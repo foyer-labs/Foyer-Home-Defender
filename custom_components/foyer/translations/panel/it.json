@@ -54,15 +54,51 @@
   "notification": {
     "armed": {
       "title": "Foyer: inserito",
-      "message": "{area} inserita con lo scenario {scenario}."
+      "message": "{area} inserito con lo scenario {scenario}."
+    },
+    "armed_area": {
+      "title": "Foyer: inserito",
+      "message": "{area} inserito da solo, fuori da ogni scenario."
     },
     "disarmed": {
       "title": "Foyer: disinserito",
-      "message": "{area} disinserita."
+      "message": "{area} disinserito."
+    },
+    "arm_failed": {
+      "title": "Foyer: inserimento fallito",
+      "message": "{area} non si è inserito. Ancora aperte o in guasto: {zones}. Resta disinserito."
+    },
+    "forced_arm": {
+      "title": "Foyer: inserimento forzato",
+      "message": "{area}{scenario} inserito forzando. Escluse: {zones}."
+    },
+    "zone_bypassed": {
+      "title": "Foyer: zona esclusa",
+      "message": "{zone} era aperta all'inserimento ed è esclusa. Rientra da sola appena si chiude."
+    },
+    "zone_rejoined": {
+      "title": "Foyer: zona rientrata",
+      "message": "{zone} si è chiusa ed è di nuovo protetta."
+    },
+    "entry_started": {
+      "title": "Foyer: ritardo di ingresso",
+      "message": "{zone} aperta in {area}. Disinserisci prima che scada il ritardo."
+    },
+    "triggered": {
+      "title": "Foyer: ALLARME",
+      "message": "Allarme in {area}: {zones}."
+    },
+    "siren_cutoff": {
+      "title": "Foyer: sirene ferme",
+      "message": "L'allarme in {area} è terminato; l'area torna allo stato precedente. Disinserisci per azzerare la memoria d'allarme."
     },
     "zone_fault": {
-      "title": "Foyer: zona in guasto",
-      "message": "La zona {zone} in {area} non è disponibile. Blocca l'inserimento finché non torna visibile."
+      "title": "Foyer: guasto zona",
+      "message": "La zona {zone} in {area} non è raggiungibile. Blocca l'inserimento finché non torna visibile."
+    },
+    "ha_restarted": {
+      "title": "Foyer: di nuovo attivo",
+      "message": "Foyer è rimasto fermo per un periodo. In quel lasso di tempo la casa non era protetta."
     }
   }
 }

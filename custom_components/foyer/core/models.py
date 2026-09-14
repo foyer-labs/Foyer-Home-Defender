@@ -531,9 +531,15 @@ class Tick:
 
 @dataclass(frozen=True, slots=True)
 class Startup:
-    """Home Assistant finished starting. ``down_since`` opens the restart gap."""
+    """Foyer is running again. ``down_since`` opens the gap in coverage.
+
+    ``cause`` says why there was a gap: ``ha_start`` after Home Assistant
+    itself restarted, ``reload`` when only Foyer was reloaded (a configuration
+    change). Both are gaps, however short, and both are recorded.
+    """
 
     down_since: datetime | None = None
+    cause: str = "ha_start"
 
 
 Event = (

@@ -22,6 +22,8 @@ from custom_components.foyer.const import (
 
 ZONE = "binary_sensor.front_door"
 PANEL_ENTITY = "alarm_control_panel.foyer_casa"
+MASTER = "alarm_control_panel.foyer_master"
+SELECT = "select.foyer_scenario"
 
 
 @pytest.fixture(autouse=True)
@@ -47,7 +49,7 @@ def entry() -> MockConfigEntry:
 
 @pytest.fixture
 async def loaded(hass, entry):
-    """A loaded Foyer with its zone closed."""
+    """A loaded Foyer with its zone closed, after Home Assistant has started."""
     hass.states.async_set(ZONE, "off", {"friendly_name": "Front door"})
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)

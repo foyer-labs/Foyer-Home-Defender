@@ -17,7 +17,7 @@ import string
 
 import pytest
 
-from custom_components.foyer.core.models import Reason
+from custom_components.foyer.core.models import Moment, Reason
 from custom_components.foyer.store.seed import seed_config
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -200,7 +200,15 @@ def test_every_rejection_reason_has_an_exception_message():
         exceptions = load(TRANSLATIONS, language)["exceptions"]
         for reason in Reason:
             assert f"rejected_{reason.value}" in exceptions, (language, reason)
-        assert "no_scenario" in exceptions
+
+
+def test_every_moment_has_a_notification():
+    """Any moment an action may list can be announced in every language."""
+    for language in LANGUAGES:
+        notifications = load(TRANSLATIONS / "panel", language)["notification"]
+        for moment in Moment:
+            assert {"title", "message"} <= notifications[moment.value].keys()
+        assert {"title", "message"} <= notifications["armed_area"].keys()
 
 
 def test_every_notification_the_seed_can_send_is_translated():

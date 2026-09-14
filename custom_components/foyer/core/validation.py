@@ -9,6 +9,7 @@ the field.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 from .models import (
     ARMED_HA_STATES,
@@ -58,6 +59,10 @@ class Problem:
     field: str | None = None
 
 
+def _slug(name: str) -> str:
+    return re.sub(r"[^0-9a-z]+", "_", name.casefold()).strip("_")
+
+
 def _in_range(value: int | None, low: int, high: int) -> bool:
     return value is None or low <= value <= high
 
@@ -73,6 +78,20 @@ def validate(config: FoyerConfig) -> list[Problem]:
     ):
         for dup in sorted({i for i in ids if ids.count(i) > 1}):
             add(Problem("duplicate_id", kind, dup))
+
+    # Names become entity ids (areas, zones) and select options (scenarios):
+    # two that slug to the same thing would collide.
+    for kind, objects in (
+        ("area", config.areas),
+        ("zone", config.zones),
+        ("scenario", config.scenarios),
+    ):
+        seen: set[str] = set()
+        for obj in objects:
+            slug = _slug(obj.name)
+            if slug and slug in seen:
+                add(Problem("duplicate_name", kind, obj.id, "name"))
+            seen.add(slug)
 
     area_ids = {a.id for a in config.areas}
     scenario_ids = {s.id for s in config.scenarios}

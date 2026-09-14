@@ -34,6 +34,7 @@ PURE_MODULES = [
     "custom_components.foyer.store.schema",
     "custom_components.foyer.store.seed",
     "custom_components.foyer.store.migrations",
+    "custom_components.foyer.store.editing",
 ]
 
 

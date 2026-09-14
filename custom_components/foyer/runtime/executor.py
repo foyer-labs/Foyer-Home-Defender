@@ -38,9 +38,13 @@ class Executor:
             i18n.load_strings, self.hass.config.language
         )
         base = f"notification.{intent.moment.value}"
+        if intent.variant:
+            base = f"{base}_{intent.variant}"
         persistent_notification.async_create(
             self.hass,
             i18n.translate(strings, f"{base}.message", **intent.placeholders),
             title=i18n.translate(strings, f"{base}.title", **intent.placeholders),
-            notification_id=f"foyer_{intent.action_id}",
+            # One notification per moment: a fault must not be overwritten by
+            # the "armed" that follows it a second later.
+            notification_id=f"foyer_{intent.action_id}_{intent.moment.value}",
         )

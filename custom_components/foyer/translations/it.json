@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Configura Foyer Home Defender",
-        "description": "Questa prima versione protegge un'area con una zona e la inserisce con uno scenario. Potrai rinominarli in seguito.",
+        "description": "Si parte da un'area, una zona e uno scenario. Tutto il resto si aggiunge dal pannello Foyer nella barra laterale.",
         "data": {
           "area_name": "Nome dell'area",
           "scenario_name": "Nome dello scenario",
@@ -55,23 +55,66 @@
     }
   },
   "exceptions": {
-    "no_scenario": {
-      "message": "Nessuno scenario inserisce quest'area in questa modalità."
-    },
     "rejected_invalid_state": {
-      "message": "L'area non è in uno stato che lo consente."
+      "message": "L'area non è in uno stato che lo permette."
     },
     "rejected_unknown_scenario": {
       "message": "Lo scenario non esiste."
     },
+    "rejected_unknown_area": {
+      "message": "L'area non esiste."
+    },
+    "rejected_no_scenario_for_mode": {
+      "message": "Nessuno scenario riporta questa modalità."
+    },
+    "rejected_ambiguous_mode": {
+      "message": "Più scenari riportano questa modalità. Scegli lo scenario da select.foyer_scenario."
+    },
+    "rejected_alarm_in_progress": {
+      "message": "C'è un allarme in corso. Disinserisci prima di cambiare scenario."
+    },
     "rejected_code_required": {
-      "message": "È richiesto un codice."
+      "message": "Serve un codice."
     },
     "rejected_zone_fault": {
       "message": "Impossibile inserire: zona in guasto: {zones}."
     },
     "rejected_zone_open": {
       "message": "Impossibile inserire: zona aperta: {zones}."
+    },
+    "rejected_zone_not_bypassable": {
+      "message": "Impossibile forzare l'inserimento: queste zone non possono essere escluse: {zones}."
+    },
+    "rejected_arm_hold_expired": {
+      "message": "Inserimento fallito: ancora aperta: {zones}."
+    }
+  },
+  "entity": {
+    "alarm_control_panel": {
+      "master": {
+        "name": "Generale"
+      }
+    },
+    "select": {
+      "scenario": {
+        "name": "Scenario"
+      }
+    },
+    "binary_sensor": {
+      "ready_to_arm": {
+        "name": "Pronto all'inserimento"
+      },
+      "fault": {
+        "name": "Guasto zona"
+      }
+    },
+    "sensor": {
+      "open_zones": {
+        "name": "Zone aperte"
+      },
+      "countdown": {
+        "name": "Conto alla rovescia"
+      }
     }
   }
 }

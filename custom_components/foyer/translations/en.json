@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Set up Foyer Home Defender",
-        "description": "This early version protects one area with one zone and arms it with one scenario. You can rename them later.",
+        "description": "Start with one area, one zone and one scenario. Add everything else from the Foyer panel in the sidebar.",
         "data": {
           "area_name": "Area name",
           "scenario_name": "Scenario name",
@@ -55,14 +55,23 @@
     }
   },
   "exceptions": {
-    "no_scenario": {
-      "message": "No scenario arms this area in that mode."
-    },
     "rejected_invalid_state": {
       "message": "The area is not in a state that allows this."
     },
     "rejected_unknown_scenario": {
       "message": "That scenario does not exist."
+    },
+    "rejected_unknown_area": {
+      "message": "That area does not exist."
+    },
+    "rejected_no_scenario_for_mode": {
+      "message": "No scenario reports this mode."
+    },
+    "rejected_ambiguous_mode": {
+      "message": "More than one scenario reports this mode. Choose the scenario on select.foyer_scenario."
+    },
+    "rejected_alarm_in_progress": {
+      "message": "An alarm is in progress. Disarm before changing scenario."
     },
     "rejected_code_required": {
       "message": "A code is required."
@@ -72,6 +81,40 @@
     },
     "rejected_zone_open": {
       "message": "Cannot arm: zone open: {zones}."
+    },
+    "rejected_zone_not_bypassable": {
+      "message": "Cannot force arming: these zones may not be bypassed: {zones}."
+    },
+    "rejected_arm_hold_expired": {
+      "message": "Arming failed: still open: {zones}."
+    }
+  },
+  "entity": {
+    "alarm_control_panel": {
+      "master": {
+        "name": "Master"
+      }
+    },
+    "select": {
+      "scenario": {
+        "name": "Scenario"
+      }
+    },
+    "binary_sensor": {
+      "ready_to_arm": {
+        "name": "Ready to arm"
+      },
+      "fault": {
+        "name": "Zone fault"
+      }
+    },
+    "sensor": {
+      "open_zones": {
+        "name": "Open zones"
+      },
+      "countdown": {
+        "name": "Countdown"
+      }
     }
   }
 }

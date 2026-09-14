@@ -94,6 +94,7 @@ def decide(
             detail={
                 "down_since": event.down_since.isoformat() if event.down_since else "",
                 "up_at": now.isoformat(),
+                "cause": event.cause,
             },
         )
     elif not isinstance(event, ZoneStateChanged | Tick):

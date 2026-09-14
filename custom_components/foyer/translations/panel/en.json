@@ -56,13 +56,49 @@
       "title": "Foyer: armed",
       "message": "{area} armed with scenario {scenario}."
     },
+    "armed_area": {
+      "title": "Foyer: armed",
+      "message": "{area} armed on its own, outside any scenario."
+    },
     "disarmed": {
       "title": "Foyer: disarmed",
       "message": "{area} disarmed."
     },
+    "arm_failed": {
+      "title": "Foyer: arming failed",
+      "message": "{area} did not arm. Still open or in fault: {zones}. It is disarmed."
+    },
+    "forced_arm": {
+      "title": "Foyer: forced arming",
+      "message": "{area}{scenario} armed by force. Excluded: {zones}."
+    },
+    "zone_bypassed": {
+      "title": "Foyer: zone excluded",
+      "message": "{zone} was open at arming and is excluded. It rejoins by itself once it closes."
+    },
+    "zone_rejoined": {
+      "title": "Foyer: zone back in",
+      "message": "{zone} has closed and is protected again."
+    },
+    "entry_started": {
+      "title": "Foyer: entry delay",
+      "message": "{zone} opened in {area}. Disarm before the delay ends."
+    },
+    "triggered": {
+      "title": "Foyer: ALARM",
+      "message": "Alarm in {area}: {zones}."
+    },
+    "siren_cutoff": {
+      "title": "Foyer: sounders stopped",
+      "message": "The alarm in {area} is over; the area is back to its previous state. Disarm to clear the alarm memory."
+    },
     "zone_fault": {
       "title": "Foyer: zone fault",
-      "message": "Zone {zone} in {area} is unavailable. It blocks arming until it is seen again."
+      "message": "Zone {zone} in {area} cannot be seen. It blocks arming until it is seen again."
+    },
+    "ha_restarted": {
+      "title": "Foyer: back online",
+      "message": "Foyer was not running for a while. The house was not protected during that time."
     }
   }
 }
