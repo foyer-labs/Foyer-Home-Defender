@@ -1,0 +1,3 @@
+# LF everywhere, so bundles built on Windows and on CI compare byte for byte.
+* text=auto eol=lf
+*.png binary

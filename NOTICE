@@ -1,0 +1,19 @@
+Foyer Home Defender
+Copyright 2026 Luca Cesana
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Prior art
+---------
+Alarmo (https://github.com/nielsfaber/alarmo), Apache-2.0, is the reference
+implementation of an alarm panel for Home Assistant and the benchmark this
+project measures itself against. Foyer Home Defender is written from scratch and
+contains no code from Alarmo.
+
+Third-party software
+--------------------
+The frontend bundles in custom_components/foyer/frontend/ include:
+
+  Lit (https://lit.dev)
+  Copyright 2017 Google LLC
+  BSD-3-Clause
