@@ -1,0 +1,1954 @@
+<title>Foyer Panel Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* ============================================================
+   Foyer Home Defender — panel prototype
+   Palette follows Home Assistant's own tokens so the mockup
+   reads as a native HA panel, not as a generic web app.
+   ============================================================ */
+:root {
+  --ha-primary:      #03a9f4;
+  --ha-primary-dim:  #0288d1;
+  --ha-accent:       #ff9800;
+
+  --bg:              #f2f3f5;
+  --surface:         #ffffff;
+  --surface-2:       #f7f8fa;
+  --surface-sunken:  #eceef1;
+  --sidebar:         #ffffff;
+  --text:            #1f2225;
+  --text-2:          #6b7178;
+  --text-3:          #9aa0a6;
+  --divider:         rgba(18, 22, 26, .10);
+  --divider-strong:  rgba(18, 22, 26, .18);
+  --shadow:          0 1px 2px rgba(16,20,24,.07), 0 2px 8px rgba(16,20,24,.06);
+  --shadow-lift:     0 2px 6px rgba(16,20,24,.10), 0 8px 24px rgba(16,20,24,.10);
+
+  --ok:       #2e9e4f;
+  --ok-bg:    #e6f4ea;
+  --warn:     #c77700;
+  --warn-bg:  #fdf1dd;
+  --crit:     #d32f2f;
+  --crit-bg:  #fdeaea;
+  --info:     #0277bd;
+  --info-bg:  #e3f2fd;
+  --idle-bg:  #eceef1;
+
+  --radius:      12px;
+  --radius-sm:   8px;
+  --radius-pill: 999px;
+  --sidebar-w:   256px;
+  --topbar-h:    64px;
+
+  --mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:             #111315;
+    --surface:        #1c1f22;
+    --surface-2:      #23272b;
+    --surface-sunken: #16191b;
+    --sidebar:        #1c1f22;
+    --text:           #e4e6e8;
+    --text-2:         #9ba1a7;
+    --text-3:         #767d84;
+    --divider:        rgba(255,255,255,.10);
+    --divider-strong: rgba(255,255,255,.18);
+    --shadow:         0 1px 2px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.35);
+    --shadow-lift:    0 2px 6px rgba(0,0,0,.55), 0 8px 24px rgba(0,0,0,.45);
+    --ok:      #6ec27f;  --ok-bg:   #1b3323;
+    --warn:    #e0a13a;  --warn-bg: #35291433;
+    --crit:    #ef6d6d;  --crit-bg: #3a1e1e;
+    --info:    #5ab4e8;  --info-bg: #14293a;
+    --idle-bg: #2a2e32;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:             #111315;
+  --surface:        #1c1f22;
+  --surface-2:      #23272b;
+  --surface-sunken: #16191b;
+  --sidebar:        #1c1f22;
+  --text:           #e4e6e8;
+  --text-2:         #9ba1a7;
+  --text-3:         #767d84;
+  --divider:        rgba(255,255,255,.10);
+  --divider-strong: rgba(255,255,255,.18);
+  --shadow:         0 1px 2px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.35);
+  --shadow-lift:    0 2px 6px rgba(0,0,0,.55), 0 8px 24px rgba(0,0,0,.45);
+  --ok:      #6ec27f;  --ok-bg:   #1b3323;
+  --warn:    #e0a13a;  --warn-bg: #3a2e19;
+  --crit:    #ef6d6d;  --crit-bg: #3a1e1e;
+  --info:    #5ab4e8;  --info-bg: #14293a;
+  --idle-bg: #2a2e32;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--ha-primary-dim); }
+a:hover { color: var(--ha-primary); }
+:focus-visible { outline: 2px solid var(--ha-primary); outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- app shell ---------- */
+.app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+
+.sidebar {
+  background: var(--sidebar); border-right: 1px solid var(--divider);
+  display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
+}
+.brand {
+  height: var(--topbar-h); display: flex; align-items: center; gap: 10px;
+  padding: 0 16px; border-bottom: 1px solid var(--divider); flex-shrink: 0;
+}
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+  background: #0D1014; display: grid; place-items: center;
+}
+
+/* ---------- contextual help ---------- */
+.help {
+  background: var(--surface); border: 1px solid var(--divider);
+  border-left: 3px solid var(--ha-primary); border-radius: var(--radius);
+  margin-bottom: 18px; overflow: hidden;
+}
+.help-hd {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 16px; border: 0; background: transparent; color: var(--text);
+  font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; text-align: left;
+}
+.help-hd .chev { margin-left: auto; color: var(--text-3); transition: transform .15s; }
+.help[data-open="false"] .chev { transform: rotate(-90deg); }
+.help[data-open="false"] .help-body { display: none; }
+.help-body { padding: 0 16px 16px 16px; }
+.help-body > p { margin: 0 0 12px; color: var(--text-2); font-size: 13.5px; max-width: 72ch; }
+.help-list { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 6px 16px; font-size: 13px; }
+.help-list dt { color: var(--text); font-weight: 500; }
+.help-list dd { margin: 0; color: var(--text-2); }
+.help-more { margin-top: 12px; font-size: 12.5px; }
+.help-lang {
+  margin-left: auto; font-size: 11px; font-family: var(--mono); color: var(--text-3);
+  border: 1px solid var(--divider); border-radius: var(--radius-pill); padding: 1px 8px;
+}
+@media (max-width: 560px) { .help-list { grid-template-columns: minmax(0,1fr); gap: 2px; } .help-list dd { margin-bottom: 8px; } }
+.brand-name { font-weight: 500; font-size: 15px; letter-spacing: -.01em; }
+.brand-sub { font-size: 11px; color: var(--text-3); letter-spacing: .04em; text-transform: uppercase; }
+
+.nav { padding: 8px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.nav-sec {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3);
+  padding: 14px 12px 6px; font-weight: 500;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 10px 12px; border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-2); font: inherit; font-size: 14px;
+  cursor: pointer; text-align: left; transition: background .12s, color .12s;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item[aria-current="page"] { background: var(--info-bg); color: var(--ha-primary-dim); font-weight: 500; }
+:root[data-theme="dark"] .nav-item[aria-current="page"],
+:root:not([data-theme="light"]) .nav-item[aria-current="page"] { color: var(--info); }
+.nav-item svg { flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; font-size: 11px; font-weight: 500; padding: 1px 7px;
+  border-radius: var(--radius-pill); background: var(--crit-bg); color: var(--crit);
+}
+
+/* ---------- topbar ---------- */
+.main { min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  height: var(--topbar-h); background: var(--surface); border-bottom: 1px solid var(--divider);
+  display: flex; align-items: center; gap: 16px; padding: 0 20px;
+  position: sticky; top: 0; z-index: 20;
+}
+.topbar h1 { font-size: 19px; font-weight: 500; margin: 0; letter-spacing: -.01em; }
+.topbar-spacer { flex: 1; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 50%; border: 0; background: transparent;
+  color: var(--text-2); display: grid; place-items: center; cursor: pointer;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+.content { padding: 20px; max-width: 1240px; width: 100%; }
+.page-intro { color: var(--text-2); margin: 0 0 18px; max-width: 68ch; }
+
+/* ---------- banner ---------- */
+.banner {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  border-radius: var(--radius); margin-bottom: 16px; font-size: 13.5px;
+  border: 1px solid transparent;
+}
+.banner strong { font-weight: 500; }
+.banner.warn { background: var(--warn-bg); color: var(--warn); border-color: color-mix(in oklab, var(--warn) 35%, transparent); }
+.banner.crit { background: var(--crit-bg); color: var(--crit); border-color: color-mix(in oklab, var(--crit) 35%, transparent); }
+.banner.info { background: var(--info-bg); color: var(--info); border-color: color-mix(in oklab, var(--info) 30%, transparent); }
+.banner .spacer { flex: 1; }
+
+/* ---------- cards ---------- */
+.card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  border: 1px solid var(--divider); overflow: hidden;
+}
+.card-head {
+  display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+  border-bottom: 1px solid var(--divider);
+}
+.card-head h2 { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: -.005em; }
+.card-head .sub { font-size: 12.5px; color: var(--text-3); }
+.card-head .spacer { flex: 1; }
+.card-body { padding: 18px; }
+.card-body.flush { padding: 0; }
+
+.grid { display: grid; gap: 16px; }
+.g-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g-side { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; }
+
+/* ---------- area state tiles ---------- */
+.area-tile {
+  background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius);
+  padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow);
+  border-left: 4px solid var(--state, var(--text-3));
+}
+.area-tile .name { font-weight: 500; font-size: 15px; }
+.area-tile .state { font-size: 13px; color: var(--state); font-weight: 500; letter-spacing: .02em; text-transform: uppercase; }
+.area-tile .meta { font-size: 12.5px; color: var(--text-3); }
+.area-tile .countdown {
+  font-family: var(--mono); font-size: 26px; font-weight: 500; color: var(--state);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- pills & chips ---------- */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px;
+  border-radius: var(--radius-pill); font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.pill.ok   { background: var(--ok-bg);   color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.crit { background: var(--crit-bg); color: var(--crit); }
+.pill.info { background: var(--info-bg); color: var(--info); }
+.pill.idle { background: var(--idle-bg); color: var(--text-2); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+.tag {
+  display: inline-block; padding: 1px 8px; border-radius: var(--radius-sm);
+  background: var(--surface-sunken); color: var(--text-2); font-size: 11.5px;
+  border: 1px solid var(--divider);
+}
+
+/* ---------- tables ---------- */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th {
+  text-align: left; font-weight: 500; font-size: 11.5px; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--text-3); padding: 10px 14px;
+  border-bottom: 1px solid var(--divider); white-space: nowrap; background: var(--surface-2);
+}
+td { padding: 11px 14px; border-bottom: 1px solid var(--divider); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover { background: var(--surface-2); }
+tbody tr[aria-selected="true"] { background: var(--info-bg); }
+.mono { font-family: var(--mono); font-size: 12.5px; color: var(--text-2); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- buttons & inputs ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px;
+  border-radius: var(--radius-sm); border: 1px solid var(--divider-strong);
+  background: var(--surface); color: var(--text); font: inherit; font-size: 13.5px;
+  font-weight: 500; cursor: pointer; transition: background .12s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--ha-primary); border-color: var(--ha-primary); color: #fff; }
+.btn.primary:hover { background: var(--ha-primary-dim); }
+.btn.danger { background: var(--crit); border-color: var(--crit); color: #fff; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+.btn.sm { padding: 5px 10px; font-size: 12.5px; }
+
+input[type="text"], input[type="number"], input[type="time"], select, textarea {
+  width: 100%; padding: 9px 11px; border-radius: var(--radius-sm);
+  border: 1px solid var(--divider-strong); background: var(--surface);
+  color: var(--text); font: inherit; font-size: 13.5px;
+}
+textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
+label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-2); }
+label.field > span.lbl { font-weight: 500; color: var(--text); font-size: 13px; }
+label.field > span.hint { font-size: 12px; color: var(--text-3); }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.row > * { flex: 1 1 180px; min-width: 0; }
+.switch-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--divider); }
+.switch-row:last-child { border-bottom: 0; }
+.switch-row .lbl { font-size: 13.5px; }
+.switch-row .hint { font-size: 12px; color: var(--text-3); }
+.switch-row .spacer { flex: 1; }
+
+.sw { width: 38px; height: 22px; border-radius: 999px; background: var(--divider-strong); position: relative; border: 0; cursor: pointer; flex-shrink: 0; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.sw[aria-checked="true"] { background: var(--ha-primary); }
+.sw[aria-checked="true"]::after { transform: translateX(16px); }
+
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--divider); margin-bottom: 18px; overflow-x: auto; }
+.tab {
+  padding: 11px 16px; border: 0; background: transparent; color: var(--text-2);
+  font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer;
+  border-bottom: 2px solid transparent; white-space: nowrap;
+}
+.tab[aria-selected="true"] { color: var(--ha-primary-dim); border-bottom-color: var(--ha-primary); }
+:root[data-theme="dark"] .tab[aria-selected="true"] { color: var(--info); }
+
+/* ---------- inheritance / trace ---------- */
+.inherit {
+  display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-3);
+  padding: 8px 12px; background: var(--surface-sunken); border-radius: var(--radius-sm);
+}
+.inherit b { color: var(--text); font-weight: 500; }
+
+.trace { font-family: var(--mono); font-size: 12.5px; line-height: 1.75; }
+.trace-step { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px dashed var(--divider); }
+.trace-step:last-child { border-bottom: 0; }
+.trace-t { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.trace-body > div { padding: 1px 0; }
+.trace-key { color: var(--text-2); }
+.trace-yes { color: var(--ok); }
+.trace-no  { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-3); }
+.trace-wait { color: var(--warn); }
+.trace-crit { color: var(--crit); font-weight: 500; }
+
+/* ---------- simulator sensor toggles ---------- */
+.simzone {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border: 1px solid var(--divider); border-radius: var(--radius-sm); background: var(--surface);
+}
+.simzone.forced { border-color: var(--ha-accent); background: color-mix(in oklab, var(--ha-accent) 8%, var(--surface)); }
+.simzone .nm { flex: 1; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- keypad ---------- */
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 240px; }
+.key {
+  aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--divider-strong);
+  background: var(--surface-2); color: var(--text); font: inherit; font-size: 20px; font-weight: 400;
+  cursor: pointer; min-height: 48px;
+}
+.key:hover { background: var(--surface-sunken); }
+.pin-display {
+  font-family: var(--mono); font-size: 24px; letter-spacing: .5em; text-align: center;
+  padding: 12px; background: var(--surface-sunken); border-radius: var(--radius-sm);
+  margin-bottom: 10px; min-height: 52px; color: var(--text);
+}
+
+/* ---------- lovelace card previews ---------- */
+.lovelace-bg {
+  background: var(--surface-sunken); border-radius: var(--radius); padding: 20px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.lcard {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  border: 1px solid var(--divider); padding: 16px; max-width: 360px;
+}
+.lcard-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+.lcard-state { font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+
+.scn-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
+.scn-chip {
+  padding: 6px 12px; border-radius: var(--radius-pill); border: 1px solid var(--divider-strong);
+  background: var(--surface); font-size: 12.5px; cursor: pointer; font: inherit; font-size: 12.5px;
+  color: var(--text-2);
+}
+.scn-chip[aria-pressed="true"] { background: var(--ha-primary); border-color: var(--ha-primary); color: #fff; font-weight: 500; }
+
+/* ---------- wizard ---------- */
+.wiz-steps { display: flex; gap: 0; margin-bottom: 22px; flex-wrap: wrap; }
+.wiz-step { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-3); padding-right: 10px; }
+.wiz-step .n {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface-sunken); color: var(--text-3); font-size: 11.5px; font-weight: 500; flex-shrink: 0;
+}
+.wiz-step.done .n { background: var(--ok); color: #fff; }
+.wiz-step.active .n { background: var(--ha-primary); color: #fff; }
+.wiz-step.active { color: var(--text); font-weight: 500; }
+.wiz-sep { width: 24px; height: 1px; background: var(--divider-strong); align-self: center; margin-right: 10px; }
+
+/* ---------- misc ---------- */
+.kv { display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; font-size: 13.5px; }
+.kv dt { color: var(--text-3); }
+.kv dd { margin: 0; }
+.note {
+  font-size: 12.5px; color: var(--text-2); background: var(--surface-sunken);
+  border-radius: var(--radius-sm); padding: 10px 12px; border-left: 3px solid var(--ha-primary);
+}
+.spec-ref { font-size: 11.5px; color: var(--text-3); font-family: var(--mono); }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.stack-sm { display: flex; flex-direction: column; gap: 8px; }
+.hr { height: 1px; background: var(--divider); margin: 16px 0; }
+.empty { padding: 32px; text-align: center; color: var(--text-3); font-size: 13.5px; }
+
+@media (max-width: 1100px) {
+  .g-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g-side { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; }
+  .nav { flex-direction: row; overflow-x: auto; }
+  .nav-sec { display: none; }
+  .nav-item { white-space: nowrap; }
+  .nav-item span { display: none; }
+  .g-2, .g-3, .g-4 { grid-template-columns: minmax(0, 1fr); }
+  .content { padding: 16px; }
+}
+</style>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark"></div>
+      <div>
+        <div class="brand-name">Foyer</div>
+        <div class="brand-sub">Home Defender</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <h1 id="pageTitle">Overview</h1>
+      <div class="topbar-spacer"></div>
+      <button class="icon-btn" id="helpBtn" title="Show or hide all help panels" aria-label="Toggle help panels"></button>
+      <button class="icon-btn" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle theme"></button>
+    </header>
+    <main class="content" id="content"></main>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Icons — 24px stroke set, drawn rather than emoji so they
+   recolor with the theme.
+   ============================================================ */
+const ICON = {
+  shield:  'M12 3l7 3v6c0 4.3-2.9 7.9-7 9-4.1-1.1-7-4.7-7-9V6l7-3z',
+  gauge:   'M3 13a9 9 0 0118 0M12 13l4-4',
+  layers:  'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17l9 5 9-5',
+  radar:   'M12 12l5-5M4 12a8 8 0 108-8M12 12m-2 0a2 2 0 104 0 2 2 0 10-4 0',
+  sliders: 'M4 7h10M18 7h2M4 17h4M12 17h8M16 4v6M8 14v6',
+  bolt:    'M13 3L5 14h6l-1 7 8-11h-6l1-7z',
+  users:   'M16 19v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9.5 7.5a2.5 2.5 0 105 0 2.5 2.5 0 10-5 0M21 19v-1a4 4 0 00-3-3.9',
+  key:     'M14.5 6.5a4 4 0 11-3.1 6.5L4 20.5V17H7v-3h3l1.4-1.4a4 4 0 013.1-6.1zM16 9h.01',
+  keypad:  'M5 4h14v16H5zM9 8h.01M12 8h.01M15 8h.01M9 12h.01M12 12h.01M15 12h.01M9 16h6',
+  flask:   'M9 3v6l-5 9a2 2 0 001.7 3h12.6a2 2 0 001.7-3l-5-9V3M9 3h6M7.5 15h9',
+  list:    'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
+  gear:    'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2v.2a2 2 0 11-4 0v-.1a1.7 1.7 0 00-2.9-1.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00-1.2-2.9H3a2 2 0 110-4h.1a1.7 1.7 0 001.3-2.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 002.9-1.2V3a2 2 0 114 0v.1a1.7 1.7 0 002.9 1.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 001.2 2.9H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z',
+  cards:   'M4 8h10v12H4zM17 4h3v16h-3M14.5 6h1',
+  wand:    'M15 4V2M15 10V8M12.5 6h-2M19.5 6h-2M4 20l9.5-9.5M13 5l6 6',
+  clock:   'M12 21a9 9 0 100-18 9 9 0 000 18zM12 7v5l3.5 2',
+  help:    'M12 17h.01M9.2 9a2.9 2.9 0 015.6 1c0 1.9-2.8 2.2-2.8 4M12 21a9 9 0 100-18 9 9 0 000 18z',
+  chev:    'M9 6l6 6-6 6',
+  ext:     'M14 4h6v6M20 4l-8.5 8.5M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5',
+  groups:  'M8 8.5a2.5 2.5 0 105 0 2.5 2.5 0 10-5 0M4 17a2.5 2.5 0 105 0 2.5 2.5 0 10-5 0M15 17a2.5 2.5 0 105 0 2.5 2.5 0 10-5 0M9.4 12.6L7 14.7M14.6 12.6l2.4 2.1M9.5 19h5',
+  pulse:   'M3 12h3.5l2-6 3.5 13 2.5-8 1.5 3H21',
+  fire:    'M12 22a6 6 0 006-6c0-4-3-5-3-9-2.5 1.5-3 4-3 4s-1-1.5-1-3c-2.5 2-3 5-3 8a6 6 0 006 6z',
+  sun:     'M12 17a5 5 0 100-10 5 5 0 000 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
+  moon:    'M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z',
+  plus:    'M12 5v14M5 12h14',
+  play:    'M6 4l14 8-14 8V4z',
+  down:    'M12 5v14M6 13l6 6 6-6',
+  alert:   'M12 9v4M12 17h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z'
+};
+const svg = (d, size = 20, w = 1.7) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+
+/* The Foyer Home Defender mark — shield frame enclosing the Foyer arches. */
+const SHIELD_D = 'M32 5.5 L55 13.5 V32 C55 44 45 53.5 32 58.5 C19 53.5 9 44 9 32 V13.5 Z';
+const foyerMark = (size = 22, stroke = '#E8ECF2') => `
+  <svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true">
+    <g transform="translate(32 32) scale(0.9) translate(-32 -32)">
+      <path d="${SHIELD_D}" fill="none" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round"/>
+      <polyline points="19,32 32,21.5 45,32" fill="none" stroke="${stroke}" stroke-width="3.2"
+                stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+      <polyline points="24,38 32,31.5 40,38" fill="none" stroke="${stroke}" stroke-width="3.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="28.5" y="45.5" width="7" height="7" fill="#F0A835"/>
+      <circle cx="32" cy="45.5" r="3.5" fill="#F0A835"/>
+    </g>
+  </svg>`;
+
+/* ============================================================
+   Fake but plausible installation: a two-storey Italian house
+   with a perimeter ring and a detached garage.
+   ============================================================ */
+const AREAS = [
+  { id: 'ground',    name: 'Ground floor', state: 'armed',    since: '22:41', zones: 4, entry: 30, exit: 45, profile: 'Full' },
+  { id: 'perimeter', name: 'Perimeter',    state: 'armed',    since: '22:41', zones: 5, entry: 0,  exit: 45, profile: 'Full' },
+  { id: 'upper',     name: 'Upper floor',  state: 'disarmed', since: '07:12', zones: 2, entry: 0,  exit: 30, profile: 'Standard' },
+  { id: 'garage',    name: 'Garage',       state: 'armed',    since: '22:41', zones: 2, entry: 20, exit: 60, profile: 'Standard' }
+];
+
+const STATE_META = {
+  armed:     { label: 'Armed',     color: 'var(--info)' },
+  disarmed:  { label: 'Disarmed',  color: 'var(--ok)' },
+  arming:    { label: 'Arming',    color: 'var(--warn)' },
+  entry:     { label: 'Entry',     color: 'var(--warn)' },
+  triggered: { label: 'Triggered', color: 'var(--crit)' }
+};
+
+const ZONES = [
+  { n: 'Front door',        e: 'binary_sensor.front_door_contact',  a: 'Ground floor', t: 'delayed',   s: 'closed', d: 30, pol: 'block',       p: '—',        health: 'ok',   batt: 84 },
+  { n: 'Hall motion',       e: 'binary_sensor.hall_pir',            a: 'Ground floor', t: 'follower',  s: 'clear',  d: 30, pol: 'ignore',      p: '—',        health: 'ok',   batt: 61 },
+  { n: 'Living room PIR',   e: 'binary_sensor.living_pir',          a: 'Ground floor', t: 'instant',   s: 'clear',  d: 0,  pol: 'ignore',      p: '—',        health: 'ok',   batt: 73 },
+  { n: 'Kitchen window',    e: 'binary_sensor.kitchen_window',      a: 'Perimeter',    t: 'instant',   s: 'closed', d: 0,  pol: 'block',       p: '—',        health: 'ok',   batt: 92 },
+  { n: 'Living room window',e: 'binary_sensor.living_window',       a: 'Perimeter',    t: 'instant',   s: 'closed', d: 0,  pol: 'block',       p: '—',        health: 'ok',   batt: 88 },
+  { n: 'Bathroom window',   e: 'binary_sensor.bath_window',         a: 'Perimeter',    t: 'instant',   s: 'OPEN',   d: 0,  pol: 'auto_bypass', p: 'Silent',   health: 'byp',  batt: 40 },
+  { n: 'Bedroom window',    e: 'binary_sensor.bedroom_window',      a: 'Perimeter',    t: 'instant',   s: 'closed', d: 0,  pol: 'block',       p: '—',        health: 'ok',   batt: 77 },
+  { n: 'Study window',      e: 'binary_sensor.study_window',        a: 'Perimeter',    t: 'instant',   s: 'closed', d: 0,  pol: 'block',       p: '—',        health: 'low',  batt: 9  },
+  { n: 'Landing motion',    e: 'binary_sensor.landing_pir',         a: 'Upper floor',  t: 'instant',   s: 'clear',  d: 0,  pol: 'ignore',      p: '—',        health: 'ok',   batt: 55 },
+  { n: 'Loft hatch',        e: 'binary_sensor.loft_hatch',          a: 'Upper floor',  t: 'instant',   s: 'closed', d: 0,  pol: 'block',       p: '—',        health: 'ok',   batt: 95 },
+  { n: 'Garage door',       e: 'cover.garage_door',                 a: 'Garage',       t: 'delayed',   s: 'closed', d: 20, pol: 'block',       p: 'Standard', health: 'ok',   batt: null },
+  { n: 'Garage motion',     e: 'binary_sensor.garage_pir',          a: 'Garage',       t: 'instant',   s: 'clear',  d: 0,  pol: 'ignore',      p: '—',        health: 'fault',batt: 12 },
+  { n: 'Kitchen smoke',     e: 'binary_sensor.kitchen_smoke',       a: 'Ground floor', t: 'technical', s: 'clear',  d: 0,  pol: 'ignore',      p: 'Maximum',  health: 'ok',   batt: 68 },
+  { n: 'Basement leak',     e: 'binary_sensor.basement_leak',       a: 'Ground floor', t: 'technical', s: 'clear',  d: 0,  pol: 'ignore',      p: 'Standard', health: 'ok',   batt: 81 },
+  { n: 'Hall keypad tamper',e: 'binary_sensor.keypad_tamper',       a: 'Ground floor', t: 'tamper',    s: 'clear',  d: 0,  pol: 'ignore',      p: 'Maximum',  health: 'ok',   batt: null },
+  { n: 'Bedside panic',     e: 'event.bedside_button',              a: 'Upper floor',  t: 'panic',     s: 'idle',   d: 0,  pol: 'ignore',      p: 'Maximum',  health: 'ok',   batt: 90 }
+];
+
+const SCENARIOS = [
+  { n: 'Away',          areas: ['Ground floor','Perimeter','Upper floor','Garage'], ha: 'armed_away',          p: 'Full',     exit: 60, active: false },
+  { n: 'Night',         areas: ['Ground floor','Perimeter','Garage'],               ha: 'armed_night',         p: 'Full',     exit: 45, active: true  },
+  { n: 'Windows only',  areas: ['Perimeter'],                                       ha: 'armed_home',          p: 'Standard', exit: 30, active: false },
+  { n: 'Dog at home',   areas: ['Perimeter','Garage'],                              ha: 'armed_home',          p: 'Standard', exit: 45, active: false },
+  { n: 'Garage only',   areas: ['Garage'],                                          ha: 'armed_custom_bypass', p: 'Silent',   exit: 60, active: false }
+];
+
+const PROFILES = [
+  { n: 'Silent',   actions: ['Notify Luca (push)'], used: '1 zone', desc: 'Log and a single push. For nuisance-prone outdoor zones.' },
+  { n: 'Standard', actions: ['Notify Luca (push)', 'Hall lights on'], used: '2 areas, 2 zones', desc: 'Notification plus lights. Deters without waking the street.' },
+  { n: 'Full',     actions: ['Indoor siren 180s', 'Hall lights flash', 'Record front camera 60s', 'Notify Luca (push)'], used: '2 areas, 2 scenarios', desc: 'Local response plus recording. The default for night and away.' },
+  { n: 'Maximum',  actions: ['Indoor + outdoor siren', 'All lights on', 'Record all cameras', 'Escalation: Household'], used: '4 zones', desc: 'Everything, with escalation until someone acknowledges.' }
+];
+
+const CONTACTS = [
+  { n: 'Luca',        ch: ['Push · mobile_app_luca', 'SMS · gsm_modem', 'Call · twilio_call'], quiet: '—',            user: 'Luca' },
+  { n: 'Partner',     ch: ['Push · mobile_app_partner', 'SMS · gsm_modem'],                    quiet: '23:00–07:00',  user: 'Partner' },
+  { n: 'Neighbour',   ch: ['SMS · gsm_modem'],                                                 quiet: '22:00–08:00',  user: '—' }
+];
+
+const USERS = [
+  { n: 'Luca',     code: '6 digits', perms: 'All', scope: 'All areas',  valid: '—',            duress: 'Set',  ha: 'luca' },
+  { n: 'Partner',  code: '6 digits', perms: 'Arm, disarm, bypass, log', scope: 'All areas', valid: '—',  duress: 'Set',  ha: 'partner' },
+  { n: 'Cleaner',  code: '4 digits', perms: 'Arm, disarm',              scope: 'Ground floor, Perimeter', valid: 'until 31 Dec 2026', duress: '—', ha: '—' },
+  { n: 'Neighbour',code: '4 digits', perms: 'Disarm',                   scope: 'All areas',  valid: 'until 20 Sep 2026', duress: '—', ha: '—' }
+];
+
+const DEVICES = [
+  { n: 'Hall keypad',     kind: 'Ring Alarm Keypad v2', via: 'Z-Wave JS', id: 'keypad_hall',   ident: 'No — code is the identity', fb: 'LED ring + beeps + countdown' },
+  { n: 'Garage keypad',   kind: 'Zigbee keypad (Tuya)', via: 'Zigbee2MQTT', id: 'keypad_gar',  ident: 'No — code is the identity', fb: 'Beeps only' },
+  { n: "Luca's tag",      kind: 'NFC tag',              via: 'HA tag',    id: 'tag_luca',      ident: 'Yes — Luca',                fb: 'Push confirmation' },
+  { n: "Partner's tag",   kind: 'NFC tag',              via: 'HA tag',    id: 'tag_partner',   ident: 'Yes — Partner',             fb: 'Push confirmation' },
+  { n: 'Hall wall tablet',kind: 'Lovelace card',        via: 'HA UI',     id: 'ha_ui',         ident: 'Yes — signed-in user',      fb: 'On-screen' }
+];
+
+const LOG = [
+  { t: '23:04:11', cat: 'system',   ev: 'Zone fault',        sev: 'warning', who: '—',      ch: '—',        detail: 'Garage motion unavailable for 14 min · supervision timeout' },
+  { t: '22:41:03', cat: 'arming',   ev: 'Armed',             sev: 'info',    who: 'Luca',   ch: 'keypad_hall', detail: 'Scenario "Night" · 3 areas · 1 zone auto-bypassed' },
+  { t: '22:41:03', cat: 'security', ev: 'Zone bypassed',     sev: 'warning', who: 'Luca',   ch: 'keypad_hall', detail: 'Bathroom window open at arming · arm policy: auto_bypass' },
+  { t: '22:40:58', cat: 'arming',   ev: 'Arm blocked',       sev: 'warning', who: 'Luca',   ch: 'keypad_hall', detail: 'Study window open · arm policy: block' },
+  { t: '19:22:40', cat: 'action',   ev: 'Action executed',   sev: 'info',    who: '—',      ch: 'engine',   detail: 'light.turn_on hall → ok (142 ms)' },
+  { t: '19:22:39', cat: 'alarm',    ev: 'Acknowledged',      sev: 'info',    who: 'Luca',   ch: 'push',     detail: 'Escalation stopped at step 1 of 4' },
+  { t: '19:22:11', cat: 'alarm',    ev: 'Triggered',         sev: 'alarm',   who: '—',      ch: '—',        detail: 'Kitchen window · area Perimeter · scenario Windows only' },
+  { t: '19:21:41', cat: 'alarm',    ev: 'Entry delay',       sev: 'warning', who: '—',      ch: '—',        detail: 'Front door · 30 s' },
+  { t: '18:03:17', cat: 'security', ev: 'Code rejected',     sev: 'warning', who: '—',      ch: 'keypad_gar', detail: 'Attempt 2 of 5 before lockout' },
+  { t: '14:55:02', cat: 'config',   ev: 'Configuration changed', sev: 'info', who: 'Luca',  ch: 'ha_ui',    detail: 'Zone "Study window" · entry_delay 0 → 15' },
+  { t: '07:12:44', cat: 'arming',   ev: 'Disarmed',          sev: 'info',    who: 'Partner',ch: 'tag_partner', detail: 'All areas · identified by NFC tag, no code required' },
+  { t: '03:14:00', cat: 'system',   ev: 'System unavailable',sev: 'warning', who: '—',      ch: '—',        detail: 'Home Assistant restart · gap 03:14:00 → 03:15:22 (82 s)' }
+];
+
+const SEV_PILL = { info: 'idle', warning: 'warn', alarm: 'crit' };
+
+/* ============================================================
+   Small render helpers
+   ============================================================ */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const card = (title, body, opts = {}) => `
+  <section class="card">
+    ${title ? `<div class="card-head">
+      <h2>${title}</h2>${opts.sub ? `<span class="sub">${opts.sub}</span>` : ''}
+      <span class="spacer"></span>${opts.actions || ''}
+    </div>` : ''}
+    <div class="card-body${opts.flush ? ' flush' : ''}">${body}</div>
+  </section>`;
+const table = (cols, rows) => `
+  <div class="tbl-wrap"><table>
+    <thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table></div>`;
+const pill = (cls, text) => `<span class="pill ${cls}"><span class="dot"></span>${text}</span>`;
+const sw = (on, label) => `<button class="sw" role="switch" aria-checked="${on}" aria-label="${esc(label)}"></button>`;
+const specRef = t => `<span class="spec-ref">${t}</span>`;
+
+const healthPill = h => ({
+  ok:    pill('ok', 'Ready'),
+  byp:   pill('warn', 'Bypassed'),
+  low:   pill('warn', 'Low battery'),
+  fault: pill('crit', 'Fault')
+}[h]);
+
+/* ============================================================
+   Pages
+   ============================================================ */
+const PAGES = [
+  { id: 'overview',  label: 'Overview',          icon: 'gauge',   sec: 'Operate' },
+  { id: 'test',      label: 'Test & diagnostics',icon: 'flask',   badge: '1' },
+  { id: 'health',    label: 'System health',     icon: 'pulse',   badge: '3' },
+  { id: 'log',       label: 'Log',               icon: 'list'     },
+  { id: 'areas',     label: 'Areas',             icon: 'layers',  sec: 'Configure' },
+  { id: 'zones',     label: 'Zones',             icon: 'radar'    },
+  { id: 'groups',    label: 'Verification groups', icon: 'groups' },
+  { id: 'scenarios', label: 'Scenarios',         icon: 'sliders'  },
+  { id: 'profiles',  label: 'Response profiles', icon: 'bolt'     },
+  { id: 'contacts',  label: 'Contacts',          icon: 'users'    },
+  { id: 'users',     label: 'Users & codes',     icon: 'key'      },
+  { id: 'devices',   label: 'Arming devices',    icon: 'keypad'   },
+  { id: 'automations', label: 'Automation rules',icon: 'clock'    },
+  { id: 'settings',  label: 'Settings',          icon: 'gear'     },
+  { id: 'cards',     label: 'Lovelace cards',    icon: 'cards',   sec: 'Reference' },
+  { id: 'wizard',    label: 'First-run wizard',  icon: 'wand'     }
+];
+
+/* ============================================================
+   Contextual help — in production these strings live in
+   translations/<lang>.json under help.<page>, so they follow
+   the Home Assistant user's language automatically.
+   ============================================================ */
+const HELP = {
+  overview: ['What this page shows',
+    'The operating view of the whole system: the live state of every area, which scenario is running, anything that would stop you arming right now, and the most recent events. Nothing here is configuration — every control acts on the system immediately.',
+    [['Area tile', 'Shows that area\'s own state. Areas arm and disarm independently; the master panel is derived from them.'],
+     ['Not ready', 'Zones that are open, in fault, or bypassed. A zone in fault blocks arming unless you have told it not to.'],
+     ['Scenario chips', 'Switching scenario while armed re-evaluates every area and may require a code.']]],
+
+  areas: ['What an area is',
+    'An area groups zones and holds its own armed state and its own alarm_control_panel entity. Scenarios decide which areas get armed together, so the areas you create determine what partial arming is possible at all.',
+    [['Default entry delay', 'Inherited by every zone in this area that does not set its own. Raising it gives you longer to reach the keypad — and gives an intruder the same time.'],
+     ['Default exit delay', 'How long you have to leave after arming. Zones still open when it expires are blocked or bypassed according to their own arm policy.'],
+     ['Reports as', 'Which Home Assistant state this area publishes when armed. Changes what voice assistants and HomeKit see; changes nothing about behaviour.'],
+     ['Perimeter area', 'Marks this as the outer defence ring. Automatic rules can never disarm a perimeter area.'],
+     ['Require code', 'Overrides the global policy for this area only. Leave inherited unless this area genuinely differs.']]],
+
+  zones: ['What a zone is',
+    'A zone is one Home Assistant entity plus alarm semantics. The type is a preset that fills the properties below; the engine only ever reads the properties, so every one of them stays editable afterwards.',
+    [['Triggered when', 'Which entity state counts as an alarm. NC and NO magnetic contacts behave in opposite ways — get this wrong and the zone never fires.'],
+     ['Type preset', 'instant fires at once · delayed grants the entry delay · follower inherits it only if a delayed zone went first · 24h, tamper, technical and panic are always live, even disarmed · key arms or disarms instead of triggering.'],
+     ['Entry delay', 'Seconds between this zone triggering and the alarm sounding. Only meaningful on delayed and follower zones.'],
+     ['If open when arming', 'block stops arming and names this zone · auto_bypass excludes it, notifies, and lets it rejoin when it closes · ignore arms regardless.'],
+     ['Trigger count', 'How many activations within the window before alarming. Raise it on zones prone to nuisance triggers; every step up adds real delay.'],
+     ['Cross-zone', 'Require a second zone to confirm within a window before alarming. Strong against false alarms, and it means a single zone alone will never fire.'],
+     ['Supervision timeout', 'No state change within this window is reported as a fault, never as "all quiet". Leave off for entities that legitimately sit still for days.']]],
+
+  scenarios: ['What a scenario is',
+    'A named preset over areas: choosing it arms exactly the areas you list. There is no limit on how many you create, which is what lets the system express "night, ground floor only" or "dog at home".',
+    [['Areas armed', 'The whole definition of the scenario. Areas not listed are left exactly as they are, not disarmed.'],
+     ['Reports master as', 'Which fixed Home Assistant state the master panel publishes. Several scenarios may share one — the exact scenario always stays on select.foyer_scenario and in the log.'],
+     ['Default profile', 'What every area and zone inherits unless it overrides. Changing it changes the response of everything that has not opted out.'],
+     ['Exit delay override', 'Replaces each area\'s own exit delay for this scenario only.'],
+     ['Allowed users', 'Restricts who may select this scenario. Leave empty for everyone with the permission.']]],
+
+  profiles: ['What a response profile is',
+    'A reusable list of actions, resolved by inheritance: zone, then area, then scenario, then the global default. This is what stops a sixteen-zone house becoming a configuration matrix nobody maintains.',
+    [['Trigger moment', 'Actions can attach to an alarm, to a state change such as arming or a rejected code, or to a system event such as a zone fault.'],
+     ['Call service action', 'Runs any Home Assistant service at all. It is the escape hatch that keeps you out of the automation editor.'],
+     ['Condition — time window', 'The action runs only inside this window. Windows crossing midnight are handled correctly.'],
+     ['Condition — entity state', 'The action runs only while an entity holds a state. Two conditions per action is the deliberate ceiling.'],
+     ['Escalation', 'Hands the notification over to a contact escalation policy instead of firing once and hoping.']]],
+
+  contacts: ['Who gets told, and when to stop',
+    'Escalation targets people, not services. Home Assistant already provides the transports — push, SMS, voice, messaging — so what is configured here is the order, the timing, and what counts as someone having taken notice.',
+    [['Channel order', 'Tried highest first. Put the channel that survives a cut internet connection somewhere in the list, not at the bottom.'],
+     ['Quiet hours', 'Only high-severity events reach this contact inside the window. It never suppresses an alarm to the whole household.'],
+     ['Linked user', 'Lets an acknowledgement be attributed to a person in the log.'],
+     ['Escalation step', 'Each step names a contact, a channel and a delay. The policy stops the instant anyone acknowledges.'],
+     ['Test channels', 'Really sends. Use it — an untested emergency channel is one you discover during the emergency.']]],
+
+  users: ['Codes, identity and permissions',
+    'Every user has their own code, stored as a bcrypt hash and verified in the backend only. Codes must be unique across users, because otherwise the first matching hash wins and the log credits the wrong person.',
+    [['Code', 'Individual per user. Length is a global setting, since a keypad must know how many digits to collect.'],
+     ['Duress code', 'Disarms normally and raises a silent alarm. Nobody watching can tell it apart from a normal disarm.'],
+     ['Permissions', 'What this user may do at all. Separate from whether a code is required to do it.'],
+     ['Area scope', 'Which areas this user may act on. A cleaner can be given the ground floor and nothing else.'],
+     ['Valid until', 'The code stops working on this date. Use it for guests and tradespeople rather than deleting a user later.'],
+     ['Skip code for this user', 'Applies only where the system already knows who is acting — the Home Assistant UI, or a personal NFC tag. On a shared keypad the code is the identity, so it stays required.']]],
+
+  devices: ['How physical devices talk to Foyer',
+    'Any device that can call a service or publish MQTT can arm this system, and receives structured feedback for its LEDs, beeps and display. Keypad models change every few months; this contract does not.',
+    [['Device ID', 'Recorded on every event, and what lockout counts attempts against. Give each keypad its own.'],
+     ['Identifies the user', 'A personal NFC tag or badge identifies who acted. A shared keypad cannot, so the code is the only identity it has.'],
+     ['Feedback', 'What Foyer publishes back: state, countdown, whether arming is possible, and why the last command failed.'],
+     ['last_result', 'Lets a keypad distinguish a wrong code from arming blocked by an open window, instead of failing silently.']]],
+
+  test: ['Proving the configuration before you need it',
+    'Four separate things share this page. Only one of them executes anything in the real world, and it says so before it does.',
+    [['Diagnostics', 'Live state of every zone and whether it would count as triggered right now. Nothing is executed.'],
+     ['Simulator', 'Force zone states and a scenario and time virtually, and read exactly what the system would decide. Nothing is executed — this is the same engine the runtime uses, with a fabricated clock.'],
+     ['Walk test', 'Really armed, really reading sensors, all response actions inhibited. Exits automatically. 24h, tamper, technical and panic zones stay live.'],
+     ['Action test', 'Really executes. Sirens really sound and messages really send. Logged as a test.']]],
+
+  log: ['What is recorded, and for how long',
+    'Stored in Foyer\'s own database rather than Home Assistant\'s recorder, whose default ten-day purge would quietly destroy a thirty-day requirement. Every entry records who acted and through which channel.',
+    [['Category', 'Groups events by kind and sets retention separately for each.'],
+     ['zone_disarmed', 'Zone activity while the system is disarmed. Off by default: a single motion sensor produces thousands of rows a day and buries everything that matters.'],
+     ['User', 'Denormalised into the row, so deleting a user does not erase the history of what they did.'],
+     ['Export', 'CSV or JSON of exactly the rows your current filters show.']]],
+
+  settings: ['System-wide defaults',
+    'Everything here is a default that areas, zones and scenarios inherit unless they override it. Three behaviours cannot be switched off, because turning them off would make the system quietly unsafe.',
+    [['Siren cutoff', 'How long sounders run before stopping. Capped at 900 seconds, the EN 50131 reference for external sounders.'],
+     ['Code length', 'Global, 4 to 12 digits. Four digits is roughly ten thousand combinations and relies entirely on lockout.'],
+     ['Restore after restart', 'Cannot be disabled. An alarm that disarms itself during a core update is worthless.'],
+     ['Unavailable is a fault', 'Cannot be disabled. A sensor that stopped reporting is a problem, not a quiet house.'],
+     ['Log retention', 'Per category, in days. Config history is kept longest because it answers "who changed this".']]],
+
+  automations: ['Letting the system arm itself',
+    'A closed rule model, not an automation engine. Rules act as a user would, so every action they take is logged with the rule name against the auto_rule channel. Arming and disarming are deliberately not treated as equally safe.',
+    [['Trigger', 'Absence of everyone, arrival of someone, a time of day, or an entity holding a state for a while.'],
+     ['Active window', 'Days and hours during which the rule exists at all. Outside it the rule is not merely skipped — it is absent.'],
+     ['Guards', 'Extra conditions that must hold: currently disarmed, every zone ready, no interior motion for N minutes. Guards are what stop a flat phone battery arming the house around you.'],
+     ['Grace period', 'Sends a countdown notification with a Cancel button before acting. Two minutes by default for arming.'],
+     ['Automatic disarming', 'Off by default, and it can never act on a perimeter area. Presence is inferred from a phone: a stolen phone must not open your house.'],
+     ['Suspension', 'Pause a rule until a date and time, or skip its next run only.'],
+     ['Expected visitor', 'A named window that suspends automatic arming — so in six months the log says "boiler engineer", not "rule suspended".']]],
+
+  groups: ['What a verification group is',
+    'A group alarms only when at least N of its M member zones detect within a window. It is the strongest tool against false alarms in large spaces, and the cross-zone field on a zone is simply a 2-of-2 group wearing a simpler hat.',
+    [['Threshold and window', 'How many members must detect, and within how long. A longer window makes the group easier to satisfy and slower to react.'],
+     ['Group profile', 'What happens once the threshold is reached. Usually a strong profile.'],
+     ['Member profiles', 'Each member keeps its own, usually a quiet one. That is what produces graduated response: one sensor notifies, two sound the siren.'],
+     ['Members below threshold', 'Turn on to make members produce nothing at all until the group is satisfied. Off by default, because a single sensor detecting a real intruder and producing silence is indistinguishable from the system working.'],
+     ['From zone field', 'Groups marked this way come from a zone\u2019s cross-zone setting and are edited there, not here.']]],
+
+  health: ['Whether the system can still do its job',
+    'An alarm that cannot tell you it has stopped working has stopped working. This page covers the failures that silently defeat a DIY alarm: the power goes out, a notification channel breaks, or Home Assistant dies. None of them is an intrusion, so none of them enters the alarm queue.',
+    [['Mains power', 'A UPS or smart plug exposes mains failure as an ordinary entity. Somebody breaking in cuts the power first, so this must never look like a quiet night.'],
+     ['Notification channels', 'Checked periodically: does the service still exist, is the modem registered, did the last send succeed. A broken channel is announced through a different channel.'],
+     ['External watchdog', 'Foyer pings an endpoint you choose. If Home Assistant dies or the line drops the pings stop and that service alerts you \u2014 the only answer to a dead system being unable to report its own death.'],
+     ['Include state in payload', 'Off by default. A heartbeat carrying your armed state tells a third party exactly when the house is empty.'],
+     ['Diagnostics', 'An anonymised dump for bug reports. No codes, no hashes, no names.']]],
+
+  cards: ['Embedding Foyer in your own dashboards',
+    'One custom element with a layout option, rather than four separate cards: one component to maintain, one visual editor, one behaviour to learn. The card never decides anything — it transmits a code and renders the answer.',
+    [['full', 'Area states, scenario selector, bypass warnings and keypad. For a wall tablet or the alarm dashboard.'],
+     ['compact', 'State plus one action, for the top of an existing dashboard.'],
+     ['badge', 'State only, colour-coded.'],
+     ['keypad', 'Keypad alone, for a tablet by the door.']]],
+
+  wizard: ['Getting to a working alarm',
+    'Five steps that produce a system that actually protects something, then the wizard gets out of the way. You can add the remaining zones, scenarios and users at any time afterwards.',
+    [['Step 1 — Areas', 'One area is enough to start. More areas mean more partial arming later.'],
+     ['Step 2 — Zones', 'Three entities are plenty. Confirm the trigger state for each — this is the one thing the wizard cannot get right on its own.'],
+     ['Step 3 — Scenario', 'One scenario that arms everything. Refinements come later.'],
+     ['Step 4 — User & code', 'Your own code, so the log has someone to credit from the first day.'],
+     ['Step 5 — Test notification', 'Proves a message actually reaches you before you rely on it.']]]
+};
+
+const R = {};
+
+/* ---------- 1. Overview ---------- */
+R.overview = () => {
+  const tiles = AREAS.map(a => {
+    const m = STATE_META[a.state];
+    return `<div class="area-tile" style="--state:${m.color}">
+      <div class="name">${a.name}</div>
+      <div class="state">${m.label}</div>
+      <div class="meta">${a.zones} zones · since ${a.since}</div>
+    </div>`;
+  }).join('');
+
+  const notReady = ZONES.filter(z => z.health !== 'ok').map(z => `
+    <tr><td>${z.n}</td><td class="mono">${z.e}</td><td>${healthPill(z.health)}</td>
+    <td>${z.health === 'fault' ? 'Blocks arming' : z.health === 'byp' ? 'Auto-bypassed at 22:41' : 'Arming allowed, warning raised'}</td></tr>`);
+
+  const recent = LOG.slice(0, 6).map(e => `
+    <tr><td class="mono num">${e.t}</td><td>${pill(SEV_PILL[e.sev], e.ev)}</td>
+    <td>${e.who}</td><td class="mono">${e.ch}</td><td>${esc(e.detail)}</td></tr>`);
+
+  return `
+  <div class="banner crit">
+    ${svg(ICON.fire, 18)}
+    <div><strong>Technical alarm: Kitchen smoke.</strong> Separate channel — unaffected by arming, and disarming will not clear it. It needs its own acknowledgement and the detector returning to normal.</div>
+    <span class="spacer"></span>
+    <button class="btn sm danger">Acknowledge</button>
+  </div>
+
+  <div class="banner warn">
+    ${svg(ICON.alert, 18)}
+    <div><strong>Garage motion has not reported for 14 minutes.</strong> Supervision timeout exceeded — treated as a fault, not as "no motion".</div>
+    <span class="spacer"></span>
+    <button class="btn sm">Open zone</button>
+  </div>
+
+  <div class="grid g-4" style="margin-bottom:16px">${tiles}</div>
+
+  <div class="grid g-side">
+    <div class="stack">
+      ${card('Not ready', table(['Zone','Entity','Status','Effect'], notReady), { sub: '3 of 16 zones' })}
+      ${card('Recent events', table(['Time','Event','User','Channel','Detail'], recent), {
+        sub: 'last 6', actions: '<button class="btn sm ghost" data-goto="log">View full log</button>' })}
+    </div>
+    <div class="stack">
+      ${card('Active scenario', `
+        <div style="font-size:22px;font-weight:500;margin-bottom:2px">Night</div>
+        <div style="color:var(--text-3);font-size:13px;margin-bottom:14px">
+          Armed by Luca at 22:41 from the hall keypad
+        </div>
+        <div class="scn-row">
+          ${SCENARIOS.map(s => `<button class="scn-chip" aria-pressed="${s.active}">${s.n}</button>`).join('')}
+        </div>
+        <div class="note">Master panel reports <span class="mono">armed_night</span> so voice assistants and HomeKit stay in sync. The exact scenario lives on <span class="mono">select.foyer_scenario</span>.</div>
+      `, { actions: '<button class="btn sm primary">Disarm</button>' })}
+      ${card('Last incident', `
+        <div style="font-size:13px;color:var(--text-3);margin-bottom:10px">
+          <span class="mono">#2026-0913-1922</span> · closed, acknowledged by Luca
+        </div>
+        <div class="trace" style="font-size:12px">
+          <div class="trace-step"><div class="trace-t">19:21:41</div><div class="trace-body">
+            <div>Opened by <b>Front door</b> · entry delay</div></div></div>
+          <div class="trace-step"><div class="trace-t">19:22:11</div><div class="trace-body">
+            <div class="trace-crit">Triggered · profile <b>Full</b></div></div></div>
+          <div class="trace-step"><div class="trace-t">19:22:18</div><div class="trace-body">
+            <div><b>Kitchen window</b> joined · same profile, no upgrade</div></div></div>
+          <div class="trace-step"><div class="trace-t">19:22:39</div><div class="trace-body">
+            <div class="trace-yes">Acknowledged · escalation stopped at step 1 of 4</div></div></div>
+        </div>
+        <div class="note" style="margin-top:12px;font-size:12px">Two zones, one incident, one escalation, one acknowledgement — not two alarms competing for the same phone.</div>
+      `)}
+      ${card('System', `
+        <dl class="kv">
+          <dt>Zones</dt><dd>16 mapped · 14 ready</dd>
+          <dt>Areas</dt><dd>4 · 3 armed</dd>
+          <dt>Log</dt><dd>18,402 events · 30 days</dd>
+          <dt>Last test</dt><dd>Walk test, 6 Sep</dd>
+          <dt>Notifications</dt><dd>3 channels · last verified 6 Sep</dd>
+        </dl>`)}
+    </div>
+  </div>`;
+};
+
+/* ---------- 2. Areas ---------- */
+R.areas = () => {
+  const rows = AREAS.map(a => `
+    <tr class="clickable">
+      <td><strong>${a.name}</strong></td>
+      <td>${pill(a.state === 'armed' ? 'info' : 'ok', STATE_META[a.state].label)}</td>
+      <td class="num">${a.zones}</td>
+      <td class="num">${a.entry} s</td>
+      <td class="num">${a.exit} s</td>
+      <td>${a.profile}</td>
+      <td>${a.id === 'garage' ? 'Required' : 'Inherited'}</td>
+      <td><span class="mono">${a.id === 'upper' ? 'armed_home' : 'armed_away'}</span></td>
+    </tr>`);
+  return `
+  <p class="page-intro">An area groups zones and holds its own armed state and its own <span class="mono">alarm_control_panel</span> entity. Scenarios decide which areas get armed together.</p>
+  ${card('Areas', table(
+    ['Area','State','Zones','Default entry','Default exit','Profile','Code to disarm','Reports as'], rows),
+    { actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add area</button>` })}
+  <div style="height:16px"></div>
+  ${card('Area defaults — Ground floor', `
+    <div class="row">
+      <label class="field"><span class="lbl">Name</span><input type="text" id="a-name" value="Ground floor"></label>
+      <label class="field"><span class="lbl">Default entry delay</span><input type="number" id="a-entry" value="30"><span class="hint">Inherited by zones that do not set their own</span></label>
+      <label class="field"><span class="lbl">Default exit delay</span><input type="number" id="a-exit" value="45"></label>
+    </div>
+    <div class="hr"></div>
+    <div class="row">
+      <label class="field"><span class="lbl">Response profile</span>
+        <select id="a-prof"><option>Full</option><option>Standard</option><option>Silent</option><option>Maximum</option></select></label>
+      <label class="field"><span class="lbl">Reports to Home Assistant as</span>
+        <select id="a-ha"><option>armed_away</option><option>armed_home</option><option>armed_night</option><option>armed_vacation</option></select></label>
+    </div>
+    <div class="hr"></div>
+    <div class="switch-row"><div><div class="lbl">Require code to arm</div><div class="hint">Overrides the global default for this area</div></div><span class="spacer"></span>${sw(false, 'Require code to arm')}</div>
+    <div class="switch-row"><div><div class="lbl">Require code to disarm</div><div class="hint">Inherited from global policy: required</div></div><span class="spacer"></span>${sw(true, 'Require code to disarm')}</div>
+  `)}`;
+};
+
+/* ---------- 3. Zones ---------- */
+R.zones = () => {
+  const rows = ZONES.map((z, i) => `
+    <tr class="clickable" ${i === 0 ? 'aria-selected="true"' : ''}>
+      <td><strong>${z.n}</strong></td>
+      <td class="mono">${z.e}</td>
+      <td>${z.a}</td>
+      <td><span class="tag">${z.t}</span></td>
+      <td>${z.s === 'OPEN' ? pill('warn','open') : `<span style="color:var(--text-2)">${z.s}</span>`}</td>
+      <td class="num">${z.d ? z.d + ' s' : '—'}</td>
+      <td><span class="mono">${z.pol}</span></td>
+      <td>${healthPill(z.health)}</td>
+    </tr>`);
+
+  return `
+  <p class="page-intro">A zone is one Home Assistant entity plus alarm semantics. The type is a preset: it fills the properties below, and every one of them stays editable.</p>
+  <div class="grid g-side">
+    ${card('Zones', table(['Zone','Entity','Area','Type','State','Entry','Arm policy','Health'], rows), {
+      sub: '16 mapped', flush: true,
+      actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add zone</button>` })}
+
+    ${card('Front door', `
+      <div class="inherit" style="margin-bottom:14px">
+        ${svg(ICON.bolt, 15)} Effective profile <b>Full</b> — inherited from area <b>Ground floor</b>
+      </div>
+      <div class="stack-sm">
+        <label class="field"><span class="lbl">Entity</span><input type="text" id="z-ent" value="binary_sensor.front_door_contact"></label>
+        <div class="row">
+          <label class="field"><span class="lbl">Type preset</span>
+            <select id="z-type"><option>delayed</option><option>instant</option><option>follower</option><option>24h</option><option>tamper</option><option>technical</option><option>panic</option><option>key</option></select></label>
+          <label class="field"><span class="lbl">Area</span>
+            <select id="z-area"><option>Ground floor</option><option>Perimeter</option><option>Upper floor</option><option>Garage</option></select></label>
+        </div>
+        <label class="field"><span class="lbl">Triggered when state is</span>
+          <select id="z-trig"><option>on  — proposed from device_class: door</option><option>off</option><option>open</option><option>unlocked</option></select>
+          <span class="hint">Confirm this. NC and NO contacts behave in opposite ways, and a wrong guess here is a system that never fires.</span></label>
+        <div class="row">
+          <label class="field"><span class="lbl">Entry delay</span><input type="number" id="z-entry" value="30"></label>
+          <label class="field"><span class="lbl">Exit delay</span><input type="text" id="z-exit" value="inherit (45 s)"></label>
+        </div>
+        <label class="field"><span class="lbl">If open when arming</span>
+          <select id="z-pol"><option>block — arming fails and names this zone</option><option>auto_bypass — exclude, notify, rejoin when closed</option><option>ignore — arm normally</option></select></label>
+        <div class="hr"></div>
+        <div class="switch-row"><div><div class="lbl">User may bypass</div></div><span class="spacer"></span>${sw(true, 'User may bypass')}</div>
+        <div class="switch-row"><div><div class="lbl">Always on (24h)</div><div class="hint">Fires even when disarmed</div></div><span class="spacer"></span>${sw(false, 'Always on')}</div>
+        <div class="switch-row"><div><div class="lbl">Silent</div><div class="hint">Response without local sounders</div></div><span class="spacer"></span>${sw(false, 'Silent')}</div>
+        <div class="hr"></div>
+        <div class="row">
+          <label class="field"><span class="lbl">Trigger count</span><input type="number" id="z-cnt" value="1"><span class="hint">Activations before alarming</span></label>
+          <label class="field"><span class="lbl">Within</span><input type="number" id="z-win" value="60"></label>
+        </div>
+        <label class="field"><span class="lbl">Cross-zone verification</span>
+          <select id="z-cross"><option>None</option><option>Hall motion — within 60 s</option><option>Living room PIR — within 60 s</option></select>
+          <span class="hint">Require a second zone before alarming. Cuts false alarms on exposed zones.</span></label>
+        <label class="field"><span class="lbl">Supervision timeout</span><input type="text" id="z-sup" value="Off"><span class="hint">No state change within this window is a fault, never "all quiet"</span></label>
+      </div>
+    `, { actions: '<button class="btn sm">Save</button>' })}
+  </div>`;
+};
+
+/* ---------- 4. Scenarios ---------- */
+R.scenarios = () => {
+  const rows = SCENARIOS.map(s => `
+    <tr class="clickable">
+      <td><strong>${s.n}</strong>${s.active ? ' ' + pill('info','active') : ''}</td>
+      <td>${s.areas.map(a => `<span class="tag">${a}</span>`).join(' ')}</td>
+      <td class="mono">${s.ha}</td>
+      <td>${s.p}</td>
+      <td class="num">${s.exit} s</td>
+      <td>${s.n === 'Garage only' ? 'Luca only' : 'Everyone'}</td>
+    </tr>`);
+  return `
+  <p class="page-intro">A scenario is a named preset over areas. There is no limit on how many you create — the mapping column is what keeps Google, Alexa and HomeKit working, since those only understand Home Assistant's fixed states.</p>
+  ${card('Scenarios', table(['Scenario','Areas armed','Reports master as','Default profile','Exit delay','Allowed users'], rows), {
+    actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add scenario</button>` })}
+  <div style="height:16px"></div>
+  ${card('Night', `
+    <div class="row">
+      <label class="field"><span class="lbl">Name</span><input type="text" id="s-name" value="Night"></label>
+      <label class="field"><span class="lbl">Reports master as</span>
+        <select id="s-ha"><option>armed_night</option><option>armed_away</option><option>armed_home</option><option>armed_vacation</option><option>armed_custom_bypass</option></select>
+        <span class="hint">Several scenarios may share one mapping</span></label>
+      <label class="field"><span class="lbl">Exit delay override</span><input type="number" id="s-exit" value="45"></label>
+    </div>
+    <div class="hr"></div>
+    <div class="lbl" style="font-weight:500;margin-bottom:8px">Areas armed by this scenario</div>
+    <div class="stack-sm">
+      ${AREAS.map(a => `<div class="switch-row"><div><div class="lbl">${a.name}</div><div class="hint">${a.zones} zones</div></div><span class="spacer"></span>${sw(a.id !== 'upper', a.name)}</div>`).join('')}
+    </div>
+    <div class="hr"></div>
+    <div class="row">
+      <label class="field"><span class="lbl">Default response profile</span>
+        <select id="s-prof"><option>Full</option><option>Standard</option><option>Silent</option><option>Maximum</option></select></label>
+      <label class="field"><span class="lbl">Code to arm</span>
+        <select id="s-arm"><option>Inherit — not required</option><option>Required</option><option>Not required</option></select></label>
+      <label class="field"><span class="lbl">Code to disarm</span>
+        <select id="s-dis"><option>Inherit — required</option><option>Required</option><option>Not required</option></select></label>
+    </div>
+  `)}`;
+};
+
+/* ---------- 5. Response profiles ---------- */
+R.profiles = () => {
+  const rows = PROFILES.map(p => `
+    <tr class="clickable">
+      <td><strong>${p.n}</strong></td>
+      <td>${p.actions.map(a => `<span class="tag">${a}</span>`).join(' ')}</td>
+      <td style="color:var(--text-3)">${p.used}</td>
+    </tr>`);
+  return `
+  <p class="page-intro">A profile is a reusable list of actions. It resolves by inheritance — zone, then area, then scenario, then the global default — which is what stops a 16-zone house turning into a 16 × 5 × 9 configuration matrix.</p>
+  ${card('Profiles', table(['Profile','Actions','Used by'], rows), {
+    actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add profile</button>` })}
+  <div style="height:16px"></div>
+  ${card('Full', `
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true">On alarm</button>
+      <button class="tab" role="tab" aria-selected="false">On state change</button>
+      <button class="tab" role="tab" aria-selected="false">On system event</button>
+      <button class="tab" role="tab" aria-selected="false">Escalation</button>
+    </div>
+    <div class="stack-sm">
+      ${[
+        ['Indoor siren', 'siren.indoor_sounder · 180 s', 'No conditions'],
+        ['Flash hall lights', 'light.hall · flash long, red', 'Time 22:00 – 07:00'],
+        ['Record front camera', 'camera.front_door · 60 s · attach to notification', 'No conditions'],
+        ['Notify contact', 'Luca · escalation "Household"', 'No conditions'],
+        ['Call service', 'shell_command.push_to_nas · {"event": "{{ zone }}"}', 'binary_sensor.nobody_home is on']
+      ].map(([n, d, c]) => `
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--divider);border-radius:var(--radius-sm)">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:500;font-size:13.5px">${n}</div>
+            <div class="mono" style="margin-top:2px">${esc(d)}</div>
+            <div style="font-size:12px;color:${c === 'No conditions' ? 'var(--text-3)' : 'var(--warn)'};margin-top:4px">${c}</div>
+          </div>
+          <button class="btn sm ghost">Test</button>
+          <button class="btn sm ghost">Edit</button>
+        </div>`).join('')}
+      <button class="btn sm" style="align-self:flex-start">${svg(ICON.plus, 15)} Add action</button>
+    </div>
+    <div class="hr"></div>
+    <div class="note">Conditions are deliberately limited to a time window and one entity state. Anything more complex belongs in a Home Assistant automation subscribed to the <span class="mono">foyer_event</span> event.</div>
+    <div class="note" style="margin-top:10px"><strong>Severity 3.</strong> Used for one thing only: when several zones join a single incident, the incident adopts the escalation of the highest-severity profile among them. It changes nothing when this profile runs alone.</div>
+  `)}`;
+};
+
+/* ---------- 6. Contacts ---------- */
+R.contacts = () => {
+  const rows = CONTACTS.map(c => `
+    <tr class="clickable">
+      <td><strong>${c.n}</strong></td>
+      <td>${c.ch.map((x, i) => `<span class="tag">${i + 1}. ${x}</span>`).join(' ')}</td>
+      <td>${c.quiet}</td>
+      <td>${c.user}</td>
+      <td><button class="btn sm ghost">Test channels</button></td>
+    </tr>`);
+
+  const steps = [
+    ['+0 s',    'Luca',      'Push · mobile_app_luca',    'Actionable: Disarm / Acknowledge'],
+    ['+60 s',   'Luca',      'SMS · gsm_modem',           'Survives a cut fibre'],
+    ['+120 s',  'Partner',   'Push · mobile_app_partner', 'And voice call to Luca'],
+    ['+300 s',  'Neighbour', 'SMS · gsm_modem',           'Last step — then escalation_exhausted']
+  ].map(([t, who, ch, note]) => `
+    <div style="display:grid;grid-template-columns:72px 1fr;gap:14px;padding:11px 0;border-bottom:1px solid var(--divider)">
+      <div class="mono num" style="color:var(--text-3)">${t}</div>
+      <div><div style="font-weight:500;font-size:13.5px">${who}</div>
+      <div class="mono">${ch}</div>
+      <div style="font-size:12px;color:var(--text-3);margin-top:2px">${note}</div></div>
+    </div>`).join('');
+
+  return `
+  <p class="page-intro">Escalation targets people, not services. Home Assistant already provides the transports — Foyer decides who gets told, in what order, and when to stop.</p>
+  ${card('Contacts', table(['Contact','Channels, highest priority first','Quiet hours','Linked user',''], rows), {
+    actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add contact</button>` })}
+  <div style="height:16px"></div>
+  <div class="grid g-2">
+    ${card('Escalation policy — Household', steps, { sub: '4 steps' })}
+    ${card('Acknowledgement', `
+      <p style="margin-top:0;color:var(--text-2)">The policy stops the instant any of these arrives. Every acknowledgement records who and through which channel.</p>
+      <div class="stack-sm">
+        ${[
+          ['Action button in a push notification', 'notify.mobile_app_* actionable notification'],
+          ['Disarming through any channel', 'keypad, card, NFC tag, service call'],
+          ['Key press during a voice call', 'DTMF captured by the provider, fed back by webhook'],
+          ['Service call', 'foyer.acknowledge']
+        ].map(([a, b]) => `<div style="padding:10px 0;border-bottom:1px solid var(--divider)">
+          <div style="font-weight:500;font-size:13.5px">${a}</div><div class="mono">${esc(b)}</div></div>`).join('')}
+      </div>
+      <div class="note" style="margin-top:14px">If no acknowledgement arrives, the last step raises <span class="mono">escalation_exhausted</span> — itself an event a profile can act on.</div>
+    `)}
+  </div>`;
+};
+
+/* ---------- 7. Users & codes ---------- */
+R.users = () => {
+  const rows = USERS.map(u => `
+    <tr class="clickable">
+      <td><strong>${u.n}</strong></td>
+      <td class="mono">${u.code}</td>
+      <td>${u.perms}</td>
+      <td>${u.scope}</td>
+      <td>${u.valid}</td>
+      <td>${u.duress === 'Set' ? pill('warn', 'Set') : '<span style="color:var(--text-3)">—</span>'}</td>
+      <td class="mono">${u.ha}</td>
+    </tr>`);
+
+  const policy = [
+    ['Arm', 'Not required', 'Arming is not a dangerous operation'],
+    ['Disarm', 'Required', 'The operation that matters'],
+    ['Change scenario while armed', 'Required', ''],
+    ['Force arm', 'Required', 'Never implicit, always logged as forced'],
+    ['Bypass a zone', 'Required', ''],
+    ['Edit configuration', 'Required', ''],
+    ['Enter walk test', 'Required', 'Silences response actions'],
+    ['Run a real action test', 'Required', 'Actually sounds sirens']
+  ].map(([op, def, why]) => `
+    <tr><td>${op}</td><td>${def === 'Required' ? pill('warn', def) : pill('idle', def)}</td>
+    <td style="color:var(--text-3)">${why}</td></tr>`);
+
+  return `
+  <p class="page-intro">Codes are stored as bcrypt hashes and verified in the backend only — a card is a keypad that transmits a code, never something that decides.</p>
+  ${card('Users', table(['User','Code','Permissions','Area scope','Valid until','Duress code','Linked HA user'], rows), {
+    actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add user</button>` })}
+  <div style="height:16px"></div>
+  <div class="grid g-2">
+    ${card('Default code policy', table(['Operation','Default','Why'], policy))}
+    <div class="stack">
+      ${card('Per-user override — Luca', `
+        <div class="switch-row"><div><div class="lbl">Skip code when disarming</div><div class="hint">Applies only on channels that identify Luca</div></div><span class="spacer"></span>${sw(true, 'Skip code when disarming')}</div>
+        <div class="hr"></div>
+        <div class="stack-sm">
+          <div style="font-size:13px;font-weight:500">Where this applies</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${pill('ok','Home Assistant UI')}${pill('ok',"Luca's NFC tag")}
+            ${pill('idle','Hall keypad — code still required')}${pill('idle','Garage keypad — code still required')}
+          </div>
+        </div>
+        <div class="note" style="margin-top:14px">On a shared keypad the code <em>is</em> the identity: the system cannot know who is typing until they type. The exemption cannot apply there, and the UI says so rather than letting it look like a bug.</div>
+      `)}
+      ${card('Lockout', `
+        <div class="row">
+          <label class="field"><span class="lbl">Failed attempts</span><input type="number" id="lo-n" value="5"></label>
+          <label class="field"><span class="lbl">Within</span><input type="number" id="lo-w" value="300"></label>
+          <label class="field"><span class="lbl">Lock for</span><input type="number" id="lo-l" value="300"></label>
+        </div>
+        <div class="switch-row" style="margin-top:8px"><div><div class="lbl">Raise an alarm event on lockout</div><div class="hint">Repeated wrong codes at a keypad is a tamper signal</div></div><span class="spacer"></span>${sw(true, 'Raise alarm on lockout')}</div>
+      `)}
+    </div>
+  </div>`;
+};
+
+/* ---------- 8. Arming devices ---------- */
+R.devices = () => {
+  const rows = DEVICES.map(d => `
+    <tr class="clickable">
+      <td><strong>${d.n}</strong></td>
+      <td>${d.kind}</td>
+      <td>${d.via}</td>
+      <td class="mono">${d.id}</td>
+      <td>${d.ident.startsWith('Yes') ? pill('ok', d.ident) : pill('idle', d.ident)}</td>
+      <td style="color:var(--text-3)">${d.fb}</td>
+    </tr>`);
+  return `
+  <p class="page-intro">Keypad models churn every six months; the contract does not. Any device that can call a service or publish to MQTT can arm this system, and gets structured feedback back for its LEDs and beeps.</p>
+  ${card('Devices', table(['Device','Hardware','Connected via','Device ID','Identifies the user','Feedback'], rows), {
+    actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add device</button>` })}
+  <div style="height:16px"></div>
+  <div class="grid g-2">
+    ${card('Inbound — device to Foyer', `
+      <textarea id="mq-in" rows="8" spellcheck="false">topic: foyer/&lt;install_id&gt;/command
+
+{
+  "action": "arm",
+  "scenario": "night",
+  "code": "1234",
+  "device_id": "keypad_hall"
+}</textarea>
+      <div class="note" style="margin-top:12px">The same payload shape is available as the <span class="mono">foyer.arm</span> service, for devices that cannot publish MQTT.</div>
+    `)}
+    ${card('Outbound — Foyer to device', `
+      <textarea id="mq-out" rows="12" spellcheck="false">topic: foyer/&lt;install_id&gt;/state   (retained)
+
+{
+  "master": "armed_night",
+  "scenario": "night",
+  "areas": { "ground": "armed", "upper": "disarmed" },
+  "countdown": { "kind": "exit", "remaining": 22 },
+  "ready_to_arm": false,
+  "open_zones": ["Bathroom window"],
+  "fault": true,
+  "last_result": "ok"
+}</textarea>
+      <div class="note" style="margin-top:12px"><span class="mono">last_result</span> is what lets a keypad tell "wrong code" from "blocked by an open window" instead of failing silently.</div>
+    `)}
+  </div>`;
+};
+
+/* ---------- 9. Test & diagnostics ---------- */
+R.test = (sub = 'diagnostics') => {
+  const tabs = [
+    ['diagnostics', 'Diagnostics'],
+    ['simulator',   'Simulator'],
+    ['walktest',    'Walk test'],
+    ['actiontest',  'Action test']
+  ].map(([id, l]) => `<button class="tab" role="tab" data-subtab="${id}" aria-selected="${sub === id}">${l}</button>`).join('');
+
+  let body = '';
+
+  if (sub === 'diagnostics') {
+    const rows = ZONES.map(z => `
+      <tr>
+        <td><strong>${z.n}</strong></td>
+        <td class="mono">${z.e}</td>
+        <td>${z.s === 'OPEN' ? pill('warn','open') : `<span style="color:var(--text-2)">${z.s}</span>`}</td>
+        <td>${z.health === 'fault' ? pill('crit','would trigger: unknown') : z.s === 'OPEN' ? pill('warn','would trigger: yes') : pill('idle','would trigger: no')}</td>
+        <td class="mono num">${z.health === 'fault' ? '23:04' : ['19:22','21:07','22:40','18:15','07:12'][z.n.length % 5]}</td>
+        <td class="num">${z.batt === null ? '—' : z.batt + '%'}</td>
+        <td>${healthPill(z.health)}</td>
+        <td>${['fault'].includes(z.health) ? pill('crit','blocks') : z.pol === 'block' && z.s === 'OPEN' ? pill('warn','blocks') : '<span style="color:var(--text-3)">—</span>'}</td>
+      </tr>`);
+    body = card('Live zone state',
+      table(['Zone','Entity','State','Trigger evaluation','Last change','Battery','Health','Arming'], rows),
+      { sub: 'updates live', flush: true });
+  }
+
+  if (sub === 'simulator') {
+    const simZones = ZONES.slice(0, 8).map((z, i) => `
+      <div class="simzone${i === 3 ? ' forced' : ''}">
+        <span class="nm">${z.n}</span>
+        ${i === 3 ? pill('warn', 'forced open') : `<span style="font-size:12px;color:var(--text-3)">${z.s}</span>`}
+        ${sw(i === 3, 'Force ' + z.n)}
+      </div>`).join('');
+
+    body = `
+    <div class="banner info">${svg(ICON.flask, 18)}
+      <div><strong>Nothing here is executed.</strong> The simulator calls the same decision engine the runtime calls, with a fabricated snapshot and a fabricated clock — then simply never hands the result to the executor.</div>
+    </div>
+    <div class="grid g-side">
+      ${card('Decision trace', `
+        <div class="trace">
+          <div class="trace-step"><div class="trace-t">19:32:00</div><div class="trace-body">
+            <div>Zone <b>Living room PIR</b> → <span class="trace-wait">motion</span></div>
+            <div class="trace-key">Group "Open plan": 1 of 2 within 60 s → not satisfied</div>
+            <div class="trace-no">✗ group profile Full — threshold not reached</div>
+            <div class="trace-yes">✓ member profile <b>Silent</b>: notify Luca, no siren</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">19:32:00</div><div class="trace-body">
+            <div>Zone <b>Kitchen window</b> → <span class="trace-crit">open</span></div>
+            <div class="trace-key">Area "Perimeter" is armed · scenario "Night"</div>
+            <div class="trace-key">Zone type: instant → no entry delay</div>
+            <div class="trace-key">Incident <span class="mono">#sim-0001</span> opens</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">19:32:00</div><div class="trace-body">
+            <div class="trace-crit">→ state: triggered</div>
+            <div class="trace-key">Effective profile: <b>Full</b> (inherited from area "Perimeter")</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">19:32:00</div><div class="trace-body">
+            <div class="trace-key">Actions evaluated:</div>
+            <div class="trace-yes">✓ siren.indoor_sounder · 180 s</div>
+            <div class="trace-no">✗ light.hall flash — condition time 22:00–07:00 not met</div>
+            <div class="trace-yes">✓ camera.front_door record 60 s</div>
+            <div class="trace-yes">✓ notify Luca (push) — escalation step 0</div>
+            <div class="trace-no">✗ shell_command.push_to_nas — binary_sensor.nobody_home is off</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">19:33:00</div><div class="trace-body">
+            <div class="trace-wait">⏱ escalation step 1 → Luca (SMS)</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">19:34:00</div><div class="trace-body">
+            <div class="trace-wait">⏱ escalation step 2 → Partner (push) + voice call Luca</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">19:33:12</div><div class="trace-body">
+            <div>Zone <b>Hall motion</b> → motion</div>
+            <div class="trace-key">Joins incident <span class="mono">#sim-0001</span> — no new escalation</div>
+            <div class="trace-key">Profile "Standard" (severity 2) ≤ "Full" (severity 3) → escalation unchanged</div>
+            <div class="trace-no">✗ siren — already sounding, not restarted</div>
+            <div class="trace-yes">✓ light.landing on — not yet on</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">19:35:00</div><div class="trace-body">
+            <div class="trace-key">Siren cutoff → area re-arms, alarm memory kept until disarm</div>
+          </div></div>
+        </div>
+      `, { sub: 'what would happen', actions: '<button class="btn sm ghost">Copy trace</button>' })}
+
+      <div class="stack">
+        ${card('Hypothetical conditions', `
+          <div class="row">
+            <label class="field"><span class="lbl">Scenario</span>
+              <select id="sim-scn">${SCENARIOS.map(s => `<option${s.n === 'Night' ? ' selected' : ''}>${s.n}</option>`).join('')}</select></label>
+            <label class="field"><span class="lbl">Time of day</span><input type="time" id="sim-time" value="19:32"></label>
+          </div>
+          <div class="hr"></div>
+          <div class="lbl" style="font-weight:500;margin-bottom:8px;font-size:13px">Override zone states</div>
+          <div class="stack-sm">${simZones}</div>
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="btn primary">${svg(ICON.play, 15)} Run simulation</button>
+            <button class="btn ghost">Reset</button>
+          </div>
+        `)}
+      </div>
+    </div>`;
+  }
+
+  if (sub === 'walktest') {
+    const rows = ZONES.filter(z => ['instant','follower','delayed'].includes(z.t)).map((z, i) => `
+      <tr><td><strong>${z.n}</strong></td><td>${z.a}</td>
+      <td>${i < 7 ? pill('ok','detected') : pill('crit','never detected')}</td>
+      <td class="mono num">${i < 7 ? ['21:44:02','21:44:19','21:45:03','21:45:51','21:46:12','21:46:40','21:47:08'][i] : '—'}</td>
+      <td class="num">${i < 7 ? [3,1,2,1,4,1,2][i] : 0}</td></tr>`);
+    body = `
+    <div class="banner crit">${svg(ICON.alert, 18)}
+      <div><strong>Walk test active — all response actions are inhibited.</strong> Exits automatically in 11:24. 24h, tamper, technical and panic zones stay fully live.</div>
+      <span class="spacer"></span><button class="btn sm danger">End walk test</button>
+    </div>
+    ${card('Detection during this walk test',
+      table(['Zone','Area','Result','First detection','Detections'], rows),
+      { sub: 'started 21:43 by Luca', flush: true })}
+    <div style="height:16px"></div>
+    ${card('', `<div class="note"><strong>Two zones never reacted.</strong> "Loft hatch" was not opened during the walk, which is expected. "Garage motion" is in fault and could not have reacted — fix the fault, then repeat.</div>`)}`;
+  }
+
+  if (sub === 'actiontest') {
+    const rows = [
+      ['Indoor siren',   'siren.indoor_sounder',        'Sounds for 3 s',              'ok · 6 Sep 21:40'],
+      ['Outdoor siren',  'switch.outdoor_sounder',      'Sounds for 3 s',              'ok · 6 Sep 21:40'],
+      ['Hall lights',    'light.hall',                  'Flashes once',                'ok · 6 Sep 21:41'],
+      ['Front camera',   'camera.front_door',           'Takes a snapshot',            'ok · 6 Sep 21:41'],
+      ['Luca — push',    'notify.mobile_app_luca',      'Sends a test notification',   'ok · 6 Sep 21:42'],
+      ['Luca — SMS',     'notify.gsm_modem',            'Sends a test SMS',            'ok · 6 Sep 21:43'],
+      ['Luca — call',    'notify.twilio_call',          'Places a test call',          'never tested'],
+      ['Partner — push', 'notify.mobile_app_partner',   'Sends a test notification',   'FAILED · 6 Sep 21:44']
+    ].map(([n, e, what, last]) => `
+      <tr><td><strong>${n}</strong></td><td class="mono">${e}</td><td style="color:var(--text-3)">${what}</td>
+      <td>${last.startsWith('ok') ? pill('ok', last) : last === 'never tested' ? pill('warn', last) : pill('crit', last)}</td>
+      <td><button class="btn sm">Test</button></td></tr>`);
+    body = `
+    <div class="banner warn">${svg(ICON.alert, 18)}
+      <div><strong>These really execute.</strong> Sirens really sound and messages really send. Every test is logged as a test, and requires the <span class="mono">test_actions</span> permission.</div>
+    </div>
+    ${card('Actions and channels', table(['Target','Service','What the test does','Last result',''], rows), { flush: true })}
+    <div style="height:16px"></div>
+    ${card('', `<div class="note"><strong>Two items need attention.</strong> The Twilio voice channel has never been tested, and Partner's push failed on 6 September — an emergency channel discovered broken during the emergency is the worst outcome this page exists to prevent.</div>`)}`;
+  }
+
+  return `<div class="tabs" role="tablist">${tabs}</div>${body}`;
+};
+
+/* ---------- 10. Log ---------- */
+R.log = () => {
+  const rows = LOG.map(e => `
+    <tr class="clickable">
+      <td class="mono num">13 Sep ${e.t}</td>
+      <td class="mono">${['alarm'].includes(e.cat) ? '#…0913-1922' : '—'}</td>
+      <td><span class="tag">${e.cat}</span></td>
+      <td>${pill(SEV_PILL[e.sev], e.ev)}</td>
+      <td>${e.who}</td>
+      <td class="mono">${e.ch}</td>
+      <td>${esc(e.detail)}</td>
+    </tr>`);
+  return `
+  <p class="page-intro">Stored in Foyer's own SQLite database, not in Home Assistant's recorder — whose default ten-day purge would quietly destroy a thirty-day requirement.</p>
+  <div class="card" style="margin-bottom:16px"><div class="card-body">
+    <div class="row">
+      <label class="field"><span class="lbl">From</span><input type="text" id="f-from" value="14 Aug 2026"></label>
+      <label class="field"><span class="lbl">To</span><input type="text" id="f-to" value="13 Sep 2026"></label>
+      <label class="field"><span class="lbl">Category</span><select id="f-cat"><option>All</option><option>arming</option><option>alarm</option><option>action</option><option>config</option><option>security</option><option>system</option><option>zone_armed</option><option>zone_disarmed — off</option></select></label>
+      <label class="field"><span class="lbl">User</span><select id="f-user"><option>All</option><option>Luca</option><option>Partner</option><option>Cleaner</option></select></label>
+      <label class="field"><span class="lbl">Area</span><select id="f-area"><option>All</option>${AREAS.map(a => `<option>${a.name}</option>`).join('')}</select></label>
+      <div style="flex:0 0 auto;display:flex;gap:8px">
+        <button class="btn">Apply</button>
+        <button class="btn ghost">${svg(ICON.down, 15)} CSV</button>
+      </div>
+    </div>
+  </div></div>
+  ${card('Events', table(['Time','Incident','Category','Event','User','Channel','Detail'], rows), {
+    sub: '18,402 events · showing 12', flush: true })}
+  <div style="height:16px"></div>
+  ${card('', `<div class="note"><strong>Zone activity while disarmed is off by default.</strong> A living-room PIR produces thousands of transitions a day; thirty days of them would bury every event that matters. Switch it on only while diagnosing.</div>`)}`;
+};
+
+/* ---------- 11. Settings ---------- */
+R.settings = () => `
+  <div class="grid g-2">
+    <div class="stack">
+      ${card('Defaults', `
+        <div class="row">
+          <label class="field"><span class="lbl">Entry delay</span><input type="number" id="st-entry" value="30"></label>
+          <label class="field"><span class="lbl">Exit delay</span><input type="number" id="st-exit" value="45"></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label class="field"><span class="lbl">Siren cutoff</span><input type="number" id="st-siren" value="180">
+            <span class="hint">Hard maximum 900 s — EN 50131 reference for external sounders</span></label>
+          <label class="field"><span class="lbl">Code length</span><input type="number" id="st-code" value="6"></label>
+        </div>
+      `)}
+      ${card('Log retention', `
+        <div class="stack-sm">
+          ${[['arming',30],['alarm',90],['action',30],['config',365],['security',90],['system',30],['zone_armed',14],['zone_disarmed',0]].map(([c, d]) => `
+            <div class="switch-row"><div><div class="lbl mono">${c}</div>
+            <div class="hint">${d === 0 ? 'disabled — thousands of rows a day' : d + ' days'}</div></div>
+            <span class="spacer"></span>${sw(d !== 0, c)}</div>`).join('')}
+        </div>
+      `)}
+    </div>
+    <div class="stack">
+      ${card('Behaviour', `
+        <div class="switch-row"><div><div class="lbl">Restore state after restart</div><div class="hint">Cannot be disabled</div></div><span class="spacer"></span>${sw(true, 'Restore state')}</div>
+        <div class="switch-row"><div><div class="lbl">Log the restart gap</div><div class="hint">Records when the system was not operational</div></div><span class="spacer"></span>${sw(true, 'Log restart gap')}</div>
+        <div class="switch-row"><div><div class="lbl">Treat unavailable entities as faults</div><div class="hint">Cannot be disabled</div></div><span class="spacer"></span>${sw(true, 'Unavailable is a fault')}</div>
+        <div class="switch-row"><div><div class="lbl">Publish state over MQTT</div></div><span class="spacer"></span>${sw(true, 'MQTT')}</div>
+      `)}
+      ${card('Configuration backup', `
+        <p style="margin-top:0;color:var(--text-2);font-size:13.5px">Nobody who has configured sixteen zones will do it a second time.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn">${svg(ICON.down, 15)} Export JSON</button>
+          <button class="btn">Import</button>
+        </div>
+        <div class="hr"></div>
+        <dl class="kv"><dt>Last export</dt><dd>6 Sep 2026, 21:48</dd>
+        <dt>Version</dt><dd class="mono">foyer 0.4.2 · schema 3</dd></dl>
+      `)}
+      ${card('Chime', `
+        <div class="row">
+          <label class="field"><span class="lbl">Play on</span>
+            <select id="ch-tgt"><option>media_player.kitchen, media_player.hall</option><option>siren.indoor_sounder</option></select></label>
+          <label class="field"><span class="lbl">Mode</span>
+            <select id="ch-mode"><option>Speak the zone name</option><option>Single tone</option></select>
+            <span class="hint">Speaking costs the same and tells you what opened</span></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label class="field"><span class="lbl">Volume</span><input type="number" id="ch-vol" value="40"></label>
+          <label class="field"><span class="lbl">Quiet from</span><input type="time" id="ch-q1" value="23:00"></label>
+          <label class="field"><span class="lbl">until</span><input type="time" id="ch-q2" value="07:30"></label>
+        </div>
+        <div class="hr"></div>
+        <div class="note">Chime sounds when a zone opens while the <em>active scenario does not monitor it</em> — not merely when disarmed. With "Windows only" armed, the internal door still chimes.</div>
+      `)}
+      ${card('Privacy', `
+        <p style="margin-top:0;color:var(--text-2);font-size:13.5px">The log records who was home and when, for everyone in the household — not only for you.</p>
+        <div class="stack-sm">
+          ${[['Cleaner', '31 rows · 14 Aug – 12 Sep'], ['Neighbour', '4 rows · 2 Sep']].map(([n, d]) => `
+            <div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--divider);border-radius:var(--radius-sm);flex-wrap:wrap">
+              <div style="flex:1;min-width:0"><div style="font-weight:500;font-size:13.5px">${n}</div><div class="mono">${d}</div></div>
+              <button class="btn sm ghost">Export</button>
+              <button class="btn sm ghost">Delete history</button>
+            </div>`).join('')}
+        </div>
+        <div class="hr"></div>
+        <div class="switch-row"><div><div class="lbl">Pseudonymise rows older than</div>
+          <div class="hint">Names become a stable opaque id</div></div><span class="spacer"></span>
+          <input type="number" id="pv-days" value="90" style="width:80px;flex:0 0 auto">${sw(false, 'Pseudonymise')}</div>
+        <div class="note" style="margin-top:12px">Turning this on trades away the ability to answer <em>who disarmed that night</em> for older rows — the question the log exists to answer. A real trade, not a free safety feature.</div>
+      `)}
+      ${card('Language', `
+        <label class="field"><span class="lbl">Panel language</span>
+          <select id="st-lang"><option>English</option><option>Italiano</option></select>
+          <span class="hint">Falls back to the Home Assistant user's language when available</span></label>
+      `)}
+    </div>
+  </div>`;
+
+/* ---------- 12. Automation rules ---------- */
+R.automations = () => {
+  const RULES = [
+    { n: 'Arm when empty',        trg: 'Everyone away for 5 min', act: 'Arm "Away"',            win: 'Every day, all hours',  guard: 'Disarmed · all zones ready · no interior motion 10 min', grace: '120 s', st: 'active' },
+    { n: 'Arm at bedtime',        trg: 'Every day at 23:30',      act: 'Arm "Night"',           win: 'Every day',             guard: 'Disarmed only',                                          grace: '120 s', st: 'active' },
+    { n: 'Interior off on return',trg: 'Luca or Partner arrives', act: 'Disarm interior areas', win: 'Mon–Fri 07:00–22:00',   guard: 'Armed in "Away" only',                                   grace: '—',     st: 'off' },
+    { n: 'Garage at night',       trg: 'Every day at 22:00',      act: 'Arm "Garage only"',     win: 'Every day',             guard: 'Garage zones ready',                                     grace: '60 s',  st: 'suspended' }
+  ];
+
+  const rows = RULES.map(r => `
+    <tr class="clickable">
+      <td><strong>${r.n}</strong></td>
+      <td>${r.trg}</td>
+      <td>${r.act.startsWith('Disarm') ? pill('warn', r.act) : `<span class="tag">${r.act}</span>`}</td>
+      <td style="color:var(--text-3)">${r.win}</td>
+      <td style="color:var(--text-3);font-size:12.5px">${r.guard}</td>
+      <td class="num">${r.grace}</td>
+      <td>${r.st === 'active' ? pill('ok','Active') : r.st === 'off' ? pill('idle','Off') : pill('warn','Suspended')}</td>
+    </tr>`);
+
+  return `
+  <div class="banner info">${svg(ICON.clock, 18)}
+    <div><strong>Next automatic action: arm "Night" at 23:30</strong>, in 4 h 26 min. You will get a notification with a Cancel button two minutes before.</div>
+    <span class="spacer"></span>
+    <button class="btn sm">Suspend all</button>
+  </div>
+
+  ${card('Rules', table(['Rule','Trigger','Action','Active window','Guards','Grace','Status'], rows), {
+    actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add rule</button>` })}
+
+  <div style="height:16px"></div>
+  <div class="grid g-side">
+    ${card('Arm when empty', `
+      <div class="row">
+        <label class="field"><span class="lbl">Trigger</span>
+          <select id="ar-trg"><option>Absence — everyone away</option><option>Presence — someone arrives</option><option>Time of day</option><option>Entity state</option></select></label>
+        <label class="field"><span class="lbl">For</span><input type="number" id="ar-for" value="5"><span class="hint">minutes</span></label>
+        <label class="field"><span class="lbl">Then</span>
+          <select id="ar-act"><option>Arm "Away"</option><option>Arm "Night"</option><option>Disarm interior areas</option><option>Switch to "Windows only"</option></select></label>
+      </div>
+      <div class="hr"></div>
+      <div class="lbl" style="font-weight:500;margin-bottom:8px;font-size:13px">People this rule watches</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+        ${pill('ok','person.luca')}${pill('ok','person.partner')}${pill('idle','person.cleaner — not watched')}
+      </div>
+      <div class="hr"></div>
+      <div class="lbl" style="font-weight:500;margin-bottom:4px;font-size:13px">Guards</div>
+      <div class="switch-row"><div><div class="lbl">Only if currently disarmed</div></div><span class="spacer"></span>${sw(true, 'Only if disarmed')}</div>
+      <div class="switch-row"><div><div class="lbl">Only if every zone is ready</div><div class="hint">Otherwise the rule would arm around an open window</div></div><span class="spacer"></span>${sw(true, 'Only if ready')}</div>
+      <div class="switch-row"><div><div class="lbl">Only if no interior motion for 10 min</div><div class="hint">Catches the flat-phone-battery case: someone is home, their phone is not</div></div><span class="spacer"></span>${sw(true, 'No interior motion')}</div>
+      <div class="hr"></div>
+      <div class="row">
+        <label class="field"><span class="lbl">Grace period</span><input type="number" id="ar-grace" value="120">
+          <span class="hint">Notification with a Cancel button before acting</span></label>
+        <label class="field"><span class="lbl">Notify</span>
+          <select id="ar-who"><option>Everyone in the address book</option><option>Luca only</option><option>Nobody</option></select></label>
+      </div>
+    `, { actions: '<button class="btn sm">Save</button>' })}
+
+    <div class="stack">
+      ${card('Expected visitor', `
+        <p style="margin-top:0;color:var(--text-2);font-size:13.5px">A named window that suspends automatic arming — so in six months the log says <em>why</em>.</p>
+        <div class="stack-sm">
+          <div style="display:flex;gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--warn);border-radius:var(--radius-sm);background:var(--warn-bg);flex-wrap:wrap">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:500;font-size:13.5px;color:var(--warn)">Boiler engineer</div>
+              <div class="mono" style="color:var(--warn)">14 Sep · 09:00 – 13:00</div>
+            </div>
+            <button class="btn sm">Cancel</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+        <div class="row">
+          <label class="field"><span class="lbl">Reason</span><input type="text" id="ev-why" value="Boiler engineer"></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label class="field"><span class="lbl">From</span><input type="time" id="ev-from" value="09:00"></label>
+          <label class="field"><span class="lbl">To</span><input type="time" id="ev-to" value="13:00"></label>
+        </div>
+        <label class="field" style="margin-top:10px"><span class="lbl">Apply instead</span>
+          <select id="ev-scn"><option>Nothing — leave disarmed</option><option>Windows only</option><option>Garage only</option></select>
+          <span class="hint">Optionally keep the outer ring armed while they are inside</span></label>
+      `)}
+
+      ${card('Automatic disarming', `
+        <div class="banner crit" style="margin:0 0 12px;padding:10px 12px;font-size:12.5px">
+          ${svg(ICON.alert, 16)}
+          <div>Presence is inferred from a phone. A stolen phone, GPS drift or a cloned MAC address can all look like you coming home.</div>
+        </div>
+        <div class="switch-row"><div><div class="lbl">Allow rules to disarm</div><div class="hint">Off by default</div></div><span class="spacer"></span>${sw(false, 'Allow rules to disarm')}</div>
+        <div class="hr"></div>
+        <div class="lbl" style="font-weight:500;margin-bottom:8px;font-size:13px">Areas a rule may disarm</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${pill('ok','Ground floor')}${pill('ok','Upper floor')}${pill('crit','Perimeter — never')}${pill('ok','Garage')}
+        </div>
+        <div class="note" style="margin-top:12px">Perimeter areas are excluded in the engine, not in this screen. Whoever walks in on a stolen phone still finds every external door and window armed.</div>
+      `)}
+    </div>
+  </div>`;
+};
+
+
+/* ---------- Verification groups ---------- */
+R.groups = () => {
+  const GROUPS = [
+    { n: 'Open plan',      a: 'Ground floor', mem: ['Living room PIR', 'Hall motion'],                       k: '2 of 2', w: 60, p: 'Full',     sup: false, src: 'group' },
+    { n: 'Garden beams',   a: 'Perimeter',    mem: ['Beam north', 'Beam east', 'Beam south'],                k: '2 of 3', w: 90, p: 'Standard', sup: false, src: 'group' },
+    { n: 'Loft approach',  a: 'Upper floor',  mem: ['Landing motion', 'Loft hatch'],                         k: '2 of 2', w: 45, p: 'Full',     sup: true,  src: 'group' },
+    { n: 'Kitchen window', a: 'Perimeter',    mem: ['Kitchen window', 'Living room PIR'],                    k: '2 of 2', w: 60, p: '\u2014',  sup: false, src: 'cross' }
+  ];
+
+  const rows = GROUPS.map(g => `
+    <tr class="clickable">
+      <td><strong>${g.n}</strong>${g.src === 'cross' ? ' ' + pill('idle', 'from zone field') : ''}</td>
+      <td>${g.a}</td>
+      <td>${g.mem.map(m => `<span class="tag">${m}</span>`).join(' ')}</td>
+      <td class="num">${g.k}</td>
+      <td class="num">${g.w} s</td>
+      <td>${g.p}</td>
+      <td>${g.sup ? pill('warn', 'suppressed') : pill('ok', 'own profile')}</td>
+    </tr>`);
+
+  return `
+  ${card('Groups', table(['Group','Area','Members','Threshold','Window','Group profile','Members below threshold'], rows), {
+    sub: '3 groups + 1 derived',
+    actions: `<button class="btn sm primary">${svg(ICON.plus, 15)} Add group</button>` })}
+
+  <div style="height:16px"></div>
+  <div class="grid g-side">
+    ${card('Open plan', `
+      <div class="row">
+        <label class="field"><span class="lbl">Name</span><input type="text" id="gr-name" value="Open plan"></label>
+        <label class="field"><span class="lbl">Area</span>
+          <select id="gr-area">${AREAS.map(a => `<option${a.name === 'Ground floor' ? ' selected' : ''}>${a.name}</option>`).join('')}</select></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label class="field"><span class="lbl">Trigger when at least</span><input type="number" id="gr-n" value="2"><span class="hint">members detect</span></label>
+        <label class="field"><span class="lbl">Within</span><input type="number" id="gr-w" value="60"><span class="hint">seconds</span></label>
+        <label class="field"><span class="lbl">Group profile</span>
+          <select id="gr-p"><option>Full</option><option>Maximum</option><option>Standard</option><option>Silent</option></select></label>
+      </div>
+      <div class="hr"></div>
+      <div class="lbl" style="font-weight:500;margin-bottom:8px;font-size:13px">Members</div>
+      <div class="stack-sm">
+        ${['Living room PIR', 'Hall motion'].map(m => `
+          <div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--divider);border-radius:var(--radius-sm)">
+            <div style="flex:1;min-width:0"><div style="font-weight:500;font-size:13.5px">${m}</div>
+            <div class="mono">own profile: Silent</div></div>
+            <button class="btn sm ghost">Remove</button>
+          </div>`).join('')}
+        <button class="btn sm" style="align-self:flex-start">${svg(ICON.plus, 15)} Add member</button>
+      </div>
+      <div class="hr"></div>
+      <div class="switch-row"><div><div class="lbl">Members produce nothing below threshold</div>
+        <div class="hint">Off: each member still alarms with its own profile</div></div><span class="spacer"></span>${sw(false, 'Suppress members')}</div>
+    `, { actions: '<button class="btn sm">Save</button>' })}
+
+    <div class="stack">
+      ${card('Graduated response', `
+        <p style="margin-top:0;color:var(--text-2);font-size:13.5px">What this group actually produces, given the member profiles above:</p>
+        <div class="trace">
+          <div class="trace-step"><div class="trace-t">1 of 2</div><div class="trace-body">
+            <div class="trace-key">Group not satisfied</div>
+            <div class="trace-yes">\u2192 member profile <b>Silent</b>: notification only</div>
+          </div></div>
+          <div class="trace-step"><div class="trace-t">2 of 2</div><div class="trace-body">
+            <div class="trace-key">Group satisfied within 60 s</div>
+            <div class="trace-crit">\u2192 group profile <b>Full</b>: siren, lights, recording</div>
+          </div></div>
+        </div>
+        <div class="note" style="margin-top:12px">One PIR in the open plan sends a notification. Two within a minute sound the siren. That is the whole point of a group \u2014 and it costs nothing beyond choosing the two profiles.</div>
+      `)}
+      ${card('Derived groups', `
+        <p style="margin-top:0;color:var(--text-2);font-size:13.5px">
+          The <strong>cross-zone verification</strong> field on a zone appears here as a 2-of-2 group, marked <em>from zone field</em>. It is edited on the zone, not here.
+        </p>
+        <div class="note">Two ways to configure it, one engine evaluating it. The simple case stays a single field on the zone; the complex case gets a group. Nothing behaves differently between them.</div>
+      `)}
+    </div>
+  </div>`;
+};
+
+/* ---------- System health ---------- */
+R.health = () => {
+  const chans = [
+    ['Luca \u2014 push',    'notify.mobile_app_luca',    'ok',     '14 Sep 06:02', 'Service present, last send delivered'],
+    ['Luca \u2014 SMS',     'notify.gsm_modem',          'ok',     '14 Sep 06:02', 'Modem registered, signal \u221272 dBm'],
+    ['Luca \u2014 call',    'notify.twilio_call',        'warn',   '\u2014',       'Service present, never exercised'],
+    ['Partner \u2014 push', 'notify.mobile_app_partner', 'crit',   '6 Sep 21:44',  'Last send failed: device not registered'],
+    ['Neighbour \u2014 SMS','notify.gsm_modem',          'ok',     '14 Sep 06:02', 'Shares the modem above']
+  ].map(([n, s, st, when, detail]) => `
+    <tr><td><strong>${n}</strong></td><td class="mono">${s}</td>
+    <td>${st === 'ok' ? pill('ok','Healthy') : st === 'warn' ? pill('warn','Untested') : pill('crit','Failing')}</td>
+    <td class="mono num">${when}</td><td style="color:var(--text-3)">${detail}</td>
+    <td><button class="btn sm">Test</button></td></tr>`);
+
+  const faults = [
+    ['Garage motion',  'binary_sensor.garage_pir',   'Unavailable for 14 min', 'Blocks arming'],
+    ['Study window',   'binary_sensor.study_window', 'Battery 9%',             'Warning only'],
+    ['Partner push',   'notify.mobile_app_partner',  'Last send failed',       'Escalation step 2 would not deliver']
+  ].map(([n, e, w, eff]) => `
+    <tr><td><strong>${n}</strong></td><td class="mono">${e}</td><td>${w}</td><td style="color:var(--text-3)">${eff}</td>
+    <td><button class="btn sm ghost">Open</button></td></tr>`);
+
+  return `
+  <div class="banner crit">${svg(ICON.alert, 18)}
+    <div><strong>Partner's push channel has been failing since 6 September.</strong> It is step 2 of the "Household" escalation \u2014 an alarm tonight would skip it silently.</div>
+    <span class="spacer"></span><button class="btn sm">Fix</button>
+  </div>
+
+  <div class="grid g-3" style="margin-bottom:16px">
+    <div class="area-tile" style="--state:var(--ok)">
+      <div class="name">Mains power</div><div class="state">Present</div>
+      <div class="meta">sensor.ups_status \u00b7 battery 100% \u00b7 last outage 2 Aug, 41 min</div>
+    </div>
+    <div class="area-tile" style="--state:var(--ok)">
+      <div class="name">External watchdog</div><div class="state">Reporting</div>
+      <div class="meta">last ping 3 min ago \u00b7 every 5 min \u00b7 empty payload</div>
+    </div>
+    <div class="area-tile" style="--state:var(--crit)">
+      <div class="name">Notification channels</div><div class="state">1 failing</div>
+      <div class="meta">4 healthy \u00b7 1 untested \u00b7 1 failing</div>
+    </div>
+  </div>
+
+  ${card('Notification channels', table(['Target','Service','Status','Last verified','Detail',''], chans), {
+    sub: 'checked every 6 hours', flush: true })}
+
+  <div style="height:16px"></div>
+  ${card('Open faults', table(['What','Entity','Condition','Effect',''], faults), { flush: true,
+    actions: '<span class="sub">also raised as Home Assistant repair issues</span>' })}
+
+  <div style="height:16px"></div>
+  <div class="grid g-2">
+    ${card('External watchdog', `
+      <div class="row">
+        <label class="field"><span class="lbl">Endpoint URL</span><input type="text" id="wd-url" value="https://hc-ping.com/\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"></label>
+        <label class="field"><span class="lbl">Every</span><input type="number" id="wd-int" value="5"><span class="hint">minutes</span></label>
+      </div>
+      <div class="hr"></div>
+      <div class="switch-row"><div><div class="lbl">Include state in the payload</div>
+        <div class="hint">Off by default</div></div><span class="spacer"></span>${sw(false, 'Include state')}</div>
+      <div class="banner warn" style="margin:12px 0 0;padding:10px 12px;font-size:12.5px">
+        ${svg(ICON.alert, 16)}
+        <div>A payload saying "armed, Night, nobody home" tells a third-party service exactly when your house is empty.</div>
+      </div>
+      <div class="hr"></div>
+      <div class="note">Foyer also watches the watchdog: repeated failures to reach this endpoint are reported here, because being unable to reach the internet means no internet notification would go out either.</div>
+    `)}
+    ${card('Diagnostics', `
+      <p style="margin-top:0;color:var(--text-2);font-size:13.5px">An anonymised dump of configuration and state \u2014 no codes, no hashes, no personal names, entity ids reduced to stable placeholders.</p>
+      <button class="btn">${svg(ICON.down, 15)} Download diagnostics</button>
+      <div class="hr"></div>
+      <dl class="kv">
+        <dt>Version</dt><dd class="mono">foyer 0.4.2 \u00b7 schema 3</dd>
+        <dt>Uptime</dt><dd>6 days, 4 hours</dd>
+        <dt>Last restart gap</dt><dd>13 Sep 03:14 \u2192 03:15 (82 s)</dd>
+        <dt>Repair issues</dt><dd>2 open</dd>
+      </dl>
+    `)}
+  </div>`;
+};
+
+/* ---------- 13. Lovelace cards ---------- */
+R.cards = () => {
+  const full = `
+    <div class="lcard">
+      <div class="lcard-title">Home alarm</div>
+      <div class="lcard-state" style="color:var(--info)">Armed · Night</div>
+      <div style="font-size:12.5px;color:var(--text-3);margin-top:2px">Armed by Luca at 22:41</div>
+      <div class="scn-row">${SCENARIOS.map(s => `<button class="scn-chip" aria-pressed="${s.active}">${s.n}</button>`).join('')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        ${AREAS.map(a => `<span class="pill ${a.state === 'armed' ? 'info' : 'ok'}"><span class="dot"></span>${a.name}</span>`).join('')}
+      </div>
+      <div class="banner warn" style="margin:0 0 12px;padding:8px 12px;font-size:12.5px">
+        1 zone bypassed · Bathroom window
+      </div>
+      <div class="pin-display">••••</div>
+      <div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n => `<button class="key">${n}</button>`).join('')}
+        <button class="key" style="font-size:14px">clr</button><button class="key">0</button>
+        <button class="key" style="font-size:14px;background:var(--ha-primary);color:#fff;border-color:var(--ha-primary)">ok</button></div>
+    </div>`;
+
+  const compact = `
+    <div class="lcard">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div class="lcard-title" style="margin:0">Home alarm</div>
+          <div class="lcard-state" style="color:var(--info)">Armed · Night</div>
+        </div>
+        <button class="btn primary">Disarm</button>
+      </div>
+      <div style="margin-top:12px"><select id="lc-scn" style="font-size:13px">${SCENARIOS.map(s => `<option${s.active ? ' selected' : ''}>${s.n}</option>`).join('')}</select></div>
+    </div>`;
+
+  const badge = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="lcard" style="max-width:none;padding:10px 14px;display:flex;align-items:center;gap:10px">
+        ${svg(ICON.shield, 18)}<span style="font-weight:500;font-size:13.5px">Armed · Night</span>
+      </div>
+      <div class="lcard" style="max-width:none;padding:10px 14px;display:flex;align-items:center;gap:10px;border-color:var(--crit);color:var(--crit)">
+        ${svg(ICON.alert, 18)}<span style="font-weight:500;font-size:13.5px">Triggered · Kitchen window</span>
+      </div>
+      <div class="lcard" style="max-width:none;padding:10px 14px;display:flex;align-items:center;gap:10px;border-color:var(--warn);color:var(--warn)">
+        <span class="mono num" style="font-size:15px;font-weight:500">22</span><span style="font-weight:500;font-size:13.5px">Exit delay</span>
+      </div>
+    </div>`;
+
+  const keypadOnly = `
+    <div class="lcard" style="max-width:280px">
+      <div class="pin-display">••</div>
+      <div class="keypad" style="max-width:none">${[1,2,3,4,5,6,7,8,9].map(n => `<button class="key">${n}</button>`).join('')}
+        <button class="key" style="font-size:14px">clr</button><button class="key">0</button>
+        <button class="key" style="font-size:14px;background:var(--ha-primary);color:#fff;border-color:var(--ha-primary)">ok</button></div>
+    </div>`;
+
+  const wrap = (name, yaml, preview, note) => card(name, `
+    <div class="grid g-2" style="align-items:start">
+      <div class="lovelace-bg">${preview}</div>
+      <div>
+        <textarea rows="6" spellcheck="false" id="y-${name.replace(/\W/g,'')}">${esc(yaml)}</textarea>
+        <div class="note" style="margin-top:10px">${note}</div>
+      </div>
+    </div>`);
+
+  return `
+  <p class="page-intro">One custom element with a layout option, rather than four separate cards: one component to maintain, one visual editor, and one behaviour to learn.</p>
+  <div class="stack">
+    ${wrap('full', `type: custom:foyer-card\nlayout: full\nkeypad: true\nshow_areas: true\nshow_bypassed: true`, full,
+      'Everything: area states, scenario selector, bypass warnings and keypad. For a wall tablet or the alarm dashboard.')}
+    ${wrap('compact', `type: custom:foyer-card\nlayout: compact\nscenarios: [Away, Night, Windows only]`, compact,
+      'State plus one action, for embedding at the top of an existing dashboard.')}
+    ${wrap('badge', `type: custom:foyer-card\nlayout: badge`, badge,
+      'State only. Shown here in its three most important appearances: armed, triggered, and counting down.')}
+    ${wrap('keypad', `type: custom:foyer-card\nlayout: keypad\narea: ground`, keypadOnly,
+      'Keypad alone, for a tablet by the door. The card transmits the code; the backend decides.')}
+  </div>`;
+};
+
+/* ---------- 13. First-run wizard ---------- */
+R.wizard = () => {
+  const steps = ['Areas', 'Zones', 'Scenario', 'User & code', 'Test notification'];
+  const stepHtml = steps.map((s, i) => `
+    ${i > 0 ? '<span class="wiz-sep"></span>' : ''}
+    <div class="wiz-step ${i < 1 ? 'done' : i === 1 ? 'active' : ''}">
+      <span class="n">${i < 1 ? '✓' : i + 1}</span>${s}
+    </div>`).join('');
+
+  return `
+  <p class="page-intro">An empty panel on first open is how projects lose people in the first five minutes. The wizard produces a working alarm in five steps, then gets out of the way.</p>
+  ${card('Set up Foyer', `
+    <div class="wiz-steps">${stepHtml}</div>
+    <h3 style="margin:0 0 4px;font-size:17px;font-weight:500">Map your first zones</h3>
+    <p style="margin:0 0 16px;color:var(--text-2);max-width:64ch">
+      Pick the entities that should protect <strong>Ground floor</strong>. Three is enough to start — you can add the rest later.
+    </p>
+    <div class="stack-sm">
+      ${[
+        ['binary_sensor.front_door_contact', 'Front door', 'door', 'delayed', 'on'],
+        ['binary_sensor.hall_pir',           'Hall motion', 'motion', 'follower', 'on'],
+        ['binary_sensor.kitchen_window',     'Kitchen window', 'window', 'instant', 'on']
+      ].map(([e, n, dc, t, trig]) => `
+        <div style="display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--divider);border-radius:var(--radius-sm);flex-wrap:wrap">
+          <div style="flex:1 1 220px;min-width:0">
+            <div style="font-weight:500;font-size:13.5px">${n}</div>
+            <div class="mono">${e}</div>
+          </div>
+          <div style="flex:0 0 auto"><span class="tag">device_class: ${dc}</span></div>
+          <label class="field" style="flex:0 0 150px"><span class="hint">Type</span>
+            <select><option>${t}</option><option>instant</option><option>delayed</option><option>follower</option></select></label>
+          <label class="field" style="flex:0 0 150px"><span class="hint">Triggered when</span>
+            <select><option>${trig}</option><option>off</option></select></label>
+        </div>`).join('')}
+      <button class="btn sm" style="align-self:flex-start">${svg(ICON.plus, 15)} Add another entity</button>
+    </div>
+    <div class="note" style="margin-top:16px">
+      <strong>Confirm the trigger state for each zone.</strong> Foyer proposes one from the entity's device class, but NC and NO magnetic contacts behave in opposite ways — a wrong guess here produces an alarm that never fires, and you would not find out until it mattered.
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="btn ghost">Back</button>
+      <span style="flex:1"></span>
+      <button class="btn">Skip for now</button>
+      <button class="btn primary">Continue</button>
+    </div>
+  `)}`;
+};
+
+/* ============================================================
+   Router
+   ============================================================ */
+let current = 'overview';
+let testSub = 'diagnostics';
+let helpOpen = {};        // per page, as it would be stored per HA user
+let helpHidden = false;   // the global ? toggle
+
+function renderHelp(id) {
+  if (helpHidden || !HELP[id]) return '';
+  const [title, intro, items] = HELP[id];
+  const open = helpOpen[id] !== false;
+  return `
+  <section class="help" data-open="${open}">
+    <button class="help-hd" data-help="${id}" aria-expanded="${open}">
+      ${svg(ICON.help, 17)} ${title}
+      <span class="help-lang">help.${id} · en</span>
+      <span class="chev">${svg(ICON.chev, 16)}</span>
+    </button>
+    <div class="help-body">
+      <p>${intro}</p>
+      <dl class="help-list">
+        ${items.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}
+      </dl>
+      <div class="help-more"><a href="#" onclick="return false">Learn more ${svg(ICON.ext, 13)}</a></div>
+    </div>
+  </section>`;
+}
+
+function renderNav() {
+  document.getElementById('nav').innerHTML = PAGES.map(p => `
+    ${p.sec ? `<div class="nav-sec">${p.sec}</div>` : ''}
+    <button class="nav-item" data-page="${p.id}" ${current === p.id ? 'aria-current="page"' : ''}>
+      ${svg(ICON[p.icon])}<span>${p.label}</span>
+      ${p.badge ? `<span class="nav-badge">${p.badge}</span>` : ''}
+    </button>`).join('');
+}
+
+function render() {
+  const page = PAGES.find(p => p.id === current);
+  document.getElementById('pageTitle').textContent = page.label;
+  document.getElementById('content').innerHTML =
+    renderHelp(current) + (current === 'test' ? R.test(testSub) : R[current]());
+  renderNav();
+  window.scrollTo({ top: 0 });
+}
+
+document.getElementById('brandMark').innerHTML = foyerMark(23);
+
+document.addEventListener('click', e => {
+  const nav = e.target.closest('[data-page]');
+  if (nav) { current = nav.dataset.page; render(); return; }
+
+  const goto = e.target.closest('[data-goto]');
+  if (goto) { current = goto.dataset.goto; render(); return; }
+
+  const st = e.target.closest('[data-subtab]');
+  if (st) { testSub = st.dataset.subtab; render(); return; }
+
+  const h = e.target.closest('[data-help]');
+  if (h) {
+    const id = h.dataset.help;
+    helpOpen[id] = helpOpen[id] === false;
+    const box = h.closest('.help');
+    box.dataset.open = helpOpen[id];
+    h.setAttribute('aria-expanded', helpOpen[id]);
+    return;
+  }
+
+  const s = e.target.closest('.sw');
+  if (s) { s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true'); return; }
+
+  const chip = e.target.closest('.scn-chip');
+  if (chip) {
+    chip.parentElement.querySelectorAll('.scn-chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', 'true');
+    return;
+  }
+
+  const tab = e.target.closest('.tab:not([data-subtab])');
+  if (tab) {
+    tab.parentElement.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+    tab.setAttribute('aria-selected', 'true');
+    return;
+  }
+
+  const row = e.target.closest('tbody tr.clickable');
+  if (row) {
+    row.closest('tbody').querySelectorAll('tr').forEach(r => r.removeAttribute('aria-selected'));
+    row.setAttribute('aria-selected', 'true');
+  }
+});
+
+/* global help toggle */
+const helpBtn = document.getElementById('helpBtn');
+function paintHelpBtn() {
+  helpBtn.innerHTML = svg(ICON.help);
+  helpBtn.style.color = helpHidden ? '' : 'var(--ha-primary)';
+}
+helpBtn.addEventListener('click', () => { helpHidden = !helpHidden; paintHelpBtn(); render(); });
+
+/* theme toggle — stamps data-theme exactly as the host does */
+const themeBtn = document.getElementById('themeBtn');
+function paintThemeBtn() {
+  const explicit = document.documentElement.getAttribute('data-theme');
+  const dark = explicit ? explicit === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  themeBtn.innerHTML = svg(dark ? ICON.sun : ICON.moon);
+}
+themeBtn.addEventListener('click', () => {
+  const explicit = document.documentElement.getAttribute('data-theme');
+  const dark = explicit ? explicit === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  paintThemeBtn();
+});
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintThemeBtn);
+
+paintThemeBtn();
+paintHelpBtn();
+render();
+</script>

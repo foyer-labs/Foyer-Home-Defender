@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 186 64" width="744" height="256" role="img" aria-label="Foyer Home Defender">
+  <title>Foyer Home Defender</title>
+  <path d="M32 5.5 L55 13.5 V32 C55 44 45 53.5 32 58.5 C19 53.5 9 44 9 32 V13.5 Z" fill="none" stroke="#E8ECF2" stroke-width="3.2" stroke-linejoin="round"/>
+  <polyline points="19,32 32,21.5 45,32" fill="none" stroke="#E8ECF2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  <polyline points="24,38 32,31.5 40,38" fill="none" stroke="#E8ECF2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="28.5" y="45.5" width="7" height="7" fill="#F0A835"/>
+  <circle cx="32" cy="45.5" r="3.5" fill="#F0A835"/>
+  <rect x="77" y="21" width="3.4" height="22" fill="#E8ECF2"/>
+  <rect x="77" y="21" width="11" height="3.4" fill="#E8ECF2"/>
+  <rect x="77" y="30.3" width="9" height="3.4" fill="#E8ECF2"/>
+  <circle cx="105.5" cy="32" r="9.8" stroke="#E8ECF2" stroke-width="3.4" fill="none"/>
+  <polyline points="124.3,22 131.5,32.6" stroke="#E8ECF2" stroke-width="3.4" fill="none" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <polyline points="138.7,22 131.5,32.6" stroke="#E8ECF2" stroke-width="3.4" fill="none" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <rect x="129.8" y="32" width="3.4" height="11" fill="#E8ECF2"/>
+  <rect x="146.5" y="21" width="3.4" height="22" fill="#E8ECF2"/>
+  <rect x="146.5" y="21" width="11" height="3.4" fill="#E8ECF2"/>
+  <rect x="146.5" y="30.3" width="9.5" height="3.4" fill="#E8ECF2"/>
+  <rect x="146.5" y="39.6" width="11" height="3.4" fill="#E8ECF2"/>
+  <rect x="164.5" y="21" width="3.4" height="22" fill="#E8ECF2"/>
+  <rect x="164.5" y="21" width="6.5" height="3.4" fill="#E8ECF2"/>
+  <rect x="164.5" y="30.3" width="6.5" height="3.4" fill="#E8ECF2"/>
+  <path d="M171 22.7 A4.65 4.65 0 0 1 171 32" stroke="#E8ECF2" stroke-width="3.4" fill="none"/>
+  <polyline points="170.5,32 176.7,42.2" stroke="#E8ECF2" stroke-width="3.4" fill="none" stroke-linecap="butt" stroke-linejoin="miter"/>
+  <path d="M630 695V0H516V304H189V0H75V695H189V397H516V695Z" fill="#F0A835" transform="translate(77.000 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M37 349Q37 451 84.5 532.0Q132 613 213.5 658.5Q295 704 392 704Q490 704 571.5 658.5Q653 613 700.0 532.0Q747 451 747 349Q747 247 700.0 165.5Q653 84 571.5 38.5Q490 -7 392 -7Q295 -7 213.5 38.5Q132 84 84.5 165.5Q37 247 37 349ZM630 349Q630 426 599.5 484.0Q569 542 515.0 573.0Q461 604 392 604Q323 604 269.0 573.0Q215 542 184.5 484.0Q154 426 154 349Q154 272 184.5 213.5Q215 155 269.0 123.5Q323 92 392 92Q461 92 515.0 123.5Q569 155 599.5 213.5Q630 272 630 349Z" fill="#F0A835" transform="translate(85.591 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M807 695V0H693V476L481 0H402L189 476V0H75V695H198L442 150L685 695Z" fill="#F0A835" transform="translate(94.783 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M189 603V399H429V306H189V93H459V0H75V696H459V603Z" fill="#F0A835" transform="translate(104.720 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M671 345Q671 239 625.5 161.0Q580 83 496.5 41.5Q413 0 302 0H75V695H302Q413 695 496.5 652.5Q580 610 625.5 530.5Q671 451 671 345ZM554 345Q554 466 489.0 534.0Q424 602 302 602H189V93H302Q424 93 489.0 159.0Q554 225 554 345Z" fill="#F0A835" transform="translate(117.145 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M189 603V399H429V306H189V93H459V0H75V696H459V603Z" fill="#F0A835" transform="translate(125.767 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M484 695V602H189V397H419V304H189V0H75V695Z" fill="#F0A835" transform="translate(132.983 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M189 603V399H429V306H189V93H459V0H75V696H459V603Z" fill="#F0A835" transform="translate(140.130 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M646 0H532L189 519V0H75V696H189L532 178V696H646Z" fill="#F0A835" transform="translate(147.346 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M671 345Q671 239 625.5 161.0Q580 83 496.5 41.5Q413 0 302 0H75V695H302Q413 695 496.5 652.5Q580 610 625.5 530.5Q671 451 671 345ZM554 345Q554 466 489.0 534.0Q424 602 302 602H189V93H302Q424 93 489.0 159.0Q554 225 554 345Z" fill="#F0A835" transform="translate(156.059 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M189 603V399H429V306H189V93H459V0H75V696H459V603Z" fill="#F0A835" transform="translate(164.681 53.500) scale(0.007600 -0.007600)"/>
+  <path d="M436 0 276 278H189V0H75V695H315Q395 695 450.5 667.0Q506 639 533.5 592.0Q561 545 561 487Q561 419 521.5 363.5Q482 308 400 288L572 0ZM189 369H315Q379 369 411.5 401.0Q444 433 444 487Q444 541 412.0 571.5Q380 602 315 602H189Z" fill="#F0A835" transform="translate(171.897 53.500) scale(0.007600 -0.007600)"/>
+</svg>

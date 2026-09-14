@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512" role="img" aria-label="Foyer Home Defender">
+  <title>Foyer Home Defender</title>
+  <rect width="64" height="64" rx="14" fill="#0D1014"/>
+  <g transform="translate(32 32) scale(0.84) translate(-32 -32)">
+  <path d="M32 5.5 L55 13.5 V32 C55 44 45 53.5 32 58.5 C19 53.5 9 44 9 32 V13.5 Z" fill="none" stroke="#E8ECF2" stroke-width="3.2" stroke-linejoin="round"/>
+  <polyline points="19,32 32,21.5 45,32" fill="none" stroke="#E8ECF2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  <polyline points="24,38 32,31.5 40,38" fill="none" stroke="#E8ECF2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="28.5" y="45.5" width="7" height="7" fill="#F0A835"/>
+  <circle cx="32" cy="45.5" r="3.5" fill="#F0A835"/>
+  </g>
+</svg>
