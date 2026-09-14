@@ -69,9 +69,11 @@ jobs:
       matrix:
         include:
           # The floor declared in hacs.json: Home Assistant 2025.1.
+          # pycares 4.9+ starts a shutdown thread that this Home Assistant's
+          # test harness reports as lingering, failing teardown.
           - name: HA 2025.1
             python: "3.12"
-            packages: pytest-homeassistant-custom-component==0.13.205 "pycares<5"
+            packages: pytest-homeassistant-custom-component==0.13.205 "pycares<4.9"
           # Whatever Home Assistant is current, to hear about breakage early.
           - name: HA latest
             python: "3.14"
