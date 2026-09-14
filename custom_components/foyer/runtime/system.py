@@ -20,12 +20,14 @@ from homeassistant.core import (
     State,
     callback,
 )
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
     async_track_time_interval,
 )
 from homeassistant.util import dt as dt_util
 
+from ..const import SIGNAL_UPDATE
 from ..core.engine import arm_blockers, decide, master_state, next_wakeup
 from ..core.models import (
     AreaState,
@@ -242,6 +244,7 @@ class FoyerSystem:
     def _notify(self) -> None:
         for listener in list(self._listeners):
             listener()
+        async_dispatcher_send(self.hass, SIGNAL_UPDATE)
 
     # --- read model ----------------------------------------------------------
 

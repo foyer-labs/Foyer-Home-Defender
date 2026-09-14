@@ -1,15 +1,17 @@
-// foyer-card: shows the area state and sends an arm command (SPEC §15.3).
-// The card decides nothing (INV-2): it calls the alarm_control_panel service,
-// the engine accepts or refuses, and the card renders the outcome.
+// foyer-card: an area's (or the master's) state, its countdown, and arm/disarm
+// (SPEC §15.3). The card decides nothing (INV-2): it sends a command, the
+// engine accepts or refuses, and the card renders the answer. The full and
+// compact layouts arrive with the rest of the card work (Phase 1, part 4).
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 
 import { loadStrings, t, type Strings } from "../shared/i18n";
 import { stateStyles } from "../shared/styles";
 import type {
   AreaState,
+  CommandResult,
   FoyerStatus,
-  HassServiceError,
   HomeAssistant,
+  StatusArea,
 } from "../shared/types";
 
 interface FoyerCardConfig {
@@ -18,13 +20,7 @@ interface FoyerCardConfig {
 }
 
 const ENTITY_PREFIX = "alarm_control_panel.foyer_";
-
-// Home Assistant alarm states -> Foyer area states, for display.
-function areaState(haState: string): AreaState {
-  if (haState === "triggered") return "triggered";
-  if (haState.startsWith("armed_")) return "armed";
-  return "disarmed";
-}
+const MASTER = "alarm_control_panel.foyer_master";
 
 class FoyerCard extends LitElement {
   static override properties = {
@@ -34,6 +30,7 @@ class FoyerCard extends LitElement {
     _status: { state: true },
     _busy: { state: true },
     _feedback: { state: true },
+    _tick: { state: true },
   };
 
   hass?: HomeAssistant;
@@ -42,9 +39,11 @@ class FoyerCard extends LitElement {
   private _status?: FoyerStatus;
   private _busy = false;
   private _feedback?: string;
-  private _rejection?: HassServiceError;
+  private _tick = 0;
+  private _offset = 0;
   private _language?: string;
   private _unsubscribe?: Promise<() => Promise<void>>;
+  private _timer?: number;
 
   static getStubConfig(hass: HomeAssistant): FoyerCardConfig {
     const entity = Object.keys(hass.states).find((id) => id.startsWith(ENTITY_PREFIX));
@@ -59,10 +58,18 @@ class FoyerCard extends LitElement {
     return 3;
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this._timer = window.setInterval(() => {
+      if (this._area?.timer || this._isMaster) this._tick += 1;
+    }, 1000);
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this._unsubscribe?.then((unsub) => unsub()).catch(() => undefined);
     this._unsubscribe = undefined;
+    window.clearInterval(this._timer);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -70,96 +77,153 @@ class FoyerCard extends LitElement {
     if (this.hass.language !== this._language) {
       this._language = this.hass.language;
       loadStrings(this.hass).then((strings) => (this._strings = strings));
-      // A rejection already on screen follows the new language too.
-      if (this._rejection) this._showRejection(this._rejection);
     }
-    // Scenario names come from Foyer; the area state itself comes from the
-    // entity, like any other alarm card.
     if (!this._unsubscribe && this.isConnected) {
       this._unsubscribe = this.hass.connection.subscribeMessage<FoyerStatus>(
-        (status) => (this._status = status),
+        (status) => {
+          this._offset = Date.parse(status.now) - Date.now();
+          this._status = status;
+        },
         { type: "foyer/subscribe" },
       );
       this._unsubscribe.catch(() => (this._unsubscribe = undefined));
     }
   }
 
-  private get _area() {
+  private get _isMaster(): boolean {
+    return this._config?.entity === MASTER;
+  }
+
+  private get _area(): StatusArea | undefined {
     return this._status?.areas.find((a) => a.entity_id === this._config?.entity);
   }
 
-  private get _scenario() {
-    const area = this._area;
-    return area ? this._status?.scenarios.find((s) => s.areas.includes(area.id)) : undefined;
-  }
-
-  private async _arm(): Promise<void> {
-    const scenario = this._scenario;
-    if (!this.hass || !this._config?.entity || !scenario) return;
+  private async _run(command: Record<string, unknown>): Promise<void> {
+    if (!this.hass) return;
     this._busy = true;
     this._feedback = undefined;
-    this._rejection = undefined;
     try {
-      await this.hass.callService(
-        "alarm_control_panel",
-        `alarm_arm_${scenario.ha_master_state.replace(/^armed_/, "")}`,
-        {},
-        { entity_id: this._config.entity },
-      );
+      const result = await this.hass.callWS<CommandResult>(command);
+      if (!result.success) {
+        this._feedback = t(this._strings, `reason.${result.reason ?? "unknown"}`, {
+          zones: result.blocking_zones.map((z) => z.name).join(", "),
+        });
+      }
     } catch (err) {
-      this._rejection = err as HassServiceError;
-      await this._showRejection(this._rejection);
+      this._feedback = String((err as Error)?.message ?? err);
     } finally {
       this._busy = false;
     }
   }
 
-  // The engine's reason, translated by Home Assistant from the integration's
-  // "exceptions" strings in the user's language: "Cannot arm: zone open: …".
-  private async _showRejection(err: HassServiceError): Promise<void> {
-    let text = "";
-    if (this.hass && err.translation_domain && err.translation_key) {
-      await this.hass.loadBackendTranslation("exceptions", err.translation_domain);
-      text = this.hass.localize(
-        `component.${err.translation_domain}.exceptions.${err.translation_key}.message`,
-        err.translation_placeholders,
-      );
-    }
-    this._feedback = text || err.message || String(err);
-  }
-
   override render() {
     const s = this._strings;
     if (!s || !this.hass) return nothing;
+    void this._tick;
     const entityId = this._config?.entity;
     if (!entityId) return this._message(t(s, "card.no_entity"));
-    const entity = this.hass.states[entityId];
-    if (!entity) return this._message(t(s, "card.entity_missing", { entity: entityId }));
+    if (!this.hass.states[entityId]) {
+      return this._message(t(s, "card.entity_missing", { entity: entityId }));
+    }
+    return this._isMaster ? this._renderMaster(s) : this._renderArea(s);
+  }
 
-    const state = areaState(entity.state);
-    const scenario = this._scenario;
+  private _renderArea(s: Strings) {
+    const area = this._area;
+    if (!area) return this._message(t(s, "common.loading"));
+    const canDisarm = area.state !== "disarmed" || area.memory;
     return html`
       <ha-card>
         <div class="content">
-          <div class="head">
-            <div class="name">${this._area?.name ?? entityId}</div>
-            <span class="state ${state}">${t(s, `state.${state}`)}</span>
+          ${this._head(area.name, area.state, area.memory)} ${this._countdown(s, area)}
+          <div class="buttons">
+            ${area.state === "disarmed"
+              ? html`<button
+                  class="primary"
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({ type: "foyer/arm", area_id: area.id })}
+                >
+                  ${t(s, "card.arm")}
+                </button>`
+              : nothing}
+            ${canDisarm
+              ? html`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({ type: "foyer/disarm", area_ids: [area.id] })}
+                >
+                  ${t(s, "card.disarm")}
+                </button>`
+              : nothing}
           </div>
-          ${scenario
-            ? html`<button
-                class="arm"
-                ?disabled=${this._busy || state !== "disarmed"}
-                @click=${this._arm}
-              >
-                ${t(s, "card.arm", { scenario: scenario.name })}
-              </button>`
-            : nothing}
-          ${this._feedback
-            ? html`<div class="feedback" role="alert">${this._feedback}</div>`
-            : nothing}
+          ${this._renderFeedback()}
         </div>
       </ha-card>
     `;
+  }
+
+  private _renderMaster(s: Strings) {
+    const status = this._status;
+    if (!status) return this._message(t(s, "common.loading"));
+    const memory = status.areas.some((a) => a.memory);
+    const active = status.scenarios.find((sc) => sc.id === status.active_scenario_id);
+    const anyArmed = status.areas.some((a) => a.state !== "disarmed" || a.memory);
+    return html`
+      <ha-card>
+        <div class="content">
+          ${this._head(active?.name ?? t(s, "overview.master"), status.master.state, memory)}
+          ${status.areas.map((area) => this._countdown(s, area, true))}
+          <div class="buttons">
+            ${status.scenarios.map(
+              (sc) => html`<button
+                class=${sc.id === status.active_scenario_id ? "primary" : ""}
+                ?disabled=${this._busy}
+                @click=${() => this._run({ type: "foyer/arm", scenario_id: sc.id })}
+              >
+                ${sc.name}
+              </button>`,
+            )}
+            ${anyArmed
+              ? html`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({ type: "foyer/disarm" })}
+                >
+                  ${t(s, "card.disarm")}
+                </button>`
+              : nothing}
+          </div>
+          ${this._renderFeedback()}
+        </div>
+      </ha-card>
+    `;
+  }
+
+  private _head(name: string, state: AreaState, memory: boolean) {
+    const s = this._strings;
+    return html`
+      <div class="head">
+        <div class="name">${name}</div>
+        <span class="state ${state}">${t(s, `state.${state}`)}</span>
+        ${memory ? html`<span class="state memory">${t(s, "overview.memory")}</span>` : nothing}
+      </div>
+    `;
+  }
+
+  private _countdown(s: Strings, area: StatusArea, named = false) {
+    if (!area.timer || area.timer.kind === "siren") return nothing;
+    const seconds = Math.max(
+      0,
+      Math.round((Date.parse(area.timer.due) - (Date.now() + this._offset)) / 1000),
+    );
+    const text = t(s, `timer.${area.timer.kind}`, { seconds });
+    return html`<div class="countdown">
+      ${named ? t(s, "card.area_countdown", { area: area.name, countdown: text }) : text}
+    </div>`;
+  }
+
+  private _renderFeedback() {
+    return this._feedback
+      ? html`<div class="feedback" role="alert">${this._feedback}</div>`
+      : nothing;
   }
 
   private _message(text: string) {
@@ -178,25 +242,40 @@ class FoyerCard extends LitElement {
       .head {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 12px;
+        flex-wrap: wrap;
+        gap: 8px;
       }
       .name {
         font-size: 18px;
         font-weight: 500;
+        flex: 1;
       }
-      .arm {
-        align-self: flex-start;
-        border: 0;
+      .countdown {
+        font-size: 15px;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      button {
+        border: 1px solid var(--divider-color);
         border-radius: 8px;
         padding: 10px 16px;
         font: inherit;
         font-weight: 500;
         cursor: pointer;
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+      }
+      button.primary {
         background: var(--primary-color);
+        border-color: var(--primary-color);
         color: var(--text-primary-color, #fff);
       }
-      .arm[disabled] {
+      button[disabled] {
         opacity: 0.5;
         cursor: default;
       }

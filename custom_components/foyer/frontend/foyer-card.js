@@ -539,6 +539,7 @@ var he = o`
     font-weight: 500;
     background: var(--secondary-background-color);
     color: var(--primary-text-color);
+    white-space: nowrap;
   }
   .state::before {
     content: "";
@@ -554,20 +555,205 @@ var he = o`
   .state.armed {
     color: var(--info-color, #0277bd);
   }
+  .state.arming,
+  .state.entry,
+  .state.open,
+  .state.bypassed,
+  .state.memory {
+    color: var(--warning-color, #c77700);
+  }
   .state.triggered,
   .state.fault {
     color: var(--error-color, #d32f2f);
   }
-  .state.open {
-    color: var(--warning-color, #c77700);
+  .state.disabled {
+    color: var(--disabled-text-color, #9e9e9e);
   }
-`, ge = "alarm_control_panel.foyer_";
-function _e(e) {
-	return e === "triggered" ? "triggered" : e.startsWith("armed_") ? "armed" : "disarmed";
-}
-var ve = class extends X {
+`;
+o`
+  .card {
+    background: var(--card-background-color);
+    border: 1px solid var(--divider-color);
+    border-radius: var(--ha-card-border-radius, 12px);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .card-hd {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--divider-color);
+  }
+  .card-hd h2 {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+    flex: 1;
+  }
+  .card-bd {
+    padding: 16px;
+  }
+  .table-wrap {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--divider-color);
+    vertical-align: middle;
+  }
+  th {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--secondary-text-color);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  tr.clickable {
+    cursor: pointer;
+  }
+  tr.clickable:hover,
+  tr[aria-selected="true"] {
+    background: var(--secondary-background-color);
+  }
+  .mono {
+    font-family: var(--code-font-family, monospace);
+    font-size: 12.5px;
+    overflow-wrap: anywhere;
+  }
+  .grid-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px 16px;
+  }
+  label.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+  }
+  label.field > span.lbl {
+    font-weight: 500;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+  }
+  input,
+  select {
+    font: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--divider-color);
+    background: var(--primary-background-color);
+    color: var(--primary-text-color);
+    min-width: 0;
+  }
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+  }
+  label.check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    padding: 6px 0;
+  }
+  label.check .hint {
+    display: block;
+  }
+  fieldset {
+    border: 1px solid var(--divider-color);
+    border-radius: 10px;
+    padding: 10px 14px 14px;
+    margin: 16px 0 0;
+  }
+  legend {
+    font-weight: 500;
+    font-size: 14px;
+    padding: 0 6px;
+  }
+  .btn {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--divider-color);
+    background: var(--card-background-color);
+    color: var(--primary-text-color);
+    cursor: pointer;
+  }
+  .btn.primary {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-primary-color, #fff);
+  }
+  .btn.danger {
+    color: var(--error-color, #d32f2f);
+  }
+  .btn[disabled] {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .problems {
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border-left: 3px solid var(--error-color, #d32f2f);
+    background: var(--secondary-background-color);
+    border-radius: 6px;
+    font-size: 13.5px;
+  }
+  .problems ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .notice {
+    padding: 10px 14px;
+    border-left: 3px solid var(--warning-color, #c77700);
+    background: var(--secondary-background-color);
+    border-radius: 6px;
+    font-size: 13.5px;
+    margin: 12px 0 0;
+  }
+  .tag {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 6px;
+    background: var(--secondary-background-color);
+    font-size: 12.5px;
+    margin: 1px 2px;
+  }
+  .muted {
+    color: var(--secondary-text-color);
+  }
+  .empty {
+    padding: 24px 16px;
+    color: var(--secondary-text-color);
+    text-align: center;
+  }
+`;
+//#endregion
+//#region src/card/foyer-card.ts
+var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", ve = class extends X {
 	constructor(...e) {
-		super(...e), this._busy = !1;
+		super(...e), this._busy = !1, this._tick = 0, this._offset = 0;
 	}
 	static {
 		this.properties = {
@@ -576,7 +762,8 @@ var ve = class extends X {
 			_strings: { state: !0 },
 			_status: { state: !0 },
 			_busy: { state: !0 },
-			_feedback: { state: !0 }
+			_feedback: { state: !0 },
+			_tick: { state: !0 }
 		};
 	}
 	static getStubConfig(e) {
@@ -591,62 +778,133 @@ var ve = class extends X {
 	getCardSize() {
 		return 3;
 	}
+	connectedCallback() {
+		super.connectedCallback(), this._timer = window.setInterval(() => {
+			(this._area?.timer || this._isMaster) && (this._tick += 1);
+		}, 1e3);
+	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0;
+		super.disconnectedCallback(), this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0, window.clearInterval(this._timer);
 	}
 	willUpdate(e) {
-		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, Q(this.hass).then((e) => this._strings = e), this._rejection && this._showRejection(this._rejection)), !this._unsubscribe && this.isConnected && (this._unsubscribe = this.hass.connection.subscribeMessage((e) => this._status = e, { type: "foyer/subscribe" }), this._unsubscribe.catch(() => this._unsubscribe = void 0)));
+		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, Q(this.hass).then((e) => this._strings = e)), !this._unsubscribe && this.isConnected && (this._unsubscribe = this.hass.connection.subscribeMessage((e) => {
+			this._offset = Date.parse(e.now) - Date.now(), this._status = e;
+		}, { type: "foyer/subscribe" }), this._unsubscribe.catch(() => this._unsubscribe = void 0)));
+	}
+	get _isMaster() {
+		return this._config?.entity === _e;
 	}
 	get _area() {
 		return this._status?.areas.find((e) => e.entity_id === this._config?.entity);
 	}
-	get _scenario() {
-		let e = this._area;
-		return e ? this._status?.scenarios.find((t) => t.areas.includes(e.id)) : void 0;
-	}
-	async _arm() {
-		let e = this._scenario;
-		if (this.hass && this._config?.entity && e) {
-			this._busy = !0, this._feedback = void 0, this._rejection = void 0;
+	async _run(e) {
+		if (this.hass) {
+			this._busy = !0, this._feedback = void 0;
 			try {
-				await this.hass.callService("alarm_control_panel", `alarm_arm_${e.ha_master_state.replace(/^armed_/, "")}`, {}, { entity_id: this._config.entity });
+				let t = await this.hass.callWS(e);
+				t.success || (this._feedback = $(this._strings, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => e.name).join(", ") }));
 			} catch (e) {
-				this._rejection = e, await this._showRejection(this._rejection);
+				this._feedback = String(e?.message ?? e);
 			} finally {
 				this._busy = !1;
 			}
 		}
 	}
-	async _showRejection(e) {
-		let t = "";
-		this.hass && e.translation_domain && e.translation_key && (await this.hass.loadBackendTranslation("exceptions", e.translation_domain), t = this.hass.localize(`component.${e.translation_domain}.exceptions.${e.translation_key}.message`, e.translation_placeholders)), this._feedback = t || e.message || String(e);
-	}
 	render() {
 		let e = this._strings;
 		if (!e || !this.hass) return V;
+		this._tick;
 		let t = this._config?.entity;
-		if (!t) return this._message($(e, "card.no_entity"));
-		let n = this.hass.states[t];
-		if (!n) return this._message($(e, "card.entity_missing", { entity: t }));
-		let r = _e(n.state), i = this._scenario;
+		return t ? this.hass.states[t] ? this._isMaster ? this._renderMaster(e) : this._renderArea(e) : this._message($(e, "card.entity_missing", { entity: t })) : this._message($(e, "card.no_entity"));
+	}
+	_renderArea(e) {
+		let t = this._area;
+		if (!t) return this._message($(e, "common.loading"));
+		let n = t.state !== "disarmed" || t.memory;
 		return z`
       <ha-card>
         <div class="content">
-          <div class="head">
-            <div class="name">${this._area?.name ?? t}</div>
-            <span class="state ${r}">${$(e, `state.${r}`)}</span>
+          ${this._head(t.name, t.state, t.memory)} ${this._countdown(e, t)}
+          <div class="buttons">
+            ${t.state === "disarmed" ? z`<button
+                  class="primary"
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({
+			type: "foyer/arm",
+			area_id: t.id
+		})}
+                >
+                  ${$(e, "card.arm")}
+                </button>` : V}
+            ${n ? z`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({
+			type: "foyer/disarm",
+			area_ids: [t.id]
+		})}
+                >
+                  ${$(e, "card.disarm")}
+                </button>` : V}
           </div>
-          ${i ? z`<button
-                class="arm"
-                ?disabled=${this._busy || r !== "disarmed"}
-                @click=${this._arm}
-              >
-                ${$(e, "card.arm", { scenario: i.name })}
-              </button>` : V}
-          ${this._feedback ? z`<div class="feedback" role="alert">${this._feedback}</div>` : V}
+          ${this._renderFeedback()}
         </div>
       </ha-card>
     `;
+	}
+	_renderMaster(e) {
+		let t = this._status;
+		if (!t) return this._message($(e, "common.loading"));
+		let n = t.areas.some((e) => e.memory), r = t.scenarios.find((e) => e.id === t.active_scenario_id), i = t.areas.some((e) => e.state !== "disarmed" || e.memory);
+		return z`
+      <ha-card>
+        <div class="content">
+          ${this._head(r?.name ?? $(e, "overview.master"), t.master.state, n)}
+          ${t.areas.map((t) => this._countdown(e, t, !0))}
+          <div class="buttons">
+            ${t.scenarios.map((e) => z`<button
+                class=${e.id === t.active_scenario_id ? "primary" : ""}
+                ?disabled=${this._busy}
+                @click=${() => this._run({
+			type: "foyer/arm",
+			scenario_id: e.id
+		})}
+              >
+                ${e.name}
+              </button>`)}
+            ${i ? z`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({ type: "foyer/disarm" })}
+                >
+                  ${$(e, "card.disarm")}
+                </button>` : V}
+          </div>
+          ${this._renderFeedback()}
+        </div>
+      </ha-card>
+    `;
+	}
+	_head(e, t, n) {
+		let r = this._strings;
+		return z`
+      <div class="head">
+        <div class="name">${e}</div>
+        <span class="state ${t}">${$(r, `state.${t}`)}</span>
+        ${n ? z`<span class="state memory">${$(r, "overview.memory")}</span>` : V}
+      </div>
+    `;
+	}
+	_countdown(e, t, n = !1) {
+		if (!t.timer || t.timer.kind === "siren") return V;
+		let r = Math.max(0, Math.round((Date.parse(t.timer.due) - (Date.now() + this._offset)) / 1e3)), i = $(e, `timer.${t.timer.kind}`, { seconds: r });
+		return z`<div class="countdown">
+      ${n ? $(e, "card.area_countdown", {
+			area: t.name,
+			countdown: i
+		}) : i}
+    </div>`;
+	}
+	_renderFeedback() {
+		return this._feedback ? z`<div class="feedback" role="alert">${this._feedback}</div>` : V;
 	}
 	_message(e) {
 		return z`<ha-card><div class="content">${e}</div></ha-card>`;
@@ -662,25 +920,40 @@ var ve = class extends X {
       .head {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 12px;
+        flex-wrap: wrap;
+        gap: 8px;
       }
       .name {
         font-size: 18px;
         font-weight: 500;
+        flex: 1;
       }
-      .arm {
-        align-self: flex-start;
-        border: 0;
+      .countdown {
+        font-size: 15px;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      button {
+        border: 1px solid var(--divider-color);
         border-radius: 8px;
         padding: 10px 16px;
         font: inherit;
         font-weight: 500;
         cursor: pointer;
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+      }
+      button.primary {
         background: var(--primary-color);
+        border-color: var(--primary-color);
         color: var(--text-primary-color, #fff);
       }
-      .arm[disabled] {
+      button[disabled] {
         opacity: 0.5;
         cursor: default;
       }

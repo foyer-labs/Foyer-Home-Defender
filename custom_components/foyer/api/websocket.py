@@ -12,11 +12,12 @@ from typing import Any
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.storage import Store
 import voluptuous as vol
 
 from .. import i18n
-from ..const import CHANNEL_HA_UI, DOMAIN
+from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
 from ..core.models import (
     ARMED_HA_STATES,
     MAX_ARM_HOLD_TIMEOUT,
@@ -93,15 +94,25 @@ def ws_subscribe(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Push the full status now and again after every change."""
-    if (system := _system(hass, connection, msg["id"])) is None:
+    """Push the full status now and again after every change.
+
+    Bound to a signal rather than to one FoyerSystem: a configuration change
+    reloads the entry and replaces the system, and the panel that made the
+    change must keep receiving updates without resubscribing.
+    """
+    if _system(hass, connection, msg["id"]) is None:
         return
 
     @callback
     def forward() -> None:
-        connection.send_message(websocket_api.event_message(msg["id"], system.status()))
+        if (system := hass.data.get(DOMAIN)) is not None:
+            connection.send_message(
+                websocket_api.event_message(msg["id"], system.status())
+            )
 
-    connection.subscriptions[msg["id"]] = system.async_add_listener(forward)
+    connection.subscriptions[msg["id"]] = async_dispatcher_connect(
+        hass, SIGNAL_UPDATE, forward
+    )
     connection.send_result(msg["id"])
     forward()
 

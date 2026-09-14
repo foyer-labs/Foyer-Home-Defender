@@ -455,3 +455,30 @@ async def test_supervision_heartbeat(hass, entry, hass_storage, freezer):
     hass.states.async_set(ZONE, "off")  # it speaks again: the fault clears
     await hass.async_block_till_done()
     assert _state(hass, "binary_sensor.foyer_fault") == "off"
+
+
+async def test_ws_subscription_survives_a_configuration_reload(
+    hass, loaded, hass_ws_client
+):
+    """The panel that saved a change keeps receiving live state afterwards."""
+    client = await hass_ws_client(hass)
+    await client.send_json({"id": 1, "type": "foyer/subscribe"})
+    assert (await client.receive_json())["success"]
+    await client.receive_json()  # the initial status
+
+    await client.send_json(
+        {
+            "id": 2,
+            "type": "foyer/config/save",
+            "kind": "area",
+            "item": {"name": "Attic"},
+        }
+    )
+    names: set[str] = set()
+    for _ in range(20):
+        msg = await client.receive_json()
+        if msg.get("id") == 1 and "event" in msg:
+            names = {a["name"] for a in msg["event"]["areas"]}
+            if "Attic" in names:
+                break
+    assert "Attic" in names

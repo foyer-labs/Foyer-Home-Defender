@@ -2,54 +2,406 @@
   "common": {
     "brand": "Foyer Home Defender",
     "loading": "Caricamento…",
-    "not_loaded": "Foyer Home Defender non è caricato. Controlla l'integrazione in Impostazioni.",
-    "connection_error": "Impossibile raggiungere Home Assistant: {error}",
-    "live": "In diretta"
+    "not_loaded": "Foyer Home Defender non è caricato. Controlla l'integrazione nelle Impostazioni.",
+    "connection_error": "Home Assistant non raggiungibile: {error}",
+    "live": "In tempo reale",
+    "seconds": "{n} s",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina"
+  },
+  "nav": {
+    "overview": "Panoramica",
+    "areas": "Aree",
+    "zones": "Zone",
+    "scenarios": "Scenari"
   },
   "state": {
     "disarmed": "Disinserito",
+    "arming": "In inserimento",
     "armed": "Inserito",
+    "entry": "Ritardo di ingresso",
     "triggered": "In allarme"
+  },
+  "timer": {
+    "exit": "Ritardo di uscita: {seconds} s",
+    "hold": "In attesa che una zona si chiuda: mancano {seconds} s",
+    "entry": "Ritardo di ingresso: {seconds} s",
+    "siren": "Sirene: {seconds} s"
   },
   "zone_status": {
     "closed": "Pronta",
     "open": "Aperta",
-    "fault": "Guasto"
+    "fault": "Guasto",
+    "disabled": "Disattivata"
+  },
+  "fault": {
+    "unavailable": "Guasto: non raggiungibile",
+    "not_numeric": "Guasto: non è un numero",
+    "supervision": "Guasto: silenziosa da troppo"
+  },
+  "bypass": {
+    "auto_bypass": "Esclusa all'inserimento",
+    "forced": "Esclusa da inserimento forzato"
+  },
+  "reason": {
+    "invalid_state": "L'area non è in uno stato che lo permette.",
+    "unknown_scenario": "Lo scenario non esiste.",
+    "unknown_area": "L'area non esiste.",
+    "no_scenario_for_mode": "Nessuno scenario riporta questa modalità.",
+    "ambiguous_mode": "Più scenari riportano questa modalità. Scegli direttamente lo scenario.",
+    "alarm_in_progress": "C'è un allarme in corso. Disinserisci prima di cambiare scenario.",
+    "code_required": "Serve un codice.",
+    "zone_fault": "Impossibile inserire: zona in guasto: {zones}.",
+    "zone_open": "Impossibile inserire: zona aperta: {zones}.",
+    "zone_not_bypassable": "Impossibile forzare: queste zone non possono essere escluse: {zones}.",
+    "arm_hold_expired": "Inserimento fallito: ancora aperta: {zones}.",
+    "unknown": "La richiesta è stata rifiutata."
+  },
+  "problem": {
+    "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
+    "name_required": "Serve un nome.",
+    "duplicate_name": "Esiste già con questo nome.",
+    "invalid_ha_state": "Scegli uno degli stati di inserimento di Home Assistant.",
+    "delay_out_of_range": "{field}: tra 0 e 300 secondi.",
+    "siren_out_of_range": "{field}: tra 1 e 900 secondi (il riferimento EN 50131 per le sirene esterne).",
+    "hold_out_of_range": "{field}: tra 60 e 1800 secondi.",
+    "supervision_out_of_range": "{field}: tra 60 secondi e 7 giorni, oppure vuoto per disattivarla.",
+    "scenario_without_areas": "Uno scenario deve inserire almeno un'area.",
+    "unknown_area": "L'area scelta non esiste.",
+    "unsupported_domain": "Questo tipo di entità non può essere una zona.",
+    "trigger_domain": "Le entità evento e tag richiedono un trigger a evento, e solo loro possono averlo.",
+    "fault_state_as_trigger": "Non disponibile e sconosciuto sono guasti, non trigger. Bloccano sempre l'inserimento.",
+    "negative_hysteresis": "L'isteresi non può essere negativa.",
+    "eq_hysteresis": "Un trigger di uguaglianza non ha isteresi.",
+    "event_type_required": "Scegli quale tipo di evento fa scattare la zona.",
+    "event_type_not_allowed": "Un tag ha un solo evento, la scansione: lascia il tipo vuoto.",
+    "subtype_not_supported": "I sottotipi di evento non sono ancora supportati.",
+    "channel_not_available": "Le zone tecniche (fumo, gas, acqua) arrivano con un aggiornamento successivo. Foyer le rifiuta invece di salvare un rilevatore che non fa nulla.",
+    "key_action_required": "Una zona chiave ha bisogno di un'azione.",
+    "key_scenario_required": "Scegli lo scenario che questa chiave inserisce.",
+    "key_always_on": "Una zona chiave comanda: non può essere sempre attiva.",
+    "key_action_not_allowed": "Solo le zone chiave hanno un'azione chiave.",
+    "always_on_must_be_instant": "Una zona sempre attiva scatta subito: il ritardo di ingresso non si applica.",
+    "auto_bypass_needs_bypassable": "L'esclusione automatica richiede una zona che si possa escludere.",
+    "hold_needs_arm_after_closing": "Il limite di attesa vale solo per “inserisci dopo la chiusura”.",
+    "area_not_disarmed": "Quest'area non è disinserita. Disinseriscila prima di cambiare ciò che la protegge.",
+    "scenario_active": "Questo scenario è in funzione. Disinserisci prima di modificarlo.",
+    "trigger_not_confirmed": "Conferma prima gli stati del trigger sul sensore reale.",
+    "not_found": "Non esiste più. Ricarica la pagina.",
+    "area_has_zones": "Sposta o elimina prima le zone di quest'area.",
+    "area_in_scenario": "Togli prima quest'area dai suoi scenari.",
+    "scenario_in_use": "Una zona chiave inserisce questo scenario. Modifica prima la zona chiave.",
+    "unknown_kind": "Tipo di oggetto sconosciuto.",
+    "invalid": "Alcuni valori non sono validi."
+  },
+  "field": {
+    "name": "Nome",
+    "entity_id": "Entità",
+    "area_id": "Area",
+    "type": "Tipo",
+    "trigger": "Trigger",
+    "channel": "Canale",
+    "entry_mode": "Quando scatta",
+    "entry_delay": "Ritardo di ingresso",
+    "alarm_kind": "Significato",
+    "arm_policy": "Se aperta all'inserimento",
+    "arm_hold_timeout": "Attendi la chiusura al massimo",
+    "always_on": "Sempre attiva (24h)",
+    "bypassable": "Può essere esclusa",
+    "allow_arm_when_faulted": "Consenti l'inserimento anche in guasto",
+    "enabled": "Attiva",
+    "supervision_timeout": "Supervisione (secondi)",
+    "key": "Azione chiave",
+    "on_activate": "Quando si attiva",
+    "on_deactivate": "Quando si rilascia",
+    "scenario_id": "Scenario",
+    "default_entry_delay": "Ritardo di ingresso predefinito",
+    "default_exit_delay": "Ritardo di uscita predefinito",
+    "ha_state_when_armed": "Stato riportato a Home Assistant",
+    "ha_master_state": "Stato riportato dal generale",
+    "areas": "Aree inserite",
+    "exit_delay_override": "Ritardo di uscita",
+    "siren_duration_override": "Durata delle sirene",
+    "siren_duration": "Durata delle sirene"
+  },
+  "ha_state": {
+    "armed_home": "Inserito in casa",
+    "armed_away": "Inserito fuori casa",
+    "armed_night": "Inserito notte",
+    "armed_vacation": "Inserito vacanza",
+    "armed_custom_bypass": "Inserito personalizzato"
+  },
+  "zone_type": {
+    "instant": "Istantanea",
+    "delayed": "Ritardata",
+    "follower": "Follower",
+    "24h": "24h",
+    "tamper": "Tamper",
+    "technical": "Tecnica",
+    "panic": "Panico",
+    "key": "Chiave"
+  },
+  "channel": {
+    "intrusion": "Intrusione",
+    "key": "Chiave (comandi)",
+    "technical": "Tecnico (aggiornamento successivo)"
+  },
+  "entry_mode": {
+    "instant": "Istantanea",
+    "delayed": "Ritardata",
+    "follower": "Follower"
+  },
+  "entry_mode_hint": {
+    "instant": "Fa scattare l'allarme subito quando l'area è inserita.",
+    "delayed": "Avvia il ritardo di ingresso: la via d'accesso, come la porta d'ingresso.",
+    "follower": "Eredita un ritardo di ingresso in corso; altrimenti è istantanea. Per l'ingresso dopo la porta."
+  },
+  "alarm_kind": {
+    "intrusion": "Intrusione",
+    "tamper": "Manomissione",
+    "panic": "Panico"
+  },
+  "arm_policy": {
+    "block": "Blocca l'inserimento",
+    "auto_bypass": "Escludi automaticamente",
+    "arm_after_closing": "Inserisci dopo la chiusura",
+    "ignore": "Ignora"
+  },
+  "arm_policy_hint": {
+    "block": "L'inserimento fallisce e indica questa zona.",
+    "auto_bypass": "Esclusa e segnalata; rientra da sola appena si chiude.",
+    "arm_after_closing": "Dopo il ritardo di uscita l'inserimento attende che si chiuda. Fallisce se resta aperta troppo a lungo.",
+    "ignore": "Inserisce comunque. Scatta la prossima volta che si apre."
+  },
+  "operator": {
+    "gt": "Sopra",
+    "lt": "Sotto",
+    "eq": "Uguale a"
+  },
+  "key_command": {
+    "arm": "Inserisci lo scenario",
+    "disarm": "Disinserisci tutto",
+    "toggle": "Inserisci o disinserisci"
+  },
+  "key_release": {
+    "none": "Niente",
+    "disarm": "Disinserisci tutto"
   },
   "overview": {
-    "heading": "Stato",
+    "no_codes_warning": "Non ci sono ancora utenti né codici: chiunque abbia accesso a Home Assistant può disinserire. I codici arrivano con un aggiornamento successivo.",
+    "memory_banner": "Memoria d'allarme in {area}: {zones}. Disinserisci l'area per azzerarla.",
+    "bypassed": "Inserito. Escluse: {zones}.",
+    "master": "Tutta la casa",
+    "scenario": "Scenario",
+    "no_scenarios": "Ancora nessuno scenario.",
+    "scenario_hint": "Scegliere uno scenario ne inserisce le aree. A impianto inserito lo cambia: le aree non incluse nel nuovo si disinseriscono.",
+    "disarm_all": "Disinserisci tutto",
+    "force_arm": "Inserisci comunque (forzato)",
+    "force_arm_hint": "Esclude le zone indicate e registra l'inserimento come forzato.",
     "area": "Area",
-    "scenario": "Scenario attivo",
-    "scenario_none": "Nessuno",
+    "memory": "Memoria d'allarme",
+    "by_scenario": "Inserita dallo scenario {scenario}",
+    "on_its_own": "Inserita da sola",
+    "arm_area": "Inserisci quest'area",
+    "disarm_area": "Disinserisci",
+    "not_ready": "Non pronte",
     "zone": "Zona",
-    "entity_state": "Stato dell'entità: {state}",
-    "phase0_warning": "Anteprima di sviluppo. Il disinserimento non richiede codice e non esistono ancora utenti: non protegge nulla."
+    "status": "Stato",
+    "entity_state": "Stato dell'entità",
+    "all_ready": "Tutte le zone sono pronte."
+  },
+  "areas": {
+    "title": "Aree",
+    "add": "Aggiungi area",
+    "new": "Nuova area",
+    "zones": "Zone",
+    "reports_as_hint": "Ciò che vedono assistenti vocali e HomeKit. Non cambia il comportamento.",
+    "entry_hint": "Per le zone che non ne impostano uno proprio.",
+    "exit_hint": "Il tempo per uscire dopo l'inserimento, salvo che lo scenario ne imposti uno proprio."
+  },
+  "zones": {
+    "title": "Zone",
+    "add": "Aggiungi zona",
+    "new": "Nuova zona",
+    "no_areas": "Crea prima un'area: ogni zona ne fa parte.",
+    "search": "Cerca",
+    "pick_entity": "Scegli un'entità…",
+    "entity": "{name} ({entity})",
+    "entity_used": "{name} ({entity}) — già una zona",
+    "entity_hint": "Qualsiasi sensore, contatto, tapparella, serratura, interruttore, persona, evento o tag.",
+    "trigger_title": "Quando scatta questa zona?",
+    "trigger_intro": "{entity} in questo momento è “{state}”.",
+    "device_class": "Proposta dal suo tipo: {device_class}.",
+    "trigger_kind": "Leggila come",
+    "kind_state": "Stati",
+    "kind_numeric": "Un numero",
+    "now": "ora",
+    "other_state": "Altro stato",
+    "add_state": "Aggiungi",
+    "state_hint": "I contatti normalmente chiusi e normalmente aperti si comportano all'opposto. Apri la porta o passaci davanti e guarda lo stato.",
+    "operator": "Scatta quando è",
+    "threshold": "Soglia",
+    "hysteresis": "Isteresi",
+    "hysteresis_hint": "Di quanto deve rientrare prima di tornare normale.",
+    "attribute": "Attributo (facoltativo)",
+    "attribute_hint": "Legge questo attributo invece dello stato.",
+    "tag_hint": "Un tag scatta a ogni scansione.",
+    "event_type": "Tipo di evento",
+    "pick_event": "Scegli…",
+    "event_hint": "Solo questo evento fa scattare la zona.",
+    "confirm": "Ho verificato questi stati sul sensore reale",
+    "confirm_hint": "Una scelta sbagliata è una zona che non scatta mai, e lo scopri durante un'effrazione.",
+    "confirm_first": "Conferma il trigger per salvare.",
+    "properties_title": "Comportamento",
+    "type_unavailable": "{type} — aggiornamento successivo",
+    "type_hint": "Un preset: compila i campi qui sotto, che restano tutti modificabili.",
+    "inherit_seconds": "eredita ({n} s)",
+    "entry_delay_hint": "Vuoto: il predefinito dell'area.",
+    "hold_hint": "Vuoto: il predefinito globale. Conta dalla fine del ritardo di uscita.",
+    "off": "disattivata",
+    "supervision_hint": "Silenziosa oltre questo tempo è un guasto. Conta ogni segnalazione, anche senza cambi di stato.",
+    "always_on_hint": "Scatta anche a impianto disinserito.",
+    "bypassable_hint": "Serve per l'esclusione automatica o forzata.",
+    "allow_faulted_hint": "L'inserimento procede anche se questa zona non è visibile. Lascialo spento se non sai perché.",
+    "enabled_hint": "Una zona disattivata viene ignorata del tutto.",
+    "key_title": "Azione chiave",
+    "pick_scenario": "Scegli uno scenario…",
+    "key_hint": "Una chiave inserisce o disinserisce come farebbe una persona. Non va mai in allarme.",
+    "area_armed": "L'area di questa zona è inserita: le modifiche vengono rifiutate finché non la disinserisci."
+  },
+  "scenarios": {
+    "title": "Scenari",
+    "add": "Aggiungi scenario",
+    "new": "Nuovo scenario",
+    "active": "in funzione",
+    "shared_mode": "Condivisa con un altro scenario: il generale non può inserire questa modalità.",
+    "area_default": "quello di ogni area",
+    "global_default": "predefinito globale",
+    "global_seconds": "globale ({n} s)",
+    "mode_hint": "Più scenari possono condividerla; il generale allora rifiuta quella modalità e lo scenario si sceglie qui.",
+    "exit_hint": "Vuoto: il ritardo di uscita di ogni area.",
+    "siren_hint": "Al massimo 900 s. Vuoto: l'impostazione globale.",
+    "areas_hint": "Solo queste vengono inserite. Passando a un altro scenario si disinseriscono le aree che non elenca."
+  },
+  "card": {
+    "arm": "Inserisci",
+    "disarm": "Disinserisci",
+    "no_entity": "Imposta un'entità: un alarm_control_panel di Foyer.",
+    "entity_missing": "Entità non trovata: {entity}",
+    "area_countdown": "{area} — {countdown}"
   },
   "help": {
     "toggle": "Informazioni su questa sezione",
+    "global_toggle": "Mostra o nascondi tutti gli aiuti",
     "overview": {
       "title": "Cosa mostra questa pagina",
-      "intro": "Lo stato dell'allarme in tempo reale. Si aggiorna da sola quando il sistema cambia; non serve ricaricare.",
+      "intro": "Lo stato dell'allarme in tempo reale. Si aggiorna da solo; ogni pulsante agisce subito.",
       "items": {
         "area": {
           "term": "Area",
-          "text": "Ha il proprio stato di inserimento. In allarme resta tale finché qualcuno non disinserisce."
+          "text": "Si inserisce e disinserisce da sola. Il suo pulsante inserisce solo quell'area."
+        },
+        "master": {
+          "term": "Tutta la casa",
+          "text": "Derivato dalle aree: inserito se almeno una lo è. Il disinserimento qui disinserisce tutto."
         },
         "scenario": {
-          "term": "Scenario attivo",
-          "text": "Il preset che ha inserito l'area. Nessuno quando è disinserita."
+          "term": "Scenario",
+          "text": "Inserisce un insieme di aree. Scelto a impianto inserito, lo cambia."
         },
-        "zone": {
-          "term": "Zona",
-          "text": "Aperta blocca l'inserimento; guasto significa che il sensore non è visibile e blocca anch'esso l'inserimento."
+        "not_ready": {
+          "term": "Non pronte",
+          "text": "Zone aperte, in guasto o escluse. I guasti bloccano l'inserimento, salvo che la zona lo consenta."
+        },
+        "memory": {
+          "term": "Memoria d'allarme",
+          "text": "Resta dopo che le sirene si fermano, finché qualcuno non disinserisce."
+        }
+      }
+    },
+    "areas": {
+      "title": "Cos'è un'area",
+      "intro": "Un gruppo di zone con un proprio stato e una propria entità pannello d'allarme. Le aree che crei decidono quali inserimenti parziali sono possibili.",
+      "items": {
+        "own_state": {
+          "term": "Stato proprio",
+          "text": "Ogni area si inserisce, conta i ritardi e va in allarme per conto suo."
+        },
+        "entry": {
+          "term": "Ritardo di ingresso predefinito",
+          "text": "Più lungo ti dà più tempo per disinserire, e lo dà anche all'intruso."
+        },
+        "exit": {
+          "term": "Ritardo di uscita predefinito",
+          "text": "Le zone ancora aperte alla scadenza seguono la loro regola di inserimento."
+        },
+        "reports_as": {
+          "term": "Stato riportato",
+          "text": "Ciò che vedono Home Assistant, HomeKit e gli assistenti vocali. Il comportamento non cambia."
+        }
+      }
+    },
+    "zones": {
+      "title": "Cos'è una zona",
+      "intro": "Un'entità di Home Assistant con un significato d'allarme. Il tipo è solo un preset; il motore legge i campi.",
+      "items": {
+        "trigger": {
+          "term": "Scatta quando",
+          "text": "Quale stato significa allarme. Se è sbagliato la zona non scatta mai."
+        },
+        "type": {
+          "term": "Tipo",
+          "text": "Compila i campi sottostanti. Ogni campo resta modificabile."
+        },
+        "entry_mode": {
+          "term": "Quando scatta",
+          "text": "Istantanea: allarme subito; ritardata: avvia il ritardo di ingresso; follower: lo eredita."
+        },
+        "arm_policy": {
+          "term": "Se aperta all'inserimento",
+          "text": "Blocca indica la zona; escludi la fa rientrare appena si chiude; ignora inserisce comunque."
+        },
+        "hold": {
+          "term": "Inserisci dopo la chiusura",
+          "text": "Attende la porta da cui esci. Fallisce se resta aperta oltre il limite."
+        },
+        "always_on": {
+          "term": "Sempre attiva",
+          "text": "Scatta anche a impianto disinserito. Tamper e panico lo sono sempre."
+        },
+        "supervision": {
+          "term": "Supervisione",
+          "text": "Un sensore silenzioso troppo a lungo è un guasto, mai “tutto tranquillo”."
+        }
+      }
+    },
+    "scenarios": {
+      "title": "Cos'è uno scenario",
+      "intro": "Un insieme di aree, con un nome, da inserire insieme. Creane quanti ne servono alla casa.",
+      "items": {
+        "areas": {
+          "term": "Aree inserite",
+          "text": "Inserisce esattamente queste."
+        },
+        "reports_master": {
+          "term": "Stato riportato dal generale",
+          "text": "La modalità vista da HomeKit e dagli assistenti vocali. Una modalità condivisa da due scenari non si può inserire dal generale."
+        },
+        "switching": {
+          "term": "Cambio di scenario",
+          "text": "Scegliere un altro scenario a impianto inserito disinserisce le aree che non elenca."
+        },
+        "exit_override": {
+          "term": "Ritardo di uscita",
+          "text": "Sostituisce quello di ogni area per questo scenario."
+        },
+        "siren": {
+          "term": "Durata delle sirene",
+          "text": "Uno scenario notturno può suonare meno. Mai più di 900 s."
         }
       }
     }
-  },
-  "card": {
-    "arm": "Inserisci {scenario}",
-    "no_entity": "Imposta un'entità: un alarm_control_panel di Foyer.",
-    "entity_missing": "Entità non trovata: {entity}"
   },
   "notification": {
     "armed": {

@@ -4,52 +4,404 @@
     "loading": "Loading…",
     "not_loaded": "Foyer Home Defender is not loaded. Check the integration in Settings.",
     "connection_error": "Cannot reach Home Assistant: {error}",
-    "live": "Live"
+    "live": "Live",
+    "seconds": "{n} s",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "nav": {
+    "overview": "Overview",
+    "areas": "Areas",
+    "zones": "Zones",
+    "scenarios": "Scenarios"
   },
   "state": {
     "disarmed": "Disarmed",
+    "arming": "Arming",
     "armed": "Armed",
+    "entry": "Entry delay",
     "triggered": "Triggered"
+  },
+  "timer": {
+    "exit": "Exit delay: {seconds} s",
+    "hold": "Waiting for a zone to close: {seconds} s left",
+    "entry": "Entry delay: {seconds} s",
+    "siren": "Sounders: {seconds} s"
   },
   "zone_status": {
     "closed": "Ready",
     "open": "Open",
-    "fault": "Fault"
+    "fault": "Fault",
+    "disabled": "Disabled"
+  },
+  "fault": {
+    "unavailable": "Fault: not reachable",
+    "not_numeric": "Fault: not a number",
+    "supervision": "Fault: silent too long"
+  },
+  "bypass": {
+    "auto_bypass": "Excluded at arming",
+    "forced": "Excluded by forced arming"
+  },
+  "reason": {
+    "invalid_state": "The area is not in a state that allows this.",
+    "unknown_scenario": "That scenario does not exist.",
+    "unknown_area": "That area does not exist.",
+    "no_scenario_for_mode": "No scenario reports this mode.",
+    "ambiguous_mode": "More than one scenario reports this mode. Choose the scenario itself.",
+    "alarm_in_progress": "An alarm is in progress. Disarm before changing scenario.",
+    "code_required": "A code is required.",
+    "zone_fault": "Cannot arm: zone in fault: {zones}.",
+    "zone_open": "Cannot arm: zone open: {zones}.",
+    "zone_not_bypassable": "Cannot force arming: these zones may not be excluded: {zones}.",
+    "arm_hold_expired": "Arming failed: still open: {zones}.",
+    "unknown": "The request was refused."
+  },
+  "problem": {
+    "duplicate_id": "Two objects share the same identifier.",
+    "name_required": "A name is required.",
+    "duplicate_name": "Another one already has this name.",
+    "invalid_ha_state": "Choose one of the Home Assistant armed states.",
+    "delay_out_of_range": "{field}: between 0 and 300 seconds.",
+    "siren_out_of_range": "{field}: between 1 and 900 seconds (the EN 50131 reference for external sounders).",
+    "hold_out_of_range": "{field}: between 60 and 1800 seconds.",
+    "supervision_out_of_range": "{field}: between 60 seconds and 7 days, or empty for off.",
+    "scenario_without_areas": "A scenario must arm at least one area.",
+    "unknown_area": "The chosen area does not exist.",
+    "unsupported_domain": "This kind of entity cannot be a zone.",
+    "trigger_domain": "Event and tag entities need an event trigger, and only they can have one.",
+    "fault_state_as_trigger": "Unavailable and unknown are faults, not triggers. They always block arming.",
+    "negative_hysteresis": "The hysteresis cannot be negative.",
+    "eq_hysteresis": "An equality trigger has no hysteresis.",
+    "event_type_required": "Choose which event type triggers the zone.",
+    "event_type_not_allowed": "A tag has only one event, the scan: leave the type empty.",
+    "subtype_not_supported": "Event subtypes are not supported yet.",
+    "channel_not_available": "Technical zones (smoke, gas, water) arrive in a later update. Foyer refuses them rather than store a detector that does nothing.",
+    "key_action_required": "A key zone needs an action.",
+    "key_scenario_required": "Choose the scenario this key arms.",
+    "key_always_on": "A key zone commands; it cannot be always on.",
+    "key_action_not_allowed": "Only key zones have a key action.",
+    "always_on_must_be_instant": "An always-on zone fires at once: no entry delay applies.",
+    "auto_bypass_needs_bypassable": "Automatic exclusion needs a zone that may be excluded.",
+    "hold_needs_arm_after_closing": "The wait limit applies only to “arm after closing”.",
+    "area_not_disarmed": "This area is not disarmed. Disarm it before changing what protects it.",
+    "scenario_active": "This scenario is running. Disarm before editing it.",
+    "trigger_not_confirmed": "Confirm the trigger states against the real sensor first.",
+    "not_found": "It no longer exists. Reload the page.",
+    "area_has_zones": "Move or delete this area's zones first.",
+    "area_in_scenario": "Remove this area from its scenarios first.",
+    "scenario_in_use": "A key zone arms this scenario. Change the key zone first.",
+    "unknown_kind": "Unknown kind of object.",
+    "invalid": "Some values are not valid."
+  },
+  "field": {
+    "name": "Name",
+    "entity_id": "Entity",
+    "area_id": "Area",
+    "type": "Type",
+    "trigger": "Trigger",
+    "channel": "Channel",
+    "entry_mode": "When it triggers",
+    "entry_delay": "Entry delay",
+    "alarm_kind": "Meaning",
+    "arm_policy": "If open when arming",
+    "arm_hold_timeout": "Wait for it to close, at most",
+    "always_on": "Always on (24h)",
+    "bypassable": "May be excluded",
+    "allow_arm_when_faulted": "Allow arming while in fault",
+    "enabled": "Enabled",
+    "supervision_timeout": "Supervision (seconds)",
+    "key": "Key action",
+    "on_activate": "When activated",
+    "on_deactivate": "When released",
+    "scenario_id": "Scenario",
+    "default_entry_delay": "Default entry delay",
+    "default_exit_delay": "Default exit delay",
+    "ha_state_when_armed": "Reports to Home Assistant as",
+    "ha_master_state": "Reports master as",
+    "areas": "Areas armed",
+    "exit_delay_override": "Exit delay",
+    "siren_duration_override": "Sounders run for",
+    "siren_duration": "Sounders run for"
+  },
+  "ha_state": {
+    "armed_home": "Armed home",
+    "armed_away": "Armed away",
+    "armed_night": "Armed night",
+    "armed_vacation": "Armed vacation",
+    "armed_custom_bypass": "Armed custom bypass"
+  },
+  "zone_type": {
+    "instant": "Instant",
+    "delayed": "Delayed",
+    "follower": "Follower",
+    "24h": "24h",
+    "tamper": "Tamper",
+    "technical": "Technical",
+    "panic": "Panic",
+    "key": "Key"
+  },
+  "channel": {
+    "intrusion": "Intrusion",
+    "key": "Key (commands)",
+    "technical": "Technical (later update)"
+  },
+  "entry_mode": {
+    "instant": "Instant",
+    "delayed": "Delayed",
+    "follower": "Follower"
+  },
+  "entry_mode_hint": {
+    "instant": "Triggers the alarm at once when the area is armed.",
+    "delayed": "Starts the entry delay: the way in, such as the front door.",
+    "follower": "Inherits a running entry delay; instant otherwise. For the hall after the door."
+  },
+  "alarm_kind": {
+    "intrusion": "Intrusion",
+    "tamper": "Tamper",
+    "panic": "Panic"
+  },
+  "arm_policy": {
+    "block": "Block arming",
+    "auto_bypass": "Exclude automatically",
+    "arm_after_closing": "Arm after closing",
+    "ignore": "Ignore"
+  },
+  "arm_policy_hint": {
+    "block": "Arming fails and names this zone.",
+    "auto_bypass": "Excluded and announced; it rejoins by itself once closed.",
+    "arm_after_closing": "Arming waits, after the exit delay, until it closes. It fails if it stays open too long.",
+    "ignore": "Arms regardless. It fires the next time it opens."
+  },
+  "operator": {
+    "gt": "Above",
+    "lt": "Below",
+    "eq": "Equal to"
+  },
+  "key_command": {
+    "arm": "Arm the scenario",
+    "disarm": "Disarm everything",
+    "toggle": "Arm or disarm"
+  },
+  "key_release": {
+    "none": "Nothing",
+    "disarm": "Disarm everything"
   },
   "overview": {
-    "heading": "Status",
+    "no_codes_warning": "No users or codes yet: anyone with access to Home Assistant can disarm. Codes arrive in a later update.",
+    "memory_banner": "Alarm memory in {area}: {zones}. Disarm the area to clear it.",
+    "bypassed": "Armed. Excluded: {zones}.",
+    "master": "Whole house",
+    "scenario": "Scenario",
+    "no_scenarios": "No scenarios yet.",
+    "scenario_hint": "Choosing a scenario arms its areas. While armed, it switches: areas not in the new one are disarmed.",
+    "disarm_all": "Disarm everything",
+    "force_arm": "Arm anyway (forced)",
+    "force_arm_hint": "Excludes the zones above and records the arming as forced.",
     "area": "Area",
-    "scenario": "Active scenario",
-    "scenario_none": "None",
+    "memory": "Alarm memory",
+    "by_scenario": "Armed by scenario {scenario}",
+    "on_its_own": "Armed on its own",
+    "arm_area": "Arm this area",
+    "disarm_area": "Disarm",
+    "not_ready": "Not ready",
     "zone": "Zone",
-    "entity_state": "Entity state: {state}",
-    "phase0_warning": "Development preview. Disarming needs no code and there are no users yet: this does not protect anything."
+    "status": "Status",
+    "entity_state": "Entity state",
+    "all_ready": "Every zone is ready."
+  },
+  "areas": {
+    "title": "Areas",
+    "add": "Add area",
+    "new": "New area",
+    "zones": "Zones",
+    "reports_as_hint": "What voice assistants and HomeKit see. Changes nothing about behaviour.",
+    "entry_hint": "For zones that do not set their own.",
+    "exit_hint": "Time to leave after arming, unless the scenario sets its own."
+  },
+  "zones": {
+    "title": "Zones",
+    "add": "Add zone",
+    "new": "New zone",
+    "no_areas": "Create an area first: every zone belongs to one.",
+    "search": "Search",
+    "pick_entity": "Choose an entity…",
+    "entity": "{name} ({entity})",
+    "entity_used": "{name} ({entity}) — already a zone",
+    "entity_hint": "Any sensor, contact, cover, lock, switch, person, event or tag.",
+    "trigger_title": "When is this zone triggered?",
+    "trigger_intro": "{entity} is “{state}” right now.",
+    "device_class": "Proposed from its type: {device_class}.",
+    "trigger_kind": "Read it as",
+    "kind_state": "States",
+    "kind_numeric": "A number",
+    "now": "now",
+    "other_state": "Another state",
+    "add_state": "Add",
+    "state_hint": "Normally-closed and normally-open contacts behave in opposite ways. Open the door or walk past and watch the state.",
+    "operator": "Triggered when",
+    "threshold": "Threshold",
+    "hysteresis": "Hysteresis",
+    "hysteresis_hint": "How far back it must go before it counts as normal again.",
+    "attribute": "Attribute (optional)",
+    "attribute_hint": "Read this attribute instead of the state.",
+    "tag_hint": "A tag fires every time it is scanned.",
+    "event_type": "Event type",
+    "pick_event": "Choose…",
+    "event_hint": "Only this event triggers the zone.",
+    "confirm": "I have checked this against the real sensor",
+    "confirm_hint": "A wrong choice is a zone that never fires, found out during a break-in.",
+    "confirm_first": "Confirm the trigger to save.",
+    "properties_title": "Behaviour",
+    "type_unavailable": "{type} — later update",
+    "type_hint": "A preset: it fills the fields below, which all stay editable.",
+    "inherit_seconds": "inherit ({n} s)",
+    "entry_delay_hint": "Empty: the area's default.",
+    "hold_hint": "Empty: the global default. Counted from the end of the exit delay.",
+    "off": "off",
+    "supervision_hint": "Silent longer than this is a fault. Any report counts, even without a change.",
+    "always_on_hint": "Fires even when disarmed.",
+    "bypassable_hint": "Needed for automatic or forced exclusion.",
+    "allow_faulted_hint": "Arming proceeds even if this zone cannot be seen. Leave off unless you know why.",
+    "enabled_hint": "A disabled zone is ignored completely.",
+    "key_title": "Key action",
+    "pick_scenario": "Choose a scenario…",
+    "key_hint": "A key arms or disarms as a person would. It never alarms.",
+    "area_armed": "This zone's area is armed: changes are refused until it is disarmed."
+  },
+  "scenarios": {
+    "title": "Scenarios",
+    "add": "Add scenario",
+    "new": "New scenario",
+    "active": "running",
+    "shared_mode": "Shared with another scenario: the master cannot arm this mode.",
+    "area_default": "each area's own",
+    "global_default": "global default",
+    "global_seconds": "global ({n} s)",
+    "mode_hint": "Several scenarios may share one; the master then refuses that mode and the scenario is chosen here.",
+    "exit_hint": "Empty: each area's own exit delay.",
+    "siren_hint": "At most 900 s. Empty: the global setting.",
+    "areas_hint": "Only these are armed. Switching to another scenario disarms the areas it does not list."
+  },
+  "card": {
+    "arm": "Arm",
+    "disarm": "Disarm",
+    "no_entity": "Set an entity: a Foyer alarm_control_panel.",
+    "entity_missing": "Entity not found: {entity}",
+    "area_countdown": "{area} — {countdown}"
   },
   "help": {
     "toggle": "About this section",
+    "global_toggle": "Show or hide every help panel",
     "overview": {
       "title": "What this page shows",
-      "intro": "The live state of the alarm. It updates by itself as the system changes; nothing here needs a reload.",
+      "intro": "The live state of the alarm. It updates by itself; every button acts at once.",
       "items": {
         "area": {
           "term": "Area",
-          "text": "Its own armed state. Triggered stays until someone disarms."
+          "text": "Arms and disarms on its own. Its button arms only that area."
+        },
+        "master": {
+          "term": "Whole house",
+          "text": "Derived from the areas: armed if any is. Disarm here disarms everything."
         },
         "scenario": {
-          "term": "Active scenario",
-          "text": "The preset that armed the area. None while disarmed."
+          "term": "Scenario",
+          "text": "Arms a set of areas. Chosen while armed, it switches."
         },
-        "zone": {
-          "term": "Zone",
-          "text": "Open blocks arming; fault means the sensor cannot be seen and also blocks arming."
+        "not_ready": {
+          "term": "Not ready",
+          "text": "Open, faulted or excluded zones. Faults block arming unless the zone allows it."
+        },
+        "memory": {
+          "term": "Alarm memory",
+          "text": "Stays after the sounders stop, until someone disarms."
+        }
+      }
+    },
+    "areas": {
+      "title": "What an area is",
+      "intro": "A group of zones with its own armed state and its own alarm panel entity. The areas you create decide what partial arming is possible.",
+      "items": {
+        "own_state": {
+          "term": "Own state",
+          "text": "Each area arms, delays and alarms independently."
+        },
+        "entry": {
+          "term": "Default entry delay",
+          "text": "Longer gives you more time to disarm, and an intruder the same."
+        },
+        "exit": {
+          "term": "Default exit delay",
+          "text": "Zones still open when it ends are handled by their own arm policy."
+        },
+        "reports_as": {
+          "term": "Reports as",
+          "text": "What Home Assistant, HomeKit and voice assistants see. Behaviour is unchanged."
+        }
+      }
+    },
+    "zones": {
+      "title": "What a zone is",
+      "intro": "One Home Assistant entity plus alarm semantics. The type is only a preset; the engine reads the fields.",
+      "items": {
+        "trigger": {
+          "term": "Triggered when",
+          "text": "Which state means an alarm. Get it wrong and the zone never fires."
+        },
+        "type": {
+          "term": "Type",
+          "text": "Fills the fields below. Every field stays editable."
+        },
+        "entry_mode": {
+          "term": "When it triggers",
+          "text": "Instant alarms at once; delayed starts the entry delay; follower inherits it."
+        },
+        "arm_policy": {
+          "term": "If open when arming",
+          "text": "Block names the zone; exclude lets it rejoin once closed; ignore arms anyway."
+        },
+        "hold": {
+          "term": "Arm after closing",
+          "text": "Waits for the door you leave by. Fails if it stays open past the limit."
+        },
+        "always_on": {
+          "term": "Always on",
+          "text": "Fires even when disarmed. Tamper and panic are always on."
+        },
+        "supervision": {
+          "term": "Supervision",
+          "text": "A sensor silent too long is a fault, never “all quiet”."
+        }
+      }
+    },
+    "scenarios": {
+      "title": "What a scenario is",
+      "intro": "A named set of areas to arm together. Create as many as the house needs.",
+      "items": {
+        "areas": {
+          "term": "Areas armed",
+          "text": "Exactly these are armed by it."
+        },
+        "reports_master": {
+          "term": "Reports master as",
+          "text": "The mode HomeKit and voice assistants see. A mode shared by two scenarios cannot be armed from the master."
+        },
+        "switching": {
+          "term": "Switching",
+          "text": "Choosing another scenario while armed disarms the areas it does not list."
+        },
+        "exit_override": {
+          "term": "Exit delay",
+          "text": "Replaces each area's own for this scenario."
+        },
+        "siren": {
+          "term": "Sounders run for",
+          "text": "A night scenario may sound for less. Never more than 900 s."
         }
       }
     }
-  },
-  "card": {
-    "arm": "Arm {scenario}",
-    "no_entity": "Set an entity: a Foyer alarm_control_panel.",
-    "entity_missing": "Entity not found: {entity}"
   },
   "notification": {
     "armed": {

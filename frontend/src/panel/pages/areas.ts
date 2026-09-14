@@ -1,0 +1,201 @@
+// Page 2 — Areas (SPEC §4.5, §15.1). The backend validates every save; this
+// page only collects the fields and shows what the backend said.
+import { LitElement, html, nothing } from "lit";
+
+import { t, type Strings } from "../../shared/i18n";
+import { formStyles, stateStyles } from "../../shared/styles";
+import type { AreaConfig, Problem } from "../../shared/types";
+import { problemText, type PanelContext } from "../context";
+
+const NEW_AREA: AreaConfig = {
+  name: "",
+  ha_state_when_armed: "armed_away",
+  default_entry_delay: 30,
+  default_exit_delay: 30,
+};
+
+class FoyerPageAreas extends LitElement {
+  static override properties = {
+    ctx: { attribute: false },
+    _draft: { state: true },
+    _problems: { state: true },
+    _busy: { state: true },
+  };
+
+  ctx?: PanelContext;
+  private _draft?: AreaConfig;
+  private _problems: Problem[] = [];
+  private _busy = false;
+
+  private _edit(area?: AreaConfig): void {
+    this._draft = area ? { ...area } : { ...NEW_AREA };
+    this._problems = [];
+  }
+
+  private _set<K extends keyof AreaConfig>(key: K, value: AreaConfig[K]): void {
+    if (this._draft) this._draft = { ...this._draft, [key]: value };
+  }
+
+  private async _save(): Promise<void> {
+    if (!this.ctx || !this._draft) return;
+    this._busy = true;
+    try {
+      const result = await this.ctx.save("area", this._draft);
+      this._problems = result.problems;
+      if (result.success) this._draft = undefined;
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private async _delete(): Promise<void> {
+    if (!this.ctx || !this._draft?.id) return;
+    this._busy = true;
+    try {
+      const result = await this.ctx.remove("area", this._draft.id);
+      this._problems = result.problems;
+      if (result.success) this._draft = undefined;
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  override render() {
+    const ctx = this.ctx;
+    if (!ctx?.config) return nothing;
+    const s = ctx.strings;
+    const live = new Map(ctx.status.areas.map((a) => [a.id, a.state]));
+    const zoneCount = (id?: string) => ctx.config!.zones.filter((z) => z.area_id === id).length;
+    return html`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t(s, "areas.title")}</h2>
+          <button class="btn primary" @click=${() => this._edit()}>
+            ${t(s, "areas.add")}
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>${t(s, "field.name")}</th>
+                <th>${t(s, "overview.status")}</th>
+                <th>${t(s, "areas.zones")}</th>
+                <th>${t(s, "field.default_entry_delay")}</th>
+                <th>${t(s, "field.default_exit_delay")}</th>
+                <th>${t(s, "field.ha_state_when_armed")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ctx.config.areas.map((area) => {
+                const state = live.get(area.id ?? "") ?? "disarmed";
+                return html`<tr
+                  class="clickable"
+                  aria-selected=${this._draft?.id === area.id ? "true" : "false"}
+                  @click=${() => this._edit(area)}
+                >
+                  <td><strong>${area.name}</strong></td>
+                  <td><span class="state ${state}">${t(s, `state.${state}`)}</span></td>
+                  <td>${zoneCount(area.id)}</td>
+                  <td>${t(s, "common.seconds", { n: area.default_entry_delay })}</td>
+                  <td>${t(s, "common.seconds", { n: area.default_exit_delay })}</td>
+                  <td class="mono">${area.ha_state_when_armed}</td>
+                </tr>`;
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      ${this._draft ? this._renderEditor(s, this._draft) : nothing}
+    `;
+  }
+
+  private _renderEditor(s: Strings, draft: AreaConfig) {
+    const meta = this.ctx!.meta;
+    const [minDelay, maxExit] = meta?.bounds.exit_delay ?? [0, 300];
+    const maxEntry = meta?.bounds.entry_delay?.[1] ?? 300;
+    return html`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${draft.id ? draft.name : t(s, "areas.new")}</h2>
+        </div>
+        <div class="card-bd">
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${t(s, "field.name")}</span>
+              <input
+                .value=${draft.name}
+                @input=${(e: Event) => this._set("name", (e.target as HTMLInputElement).value)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${t(s, "field.ha_state_when_armed")}</span>
+              <select
+                @change=${(e: Event) =>
+                  this._set("ha_state_when_armed", (e.target as HTMLSelectElement).value)}
+              >
+                ${(meta?.ha_states ?? []).map(
+                  (mode) =>
+                    html`<option .value=${mode} ?selected=${mode === draft.ha_state_when_armed}>
+                      ${t(s, `ha_state.${mode}`)}
+                    </option>`,
+                )}
+              </select>
+              <span class="hint">${t(s, "areas.reports_as_hint")}</span>
+            </label>
+            <label class="field">
+              <span class="lbl">${t(s, "field.default_entry_delay")}</span>
+              <input
+                type="number"
+                min=${minDelay}
+                max=${maxEntry}
+                .value=${String(draft.default_entry_delay)}
+                @input=${(e: Event) =>
+                  this._set("default_entry_delay", Number((e.target as HTMLInputElement).value))}
+              />
+              <span class="hint">${t(s, "areas.entry_hint")}</span>
+            </label>
+            <label class="field">
+              <span class="lbl">${t(s, "field.default_exit_delay")}</span>
+              <input
+                type="number"
+                min=${minDelay}
+                max=${maxExit}
+                .value=${String(draft.default_exit_delay)}
+                @input=${(e: Event) =>
+                  this._set("default_exit_delay", Number((e.target as HTMLInputElement).value))}
+              />
+              <span class="hint">${t(s, "areas.exit_hint")}</span>
+            </label>
+          </div>
+          ${this._problems.length
+            ? html`<div class="problems" role="alert">
+                <ul>
+                  ${this._problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+                </ul>
+              </div>`
+            : nothing}
+          <div class="actions">
+            <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
+              ${t(s, "common.save")}
+            </button>
+            <button class="btn" ?disabled=${this._busy} @click=${() => (this._draft = undefined)}>
+              ${t(s, "common.cancel")}
+            </button>
+            ${draft.id
+              ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
+                  ${t(s, "common.delete")}
+                </button>`
+              : nothing}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  static override styles = [stateStyles, formStyles];
+}
+
+if (!customElements.get("foyer-page-areas")) {
+  customElements.define("foyer-page-areas", FoyerPageAreas);
+}

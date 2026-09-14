@@ -21,6 +21,9 @@ PANEL_ICON: Final = "foyer:shield"  # registered by foyer-icons.js
 STATIC_URL: Final = "/foyer_static"
 FRONTEND_MODULES: Final = ("foyer-panel.js", "foyer-card.js", "foyer-icons.js")
 
+# Dispatcher signal: something visible changed. Survives entry reloads.
+SIGNAL_UPDATE: Final = f"{DOMAIN}_update"
+
 # Channels (SPEC §9.1)
 CHANNEL_HA_UI: Final = "ha_ui"
 CHANNEL_AUTOMATION: Final = "automation"

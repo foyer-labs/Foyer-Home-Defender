@@ -223,3 +223,32 @@ def test_every_notification_the_seed_can_send_is_translated():
         notifications = load(TRANSLATIONS / "panel", language)["notification"]
         for moment in config.actions[0].moments:
             assert {"title", "message"} <= notifications[moment.value].keys()
+
+
+def test_every_problem_and_reason_the_backend_returns_is_translated():
+    """The panel shows backend problems by code: each needs text in each language."""
+    sources = [
+        ROOT / "custom_components" / "foyer" / "core" / "validation.py",
+        ROOT / "custom_components" / "foyer" / "store" / "editing.py",
+    ]
+    text = "\n".join(p.read_text(encoding="utf-8") for p in sources)
+    codes = set(re.findall(r"""(?:Problem\(|add\()\s*["'](\w+)["']""", text))
+    fields = set(
+        re.findall(
+            r"""Problem\(\s*["']\w+["'],\s*["']\w+["'],\s*[\w.]+,\s*["'](\w+)["']""",
+            text,
+        )
+    )
+    fields |= set(re.findall(r"""add\(\s*["']\w+["'],\s*["'](\w+)["']\)""", text))
+    assert "trigger_not_confirmed" in codes and "entry_delay" in fields
+    for language in LANGUAGES:
+        panel = load(TRANSLATIONS / "panel", language)
+        assert not codes - panel["problem"].keys(), (
+            language,
+            codes - panel["problem"].keys(),
+        )
+        assert not fields - panel["field"].keys(), (
+            language,
+            fields - panel["field"].keys(),
+        )
+        assert {r.value for r in Reason} <= panel["reason"].keys()

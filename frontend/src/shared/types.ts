@@ -1,4 +1,5 @@
-// The subset of Home Assistant's frontend objects that Foyer uses.
+// The subset of Home Assistant's frontend objects that Foyer uses, and the
+// shapes of Foyer's own WebSocket payloads (api/websocket.py).
 
 export interface HassEntity {
   entity_id: string;
@@ -17,6 +18,7 @@ export interface HomeAssistant {
   language: string;
   states: Record<string, HassEntity>;
   themes?: { darkMode?: boolean };
+  user?: { id: string; name: string; is_admin: boolean };
   connection: HassConnection;
   callWS<T>(message: Record<string, unknown>): Promise<T>;
   callService(
@@ -37,20 +39,157 @@ export interface HassServiceError {
   translation_placeholders?: Record<string, string>;
 }
 
-// foyer/status and foyer/subscribe payload (runtime/system.py: status()).
-export type AreaState = "disarmed" | "armed" | "triggered";
+// --- live status: foyer/status and foyer/subscribe (runtime/system.py) ----------
+
+export type AreaState = "disarmed" | "arming" | "armed" | "entry" | "triggered";
+export type TimerKind = "exit" | "hold" | "entry" | "siren";
+
+export interface StatusArea {
+  id: string;
+  name: string;
+  state: AreaState;
+  entity_id: string | null;
+  scenario_id: string | null;
+  memory: boolean;
+  causes: string[];
+  timer: { kind: TimerKind; due: string } | null;
+  ready: boolean;
+  blocking: { fault: string[]; open: string[] };
+}
+
+export interface StatusZone {
+  id: string;
+  name: string;
+  area_id: string;
+  entity_id: string;
+  type: string;
+  enabled: boolean;
+  state: string | null;
+  fault: string | null;
+  open: boolean;
+  bypassed: string | null;
+}
+
+export interface StatusScenario {
+  id: string;
+  name: string;
+  icon: string | null;
+  areas: string[];
+  ha_master_state: string;
+}
 
 export interface FoyerStatus {
+  now: string;
   active_scenario_id: string | null;
-  areas: { id: string; name: string; state: AreaState; entity_id: string | null }[];
-  scenarios: { id: string; name: string; areas: string[]; ha_master_state: string }[];
-  zones: {
-    id: string;
-    name: string;
-    area_id: string;
-    entity_id: string;
-    state: string | null;
-    fault: boolean;
-    open: boolean;
-  }[];
+  master: { state: AreaState; mode: string | null };
+  areas: StatusArea[];
+  scenarios: StatusScenario[];
+  zones: StatusZone[];
 }
+
+// Result of foyer/arm and foyer/disarm (SPEC §9.1).
+export interface CommandResult {
+  success: boolean;
+  reason: string | null;
+  blocking_zones: { id: string; name: string }[];
+  bypassed_zones: { id: string; name: string }[];
+  state: FoyerStatus;
+}
+
+// --- configuration: foyer/config (store/schema.py) --------------------------------
+
+export type Trigger =
+  | { kind: "state"; states: string[] }
+  | {
+      kind: "numeric";
+      operator: "gt" | "lt" | "eq";
+      value: number;
+      hysteresis: number;
+      attribute: string | null;
+    }
+  | { kind: "event"; event_type: string | null; subtype: string | null };
+
+export interface AreaConfig {
+  id?: string;
+  name: string;
+  ha_state_when_armed: string;
+  default_entry_delay: number;
+  default_exit_delay: number;
+}
+
+export interface KeyConfig {
+  on_activate: "arm" | "disarm" | "toggle";
+  scenario_id: string | null;
+  on_deactivate: "none" | "disarm";
+}
+
+export interface ZoneConfig {
+  id?: string;
+  name: string;
+  entity_id: string;
+  area_id: string;
+  trigger: Trigger;
+  type: string;
+  channel: "intrusion" | "technical" | "key";
+  entry_mode: "instant" | "delayed" | "follower";
+  alarm_kind: "intrusion" | "tamper" | "panic";
+  always_on: boolean;
+  entry_delay: number | null;
+  arm_policy: "block" | "auto_bypass" | "arm_after_closing" | "ignore";
+  arm_hold_timeout: number | null;
+  allow_arm_when_faulted: boolean;
+  bypassable: boolean;
+  supervision_timeout: number | null;
+  enabled: boolean;
+  key: KeyConfig | null;
+}
+
+export interface ScenarioConfig {
+  id?: string;
+  name: string;
+  areas: string[];
+  ha_master_state: string;
+  icon: string | null;
+  exit_delay_override: number | null;
+  siren_duration_override: number | null;
+}
+
+export interface FoyerConfig {
+  areas: AreaConfig[];
+  zones: ZoneConfig[];
+  scenarios: ScenarioConfig[];
+  settings: { siren_duration: number; arm_hold_timeout: number };
+}
+
+export interface ConfigMeta {
+  zone_types: { type: string; available: boolean; preset: Partial<ZoneConfig> }[];
+  zone_domains: string[];
+  ha_states: string[];
+  bounds: Record<string, [number, number]>;
+}
+
+export interface Problem {
+  code: string;
+  kind: string;
+  ref: string | null;
+  field: string | null;
+}
+
+export interface EditResult {
+  success: boolean;
+  id?: string;
+  problems: Problem[];
+}
+
+export interface ZoneProposal {
+  entity_id: string;
+  name: string;
+  state: string | null;
+  device_class: string | null;
+  trigger_kind: "state" | "numeric" | "event";
+  options: string[];
+  proposed: string[];
+  zone_type: string | null;
+}
+
+export type PageId = "overview" | "areas" | "zones" | "scenarios";
