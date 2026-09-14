@@ -335,3 +335,42 @@ order, each part still leaving something that runs:
 
 Do not split it by layer — backend first, then frontend — because that produces
 two halves neither of which can be verified until both are done.
+
+---
+
+## Session appendices
+
+A fresh session knows the spec but not what earlier sessions decided or
+discovered. When a phase (or part of one) is run, paste in this order: the
+session preamble, the phase prompt, then the appendix for that session below.
+Each appendix is written at the end of the session before it.
+
+### Phase 1, part 1
+
+```
+Scope for THIS session: Phase 1, part 1 only, as listed under "If a phase turns
+out too big" in docs/PROMPTS.md — zones, areas, scenarios, the state machine,
+delays, arm policies and persistence. Parts 2–4 are separate sessions. The full
+Phase 1 prompt above is context for the design, so that part 1 does not paint
+later parts into a corner; it is not this session's to-do list.
+
+Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
+- Work on a new branch phase-1 from master.
+- Commit as Foyer Labs <foyerlabs@gmail.com>; it is already set in the repo's
+  local git config. Never commit with any other identity.
+- INV-3 was knowingly deferred from Phase 0: today area state lives in memory
+  and a restart disarms everything. Persisting state, and logging the restart
+  gap once the log exists, is the first thing this phase must fix.
+- Panel, card, help and notification strings live in
+  translations/panel/<lang>.json, not translations/<lang>.json, because
+  hassfest rejects extra top-level keys there (SPEC §15.2, decision 35).
+- Real installations already exist with the Phase 0 stored config, schema
+  version 1.1 in .storage/foyer.config. They must be migrated through the
+  existing hook in store/migrations, with a test, never silently broken or
+  reset.
+- The Phase 0 code policy (no code for arm or disarm, enforced fail-closed in
+  the engine) stays as it is: codes and users are Phase 2.
+- Home Assistant integration tests do not run on Windows. See the project
+  memory for the WSL environments (HA 2025.1.4 and latest) and the hassfest
+  checkout; CI runs all of it on every push.
+```
