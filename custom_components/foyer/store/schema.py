@@ -299,6 +299,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
         "active_scenario_id": state.active_scenario_id,
         "bypassed": {z: r.value for z, r in state.bypassed.items()},
         "active_zones": sorted(state.active_zones),
+        "seen_zones": sorted(state.seen_zones),
         "faults": sorted(state.faults),
     }
 
@@ -342,6 +343,9 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
             },
             active_zones=frozenset(
                 z for z in data.get("active_zones", ()) if z in zone_ids
+            ),
+            seen_zones=frozenset(
+                z for z in data.get("seen_zones", ()) if z in zone_ids
             ),
             faults=frozenset(z for z in data.get("faults", ()) if z in zone_ids),
         )

@@ -25,6 +25,7 @@ from custom_components.foyer.core.models import (
     RuntimeState,
     Scenario,
     StateTrigger,
+    Tick,
     Zone,
     ZoneType,
 )
@@ -363,3 +364,47 @@ def test_refused_key_arm_is_recorded_not_silent():
     assert failed[0].zone_id == "key"
     assert failed[0].zone_ids == ("window",)
     assert failed[0].detail["reason"] == "zone_open"
+
+
+def test_a_key_zone_added_while_on_does_not_arm_until_turned():
+    """The first reading of a new zone is its baseline, not an activation."""
+    config = make_house()
+    world = World(config)
+    key = Zone(
+        id="key",
+        name="Key switch",
+        entity_id=KEY,
+        area_id="ground",
+        trigger=StateTrigger(frozenset({"on"})),
+        type=ZoneType.KEY,
+        channel=Channel.KEY,
+        key=KeyAction(KeyCommand.ARM, "night"),
+    )
+    world.config = replace(config, zones=(*config.zones, key))
+    world.entities[KEY] = world.entities[DOOR].__class__("on", {}, world.now)
+
+    world.send(Tick())
+    assert set(world.states().values()) == {"disarmed"}
+
+    world.set(KEY, "off")
+    world.set(KEY, "on")
+    assert world.state.active_scenario_id == "night"
+
+
+def test_a_zone_unreadable_when_added_gets_its_baseline_once_readable():
+    config = make_house()
+    world = World(config)
+    key = Zone(
+        id="key",
+        name="Key switch",
+        entity_id=KEY,
+        area_id="ground",
+        trigger=StateTrigger(frozenset({"on"})),
+        type=ZoneType.KEY,
+        channel=Channel.KEY,
+        key=KeyAction(KeyCommand.ARM, "night"),
+    )
+    world.config = replace(config, zones=(*config.zones, key))
+    world.set(KEY, "unavailable")
+    world.set(KEY, "on")  # first readable value: baseline
+    assert world.state.active_scenario_id is None

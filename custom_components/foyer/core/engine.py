@@ -53,7 +53,13 @@ from .models import (
     Zone,
     ZoneStateChanged,
 )
-from .triggers import fault_cause, fires_momentarily, is_active, supervision_due
+from .triggers import (
+    fault_cause,
+    fires_momentarily,
+    is_active,
+    is_unavailable,
+    supervision_due,
+)
 
 KEY_ZONE_CHANNEL = "key_zone"
 
@@ -204,6 +210,7 @@ class _Run:
         zone_ids = {z.id for z in config.zones}
         self.bypassed = {z: r for z, r in state.bypassed.items() if z in zone_ids}
         self.active = set(state.active_zones & zone_ids)
+        self.seen = set(state.seen_zones & zone_ids)
         self.faults = frozenset(state.faults & zone_ids)
         self.entities: dict[str, EntityState] = dict(snapshot.entities)
         self.occurrences: list[Occurrence] = []
@@ -311,6 +318,10 @@ class _Run:
         Level triggers are recomputed for every zone on every call, not only
         the entity in the event: at startup, a door opened while Home Assistant
         was down shows up here as a newly active zone.
+
+        A zone never read before only records its baseline: its first readable
+        value is not a change. Without this, saving a new key zone whose switch
+        is already on would arm the house.
         """
         previous = set(self.active)
         self.active = {
@@ -320,6 +331,10 @@ class _Run:
         }
         for zone in self.config.zones:
             if not zone.enabled:
+                continue
+            if zone.id not in self.seen:
+                if not is_unavailable(self.entity(zone)):
+                    self.seen.add(zone.id)
                 continue
             fired = zone.entity_id == changed_entity and fires_momentarily(
                 zone, before.entity(zone.entity_id), self.entity(zone)
@@ -796,6 +811,7 @@ class _Run:
             active_scenario_id=self.active_scenario_id,
             bypassed=self.bypassed,
             active_zones=frozenset(self.active),
+            seen_zones=frozenset(self.seen),
             faults=self.faults,
         )
         occurrences = tuple(self.occurrences)

@@ -412,14 +412,17 @@ class RuntimeState:
 
     ``active_zones`` remembers which zones count as triggered, because a numeric
     trigger inside its hysteresis band, or an entity in fault, keeps whatever it
-    was before. ``faults`` holds the zones already announced as faulted, so
-    each fault is announced once.
+    was before. ``seen_zones`` are the zones read at least once: a zone's first
+    readable value is its baseline, not an activation, so adding a key switch
+    that is already on does not arm the house. ``faults`` holds the zones
+    already announced as faulted, so each fault is announced once.
     """
 
     areas: Mapping[str, AreaRuntime] = field(default_factory=dict)
     active_scenario_id: str | None = None
     bypassed: Mapping[str, BypassReason] = field(default_factory=dict)
     active_zones: frozenset[str] = frozenset()
+    seen_zones: frozenset[str] = frozenset()
     faults: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
