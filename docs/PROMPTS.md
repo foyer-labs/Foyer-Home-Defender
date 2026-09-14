@@ -374,3 +374,59 @@ Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
   memory for the WSL environments (HA 2025.1.4 and latest) and the hassfest
   checkout; CI runs all of it on every push.
 ```
+
+### Phase 1, part 2
+
+```
+Scope for THIS session: Phase 1, part 2 only — the technical channel (§5.5),
+incidents with profile severity (§5.6), verification groups with the
+cross-zone field built on them (§4.8) and panel page 13, and chime (§6.6).
+Trigger counting (trigger_count / trigger_window, §4.2) also lands here: it
+is windowed activation counting and must share the group engine's
+machinery rather than grow a second one. Parts 3-4 are separate sessions.
+
+Context from part 1 (branch phase-1):
+- Continue on branch phase-1. Commit as Foyer Labs <foyerlabs@gmail.com>.
+- The user resolved these spec ambiguities before part 1; they are binding
+  and the spec has not yet been amended to match:
+  1. Zone type is a preset label only. The engine reads explicit
+     properties: channel (intrusion | technical | key), entry_mode
+     (instant | delayed | follower), alarm_kind (intrusion | tamper | panic).
+  2. Siren cutoff returns an area to its pre-trigger state (disarmed stays
+     disarmed with alarm memory; armed/entry -> armed; arming resumes).
+     Disarm clears memory and is accepted on a disarmed area holding it.
+  3. arm_after_closing completes when the exit delay has elapsed AND the
+     zone has closed; it fails like block after a cap, per zone with a
+     global default of 300 s.
+  4. An area's own alarm_control_panel arms only that area, outside any
+     scenario. Scenarios are armed from the master, select.foyer_scenario,
+     the panel and the card.
+  5. Zone-level exit_delay is dropped. Exit = scenario override ?? area.
+  6. Forced arm and scenario change need no code until Phase 2.
+  7. The master's arm_<mode> is refused when two scenarios share the mode.
+  8. Switching scenario A -> B while armed disarms areas armed by A that B
+     does not list; areas armed on their own are untouched.
+  9. The master reports armed_custom_bypass whenever the armed set differs
+     from the active scenario's areas.
+  10. Supervision resets on any report (HA last_reported), not only on a
+      state change.
+  11. EventTrigger: event.* matches the event_type attribute; tag.* fires
+      on every scan; subtype is refused by validation for now.
+  12. A key zone's disarm and toggle act on every area.
+- The technical type exists as a preset but validation refuses channel
+  "technical" (problem channel_not_available) and the panel greys it out,
+  because a stored smoke detector that does nothing is worse than none.
+  Part 2 lifts that refusal when the channel exists.
+- Engine shape: decide() returns the complete RuntimeState, persisted
+  verbatim in .storage/foyer.state; timers are data (Timer on AreaRuntime)
+  and the scheduler wakes at core.engine.next_wakeup(). Every decision emits
+  Occurrences (moment + area/zone/scenario/channel/detail): these become log
+  rows in part 4 and the input of response profiles in part 3. Incidents
+  should hang off them, not bypass them.
+- Panel pages 1-4 already exist (the user moved 2-4 into part 1). Part 4
+  keeps the log, settings (page 11), the first-run wizard, backup/restore,
+  pages 5 and 10, and the card layouts full and compact.
+- Config edits reload the entry; the status subscription is bound to a
+  dispatcher signal so it survives. Edits touching an armed area or the
+  running scenario are refused (core.validation.edit_conflicts).
+```

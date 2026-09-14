@@ -9,13 +9,15 @@ with their own armed state, user-defined arming scenarios, zone semantics, a
 response engine, identified users, physical keypads, an auditable event log, and
 a simulator that lets you check the configuration before you trust it.
 
-> **Status: Phase 0 — walking skeleton. This does not protect anything yet.**
-> It wires one area, one zone, one scenario and one action end to end, to prove
-> the technical chain: config flow → stored configuration → pure decision engine
-> → `alarm_control_panel` entity → sidebar panel and Lovelace card. There are no
-> users or codes: **anyone who can reach Home Assistant can disarm it.** Alarm
-> state is not kept across a restart yet; after a restart the area is disarmed.
-> Do not rely on it.
+> **Status: Phase 1 in progress — the alarm core. Not yet something to rely on.**
+> Areas, zones and scenarios are configured from the sidebar panel; the state
+> machine has exit and entry delays, instant, delayed, follower, 24h, tamper and
+> panic zones, arm policies, forced arming, a siren cutoff with alarm memory, and
+> alarm state that survives a restart. What is still missing matters: there are
+> no sirens, lights or response profiles yet — an alarm changes state and can
+> send a Home Assistant notification, nothing more — no event log, and no
+> technical channel for smoke, gas or water. There are no users or codes:
+> **anyone who can reach Home Assistant can disarm it.**
 
 The full design is in [docs/SPEC.md](docs/SPEC.md).
 
@@ -55,15 +57,16 @@ does not replace certified, interconnected smoke alarms.
    with category *Integration*.
 2. Install *Foyer Home Defender* and restart Home Assistant.
 3. *Settings → Devices & services → Add integration → Foyer Home Defender*.
-   Name the area and the scenario, pick the zone entity, then confirm the states
-   in which it counts as triggered. Check them against the real sensor: open the
-   door, walk past the sensor, and watch its state.
-4. A **Foyer** entry appears in the sidebar. To add the card to a dashboard, pick
+   Name the first area and scenario, pick the first zone entity, then confirm the
+   states in which it counts as triggered. Check them against the real sensor:
+   open the door, walk past the sensor, and watch its state.
+4. A **Foyer** entry appears in the sidebar. Add the other areas, zones and
+   scenarios there (administrators only). To add the card to a dashboard, pick
    *Foyer Home Defender* in the card picker, or use:
 
    ```yaml
    type: custom:foyer-card
-   entity: alarm_control_panel.foyer_<area>
+   entity: alarm_control_panel.foyer_<area>   # or alarm_control_panel.foyer_master
    ```
 
    The card is loaded automatically; no dashboard resource needs adding.
