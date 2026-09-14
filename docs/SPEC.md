@@ -183,7 +183,8 @@ foyer-home-defender/
 │   ├── security/    codes.py  permissions.py  lockout.py
 │   ├── api/         websocket.py  services.py  services.yaml
 │   ├── entity/      alarm_panel.py  scenario_select.py  zone.py  sensors.py
-│   ├── translations/  en.json  it.json
+│   ├── translations/  en.json  it.json   (Home Assistant: config flow, entities, errors)
+│   │   └── panel/     en.json  it.json   (panel, card, help, notifications)
 │   └── frontend/    (built panel + card bundles, committed)
 ├── frontend/        panel and card sources (TypeScript, Vite)
 ├── blueprints/      keypad adapters (Ring v2, Zigbee generic, NFC tag)
@@ -1116,6 +1117,53 @@ you find out, from somewhere else, that the power went out at home.
   entity ids redacted to stable placeholders. This is what turns a GitHub issue
   into something answerable instead of five rounds of questions.
 
+### 12.5 RF interference detection
+
+Neither Zigbee nor Z-Wave lets Home Assistant measure jamming directly. But
+jamming has an unmistakable signature: **many zones on the same radio go
+unavailable within seconds of each other.**
+
+One sensor going quiet is a flat battery. Eight going quiet in the same minute is
+a radio event.
+
+```
+if  N or more zones sharing one radio integration
+    become unavailable within T seconds
+    and the coordinator itself is still reachable
+then raise rf_interference_suspected
+```
+
+| Parameter | Default | Notes |
+|---|---|---|
+| `n_zones` | 4 | or 40% of the zones on that radio, whichever is lower |
+| `window` | 60 s | |
+| Scope | per radio integration | Zigbee and Z-Wave counted separately; a Zigbee outage says nothing about Z-Wave |
+
+**The coordinator check is what makes this useful rather than noisy.** If the
+coordinator entity is itself unavailable, this is a coordinator or network failure,
+not interference, and it is reported as such. A PoE coordinator dies with its
+switch; that is a different fault with a different fix, and conflating the two
+would teach the user to ignore both.
+
+Response depends on arming state, as in professional panels, where jamming is
+treated as a tamper condition:
+
+| State | Response |
+|---|---|
+| Armed | Alarm-grade: raises an incident-capable event a response profile can act on |
+| Disarmed | Warning: notification, log entry, repair issue |
+
+One rule that is easy to miss and that defeats the whole feature if missed:
+**notify over a channel that does not depend on the affected radio.** Announcing a
+Zigbee blackout through a Zigbee siren is not a notification.
+
+**Stated honestly in the documentation:** this is a heuristic, not jamming
+detection. A coordinator crash, a firmware update, a Zigbee channel change or a
+power cut to a room full of mains-powered routers all produce the same signature.
+That is why the event is called *suspected*, and why its first line reports how
+many zones, on which radio, and whether the coordinator is still answering —
+enough for the user to tell the cases apart.
+
 ## 13. Home Assistant entities exposed
 
 | Entity | Per | Purpose |
@@ -1137,6 +1185,7 @@ you find out, from somewhere else, that the power went out at home.
 | `switch.foyer_chime` | 1 | chime on/off (§6.6) |
 | `switch.foyer_auto_arming` | 1 | global kill switch for automatic rules (§9.4) |
 | `sensor.foyer_next_auto_action` | 1 | what will happen next and when |
+| `binary_sensor.foyer_rf_interference` | per radio | correlated unavailability suspected on that radio (§12.5) |
 | `binary_sensor.foyer_system_health` | 1 | any of: zone fault, mains lost, broken notification channel, watchdog unreachable — with the causes as attributes |
 
 Master aggregation rule: `triggered` if any area is triggered; else `entry` if any
@@ -1204,7 +1253,7 @@ timeout`), and a user who guesses wrong finds out during a burglary.
 | Aspect | Decision |
 |---|---|
 | Content | One short paragraph on what the section does, then a compact list — one line per setting — saying **what changes if you change it** |
-| Source | `translations/<lang>.json` under `help.<page>`, the same files that localise everything else, so it follows the Home Assistant user's language automatically and a translator gets it with no extra machinery |
+| Source | `translations/panel/<lang>.json` under `help.<page>`, next to the file Home Assistant itself reads, so it follows the Home Assistant user's language automatically and a translator gets it with no extra machinery. Not in `translations/<lang>.json`: hassfest validates that file against a closed schema and rejects a top-level `help` key (decision 35) |
 | State | Expanded on first visit, then remembers the user's choice **per Home Assistant user** (stored in Foyer config, not `localStorage`) so it follows them from desktop to wall tablet |
 | Global toggle | A `?` button in the panel toolbar shows or hides every help panel at once |
 | Deep link | A "Learn more" link to the matching page under `docs/` |
@@ -1249,7 +1298,7 @@ one hard-coded area, one zone, one scenario, one action.
 - Integration loads via a config flow; `.storage` config read and written.
 - `core/engine.decide()` exists as a pure function with a real unit test.
 - One `alarm_control_panel` entity arms and disarms.
-- Sidebar panel registers with the final icon (§16), builds, loads, and reads live
+- Sidebar panel registers with the final icon (§17), builds, loads, and reads live
   data over the WebSocket API.
 - `foyer-card` renders state and sends an arm command.
 - The `translations/` mechanism works end to end in `en` and `it`, including one
@@ -1322,7 +1371,9 @@ Not features: the difference between a repository and something a stranger can
 rely on.
 
 - **System health** (§12) in full: mains power, notification channel health, the
-  external watchdog, repair issues, anonymised diagnostics, panel page 14.
+  external watchdog, RF interference detection including the rule that its
+  notification must not route through the affected radio, repair issues,
+  anonymised diagnostics, panel page 14.
 - **Privacy tooling** (§10.4): targeted history deletion, optional timed
   pseudonymisation, per-person export, `docs/privacy.md`.
 - **Clean uninstall**: entities removed from the registry, timers stopped, MQTT
@@ -1390,7 +1441,8 @@ rendition.
 | `docs/automation-rules.md` | Presence-based arming, the guards, suspensions and expected-visitor windows, and an unhedged explanation of why automatic disarming is restricted |
 | `docs/brand.md` | The asset set, the palette, and the rule that the sidebar icon is redrawn rather than scaled |
 | `docs/privacy.md` | What the log contains, the GDPR household exemption, and the point at which it stops applying — logging a cleaner, a B&B guest or an employee |
-| `docs/system-health.md` | Mains power and UPS, notification channel health, the external watchdog and its documented limits |
+| `docs/system-health.md` | Mains power and UPS, notification channel health, the external watchdog and its limits, and RF interference detection stated plainly as a heuristic |
+| `docs/choosing-sensors.md` | What makes a sensor suitable for alarm use rather than automation: tamper, supervision interval, magnet defeat, radio band. Why a layered zone beats a better sensor, and why the cheapest real upgrade is usually a second sensor in a verification group rather than a more expensive contact |
 | `docs/migrating-from-alarmo.md` | What the importer converts, what it cannot, and what to check afterwards |
 | `docs/simulator.md` | How to read a decision trace |
 | `docs/troubleshooting.md` | Zone never triggers (check the trigger spec), false alarms, faults |
@@ -1412,8 +1464,9 @@ rendition.
   action, a grace cancellation aborts it, and — asserted directly — **a disarm rule
   never disarms an area flagged `is_perimeter`**.
 - A test that every user-visible string resolves through `translations/`, and that
-  `en.json` and `it.json` carry the same key set, so a missing help translation
-  fails CI rather than shipping an English panel to an Italian user.
+  `en.json` and `it.json` carry the same key set — in both `translations/` and
+  `translations/panel/` — so a missing help translation fails CI rather than
+  shipping an English panel to an Italian user.
 - Incident tests: a second trigger joins the open incident rather than starting an
   escalation; actions are unioned without restarting a running siren; the
   highest-severity contributing profile supplies the escalation; one
@@ -1428,6 +1481,10 @@ rendition.
 - Chime fires only while the zone is unmonitored by the active scenario, and never
   during a walk test.
 - A test asserting the watchdog payload is empty unless explicitly enabled.
+- RF interference tests: N zones on one radio going unavailable inside the window
+  raises the event; the same pattern with the coordinator ALSO unavailable reports
+  a coordinator failure instead; zones spread across two radios do not trigger it;
+  and a Zigbee event never notifies through a Zigbee target.
 - A test asserting diagnostics output contains no code hashes and no personal names.
 - A regression test asserting that `core/` imports nothing from
   `homeassistant.*` — this is what keeps INV-1 true over time.
@@ -1468,8 +1525,9 @@ other way it becomes a permanent source of issues that are nobody's bug.
   (§12.4), so the first reply is an answer rather than a question.
 - `CONTRIBUTING.md` covering the development setup, the `core/` purity rule
   (INV-1) and the test expectations.
-- A documented flow for adding a language that touches no code: copy `en.json`,
-  translate, open a pull request. CI already enforces matching key sets (§19).
+- A documented flow for adding a language that touches no code: copy
+  `translations/en.json` and `translations/panel/en.json`, translate both, open a
+  pull request. CI already enforces matching key sets (§19).
 
 ## 21. Decision log
 
@@ -1508,3 +1566,5 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 31 | Full privacy tooling: targeted deletion, optional pseudonymisation, per-person export | The household exemption stops covering the log the moment it records the cleaner |
 | 32 | hassfest and HACS validation from Phase 0 | In practice the entry requirement for the default HACS repository |
 | 33 | Alarmo import as an explicitly best-effort tool | Reads an internal format that may change without notice and without fault |
+| 34 | RF interference detected by correlated unavailability, gated on the coordinator still answering | Jamming cannot be measured from Home Assistant, but many zones on one radio falling silent at once is its signature — and the coordinator check is what separates it from a dead switch |
+| 35 | Panel, card, help and notification strings in `translations/panel/<lang>.json`, served over `foyer/translations` | hassfest validates `translations/<lang>.json` against a closed schema with no room for them; a subdirectory keeps one translation home without breaking the CI gate for the default HACS repository (decision 32) |
