@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: integration
+          # Not yet listed in home-assistant/brands; that is a prerequisite for
+          # the default HACS repository only, not for custom repositories.
+          ignore: brands
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff shapely
+      - run: ruff check .
+      - run: ruff format --check .
+      - name: Sidebar icon path matches docs/logo/foyer-hd-icon.svg
+        run: |
+          python scripts/build_sidebar_icon.py
+          git diff --exit-code frontend/src/icons/icon-path.ts
+
+  core:
+    # The pure suite, deliberately WITHOUT Home Assistant installed: if core/
+    # ever needs it, these tests cannot even import (INV-1, SPEC §19). Also
+    # covers the en/it translation key parity check.
+    name: pytest core (py${{ matrix.python }}, no Home Assistant)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install pytest
+      - name: Home Assistant must not be importable here
+        run: "! python -c 'import homeassistant'"
+      - run: pytest
+
+  integration:
+    name: pytest integration (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The floor declared in hacs.json: Home Assistant 2025.1.
+          - name: HA 2025.1
+            python: "3.12"
+            packages: pytest-homeassistant-custom-component==0.13.205 "pycares<5"
+          # Whatever Home Assistant is current, to hear about breakage early.
+          - name: HA latest
+            python: "3.14"
+            packages: pytest-homeassistant-custom-component
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install ${{ matrix.packages }}
+      - name: Install the frontend package pinned by that Home Assistant
+        run: |
+          pip install "$(python - <<'EOF'
+          import json, pathlib, homeassistant.components.frontend as f
+          manifest = pathlib.Path(f.__file__).with_name("manifest.json")
+          print(json.loads(manifest.read_text())["requirements"][0])
+          EOF
+          )"
+      - run: >
+          pytest -p pytest_homeassistant_custom_component
+          -o asyncio_mode=auto -o asyncio_default_fixture_loop_scope=function
+          tests/ha
+
+  frontend:
+    name: frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+      - name: Committed bundles match the sources
+        run: git diff --exit-code custom_components/foyer/frontend
