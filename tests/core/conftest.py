@@ -6,9 +6,14 @@ import pytest
 
 from custom_components.foyer.core.models import FoyerConfig
 
-from .helpers import make_config
+from .helpers import World, make_house
 
 
 @pytest.fixture
 def config() -> FoyerConfig:
-    return make_config()
+    return make_house()
+
+
+@pytest.fixture
+def world() -> World:
+    return World()

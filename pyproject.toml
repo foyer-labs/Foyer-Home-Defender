@@ -22,6 +22,12 @@ ignore = [
     "PLR2004",  # magic values are normal in tests
     "PLC0415",  # __init__.py imports Home Assistant lazily on purpose (INV-1)
     "PLR0913",
+    # A validator is a flat list of independent checks and a state machine is
+    # a flat list of transitions; splitting either to satisfy a branch count
+    # would scatter rules that are easiest to audit side by side.
+    "PLR0911",
+    "PLR0912",
+    "PLR0915",
 ]
 
 [tool.ruff.lint.isort]
