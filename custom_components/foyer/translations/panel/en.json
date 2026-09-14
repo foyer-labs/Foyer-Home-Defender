@@ -1,0 +1,68 @@
+{
+  "common": {
+    "brand": "Foyer Home Defender",
+    "loading": "Loading…",
+    "not_loaded": "Foyer Home Defender is not loaded. Check the integration in Settings.",
+    "connection_error": "Cannot reach Home Assistant: {error}",
+    "live": "Live"
+  },
+  "state": {
+    "disarmed": "Disarmed",
+    "armed": "Armed",
+    "triggered": "Triggered"
+  },
+  "zone_status": {
+    "closed": "Ready",
+    "open": "Open",
+    "fault": "Fault"
+  },
+  "overview": {
+    "heading": "Status",
+    "area": "Area",
+    "scenario": "Active scenario",
+    "scenario_none": "None",
+    "zone": "Zone",
+    "entity_state": "Entity state: {state}",
+    "phase0_warning": "Development preview. Disarming needs no code and there are no users yet: this does not protect anything."
+  },
+  "help": {
+    "toggle": "About this section",
+    "overview": {
+      "title": "What this page shows",
+      "intro": "The live state of the alarm. It updates by itself as the system changes; nothing here needs a reload.",
+      "items": {
+        "area": {
+          "term": "Area",
+          "text": "Its own armed state. Triggered stays until someone disarms."
+        },
+        "scenario": {
+          "term": "Active scenario",
+          "text": "The preset that armed the area. None while disarmed."
+        },
+        "zone": {
+          "term": "Zone",
+          "text": "Open blocks arming; fault means the sensor cannot be seen and also blocks arming."
+        }
+      }
+    }
+  },
+  "card": {
+    "arm": "Arm {scenario}",
+    "no_entity": "Set an entity: a Foyer alarm_control_panel.",
+    "entity_missing": "Entity not found: {entity}"
+  },
+  "notification": {
+    "armed": {
+      "title": "Foyer: armed",
+      "message": "{area} armed with scenario {scenario}."
+    },
+    "disarmed": {
+      "title": "Foyer: disarmed",
+      "message": "{area} disarmed."
+    },
+    "zone_fault": {
+      "title": "Foyer: zone fault",
+      "message": "Zone {zone} in {area} is unavailable. It blocks arming until it is seen again."
+    }
+  }
+}

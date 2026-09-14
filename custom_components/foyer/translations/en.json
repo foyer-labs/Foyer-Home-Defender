@@ -1,0 +1,77 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Foyer Home Defender",
+        "description": "This early version protects one area with one zone and arms it with one scenario. You can rename them later.",
+        "data": {
+          "area_name": "Area name",
+          "scenario_name": "Scenario name",
+          "zone_entity": "Zone entity"
+        },
+        "data_description": {
+          "area_name": "The part of the house this alarm protects, for example Home.",
+          "scenario_name": "The name of the arming preset, for example Away.",
+          "zone_entity": "The sensor that watches this area: a door contact, a motion sensor, a cover or a lock."
+        }
+      },
+      "trigger": {
+        "title": "When is the zone triggered?",
+        "description": "{entity} is currently **{current_state}**. Choose the states that mean an intrusion. Normally-closed and normally-open contacts behave in opposite ways, so check this against the real sensor: open the door or walk past it and watch its state.",
+        "data": {
+          "trigger_states": "Triggered when the state is",
+          "confirm_trigger": "I have checked these states against the real sensor"
+        },
+        "data_description": {
+          "trigger_states": "A proposal based on the entity type. Nothing is assumed: the zone fires only in the states you confirm here.",
+          "confirm_trigger": "A wrong choice produces a zone that never fires, and you would find out during a break-in."
+        }
+      }
+    },
+    "error": {
+      "no_trigger_states": "Choose at least one state.",
+      "fault_state_as_trigger": "Unavailable and unknown are faults, not triggers. They always block arming.",
+      "trigger_not_confirmed": "Confirm that you have checked the trigger states."
+    },
+    "abort": {
+      "single_instance_allowed": "Foyer Home Defender is already set up."
+    }
+  },
+  "selector": {
+    "trigger_state": {
+      "options": {
+        "on": "On",
+        "off": "Off",
+        "open": "Open",
+        "opening": "Opening",
+        "closed": "Closed",
+        "closing": "Closing",
+        "locked": "Locked",
+        "locking": "Locking",
+        "unlocked": "Unlocked",
+        "unlocking": "Unlocking",
+        "jammed": "Jammed"
+      }
+    }
+  },
+  "exceptions": {
+    "no_scenario": {
+      "message": "No scenario arms this area in that mode."
+    },
+    "rejected_invalid_state": {
+      "message": "The area is not in a state that allows this."
+    },
+    "rejected_unknown_scenario": {
+      "message": "That scenario does not exist."
+    },
+    "rejected_code_required": {
+      "message": "A code is required."
+    },
+    "rejected_zone_fault": {
+      "message": "Cannot arm: zone in fault: {zones}."
+    },
+    "rejected_zone_open": {
+      "message": "Cannot arm: zone open: {zones}."
+    }
+  }
+}

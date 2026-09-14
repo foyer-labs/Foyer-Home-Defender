@@ -1,0 +1,77 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configura Foyer Home Defender",
+        "description": "Questa prima versione protegge un'area con una zona e la inserisce con uno scenario. Potrai rinominarli in seguito.",
+        "data": {
+          "area_name": "Nome dell'area",
+          "scenario_name": "Nome dello scenario",
+          "zone_entity": "Entità della zona"
+        },
+        "data_description": {
+          "area_name": "La parte della casa protetta da questo allarme, per esempio Casa.",
+          "scenario_name": "Il nome del preset di inserimento, per esempio Fuori casa.",
+          "zone_entity": "Il sensore che sorveglia l'area: un contatto porta, un sensore di movimento, una tapparella o una serratura."
+        }
+      },
+      "trigger": {
+        "title": "Quando scatta la zona?",
+        "description": "{entity} è attualmente **{current_state}**. Scegli gli stati che indicano un'intrusione. I contatti normalmente chiusi e normalmente aperti si comportano in modo opposto, quindi verifica sul sensore reale: apri la porta o passaci davanti e guarda il suo stato.",
+        "data": {
+          "trigger_states": "Scatta quando lo stato è",
+          "confirm_trigger": "Ho verificato questi stati sul sensore reale"
+        },
+        "data_description": {
+          "trigger_states": "Una proposta basata sul tipo di entità. Non si dà nulla per scontato: la zona scatta solo negli stati che confermi qui.",
+          "confirm_trigger": "Una scelta sbagliata produce una zona che non scatta mai, e lo scopriresti durante un'effrazione."
+        }
+      }
+    },
+    "error": {
+      "no_trigger_states": "Scegli almeno uno stato.",
+      "fault_state_as_trigger": "Non disponibile e sconosciuto sono guasti, non allarmi. Bloccano sempre l'inserimento.",
+      "trigger_not_confirmed": "Conferma di aver verificato gli stati di allarme."
+    },
+    "abort": {
+      "single_instance_allowed": "Foyer Home Defender è già configurato."
+    }
+  },
+  "selector": {
+    "trigger_state": {
+      "options": {
+        "on": "Acceso",
+        "off": "Spento",
+        "open": "Aperto",
+        "opening": "In apertura",
+        "closed": "Chiuso",
+        "closing": "In chiusura",
+        "locked": "Bloccato",
+        "locking": "In blocco",
+        "unlocked": "Sbloccato",
+        "unlocking": "In sblocco",
+        "jammed": "Inceppato"
+      }
+    }
+  },
+  "exceptions": {
+    "no_scenario": {
+      "message": "Nessuno scenario inserisce quest'area in questa modalità."
+    },
+    "rejected_invalid_state": {
+      "message": "L'area non è in uno stato che lo consente."
+    },
+    "rejected_unknown_scenario": {
+      "message": "Lo scenario non esiste."
+    },
+    "rejected_code_required": {
+      "message": "È richiesto un codice."
+    },
+    "rejected_zone_fault": {
+      "message": "Impossibile inserire: zona in guasto: {zones}."
+    },
+    "rejected_zone_open": {
+      "message": "Impossibile inserire: zona aperta: {zones}."
+    }
+  }
+}

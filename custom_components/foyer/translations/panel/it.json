@@ -1,0 +1,68 @@
+{
+  "common": {
+    "brand": "Foyer Home Defender",
+    "loading": "Caricamento…",
+    "not_loaded": "Foyer Home Defender non è caricato. Controlla l'integrazione in Impostazioni.",
+    "connection_error": "Impossibile raggiungere Home Assistant: {error}",
+    "live": "In diretta"
+  },
+  "state": {
+    "disarmed": "Disinserito",
+    "armed": "Inserito",
+    "triggered": "In allarme"
+  },
+  "zone_status": {
+    "closed": "Pronta",
+    "open": "Aperta",
+    "fault": "Guasto"
+  },
+  "overview": {
+    "heading": "Stato",
+    "area": "Area",
+    "scenario": "Scenario attivo",
+    "scenario_none": "Nessuno",
+    "zone": "Zona",
+    "entity_state": "Stato dell'entità: {state}",
+    "phase0_warning": "Anteprima di sviluppo. Il disinserimento non richiede codice e non esistono ancora utenti: non protegge nulla."
+  },
+  "help": {
+    "toggle": "Informazioni su questa sezione",
+    "overview": {
+      "title": "Cosa mostra questa pagina",
+      "intro": "Lo stato dell'allarme in tempo reale. Si aggiorna da sola quando il sistema cambia; non serve ricaricare.",
+      "items": {
+        "area": {
+          "term": "Area",
+          "text": "Ha il proprio stato di inserimento. In allarme resta tale finché qualcuno non disinserisce."
+        },
+        "scenario": {
+          "term": "Scenario attivo",
+          "text": "Il preset che ha inserito l'area. Nessuno quando è disinserita."
+        },
+        "zone": {
+          "term": "Zona",
+          "text": "Aperta blocca l'inserimento; guasto significa che il sensore non è visibile e blocca anch'esso l'inserimento."
+        }
+      }
+    }
+  },
+  "card": {
+    "arm": "Inserisci {scenario}",
+    "no_entity": "Imposta un'entità: un alarm_control_panel di Foyer.",
+    "entity_missing": "Entità non trovata: {entity}"
+  },
+  "notification": {
+    "armed": {
+      "title": "Foyer: inserito",
+      "message": "{area} inserita con lo scenario {scenario}."
+    },
+    "disarmed": {
+      "title": "Foyer: disinserito",
+      "message": "{area} disinserita."
+    },
+    "zone_fault": {
+      "title": "Foyer: zona in guasto",
+      "message": "La zona {zone} in {area} non è disponibile. Blocca l'inserimento finché non torna visibile."
+    }
+  }
+}
