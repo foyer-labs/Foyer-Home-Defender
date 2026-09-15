@@ -333,6 +333,27 @@ The zone creation wizard proposes a `TriggerSpec` from the entity's
 Multiple scenarios may map to the same `ha_master_state`. The exact scenario is
 always available on the `select.foyer_scenario` entity and in the log.
 
+#### 4.6.1 Arming entry points
+
+Areas have independent state (§4.1), so arming can target one area or a
+scenario, and the two must not be confused:
+
+| Entry point | Arms | Disarms |
+|---|---|---|
+| `alarm_control_panel.foyer_<area>` | **only that area**, outside any scenario, in the one mode it reports (`ha_state_when_armed`) | only that area |
+| `alarm_control_panel.foyer_master` | the scenario whose `ha_master_state` is the requested mode — **refused when two or more scenarios share that mode**; the master advertises only unambiguous modes | every area |
+| `select.foyer_scenario`, the panel, the card | the chosen scenario | — (disarm is a separate command) |
+
+**Switching scenario while armed** (A → B): areas armed by A and absent from
+B are disarmed; areas in both stay armed and now belong to B; areas of B not
+yet armed go through their exit delay; areas armed on their own, outside any
+scenario, are left exactly as they are. A switch is refused while any area it
+would touch is in `entry` or `triggered`: changing scenario must never silence
+an alarm without a disarm.
+
+The scenario stays active while any area it armed is still armed. An area
+armed on its own does not change the active scenario.
+
 ### 4.7 Key zones
 
 A zone of type `key` maps a state change to an arming command:
@@ -345,6 +366,12 @@ identity:      user_id | null    # who the log attributes the action to
 
 This covers key switches, NFC tags and remotes that are wired as entities rather
 than through the MQTT contract.
+
+`disarm` acts on **every** area, as the master's disarm does. `toggle`
+disarms every area if any area is armed, and otherwise arms its scenario. A key
+zone commands; it never alarms, and a refused arm is recorded, never silent.
+A key zone's first reading after it is created is its baseline, not a turn of
+the key: saving a key zone whose switch is already on does not arm the house.
 
 ### 4.8 Verification groups (N-of-M)
 
@@ -1199,6 +1226,11 @@ enough for the user to tell the cases apart.
 Master aggregation rule: `triggered` if any area is triggered; else `entry` if any
 is in entry; else `arming` if any is arming; else `armed` if **any** area is armed
 (a partially armed house is not a disarmed house); else `disarmed`.
+When the result is `armed`, the master reports the active scenario's
+`ha_master_state` only while exactly that scenario's areas are armed; any other
+armed set — an extra area armed on its own, or one of the scenario's areas
+that failed to arm — is reported as `armed_custom_bypass`. The exact scenario
+is always on `select.foyer_scenario`.
 
 ---
 
@@ -1580,3 +1612,8 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 37 | Siren cutoff returns an area to its pre-trigger state | An `always_on` zone fires on a disarmed house; a cutoff that always re-arms would arm it |
 | 38 | No per-zone exit delay | The exit timer belongs to the area; a zone-level value had no defined meaning |
 | 39 | Supervision counts heartbeats, per sensor, off by default | Sensors report at different intervals and some only on change: the window must be set sensor by sensor, and "no change" would fault a door that stays shut |
+| 40 | An area's own panel arms only that area; scenarios arm from the master, the select, the panel and the card | Independent area state is the point of areas; an area button that armed a whole scenario would trap people in other rooms |
+| 41 | The master refuses a mode shared by two scenarios | Guessing which scenario "arm night" means is how a house ends up half armed without anyone knowing |
+| 42 | Switching scenario disarms what only the old one armed, and never silences an alarm | A scenario defines what is armed; a switch that left the old areas armed would not be a switch |
+| 43 | The master reports `armed_custom_bypass` whenever the armed set differs from the active scenario | HomeKit and voice assistants must not be told "night" when what is armed is not Night |
+| 44 | A key zone's disarm and toggle act on every area | A key has no area to choose; it behaves like the master |
