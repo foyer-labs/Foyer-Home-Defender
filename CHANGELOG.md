@@ -5,6 +5,16 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [Unreleased]
+
+### Added
+- A follower zone can follow delayed zones in **other areas** ("Also follows"
+  in the zone editor). With areas grouped by function — perimeter, interior
+  day, interior night — the hall sensor is in a different area from the front
+  door; following it, the hall inherits the running entry delay instead of
+  sounding the alarm as you walk in. Stored configuration moves to schema 2.2;
+  existing followers keep following their own area only.
+
 ## [0.1.0-alpha.1] — Phase 1, part 1: zones, areas, scenarios, state machine
 
 **Pre-release, for testing only.** Still not for protecting a house: no sirens

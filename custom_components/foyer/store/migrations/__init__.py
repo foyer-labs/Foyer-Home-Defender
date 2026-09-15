@@ -68,9 +68,19 @@ def _v1_1_to_v2_1(data: Document) -> Document:
     return out
 
 
+def _v2_1_to_v2_2(data: Document) -> Document:
+    """0.1.0-alpha.1 → alpha.2: followers can follow delayed zones in other
+    areas. An empty list is exactly the 2.1 behaviour (own area only)."""
+    out = copy.deepcopy(data)
+    for zone in out["zones"]:
+        zone.setdefault("follows", [])
+    return out
+
+
 # (from_major, from_minor) -> (step, (to_major, to_minor))
 STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (1, 1): (_v1_1_to_v2_1, (2, 1)),
+    (2, 1): (_v2_1_to_v2_2, (2, 2)),
 }
 
 

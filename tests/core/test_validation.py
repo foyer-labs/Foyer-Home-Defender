@@ -183,3 +183,13 @@ def test_a_zone_cannot_be_moved_into_an_armed_area():
     world.arm("night")
     new = with_zone(world.config, "garage_door", area_id="ground")
     assert edit_conflicts(world.config, new, world.state)
+
+
+def test_follows_rules(config):
+    # Only a follower may follow, and only delayed intrusion zones.
+    assert "follows_needs_follower" in codes(with_zone(config, follows=("door",)))
+    assert "follows_not_delayed" in codes(
+        with_zone(config, "hall", follows=("window",))
+    )
+    assert "follows_not_delayed" in codes(with_zone(config, "hall", follows=("nope",)))
+    assert validate(with_zone(config, "landing", follows=("door", "garage_door"))) == []

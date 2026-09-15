@@ -92,7 +92,9 @@
     "area_in_scenario": "Togli prima quest'area dai suoi scenari.",
     "scenario_in_use": "Una zona chiave inserisce questo scenario. Modifica prima la zona chiave.",
     "unknown_kind": "Tipo di oggetto sconosciuto.",
-    "invalid": "Alcuni valori non sono validi."
+    "invalid": "Alcuni valori non sono validi.",
+    "follows_needs_follower": "Solo una zona follower può seguire altre zone.",
+    "follows_not_delayed": "Un follower può seguire solo zone di intrusione ritardate."
   },
   "field": {
     "name": "Nome",
@@ -122,7 +124,8 @@
     "areas": "Aree inserite",
     "exit_delay_override": "Ritardo di uscita",
     "siren_duration_override": "Durata delle sirene",
-    "siren_duration": "Durata delle sirene"
+    "siren_duration": "Durata delle sirene",
+    "follows": "Segue anche"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -154,7 +157,7 @@
   "entry_mode_hint": {
     "instant": "Fa scattare l'allarme subito quando l'area è inserita.",
     "delayed": "Avvia il ritardo di ingresso: la via d'accesso, come la porta d'ingresso.",
-    "follower": "Eredita un ritardo di ingresso in corso; altrimenti è istantanea. Per l'ingresso dopo la porta."
+    "follower": "Eredita un ritardo di ingresso in corso — quello della sua area o quello aperto da una zona che segue; altrimenti è istantanea."
   },
   "alarm_kind": {
     "intrusion": "Intrusione",
@@ -267,7 +270,9 @@
     "key_title": "Azione chiave",
     "pick_scenario": "Scegli uno scenario…",
     "key_hint": "Una chiave inserisce o disinserisce come farebbe una persona. Non va mai in allarme.",
-    "area_armed": "L'area di questa zona è inserita: le modifiche vengono rifiutate finché non la disinserisci."
+    "area_armed": "L'area di questa zona è inserita: le modifiche vengono rifiutate finché non la disinserisci.",
+    "follows_hint": "Il ritardo di ingresso della sua area vale sempre. Spunta le zone ritardate di altre aree da cui deve ereditare anche il ritardo, come la porta d'ingresso per un sensore dell'ingresso in un'area interna.",
+    "no_delayed_zones": "Ancora nessuna zona ritardata."
   },
   "scenarios": {
     "title": "Scenari",
@@ -321,7 +326,7 @@
     },
     "areas": {
       "title": "Cos'è un'area",
-      "intro": "Un gruppo di zone con un proprio stato e una propria entità pannello d'allarme. Le aree che crei decidono quali inserimenti parziali sono possibili.",
+      "intro": "Un gruppo di zone che si inseriscono insieme, con un proprio stato e una propria entità pannello d'allarme. Raggruppa per ciò che inserisci insieme — perimetro, interni giorno, interni notte — non per stanza: è questo che rende possibile \"cane in casa, solo perimetrale\".",
       "items": {
         "own_state": {
           "term": "Stato proprio",

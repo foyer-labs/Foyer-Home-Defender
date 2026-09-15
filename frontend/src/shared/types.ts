@@ -135,6 +135,7 @@ export interface ZoneConfig {
   alarm_kind: "intrusion" | "tamper" | "panic";
   always_on: boolean;
   entry_delay: number | null;
+  follows: string[];
   arm_policy: "block" | "auto_bypass" | "arm_after_closing" | "ignore";
   arm_hold_timeout: number | null;
   allow_arm_when_faulted: boolean;

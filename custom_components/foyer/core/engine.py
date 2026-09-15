@@ -359,8 +359,12 @@ class _Run:
         elif rt.state is AreaState.ARMED:
             if zone.entry_mode is EntryMode.DELAYED:
                 self.start_entry(zone.area_id, zone)
+            elif zone.entry_mode is EntryMode.FOLLOWER and (
+                inherited := self.followed_window(zone)
+            ):
+                self.inherit_entry(zone.area_id, zone, *inherited)
             else:
-                # A follower with no entry window running is instant (§5.2).
+                # A follower with no entry window to inherit is instant (§5.2).
                 self.trigger(zone.area_id, zone)
         elif rt.state is AreaState.ENTRY:
             if zone.entry_mode is EntryMode.INSTANT:
@@ -488,6 +492,44 @@ class _Run:
             zone_id=zone_id,
             scenario_id=rt.scenario_id,
             detail={"kind": zone.alarm_kind.value if zone else "", **(detail or {})},
+        )
+
+    def followed_window(self, zone: Zone) -> tuple[Timer, str] | None:
+        """The running entry window, in another area, of a zone this follows.
+
+        With several, the one that ends first: it is when the alarm would sound
+        anyway, and inheriting a later one would lengthen the delay (decision 47).
+        """
+        windows = [
+            (rt.timer, followed)
+            for rt in self.areas.values()
+            if rt.state is AreaState.ENTRY
+            and rt.timer is not None
+            and rt.timer.kind is TimerKind.ENTRY
+            for followed in zone.follows
+            if followed in rt.causes
+        ]
+        return min(windows, key=lambda w: w[0].due, default=None)
+
+    def inherit_entry(
+        self, area_id: str, zone: Zone, timer: Timer, source: str
+    ) -> None:
+        """The walk from the front door into the hall: same deadline, no restart."""
+        rt = self.set_area(
+            area_id,
+            state=AreaState.ENTRY,
+            timer=Timer(TimerKind.ENTRY, timer.due),
+            causes=(zone.id,),
+        )
+        self.occur(
+            Moment.ENTRY_STARTED,
+            area_id=area_id,
+            zone_id=zone.id,
+            scenario_id=rt.scenario_id,
+            detail={
+                "inherited_from": source,
+                "seconds": str(max(0, int((timer.due - self.now).total_seconds()))),
+            },
         )
 
     def start_entry(self, area_id: str, zone: Zone) -> None:

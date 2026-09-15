@@ -32,6 +32,7 @@ function blankZone(areaId: string): ZoneConfig {
     alarm_kind: "intrusion",
     always_on: false,
     entry_delay: null,
+    follows: [],
     arm_policy: "block",
     arm_hold_timeout: null,
     allow_arm_when_faulted: false,
@@ -94,6 +95,7 @@ class FoyerPageZones extends LitElement {
     }
     if (draft.channel !== "key") draft.key = null;
     if (draft.arm_policy !== "arm_after_closing") draft.arm_hold_timeout = null;
+    if (draft.entry_mode !== "follower") draft.follows = [];
     this._draft = draft;
   }
 
@@ -240,6 +242,9 @@ class FoyerPageZones extends LitElement {
           ${draft.entity_id
             ? html`
                 ${this._renderTrigger(s, draft)} ${this._renderProperties(s, draft)}
+                ${draft.channel === "intrusion" && draft.entry_mode === "follower"
+                  ? this._renderFollows(s, draft)
+                  : nothing}
                 ${draft.channel === "key" ? this._renderKey(s, draft) : nothing}
               `
             : nothing}
@@ -612,11 +617,12 @@ class FoyerPageZones extends LitElement {
                   <span class="lbl">${t(s, "field.entry_mode")}</span>
                   <select
                     ?disabled=${draft.always_on}
-                    @change=${(e: Event) =>
-                      this._set(
-                        "entry_mode",
-                        (e.target as HTMLSelectElement).value as ZoneConfig["entry_mode"],
-                      )}
+                    @change=${(e: Event) => {
+                      const mode = (e.target as HTMLSelectElement)
+                        .value as ZoneConfig["entry_mode"];
+                      this._set("entry_mode", mode);
+                      if (mode !== "follower") this._set("follows", []);
+                    }}
                   >
                     ${(["instant", "delayed", "follower"] as const).map(
                       (mode) =>
@@ -722,6 +728,42 @@ class FoyerPageZones extends LitElement {
           ${check("allow_arm_when_faulted", "zones.allow_faulted_hint")}
           ${check("enabled", "zones.enabled_hint")}
         </div>
+      </fieldset>
+    `;
+  }
+
+  private _renderFollows(s: Strings, draft: ZoneConfig) {
+    const areas = new Map(this.ctx?.config?.areas.map((a) => [a.id, a.name]));
+    const delayed = (this.ctx?.config?.zones ?? []).filter(
+      (z) => z.id !== draft.id && z.channel === "intrusion" && z.entry_mode === "delayed",
+    );
+    const toggle = (id: string, on: boolean) =>
+      this._set(
+        "follows",
+        on ? [...new Set([...draft.follows, id])] : draft.follows.filter((f) => f !== id),
+      );
+    return html`
+      <fieldset>
+        <legend>${t(s, "field.follows")}</legend>
+        ${delayed.length
+          ? delayed.map(
+              (zone) => html`<label class="check">
+                <input
+                  type="checkbox"
+                  .checked=${draft.follows.includes(zone.id ?? "")}
+                  @change=${(e: Event) =>
+                    toggle(zone.id ?? "", (e.target as HTMLInputElement).checked)}
+                />
+                <span>
+                  ${t(s, "zones.entity", {
+                    name: zone.name,
+                    entity: areas.get(zone.area_id) ?? zone.area_id,
+                  })}
+                </span>
+              </label>`,
+            )
+          : html`<p class="hint">${t(s, "zones.no_delayed_zones")}</p>`}
+        <p class="hint">${t(s, "zones.follows_hint")}</p>
       </fieldset>
     `;
   }

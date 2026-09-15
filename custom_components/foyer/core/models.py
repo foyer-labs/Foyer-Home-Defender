@@ -253,6 +253,9 @@ class Zone:
     alarm_kind: AlarmKind = AlarmKind.INTRUSION
     always_on: bool = False
     entry_delay: int | None = None  # None: inherit the area default
+    # Follower only: delayed zones, in any area, whose running entry window it
+    # also inherits. Its own area's window is always inherited (§5.2).
+    follows: tuple[str, ...] = ()
     arm_policy: ArmPolicy = ArmPolicy.BLOCK
     arm_hold_timeout: int | None = None  # None: inherit the global default
     allow_arm_when_faulted: bool = False

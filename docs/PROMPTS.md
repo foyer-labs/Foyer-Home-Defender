@@ -387,7 +387,7 @@ Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
 
 ```
 Binding decisions taken by the user in Phase 1. The spec has been amended to
-match (SPEC §21, decisions 36-46); this list is the quick reference. None of
+match (SPEC §21, decisions 36-47); this list is the quick reference. None of
 them may be "fixed back" without asking.
 
  1. Zone type is a preset label only. The engine reads explicit properties:
@@ -422,6 +422,10 @@ them may be "fixed back" without asking.
     the spec by the user).
 15. Supervision is set per sensor and is off by default; there is no
     per-zone exit delay.
+16. A follower inherits its own area's entry window and, through its
+    `follows` list, the running entry window of the delayed zones it follows
+    in other areas (same deadline; the earliest if several). Areas are meant
+    to be grouped by function (perimeter, interiors), not by room.
 12. A key zone's disarm and toggle act on every area; toggle disarms all if
     any area is armed, otherwise arms its scenario.
 13. Each panel page ships in the part that builds its feature (see "If a

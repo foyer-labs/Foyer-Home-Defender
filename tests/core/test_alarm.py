@@ -323,3 +323,72 @@ def test_trigger_in_one_area_leaves_the_others_alone():
         "upstairs": "triggered",
         "garage": "armed",
     }
+
+
+# --- followers across areas (decision 47) --------------------------------------------
+
+
+def follows_door(*extra: str) -> World:
+    """Upstairs' landing PIR follows the front door, which is in another area."""
+    config = make_house()
+    config = replace(
+        config,
+        zones=tuple(
+            replace(z, follows=("door", *extra)) if z.id == "landing" else z
+            for z in config.zones
+        ),
+    )
+    world = World(config)
+    world.arm("away")
+    world.advance(30)
+    return world
+
+
+def test_follower_inherits_the_entry_window_of_a_zone_it_follows_in_another_area():
+    world = follows_door()
+    world.set(DOOR, "on")
+    due = world.area("ground").timer.due
+    world.advance(5)
+    decision = world.set(LANDING, "on")
+
+    rt = world.area("upstairs")
+    assert rt.state is AreaState.ENTRY
+    assert rt.timer.due == due  # the same deadline, not a fresh delay
+    entry = decision.occurrences[0]
+    assert entry.moment is Moment.ENTRY_STARTED
+    assert entry.detail["inherited_from"] == "door"
+
+    world.disarm()
+    assert set(world.states().values()) == {"disarmed"}
+
+
+def test_an_inherited_entry_expires_into_an_alarm_like_any_other():
+    world = follows_door()
+    world.set(DOOR, "on")
+    world.set(LANDING, "on")
+    world.disarm("ground")  # only the perimeter: the landing's area still counts
+    world.advance(30)
+    assert world.states()["upstairs"] == "triggered"
+
+
+def test_follower_is_instant_when_no_followed_zone_has_opened_a_window():
+    world = follows_door()
+    world.set(LANDING, "on")
+    assert world.states()["upstairs"] == "triggered"
+
+
+def test_follower_is_instant_after_the_followed_window_has_expired():
+    world = follows_door()
+    world.set(DOOR, "on")
+    world.advance(30)  # ground triggered: the window is over
+    world.set(LANDING, "on")
+    assert world.states()["upstairs"] == "triggered"
+
+
+def test_follower_takes_the_earliest_of_several_followed_windows():
+    world = follows_door("garage_door")
+    world.set(GARAGE, "open")  # garage entry: 15 s
+    garage_due = world.area("garage").timer.due
+    world.set(DOOR, "on")  # ground entry: 30 s
+    world.set(LANDING, "on")
+    assert world.area("upstairs").timer.due == garage_due

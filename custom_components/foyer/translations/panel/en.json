@@ -92,7 +92,9 @@
     "area_in_scenario": "Remove this area from its scenarios first.",
     "scenario_in_use": "A key zone arms this scenario. Change the key zone first.",
     "unknown_kind": "Unknown kind of object.",
-    "invalid": "Some values are not valid."
+    "invalid": "Some values are not valid.",
+    "follows_needs_follower": "Only a follower zone can follow other zones.",
+    "follows_not_delayed": "A follower can follow only delayed intrusion zones."
   },
   "field": {
     "name": "Name",
@@ -122,7 +124,8 @@
     "areas": "Areas armed",
     "exit_delay_override": "Exit delay",
     "siren_duration_override": "Sounders run for",
-    "siren_duration": "Sounders run for"
+    "siren_duration": "Sounders run for",
+    "follows": "Also follows"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -154,7 +157,7 @@
   "entry_mode_hint": {
     "instant": "Triggers the alarm at once when the area is armed.",
     "delayed": "Starts the entry delay: the way in, such as the front door.",
-    "follower": "Inherits a running entry delay; instant otherwise. For the hall after the door."
+    "follower": "Inherits a running entry delay — its own area's, or one opened by a zone it follows; instant otherwise."
   },
   "alarm_kind": {
     "intrusion": "Intrusion",
@@ -267,7 +270,9 @@
     "key_title": "Key action",
     "pick_scenario": "Choose a scenario…",
     "key_hint": "A key arms or disarms as a person would. It never alarms.",
-    "area_armed": "This zone's area is armed: changes are refused until it is disarmed."
+    "area_armed": "This zone's area is armed: changes are refused until it is disarmed.",
+    "follows_hint": "Its own area's entry delay always counts. Tick the delayed zones of other areas whose entry delay it should also inherit, such as the front door for a hall sensor in an interior area.",
+    "no_delayed_zones": "No delayed zones yet."
   },
   "scenarios": {
     "title": "Scenarios",
@@ -321,7 +326,7 @@
     },
     "areas": {
       "title": "What an area is",
-      "intro": "A group of zones with its own armed state and its own alarm panel entity. The areas you create decide what partial arming is possible.",
+      "intro": "A group of zones armed together, with its own state and alarm panel entity. Group by what you arm together — perimeter, interior day, interior night — not by room: that is what makes \"dog at home, perimeter only\" possible.",
       "items": {
         "own_state": {
           "term": "Own state",

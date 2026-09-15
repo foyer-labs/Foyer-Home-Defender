@@ -276,3 +276,40 @@ def test_restored_state_drops_what_the_configuration_no_longer_has(config):
 def test_unreadable_state_raises_config_error(config):
     with pytest.raises(ConfigError):
         state_from_dict({"areas": {"ground": {"state": "exploded"}}}, config)
+
+
+# A zone exactly as 0.1.0-alpha.1 (schema 2.1) wrote it to .storage/foyer.config.
+ALPHA_1_ZONE = {
+    "id": "hall",
+    "name": "Hall",
+    "entity_id": "binary_sensor.hall",
+    "area_id": "a1",
+    "trigger": {"kind": "state", "states": ["on"]},
+    "type": "follower",
+    "channel": "intrusion",
+    "entry_mode": "follower",
+    "alarm_kind": "intrusion",
+    "always_on": False,
+    "entry_delay": None,
+    "arm_policy": "block",
+    "arm_hold_timeout": None,
+    "allow_arm_when_faulted": False,
+    "bypassable": True,
+    "supervision_timeout": None,
+    "enabled": True,
+    "key": None,
+}
+
+
+def test_alpha_1_document_migrates_with_followers_unchanged():
+    """2.1 -> 2.2: an empty follows list is exactly the 2.1 behaviour."""
+    document = migrate((1, 1), (2, 1), PHASE_0_DOCUMENT)
+    document["zones"].append(dict(ALPHA_1_ZONE))
+    assert all("follows" not in z for z in document["zones"])
+
+    config = config_from_dict(migrate((2, 1), CURRENT, document))
+
+    assert [z.follows for z in config.zones] == [(), ()]
+    from custom_components.foyer.core.validation import validate
+
+    assert validate(config) == []

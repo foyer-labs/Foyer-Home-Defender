@@ -1291,6 +1291,7 @@ function Le(e) {
 		alarm_kind: "intrusion",
 		always_on: !1,
 		entry_delay: null,
+		follows: [],
 		arm_policy: "block",
 		arm_hold_timeout: null,
 		allow_arm_when_faulted: !1,
@@ -1339,7 +1340,7 @@ var Re = (e, t) => JSON.stringify(e) === JSON.stringify(t), ze = class extends W
 			on_activate: "toggle",
 			scenario_id: null,
 			on_deactivate: "none"
-		}), n.channel !== "key" && (n.key = null), n.arm_policy !== "arm_after_closing" && (n.arm_hold_timeout = null), this._draft = n;
+		}), n.channel !== "key" && (n.key = null), n.arm_policy !== "arm_after_closing" && (n.arm_hold_timeout = null), n.entry_mode !== "follower" && (n.follows = []), this._draft = n;
 	}
 	async _propose(e, t) {
 		let n = this.ctx;
@@ -1457,6 +1458,7 @@ var Re = (e, t) => JSON.stringify(e) === JSON.stringify(t), ze = class extends W
           ${t.id ? F : this._renderEntityPicker(e, t)}
           ${t.entity_id ? N`
                 ${this._renderTrigger(e, t)} ${this._renderProperties(e, t)}
+                ${t.channel === "intrusion" && t.entry_mode === "follower" ? this._renderFollows(e, t) : F}
                 ${t.channel === "key" ? this._renderKey(e, t) : F}
               ` : F}
           ${this._problems.length ? N`<div class="problems" role="alert">
@@ -1768,7 +1770,10 @@ var Re = (e, t) => JSON.stringify(e) === JSON.stringify(t), ze = class extends W
                   <span class="lbl">${J(e, "field.entry_mode")}</span>
                   <select
                     ?disabled=${t.always_on}
-                    @change=${(e) => this._set("entry_mode", e.target.value)}
+                    @change=${(e) => {
+			let t = e.target.value;
+			this._set("entry_mode", t), t !== "follower" && this._set("follows", []);
+		}}
                   >
                     ${[
 			"instant",
@@ -1856,6 +1861,28 @@ var Re = (e, t) => JSON.stringify(e) === JSON.stringify(t), ze = class extends W
           ${o("allow_arm_when_faulted", "zones.allow_faulted_hint")}
           ${o("enabled", "zones.enabled_hint")}
         </div>
+      </fieldset>
+    `;
+	}
+	_renderFollows(e, t) {
+		let n = new Map(this.ctx?.config?.areas.map((e) => [e.id, e.name])), r = (this.ctx?.config?.zones ?? []).filter((e) => e.id !== t.id && e.channel === "intrusion" && e.entry_mode === "delayed"), i = (e, n) => this._set("follows", n ? [.../* @__PURE__ */ new Set([...t.follows, e])] : t.follows.filter((t) => t !== e));
+		return N`
+      <fieldset>
+        <legend>${J(e, "field.follows")}</legend>
+        ${r.length ? r.map((r) => N`<label class="check">
+                <input
+                  type="checkbox"
+                  .checked=${t.follows.includes(r.id ?? "")}
+                  @change=${(e) => i(r.id ?? "", e.target.checked)}
+                />
+                <span>
+                  ${J(e, "zones.entity", {
+			name: r.name,
+			entity: n.get(r.area_id) ?? r.area_id
+		})}
+                </span>
+              </label>`) : N`<p class="hint">${J(e, "zones.no_delayed_zones")}</p>`}
+        <p class="hint">${J(e, "zones.follows_hint")}</p>
       </fieldset>
     `;
 	}

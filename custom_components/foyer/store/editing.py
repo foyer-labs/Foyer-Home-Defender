@@ -32,6 +32,7 @@ _AREA_DEFAULTS: dict[str, Any] = {
 }
 _ZONE_DEFAULTS: dict[str, Any] = {
     "entry_delay": None,
+    "follows": [],
     "arm_hold_timeout": None,
     "allow_arm_when_faulted": False,
     "supervision_timeout": None,

@@ -139,8 +139,21 @@ def validate(config: FoyerConfig) -> list[Problem]:
     ):
         add(Problem("hold_out_of_range", "settings", None, "arm_hold_timeout"))
 
+    zones = {z.id: z for z in config.zones}
     for zone in config.zones:
         problems.extend(_zone_problems(zone, area_ids, scenario_ids))
+        if zone.follows and zone.entry_mode is not EntryMode.FOLLOWER:
+            add(Problem("follows_needs_follower", "zone", zone.id, "follows"))
+        for followed in zone.follows:
+            target = zones.get(followed)
+            if (
+                target is None
+                or target.id == zone.id
+                or target.channel is not Channel.INTRUSION
+                or target.entry_mode is not EntryMode.DELAYED
+            ):
+                add(Problem("follows_not_delayed", "zone", zone.id, "follows"))
+                break
 
     return problems
 

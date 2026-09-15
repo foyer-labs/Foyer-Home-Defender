@@ -48,7 +48,7 @@ from ..core.models import (
 # zones) are not additive. A Phase 0 build reading this file would treat a key
 # switch or a 24h zone as an ordinary instant zone, so it must refuse instead.
 STORAGE_VERSION = 2
-STORAGE_MINOR_VERSION = 1
+STORAGE_MINOR_VERSION = 2
 
 STATE_VERSION = 1
 STATE_MINOR_VERSION = 1
@@ -173,6 +173,7 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
         alarm_kind=AlarmKind(z["alarm_kind"]),
         always_on=bool(z["always_on"]),
         entry_delay=_opt_int(z.get("entry_delay")),
+        follows=tuple(z["follows"]),
         arm_policy=ArmPolicy(z["arm_policy"]),
         arm_hold_timeout=_opt_int(z.get("arm_hold_timeout")),
         allow_arm_when_faulted=bool(z["allow_arm_when_faulted"]),
@@ -202,6 +203,7 @@ def zone_to_dict(z: Zone) -> dict[str, Any]:
         "alarm_kind": z.alarm_kind.value,
         "always_on": z.always_on,
         "entry_delay": z.entry_delay,
+        "follows": list(z.follows),
         "arm_policy": z.arm_policy.value,
         "arm_hold_timeout": z.arm_hold_timeout,
         "allow_arm_when_faulted": z.allow_arm_when_faulted,

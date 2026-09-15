@@ -240,6 +240,7 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `alarm_kind` | enum | `intrusion` \| `tamper` \| `panic` — what an intrusion trigger means, for events and the log |
 | `trigger` | TriggerSpec | how "triggered" is determined — see 4.4 |
 | `entry_delay` | seconds \| null | null = inherit from area |
+| `follows` | list[uuid] | follower only: delayed zones, **in any area**, whose running entry window this zone also inherits. Empty = only its own area's window (the default) |
 | `arm_policy` | enum | `block` (default) \| `auto_bypass` \| `arm_after_closing` \| `ignore` — what happens if open at arming. `arm_after_closing` holds the area in `arming` once the exit delay has elapsed and completes the moment the zone closes — both conditions — for the person who presses arm and *then* pulls the patio door shut; if the zone is still open `arm_hold_timeout` after the exit delay, arming fails as for `block` |
 | `arm_hold_timeout` | seconds \| null | only with `arm_after_closing`: how long after the exit delay the zone may stay open before arming fails as `block`; null = the global default (300 s, bounds 60–1800) |
 | `chime` | bool | sound a chime when this zone opens while it is **not monitored by the active scenario** (§6.5) |
@@ -280,7 +281,7 @@ nothing to do with a burglary and must never reach the intrusion state machine
 |---|---|---|
 | `instant` | fires immediately when the area is armed | `channel=intrusion`, `entry_mode=instant` |
 | `delayed` | grants entry delay (front door) | `channel=intrusion`, `entry_mode=delayed` |
-| `follower` | inherits the entry delay if it triggers *after* a delayed zone in the same area within the entry window; instant otherwise (hallway PIR) | `channel=intrusion`, `entry_mode=follower` |
+| `follower` | inherits the entry delay if it triggers *after* a delayed zone in the same area within the entry window — or, via `follows`, after a delayed zone it follows in another area; instant otherwise (hallway PIR) | `channel=intrusion`, `entry_mode=follower` |
 | `24h` | `always_on = true`; fires even when disarmed | `channel=intrusion`, `always_on=true`, `bypassable=false` |
 | `tamper` | `always_on = true`, dedicated tamper semantics and events | `channel=intrusion`, `alarm_kind=tamper`, `always_on=true`, `bypassable=false` |
 | `technical` | `always_on = true`, non-intrusion alarm (smoke, gas, flood) | `channel=technical`, `always_on=true`, `bypassable=false` |
@@ -453,6 +454,7 @@ independent state holder.
 | `armed` | delayed zone triggers | `entry` | entry delay starts |
 | `armed` | follower zone triggers, no active entry window | `triggered` | |
 | `armed` | follower zone triggers, entry window active | `entry` | inherits remaining delay |
+| `armed` | follower zone triggers, a zone in its `follows` opened an entry window still running in another area | `entry` | inherits that window's deadline, not a new delay; with several, the earliest. The follower's area must be disarmed too, or it expires into `triggered` |
 | `entry` | entry delay elapsed | `triggered` | |
 | `entry` | `disarm_request` accepted | `disarmed` | the normal homecoming path |
 | `entry` | instant zone triggers | `triggered` | entry delay does not protect other zones |
@@ -1630,3 +1632,4 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 44 | A key zone's disarm and toggle act on every area | A key has no area to choose; it behaves like the master |
 | 45 | `arm_after_closing` waits for the exit delay and the closure, with a per-zone cap | Completing on closure alone would arm while the person is still walking to the other door; holding forever leaves a house that believes it is arming and protects nothing |
 | 46 | Event triggers match `event_type`; no subtype | Home Assistant event entities have no standard subtype attribute and a tag has only the scan; a field nobody can fill meaningfully is removed rather than kept |
+| 47 | A follower can follow delayed zones in other areas, by explicit choice | Areas are grouped by function (perimeter, interior day, interior night), so the front door and the hall sensor sit in different areas; a same-area-only follower would sound the alarm the moment you walk in |
