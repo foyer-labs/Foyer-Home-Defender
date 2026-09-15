@@ -112,7 +112,6 @@ class FoyerPageZones extends LitElement {
         ? {
             kind: "event",
             event_type: entityId.startsWith("event.") ? (proposal.proposed[0] ?? null) : null,
-            subtype: null,
           }
         : proposal.trigger_kind === "numeric"
           ? { kind: "numeric", operator: "gt", value: 0, hysteresis: 0, attribute: null }
@@ -508,7 +507,6 @@ class FoyerPageZones extends LitElement {
             this._set("trigger", {
               kind: "event",
               event_type: (e.target as HTMLSelectElement).value || null,
-              subtype: null,
             })}
         >
           <option value="" ?selected=${!eventType}>${t(s, "zones.pick_event")}</option>

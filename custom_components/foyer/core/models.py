@@ -216,13 +216,10 @@ class EventTrigger:
     """A momentary trigger for ``event`` and ``tag`` entities (SPEC §4.4).
 
     ``event.*`` fires on each new event whose ``event_type`` attribute matches;
-    ``tag.*`` fires on every scan and takes no event type. ``subtype`` is part
-    of the spec's shape but has no Home Assistant counterpart yet, so the
-    validator refuses it rather than store something that is never read.
+    ``tag.*`` fires on every scan and takes no event type.
     """
 
     event_type: str | None = None
-    subtype: str | None = None
 
 
 TriggerSpec = StateTrigger | NumericTrigger | EventTrigger

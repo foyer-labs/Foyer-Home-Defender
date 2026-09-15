@@ -107,7 +107,7 @@ export type Trigger =
       hysteresis: number;
       attribute: string | null;
     }
-  | { kind: "event"; event_type: string | null; subtype: string | null };
+  | { kind: "event"; event_type: string | null };
 
 export interface AreaConfig {
   id?: string;

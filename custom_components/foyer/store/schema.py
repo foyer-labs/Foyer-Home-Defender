@@ -230,10 +230,7 @@ def trigger_from_dict(data: dict[str, Any]) -> TriggerSpec:
             attribute=data.get("attribute") or None,
         )
     if kind == "event":
-        return EventTrigger(
-            event_type=data.get("event_type") or None,
-            subtype=data.get("subtype") or None,
-        )
+        return EventTrigger(event_type=data.get("event_type") or None)
     raise ConfigError(f"unsupported trigger kind: {kind!r}")
 
 
@@ -248,11 +245,7 @@ def trigger_to_dict(trigger: TriggerSpec) -> dict[str, Any]:
             "hysteresis": trigger.hysteresis,
             "attribute": trigger.attribute,
         }
-    return {
-        "kind": "event",
-        "event_type": trigger.event_type,
-        "subtype": trigger.subtype,
-    }
+    return {"kind": "event", "event_type": trigger.event_type}
 
 
 # --- runtime state (INV-3) -------------------------------------------------------

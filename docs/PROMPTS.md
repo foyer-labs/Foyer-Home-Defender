@@ -418,7 +418,8 @@ tracked separately and must not be "fixed back" without asking.
 10. Supervision resets on any report (HA last_reported), not only on a state
     change.
 11. EventTrigger: event.* fires on each new event whose event_type attribute
-    matches; tag.* fires on every scan; subtype is refused by validation.
+    matches; tag.* fires on every scan. There is no subtype (removed from
+    the spec by the user).
 12. A key zone's disarm and toggle act on every area; toggle disarms all if
     any area is armed, otherwise arms its scenario.
 13. Each panel page ships in the part that builds its feature (see "As run"

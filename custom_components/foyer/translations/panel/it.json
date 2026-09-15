@@ -76,7 +76,6 @@
     "eq_hysteresis": "Un trigger di uguaglianza non ha isteresi.",
     "event_type_required": "Scegli quale tipo di evento fa scattare la zona.",
     "event_type_not_allowed": "Un tag ha un solo evento, la scansione: lascia il tipo vuoto.",
-    "subtype_not_supported": "I sottotipi di evento non sono ancora supportati.",
     "channel_not_available": "Le zone tecniche (fumo, gas, acqua) arrivano con un aggiornamento successivo. Foyer le rifiuta invece di salvare un rilevatore che non fa nulla.",
     "key_action_required": "Una zona chiave ha bisogno di un'azione.",
     "key_scenario_required": "Scegli lo scenario che questa chiave inserisce.",

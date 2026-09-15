@@ -1351,8 +1351,7 @@ var Re = (e, t) => JSON.stringify(e) === JSON.stringify(t), ze = class extends W
 		if (this._proposal = r, !t || !this._draft) return;
 		let i = r.trigger_kind === "event" ? {
 			kind: "event",
-			event_type: e.startsWith("event.") ? r.proposed[0] ?? null : null,
-			subtype: null
+			event_type: e.startsWith("event.") ? r.proposed[0] ?? null : null
 		} : r.trigger_kind === "numeric" ? {
 			kind: "numeric",
 			operator: "gt",
@@ -1681,8 +1680,7 @@ var Re = (e, t) => JSON.stringify(e) === JSON.stringify(t), ze = class extends W
         <select
           @change=${(e) => this._set("trigger", {
 			kind: "event",
-			event_type: e.target.value || null,
-			subtype: null
+			event_type: e.target.value || null
 		})}
         >
           <option value="" ?selected=${!r}>${J(e, "zones.pick_event")}</option>

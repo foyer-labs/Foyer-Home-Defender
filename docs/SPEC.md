@@ -296,9 +296,20 @@ StateTrigger:   states: list[str]          # e.g. ["on"] or ["open", "opening"]
 NumericTrigger: operator: "gt"|"lt"|"eq"   # attribute optional
                 value: float
                 hysteresis: float
-EventTrigger:   event_type: str            # for `event` / `tag` domains
-                subtype: str | None
+EventTrigger:   event_type: str | None     # for `event` / `tag` domains
 ```
+
+How each domain is read:
+
+| Domain | Trigger | Fires |
+|---|---|---|
+| `event` | `EventTrigger` with `event_type` required | on each new event whose `event_type` attribute matches |
+| `tag` | `EventTrigger` with no `event_type` | on every scan — a tag has one event |
+| any other | `StateTrigger` or `NumericTrigger` | while the state (or the number, with its hysteresis) is in the trigger condition |
+
+Event triggers are momentary: an event zone is never "open" at arming. A
+change out of `unavailable` is Home Assistant restoring the last event at
+startup, not a new event, and does not fire.
 
 The zone creation wizard proposes a `TriggerSpec` from the entity's
 `device_class` and current state, and requires explicit confirmation (INV-5).
@@ -1618,3 +1629,4 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 43 | The master reports `armed_custom_bypass` whenever the armed set differs from the active scenario | HomeKit and voice assistants must not be told "night" when what is armed is not Night |
 | 44 | A key zone's disarm and toggle act on every area | A key has no area to choose; it behaves like the master |
 | 45 | `arm_after_closing` waits for the exit delay and the closure, with a per-zone cap | Completing on closure alone would arm while the person is still walking to the other door; holding forever leaves a house that believes it is arming and protects nothing |
+| 46 | Event triggers match `event_type`; no subtype | Home Assistant event entities have no standard subtype attribute and a tag has only the scan; a field nobody can fill meaningfully is removed rather than kept |

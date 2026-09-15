@@ -76,7 +76,6 @@
     "eq_hysteresis": "An equality trigger has no hysteresis.",
     "event_type_required": "Choose which event type triggers the zone.",
     "event_type_not_allowed": "A tag has only one event, the scan: leave the type empty.",
-    "subtype_not_supported": "Event subtypes are not supported yet.",
     "channel_not_available": "Technical zones (smoke, gas, water) arrive in a later update. Foyer refuses them rather than store a detector that does nothing.",
     "key_action_required": "A key zone needs an action.",
     "key_scenario_required": "Choose the scenario this key arms.",

@@ -179,8 +179,6 @@ def _zone_problems(
             add("event_type_required", "trigger")
         if domain == "tag" and trigger.event_type:
             add("event_type_not_allowed", "trigger")
-        if trigger.subtype is not None:
-            add("subtype_not_supported", "trigger")
 
     if zone.channel is Channel.TECHNICAL:
         add("channel_not_available", "channel")

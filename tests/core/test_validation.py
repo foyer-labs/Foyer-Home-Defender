@@ -96,8 +96,6 @@ def test_event_trigger_rules(config):
     assert "event_type_required" in codes(event_zone)
     tag_zone = with_zone(config, entity_id="tag.front", trigger=EventTrigger("press"))
     assert "event_type_not_allowed" in codes(tag_zone)
-    subtype = with_zone(config, entity_id="event.b", trigger=EventTrigger("press", "x"))
-    assert "subtype_not_supported" in codes(subtype)
     state_on_event = with_zone(config, entity_id="event.b")
     assert "trigger_domain" in codes(state_on_event)
 
