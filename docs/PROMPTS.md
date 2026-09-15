@@ -386,9 +386,9 @@ Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
 ### Phase 1 decisions (paste after the appendix, in every session from Phase 1 part 2 on)
 
 ```
-Binding decisions taken by the user in Phase 1. Where they differ from
-docs/SPEC.md they win until the spec is amended; the spec amendments are
-tracked separately and must not be "fixed back" without asking.
+Binding decisions taken by the user in Phase 1. The spec has been amended to
+match (SPEC §21, decisions 36-46); this list is the quick reference. None of
+them may be "fixed back" without asking.
 
  1. Zone type is a preset label only. The engine reads explicit properties:
     channel (intrusion | technical | key), entry_mode (instant | delayed |
@@ -420,6 +420,8 @@ tracked separately and must not be "fixed back" without asking.
 11. EventTrigger: event.* fires on each new event whose event_type attribute
     matches; tag.* fires on every scan. There is no subtype (removed from
     the spec by the user).
+15. Supervision is set per sensor and is off by default; there is no
+    per-zone exit delay.
 12. A key zone's disarm and toggle act on every area; toggle disarms all if
     any area is armed, otherwise arms its scenario.
 13. Each panel page ships in the part that builds its feature (see "If a
