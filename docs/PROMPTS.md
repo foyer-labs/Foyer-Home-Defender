@@ -328,20 +328,20 @@ problem, and file an issue that is answerable without five rounds of questions.
 Phase 1 is the one most likely to overflow a working session. Split it in this
 order, each part still leaving something that runs:
 
-1. Zones, areas, scenarios, state machine, delays, arm policies, persistence.
-2. Technical channel, incidents, verification groups, chime.
-3. Response profiles, conditions, action catalogue, timed bypass.
-4. The SQLite log, panel pages, wizard, cards.
+1. Zones, areas, scenarios, state machine, delays, arm policies, persistence —
+   with panel pages 1–4 (overview, areas, zones, scenarios) and the card
+   updated for the new states.
+2. Technical channel, incidents, verification groups (page 13), chime (with
+   its block of the settings page).
+3. Response profiles (page 5), conditions, action catalogue, timed bypass.
+4. The SQLite log (page 10), settings (page 11), the first-run wizard, config
+   backup/restore, card layouts full and compact.
 
-Do not split it by layer — backend first, then frontend — because that produces
-two halves neither of which can be verified until both are done.
-
-As run (decided by the user in part 1): each panel page ships in the part that
-builds its feature, so every part can be used on a real Home Assistant and not
-only tested. Part 1 delivered pages 1–4; part 2 delivers page 13 and the chime
-settings; part 3 page 5; part 4 pages 10 and 11, the first-run wizard, config
-backup/restore and the card layouts. The appendices below are the authoritative
-scope of each part.
+Each panel page ships in the part that builds its feature. Do not split by
+layer — backend first, then frontend — because that produces two halves
+neither of which can be verified until both are done: a part is finished only
+when it can be used on a real Home Assistant, not only tested. The appendices
+below are the authoritative scope of each part.
 
 ---
 
@@ -422,8 +422,8 @@ tracked separately and must not be "fixed back" without asking.
     the spec by the user).
 12. A key zone's disarm and toggle act on every area; toggle disarms all if
     any area is armed, otherwise arms its scenario.
-13. Each panel page ships in the part that builds its feature (see "As run"
-    under "If a phase turns out too big").
+13. Each panel page ships in the part that builds its feature (see "If a
+    phase turns out too big").
 14. A zone's first readable value is its baseline, not an activation (so a
     newly saved key zone already "on" does not arm the house).
 
