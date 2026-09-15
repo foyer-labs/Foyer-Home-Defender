@@ -135,7 +135,8 @@ class FoyerCard extends LitElement {
     return html`
       <ha-card>
         <div class="content">
-          ${this._head(area.name, area.state, area.memory)} ${this._countdown(s, area)}
+          ${this._renderAlerts(s)} ${this._head(area.name, area.state, area.memory)}
+          ${this._countdown(s, area)}
           <div class="buttons">
             ${area.state === "disarmed"
               ? html`<button
@@ -170,6 +171,7 @@ class FoyerCard extends LitElement {
     return html`
       <ha-card>
         <div class="content">
+          ${this._renderAlerts(s)}
           ${this._head(active?.name ?? t(s, "overview.master"), status.master.state, memory)}
           ${status.areas.map((area) => this._countdown(s, area, true))}
           <div class="buttons">
@@ -194,6 +196,48 @@ class FoyerCard extends LitElement {
           ${this._renderFeedback()}
         </div>
       </ha-card>
+    `;
+  }
+
+  // The technical alarm and the open incident show on every card, whatever
+  // area it shows (§5.5): each with its own acknowledgement, never merged.
+  private _renderAlerts(s: Strings) {
+    const status = this._status;
+    if (!status) return nothing;
+    const names = new Map(status.zones.map((z) => [z.id, z.name]));
+    const technical = status.technical ?? [];
+    const incident = status.incident;
+    return html`
+      ${technical.length
+        ? html`<div class="alert technical" role="alert">
+            <span>${t(s, "card.technical", { zones: technical.map((a) => a.name).join(", ") })}</span>
+            ${technical.some((a) => !a.acknowledged)
+              ? html`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({ type: "foyer/acknowledge", target: "technical" })}
+                >
+                  ${t(s, "common.acknowledge")}
+                </button>`
+              : nothing}
+          </div>`
+        : nothing}
+      ${incident
+        ? html`<div class="alert incident" role="alert">
+            <span>
+              ${t(s, "card.incident", {
+                zones: incident.zone_ids.map((z) => names.get(z) ?? z).join(", "),
+              })}
+            </span>
+            ${incident.acknowledged
+              ? nothing
+              : html`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({ type: "foyer/acknowledge", target: "incident" })}
+                >
+                  ${t(s, "common.acknowledge")}
+                </button>`}
+          </div>`
+        : nothing}
     `;
   }
 
@@ -282,6 +326,26 @@ class FoyerCard extends LitElement {
       .feedback {
         color: var(--error-color);
         font-size: 14px;
+      }
+      .alert {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border-left: 4px solid var(--error-color, #d32f2f);
+        background: var(--secondary-background-color);
+        font-weight: 500;
+      }
+      .alert.incident {
+        border-left-color: var(--warning-color, #c77700);
+      }
+      .alert span {
+        flex: 1;
+      }
+      .alert button {
+        padding: 6px 12px;
       }
     `,
   ];

@@ -3,6 +3,7 @@
 // the WebSocket commands.
 import { t, type Strings } from "../shared/i18n";
 import type {
+  ChimeConfig,
   CommandResult,
   ConfigMeta,
   EditResult,
@@ -25,8 +26,11 @@ export interface PanelContext {
   navigate(page: PageId): void;
   arm(target: Record<string, unknown>): Promise<CommandResult>;
   disarm(areaIds?: string[]): Promise<CommandResult>;
+  /** The incident and the technical channel have separate acknowledgements. */
+  acknowledge(target: "incident" | "technical"): Promise<CommandResult>;
   save(kind: string, item: object, triggerConfirmed?: boolean): Promise<EditResult>;
   remove(kind: string, id: string): Promise<EditResult>;
+  saveChime(chime: ChimeConfig): Promise<EditResult>;
 }
 
 /** Seconds left on a timer, never negative. */

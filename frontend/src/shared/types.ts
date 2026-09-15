@@ -63,6 +63,7 @@ export interface StatusZone {
   area_id: string;
   entity_id: string;
   type: string;
+  channel: "intrusion" | "technical" | "key";
   enabled: boolean;
   state: string | null;
   fault: string | null;
@@ -78,6 +79,25 @@ export interface StatusScenario {
   ha_master_state: string;
 }
 
+// The technical channel (§5.5): one entry per zone in alarm or in memory.
+export interface StatusTechnical {
+  zone_id: string;
+  name: string;
+  area_id: string | null;
+  since: string;
+  active: boolean;
+  acknowledged: boolean;
+}
+
+// The open intrusion incident (§5.6).
+export interface StatusIncident {
+  id: string;
+  opened_at: string;
+  zone_ids: string[];
+  area_ids: string[];
+  acknowledged: boolean;
+}
+
 export interface FoyerStatus {
   now: string;
   active_scenario_id: string | null;
@@ -85,6 +105,9 @@ export interface FoyerStatus {
   areas: StatusArea[];
   scenarios: StatusScenario[];
   zones: StatusZone[];
+  technical: StatusTechnical[];
+  incident: StatusIncident | null;
+  chime_enabled: boolean;
 }
 
 // Result of foyer/arm and foyer/disarm (SPEC §9.1).
@@ -143,6 +166,32 @@ export interface ZoneConfig {
   supervision_timeout: number | null;
   enabled: boolean;
   key: KeyConfig | null;
+  chime: boolean;
+  cross_zone_id: string | null;
+  cross_zone_window: number;
+  trigger_count: number;
+  trigger_window: number;
+}
+
+export interface GroupConfig {
+  id?: string;
+  name: string;
+  area_id: string;
+  members: string[];
+  n: number;
+  window_seconds: number;
+  suppress_members: boolean;
+}
+
+export interface ChimeConfig {
+  targets: string[];
+  mode: "sound" | "speech";
+  sound: string | null;
+  tts_entity: string | null;
+  volume: number | null;
+  quiet_start: string | null;
+  quiet_end: string | null;
+  during_exit: boolean;
 }
 
 export interface ScenarioConfig {
@@ -159,12 +208,15 @@ export interface FoyerConfig {
   areas: AreaConfig[];
   zones: ZoneConfig[];
   scenarios: ScenarioConfig[];
+  groups: GroupConfig[];
   settings: { siren_duration: number; arm_hold_timeout: number };
+  chime: ChimeConfig;
 }
 
 export interface ConfigMeta {
   zone_types: { type: string; available: boolean; preset: Partial<ZoneConfig> }[];
   zone_domains: string[];
+  chime_domains: string[];
   ha_states: string[];
   bounds: Record<string, [number, number]>;
 }
@@ -194,4 +246,4 @@ export interface ZoneProposal {
   zone_type: string | null;
 }
 
-export type PageId = "overview" | "areas" | "zones" | "scenarios";
+export type PageId = "overview" | "areas" | "zones" | "scenarios" | "groups" | "settings";

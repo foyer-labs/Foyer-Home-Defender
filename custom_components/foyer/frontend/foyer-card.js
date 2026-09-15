@@ -824,7 +824,8 @@ var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", 
 		return z`
       <ha-card>
         <div class="content">
-          ${this._head(t.name, t.state, t.memory)} ${this._countdown(e, t)}
+          ${this._renderAlerts(e)} ${this._head(t.name, t.state, t.memory)}
+          ${this._countdown(e, t)}
           <div class="buttons">
             ${t.state === "disarmed" ? z`<button
                   class="primary"
@@ -858,6 +859,7 @@ var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", 
 		return z`
       <ha-card>
         <div class="content">
+          ${this._renderAlerts(e)}
           ${this._head(r?.name ?? $(e, "overview.master"), t.master.state, n)}
           ${t.areas.map((t) => this._countdown(e, t, !0))}
           <div class="buttons">
@@ -881,6 +883,39 @@ var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", 
           ${this._renderFeedback()}
         </div>
       </ha-card>
+    `;
+	}
+	_renderAlerts(e) {
+		let t = this._status;
+		if (!t) return V;
+		let n = new Map(t.zones.map((e) => [e.id, e.name])), r = t.technical ?? [], i = t.incident;
+		return z`
+      ${r.length ? z`<div class="alert technical" role="alert">
+            <span>${$(e, "card.technical", { zones: r.map((e) => e.name).join(", ") })}</span>
+            ${r.some((e) => !e.acknowledged) ? z`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({
+			type: "foyer/acknowledge",
+			target: "technical"
+		})}
+                >
+                  ${$(e, "common.acknowledge")}
+                </button>` : V}
+          </div>` : V}
+      ${i ? z`<div class="alert incident" role="alert">
+            <span>
+              ${$(e, "card.incident", { zones: i.zone_ids.map((e) => n.get(e) ?? e).join(", ") })}
+            </span>
+            ${i.acknowledged ? V : z`<button
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({
+			type: "foyer/acknowledge",
+			target: "incident"
+		})}
+                >
+                  ${$(e, "common.acknowledge")}
+                </button>`}
+          </div>` : V}
     `;
 	}
 	_head(e, t, n) {
@@ -960,6 +995,26 @@ var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", 
       .feedback {
         color: var(--error-color);
         font-size: 14px;
+      }
+      .alert {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border-left: 4px solid var(--error-color, #d32f2f);
+        background: var(--secondary-background-color);
+        font-weight: 500;
+      }
+      .alert.incident {
+        border-left-color: var(--warning-color, #c77700);
+      }
+      .alert span {
+        flex: 1;
+      }
+      .alert button {
+        padding: 6px 12px;
       }
     `];
 	}

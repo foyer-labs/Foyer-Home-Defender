@@ -651,7 +651,7 @@
     "chime_intro": "Sounds when a zone with the chime switched on opens while its area is not armed — not merely when the house is disarmed. With only the perimeter armed, an internal door still chimes.",
     "targets_hint": "Media players and sirens.",
     "no_targets": "No media player or siren found.",
-    "sound_hint": "For media players: a media id or URL, such as media-source://media_source/local/chime.mp3. Sirens simply sound briefly.",
+    "sound_hint": "For media players: a media id or URL, such as media-source://media_source/local/chime.mp3. A siren sounds for one second, if it supports a set duration; otherwise it is skipped.",
     "tts_hint": "Used to speak the zone name.",
     "pick_tts": "Choose…",
     "volume_hint": "Percent. Empty: leave the player's volume as it is.",

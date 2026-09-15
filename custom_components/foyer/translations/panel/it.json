@@ -651,7 +651,7 @@
     "chime_intro": "Suona quando si apre una zona con il campanello attivo mentre la sua area non è inserita — non solo quando la casa è disinserita. Con il solo perimetro inserito, una porta interna suona comunque.",
     "targets_hint": "Media player e sirene.",
     "no_targets": "Nessun media player o sirena trovato.",
-    "sound_hint": "Per i media player: un id di contenuto o un URL, come media-source://media_source/local/chime.mp3. Le sirene suonano semplicemente per un attimo.",
+    "sound_hint": "Per i media player: un id di contenuto o un URL, come media-source://media_source/local/chime.mp3. Una sirena suona per un secondo, se supporta una durata impostata; altrimenti viene saltata.",
     "tts_hint": "Usata per pronunciare il nome della zona.",
     "pick_tts": "Scegli…",
     "volume_hint": "Percentuale. Vuoto: lascia il volume del lettore com'è.",

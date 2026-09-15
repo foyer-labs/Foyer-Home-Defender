@@ -22,16 +22,30 @@ import "./pages/overview";
 import "./pages/areas";
 import "./pages/zones";
 import "./pages/scenarios";
+import "./pages/groups";
+import "./pages/settings";
 
-const PAGES: PageId[] = ["overview", "areas", "zones", "scenarios"];
-const CONFIG_PAGES: PageId[] = ["areas", "zones", "scenarios"];
+// In the order of SPEC §15.1: 1–4, then 11 and 13 as they arrive.
+const PAGES: PageId[] = ["overview", "areas", "zones", "scenarios", "groups", "settings"];
+const CONFIG_PAGES: PageId[] = ["areas", "zones", "scenarios", "groups", "settings"];
 
 // One line per setting in each page's help (translations: help.<page>.items).
 const HELP_ITEMS: Record<PageId, string[]> = {
-  overview: ["area", "master", "scenario", "not_ready", "memory"],
+  overview: ["area", "master", "scenario", "not_ready", "memory", "technical", "incident"],
   areas: ["own_state", "entry", "exit", "reports_as"],
-  zones: ["trigger", "type", "entry_mode", "arm_policy", "hold", "always_on", "supervision"],
+  zones: [
+    "trigger",
+    "type",
+    "entry_mode",
+    "arm_policy",
+    "hold",
+    "always_on",
+    "supervision",
+    "verification",
+  ],
   scenarios: ["areas", "reports_master", "switching", "exit_override", "siren"],
+  groups: ["threshold", "members", "suppress", "derived"],
+  settings: ["targets", "mode", "quiet", "during_exit"],
 };
 
 interface Prefs {
@@ -157,6 +171,9 @@ class FoyerPanel extends LitElement {
           type: "foyer/disarm",
           ...(areaIds ? { area_ids: areaIds } : {}),
         }),
+      acknowledge: (target) =>
+        hass.callWS<CommandResult>({ type: "foyer/acknowledge", target }),
+      saveChime: (chime) => this._edit("chime", { type: "foyer/config/chime", chime }),
       save: (kind, item, triggerConfirmed = false) =>
         this._edit(kind, {
           type: "foyer/config/save",
@@ -288,6 +305,10 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-zones .ctx=${ctx}></foyer-page-zones>`;
       case "scenarios":
         return html`<foyer-page-scenarios .ctx=${ctx}></foyer-page-scenarios>`;
+      case "groups":
+        return html`<foyer-page-groups .ctx=${ctx}></foyer-page-groups>`;
+      case "settings":
+        return html`<foyer-page-settings .ctx=${ctx}></foyer-page-settings>`;
       default:
         return html`<foyer-page-overview .ctx=${ctx}></foyer-page-overview>`;
     }

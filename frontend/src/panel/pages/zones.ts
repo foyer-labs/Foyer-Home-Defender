@@ -40,7 +40,19 @@ function blankZone(areaId: string): ZoneConfig {
     supervision_timeout: null,
     enabled: true,
     key: null,
+    chime: false,
+    cross_zone_id: null,
+    cross_zone_window: 60,
+    trigger_count: 1,
+    trigger_window: 60,
   };
+}
+
+// Verification and chime belong to intrusion zones only (the backend refuses
+// them elsewhere): reset them whenever a zone leaves the intrusion channel.
+function intrusionOnly(draft: ZoneConfig): ZoneConfig {
+  if (draft.channel === "intrusion") return draft;
+  return { ...draft, chime: false, cross_zone_id: null, trigger_count: 1 };
 }
 
 const sameTrigger = (a?: Trigger, b?: Trigger) => JSON.stringify(a) === JSON.stringify(b);
@@ -96,7 +108,8 @@ class FoyerPageZones extends LitElement {
     if (draft.channel !== "key") draft.key = null;
     if (draft.arm_policy !== "arm_after_closing") draft.arm_hold_timeout = null;
     if (draft.entry_mode !== "follower") draft.follows = [];
-    this._draft = draft;
+    if (draft.always_on) draft.chime = false;
+    this._draft = intrusionOnly(draft);
   }
 
   private async _propose(entityId: string, apply: boolean): Promise<void> {
@@ -245,6 +258,7 @@ class FoyerPageZones extends LitElement {
                 ${draft.channel === "intrusion" && draft.entry_mode === "follower"
                   ? this._renderFollows(s, draft)
                   : nothing}
+                ${draft.channel === "intrusion" ? this._renderVerification(s, draft) : nothing}
                 ${draft.channel === "key" ? this._renderKey(s, draft) : nothing}
               `
             : nothing}
@@ -590,22 +604,25 @@ class FoyerPageZones extends LitElement {
             <select
               @change=${(e: Event) => {
                 const channel = (e.target as HTMLSelectElement).value as ZoneConfig["channel"];
-                this._set("channel", channel);
-                this._set(
-                  "key",
-                  channel === "key"
-                    ? (draft.key ?? { on_activate: "toggle", scenario_id: null, on_deactivate: "none" })
-                    : null,
-                );
+                this._draft = intrusionOnly({
+                  ...draft,
+                  channel,
+                  key:
+                    channel === "key"
+                      ? (draft.key ?? {
+                          on_activate: "toggle",
+                          scenario_id: null,
+                          on_deactivate: "none",
+                        })
+                      : null,
+                  // The technical channel is live whatever the areas do (§5.5).
+                  ...(channel === "technical" ? { always_on: true, entry_mode: "instant" } : {}),
+                });
               }}
             >
               ${(["intrusion", "key", "technical"] as const).map(
                 (channel) =>
-                  html`<option
-                    .value=${channel}
-                    ?selected=${channel === draft.channel}
-                    ?disabled=${channel === "technical"}
-                  >
+                  html`<option .value=${channel} ?selected=${channel === draft.channel}>
                     ${t(s, `channel.${channel}`)}
                   </option>`,
               )}
@@ -725,8 +742,110 @@ class FoyerPageZones extends LitElement {
         <div class="checks">
           ${intrusion ? check("always_on", "zones.always_on_hint") : nothing}
           ${intrusion ? check("bypassable", "zones.bypassable_hint") : nothing}
+          ${intrusion && !draft.always_on ? check("chime", "zones.chime_hint") : nothing}
           ${check("allow_arm_when_faulted", "zones.allow_faulted_hint")}
           ${check("enabled", "zones.enabled_hint")}
+        </div>
+        ${draft.channel === "technical"
+          ? html`<p class="hint">${t(s, "zones.technical_hint")}</p>
+              <div class="notice fire" role="note">${t(s, "zones.fire_statement")}</div>`
+          : nothing}
+      </fieldset>
+    `;
+  }
+
+  // Cross-zone and trigger counting (§4.2): the same engine as the groups of
+  // page 13. A zone already in a group is shown as such and edited there.
+  private _renderVerification(s: Strings, draft: ZoneConfig) {
+    const ctx = this.ctx!;
+    const meta = ctx.meta;
+    const [low, high] = meta?.bounds.window ?? [1, 3600];
+    const group = ctx.config?.groups.find((g) => g.members.includes(draft.id ?? ""));
+    // A zone belongs to one group or pair at most: offer only free partners,
+    // plus the one already chosen (the backend enforces it either way).
+    const busy = new Set<string>();
+    for (const g of ctx.config?.groups ?? []) g.members.forEach((m) => busy.add(m));
+    for (const z of ctx.config?.zones ?? []) {
+      if (!z.id || !z.cross_zone_id || z.id === draft.id || z.cross_zone_id === draft.id) continue;
+      busy.add(z.id);
+      busy.add(z.cross_zone_id);
+    }
+    const partners = (ctx.config?.zones ?? []).filter(
+      (z) =>
+        z.id !== draft.id &&
+        z.channel === "intrusion" &&
+        (!busy.has(z.id ?? "") || z.id === draft.cross_zone_id),
+    );
+    const areas = new Map(ctx.config?.areas.map((a) => [a.id, a.name]));
+    const number = (key: "cross_zone_window" | "trigger_count" | "trigger_window") => (e: Event) => {
+      const value = optionalNumber((e.target as HTMLInputElement).value);
+      this._set(key, value ?? (key === "trigger_count" ? 1 : 60));
+    };
+    return html`
+      <fieldset>
+        <legend>${t(s, "zones.verification_title")}</legend>
+        ${group
+          ? html`<p class="notice">${t(s, "zones.in_group", { group: group.name })}</p>`
+          : html`<div class="grid-form">
+              <label class="field">
+                <span class="lbl">${t(s, "field.cross_zone_id")}</span>
+                <select
+                  @change=${(e: Event) =>
+                    this._set("cross_zone_id", (e.target as HTMLSelectElement).value || null)}
+                >
+                  <option value="" ?selected=${!draft.cross_zone_id}>
+                    ${t(s, "zones.no_cross_zone")}
+                  </option>
+                  ${partners.map(
+                    (z) => html`<option .value=${z.id ?? ""} ?selected=${z.id === draft.cross_zone_id}>
+                      ${t(s, "zones.entity", {
+                        name: z.name,
+                        entity: areas.get(z.area_id) ?? z.area_id,
+                      })}
+                    </option>`,
+                  )}
+                </select>
+                <span class="hint">${t(s, "zones.cross_zone_hint")}</span>
+              </label>
+              ${draft.cross_zone_id
+                ? html`<label class="field">
+                    <span class="lbl">${t(s, "field.cross_zone_window")}</span>
+                    <input
+                      type="number"
+                      min=${low}
+                      max=${high}
+                      .value=${String(draft.cross_zone_window)}
+                      @input=${number("cross_zone_window")}
+                    />
+                    <span class="hint">${t(s, "groups.window_hint")}</span>
+                  </label>`
+                : nothing}
+            </div>`}
+        <div class="grid-form">
+          <label class="field">
+            <span class="lbl">${t(s, "field.trigger_count")}</span>
+            <input
+              type="number"
+              min="1"
+              max=${meta?.bounds.trigger_count?.[1] ?? 10}
+              .value=${String(draft.trigger_count)}
+              @input=${number("trigger_count")}
+            />
+            <span class="hint">${t(s, "zones.trigger_count_hint")}</span>
+          </label>
+          ${draft.trigger_count > 1
+            ? html`<label class="field">
+                <span class="lbl">${t(s, "field.trigger_window")}</span>
+                <input
+                  type="number"
+                  min=${low}
+                  max=${high}
+                  .value=${String(draft.trigger_window)}
+                  @input=${number("trigger_window")}
+                />
+                <span class="hint">${t(s, "groups.window_hint")}</span>
+              </label>`
+            : nothing}
         </div>
       </fieldset>
     `;
@@ -859,6 +978,10 @@ class FoyerPageZones extends LitElement {
         grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         gap: 0 16px;
         margin-top: 12px;
+      }
+      .notice.fire {
+        border-left-color: var(--error-color, #d32f2f);
+        font-weight: 500;
       }
       .confirm {
         margin-top: 12px;

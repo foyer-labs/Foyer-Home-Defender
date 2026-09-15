@@ -72,6 +72,11 @@ class FoyerPageOverview extends LitElement {
     if (ctx) this._run(() => ctx.disarm(areaIds));
   }
 
+  private _acknowledge(target: "incident" | "technical"): void {
+    const ctx = this.ctx;
+    if (ctx) this._run(() => ctx.acknowledge(target));
+  }
+
   override render() {
     const ctx = this.ctx;
     if (!ctx) return nothing;
@@ -79,6 +84,7 @@ class FoyerPageOverview extends LitElement {
     const status = ctx.status;
     const memory = status.areas.filter((a) => a.memory);
     return html`
+      ${this._renderTechnical(s)} ${this._renderIncident(s)}
       <div class="notice" role="note">${t(s, "overview.no_codes_warning")}</div>
       ${memory.map(
         (area) => html`<div class="alarm-memory" role="alert">
@@ -97,6 +103,80 @@ class FoyerPageOverview extends LitElement {
   private _zoneNames(ids: string[]): string {
     const names = new Map(this.ctx!.status.zones.map((z) => [z.id, z.name]));
     return ids.map((id) => names.get(id) ?? id).join(", ");
+  }
+
+  // The technical channel (§5.5): its own banner and its own acknowledgement,
+  // visible whatever the areas are doing. Disarming does not clear it.
+  private _renderTechnical(s: Strings) {
+    const alarms = this.ctx!.status.technical;
+    if (!alarms.length) return nothing;
+    const pending = alarms.some((a) => !a.acknowledged);
+    return html`
+      <div class="banner technical" role="alert">
+        <div class="banner-hd">${t(s, "overview.technical_title")}</div>
+        <div>
+          ${t(s, "overview.technical_banner", { zones: alarms.map((a) => a.name).join(", ") })}
+        </div>
+        <ul class="plain">
+          ${alarms.map(
+            (a) => html`<li>
+              <strong>${a.name}</strong> —
+              ${t(
+                s,
+                a.acknowledged
+                  ? "technical_state.acknowledged"
+                  : a.active
+                    ? "technical_state.active"
+                    : "technical_state.memory",
+              )}
+            </li>`,
+          )}
+        </ul>
+        ${pending
+          ? html`<div class="actions">
+              <button
+                class="btn danger"
+                ?disabled=${this._busy}
+                @click=${() => this._acknowledge("technical")}
+              >
+                ${t(s, "common.acknowledge")}
+              </button>
+            </div>`
+          : nothing}
+      </div>
+    `;
+  }
+
+  // The open intrusion incident (§5.6): every zone of one alarm, acknowledged once.
+  private _renderIncident(s: Strings) {
+    const incident = this.ctx!.status.incident;
+    if (!incident) return nothing;
+    return html`
+      <div class="banner incident" role="alert">
+        <div class="banner-hd">
+          ${t(s, "overview.incident_title", { id: incident.id })}
+          <span class="state ${incident.acknowledged ? "memory" : "triggered"}">
+            ${t(
+              s,
+              incident.acknowledged ? "overview.incident_acknowledged" : "overview.incident_open",
+            )}
+          </span>
+        </div>
+        <div>${t(s, "overview.incident_zones", { zones: this._zoneNames(incident.zone_ids) })}</div>
+        <div class="hint">${t(s, "overview.incident_hint")}</div>
+        ${incident.acknowledged
+          ? nothing
+          : html`<div class="actions">
+              <button
+                class="btn danger"
+                ?disabled=${this._busy}
+                @click=${() => this._acknowledge("incident")}
+              >
+                ${t(s, "common.acknowledge")}
+              </button>
+            </div>`}
+      </div>
+    `;
   }
 
   private _renderMaster(s: Strings) {
@@ -223,7 +303,10 @@ class FoyerPageOverview extends LitElement {
   private _renderNotReady(s: Strings) {
     const ctx = this.ctx!;
     const areas = new Map(ctx.status.areas.map((a) => [a.id, a.name]));
-    const rows = ctx.status.zones.filter((z) => z.enabled && (z.fault || z.open || z.bypassed));
+    // A smoke detector in alarm is not an open zone: it has its own banner.
+    const rows = ctx.status.zones.filter(
+      (z) => z.enabled && (z.fault || (z.open && z.channel === "intrusion") || z.bypassed),
+    );
     return html`
       <div class="card">
         <div class="card-hd"><h2>${t(s, "overview.not_ready")}</h2></div>
@@ -338,6 +421,34 @@ class FoyerPageOverview extends LitElement {
       }
       .problems {
         margin: 0 0 16px;
+      }
+      .banner {
+        margin: 0 0 16px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--divider-color);
+        border-left: 4px solid var(--error-color, #d32f2f);
+        background: var(--card-background-color);
+        font-size: 14px;
+      }
+      .banner.incident {
+        border-left-color: var(--warning-color, #c77700);
+      }
+      .banner-hd {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+      .banner .actions {
+        margin-top: 10px;
+      }
+      ul.plain {
+        margin: 8px 0 0;
+        padding-left: 18px;
       }
     `,
   ];
