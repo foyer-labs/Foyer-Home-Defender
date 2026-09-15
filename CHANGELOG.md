@@ -5,10 +5,11 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased] — Phase 1, part 1: zones, areas, scenarios, state machine
+## [0.1.0-alpha.1] — Phase 1, part 1: zones, areas, scenarios, state machine
 
-Still not for protecting a house: no sirens or response profiles, no event log,
-no technical channel, no codes.
+**Pre-release, for testing only.** Still not for protecting a house: no sirens
+or response profiles, no event log, no technical channel, no codes. Parts 2–4
+of Phase 1 follow as further alpha pre-releases; 0.1.0 is Phase 1 complete.
 
 ### Changed — read this if you run 0.0.1
 - **Alarm state now survives a restart.** It is saved on every change in
