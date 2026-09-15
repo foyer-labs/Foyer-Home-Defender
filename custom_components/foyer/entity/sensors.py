@@ -18,7 +18,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util, slugify
 
 from ..const import DOMAIN
-from ..core.models import Area, TimerKind, Zone
+from ..core.models import Area, Channel, TimerKind, Zone
 from ..runtime.system import FoyerSystem
 from .common import FoyerEntity, area_device, hub_device
 
@@ -38,6 +38,7 @@ async def async_setup_binary_sensors(
             FoyerReadyToArm(system, entry_id, None),
             *(FoyerReadyToArm(system, entry_id, a) for a in system.config.areas),
             FoyerFault(system, entry_id),
+            FoyerTechnicalAlarm(system, entry_id),
             *(
                 FoyerZoneSensor(system, entry_id, z, areas[z.area_id])
                 for z in system.config.zones
@@ -57,6 +58,8 @@ async def async_setup_sensors(
         [
             FoyerOpenZones(system, entry.entry_id),
             *(FoyerCountdown(system, entry.entry_id, a) for a in system.config.areas),
+            FoyerTechnicalCause(system, entry.entry_id),
+            FoyerIncident(system, entry.entry_id),
         ]
     )
 
@@ -155,7 +158,98 @@ class FoyerFault(FoyerEntity, BinarySensorEntity):
         return {"zones": sorted(names[z] for z in self._system.state.faults)}
 
 
+class FoyerTechnicalAlarm(FoyerEntity, BinarySensorEntity):
+    """The technical channel (§5.5): on from the moment a technical zone fires
+    until it is both acknowledged and back to normal. Never part of any
+    alarm_control_panel, so HomeKit and voice assistants never hear "burglary"
+    for a smoke detector."""
+
+    _attr_translation_key = "technical_alarm"
+    _attr_device_class = BinarySensorDeviceClass.SAFETY
+
+    def __init__(self, system: FoyerSystem, entry_id: str) -> None:
+        super().__init__(system)
+        self._attr_unique_id = f"{entry_id}_technical_alarm"
+        self.entity_id = f"binary_sensor.{DOMAIN}_technical_alarm"
+        self._attr_device_info = hub_device(entry_id)
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self._system.state.technical)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        alarms = self._system.technical_status()
+        return {
+            "zones": [a["name"] for a in alarms],
+            "active": [a["name"] for a in alarms if a["active"]],
+            "unacknowledged": [a["name"] for a in alarms if not a["acknowledged"]],
+        }
+
+
 # --- sensors ----------------------------------------------------------------------
+
+# The state of a text sensor with nothing to report: a word, not "unknown",
+# because "unknown" would say Foyer does not know (INV-4).
+NONE = "none"
+
+
+class FoyerTechnicalCause(FoyerEntity, SensorEntity):
+    """Which technical zone is in alarm: the first to fire, all as attributes."""
+
+    _attr_translation_key = "technical_cause"
+
+    def __init__(self, system: FoyerSystem, entry_id: str) -> None:
+        super().__init__(system)
+        self._attr_unique_id = f"{entry_id}_technical_cause"
+        self.entity_id = f"sensor.{DOMAIN}_technical_cause"
+        self._attr_device_info = hub_device(entry_id)
+
+    @property
+    def native_value(self) -> str:
+        alarms = sorted(self._system.technical_status(), key=lambda a: a["since"])
+        return alarms[0]["name"] if alarms else NONE
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"zones": [a["name"] for a in self._system.technical_status()]}
+
+
+class FoyerIncident(FoyerEntity, SensorEntity):
+    """The open intrusion incident (§5.6, §13): its id, or "none"."""
+
+    _attr_translation_key = "incident"
+
+    def __init__(self, system: FoyerSystem, entry_id: str) -> None:
+        super().__init__(system)
+        self._attr_unique_id = f"{entry_id}_incident"
+        self.entity_id = f"sensor.{DOMAIN}_incident"
+        self._attr_device_info = hub_device(entry_id)
+
+    @property
+    def native_value(self) -> str:
+        incident = self._system.state.incident
+        return incident.id if incident else NONE
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        incident = self._system.state.incident
+        if incident is None:
+            return {"zones": [], "areas": [], "acknowledged": None, "severity": None}
+        zones = {z.id: z.name for z in self._system.config.zones}
+        areas = {a.id: a.name for a in self._system.config.areas}
+        severities = [
+            c.severity for c in incident.contributors if c.severity is not None
+        ]
+        return {
+            "opened_at": incident.opened_at.isoformat(),
+            "zones": [zones.get(z, z) for z in incident.zone_ids],
+            "areas": [areas.get(a, a) for a in incident.area_ids],
+            "acknowledged": incident.acknowledged,
+            # The highest contributing profile severity: filled once response
+            # profiles exist (Phase 1 part 3); None until then.
+            "severity": max(severities, default=None),
+        }
 
 
 class FoyerOpenZones(FoyerEntity, SensorEntity):
@@ -169,8 +263,14 @@ class FoyerOpenZones(FoyerEntity, SensorEntity):
         self._attr_device_info = hub_device(entry_id)
 
     def _open(self) -> list[str]:
+        """Open intrusion zones. A smoke detector in alarm is not an open zone:
+        it is on the technical channel's own entities."""
         active = self._system.state.active_zones
-        return [z.name for z in self._system.config.zones if z.id in active]
+        return [
+            z.name
+            for z in self._system.config.zones
+            if z.id in active and z.channel is Channel.INTRUSION
+        ]
 
     @property
     def native_value(self) -> int:

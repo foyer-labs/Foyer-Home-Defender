@@ -36,7 +36,17 @@ def expected_unique_ids(entry_id: str, config: FoyerConfig) -> set[str]:
     """Every entity this configuration creates. Anything else is stale."""
     ids = {
         f"{entry_id}_{suffix}"
-        for suffix in ("master", "scenario", "ready_to_arm", "fault", "open_zones")
+        for suffix in (
+            "master",
+            "scenario",
+            "ready_to_arm",
+            "fault",
+            "open_zones",
+            "technical_alarm",
+            "technical_cause",
+            "incident",
+            "chime",
+        )
     }
     for area in config.areas:
         for prefix in ("area", "ready_to_arm", "countdown"):

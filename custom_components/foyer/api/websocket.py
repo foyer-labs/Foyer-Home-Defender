@@ -25,8 +25,13 @@ from ..core.models import (
     MAX_EXIT_DELAY,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
+    MAX_TRIGGER_COUNT,
+    MAX_VERIFICATION_WINDOW,
     MIN_ARM_HOLD_TIMEOUT,
     MIN_SUPERVISION_TIMEOUT,
+    MIN_VERIFICATION_WINDOW,
+    AcknowledgeIncident,
+    AcknowledgeTechnical,
     ArmAreaRequest,
     ArmModeRequest,
     ArmRequest,
@@ -36,10 +41,17 @@ from ..core.models import (
 )
 from ..core.presets import UNAVAILABLE_TYPES, preset
 from ..core.proposals import propose_zone
-from ..core.validation import ZONE_DOMAINS
+from ..core.validation import CHIME_DOMAINS, ZONE_DOMAINS
 from ..runtime.system import FoyerSystem
 from ..store.config_store import ConfigStore
-from ..store.editing import EditResult, delete, update_settings, upsert
+from ..store.editing import (
+    KINDS,
+    EditResult,
+    delete,
+    update_chime,
+    update_settings,
+    upsert,
+)
 from ..store.schema import config_to_dict
 
 PREFS_KEY = "foyer.prefs"
@@ -55,9 +67,11 @@ def async_register(hass: HomeAssistant) -> None:
         ws_config_save,
         ws_config_delete,
         ws_settings_save,
+        ws_chime_save,
         ws_propose_zone,
         ws_arm,
         ws_disarm,
+        ws_acknowledge,
         ws_prefs_get,
         ws_prefs_set,
     ):
@@ -210,6 +224,34 @@ async def ws_disarm(
     connection.send_result(msg["id"], _result(system, decision))
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/acknowledge",
+        # Two channels, two acknowledgements (§5.5): the caller says which.
+        vol.Required("target"): vol.In(["incident", "technical"]),
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_acknowledge(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Acknowledge the incident or the technical alarm. The engine checks the
+    code policy (INV-2): no code is needed before Phase 2, and the check runs
+    already so that Phase 2 changes the policy, not this command."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    event: Any = (
+        AcknowledgeIncident(msg.get("code"), CHANNEL_HA_UI)
+        if msg["target"] == "incident"
+        else AcknowledgeTechnical(msg.get("code"), CHANNEL_HA_UI)
+    )
+    decision = await system.async_handle(event)
+    connection.send_result(msg["id"], _result(system, decision))
+
+
 # --- configuration (admin only) -------------------------------------------------------
 
 
@@ -225,6 +267,7 @@ def _meta() -> dict[str, Any]:
             for t in ZoneType
         ],
         "zone_domains": list(ZONE_DOMAINS),
+        "chime_domains": list(CHIME_DOMAINS),
         "ha_states": list(ARMED_HA_STATES),
         "bounds": {
             "exit_delay": [0, MAX_EXIT_DELAY],
@@ -232,6 +275,9 @@ def _meta() -> dict[str, Any]:
             "siren_duration": [1, MAX_SIREN_DURATION],
             "arm_hold_timeout": [MIN_ARM_HOLD_TIMEOUT, MAX_ARM_HOLD_TIMEOUT],
             "supervision_timeout": [MIN_SUPERVISION_TIMEOUT, MAX_SUPERVISION_TIMEOUT],
+            "window": [MIN_VERIFICATION_WINDOW, MAX_VERIFICATION_WINDOW],
+            "trigger_count": [1, MAX_TRIGGER_COUNT],
+            "volume": [0, 100],
         },
     }
 
@@ -276,7 +322,7 @@ async def _apply(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "foyer/config/save",
-        vol.Required("kind"): vol.In(["area", "zone", "scenario"]),
+        vol.Required("kind"): vol.In(list(KINDS)),
         vol.Required("item"): dict,
         vol.Optional("trigger_confirmed", default=False): bool,
     }
@@ -303,7 +349,7 @@ async def ws_config_save(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "foyer/config/delete",
-        vol.Required("kind"): vol.In(["area", "zone", "scenario"]),
+        vol.Required("kind"): vol.In(list(KINDS)),
         # Not "id": that is the WebSocket message id, and a clash makes Home
         # Assistant drop the command as invalid.
         vol.Required("item_id"): str,
@@ -338,6 +384,26 @@ async def ws_settings_save(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     result = update_settings(system.config, system.state, msg["settings"])
+    await _apply(hass, connection, msg["id"], system, result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/config/chime",
+        vol.Required("chime"): dict,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_chime_save(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """The global chime block (§6.6), validated like every configuration edit."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    result = update_chime(system.config, system.state, msg["chime"])
     await _apply(hass, connection, msg["id"], system, result)
 
 

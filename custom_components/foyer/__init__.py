@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 _WS_KEY = f"{DOMAIN}_websocket_registered"
 
-PLATFORMS = ("alarm_control_panel", "select", "binary_sensor", "sensor")
+PLATFORMS = ("alarm_control_panel", "select", "binary_sensor", "sensor", "switch")
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

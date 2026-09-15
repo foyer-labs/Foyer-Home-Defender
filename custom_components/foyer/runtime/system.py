@@ -222,7 +222,9 @@ class FoyerSystem:
             for entity_id in self.zone_entity_ids()
         }
         entities.update(overrides or {})
-        return SystemSnapshot(self.state, entities, self.settling)
+        return SystemSnapshot(
+            self.state, entities, self.settling, dt_util.get_default_time_zone()
+        )
 
     # --- listeners -----------------------------------------------------------
 
@@ -289,6 +291,7 @@ class FoyerSystem:
                     "area_id": zone.area_id,
                     "entity_id": zone.entity_id,
                     "type": zone.type.value,
+                    "channel": zone.channel.value,
                     "enabled": zone.enabled,
                     "state": entity.state,
                     "fault": fault_cause(zone, entity, now) if zone.enabled else None,
@@ -316,4 +319,37 @@ class FoyerSystem:
                 for s in self.config.scenarios
             ],
             "zones": zones,
+            "technical": self.technical_status(),
+            "incident": self.incident_status(),
+            "chime_enabled": self.state.chime_enabled,
+        }
+
+    def technical_status(self) -> list[dict[str, Any]]:
+        """The technical channel (§5.5): every zone in alarm or in memory."""
+        names = {z.id: z for z in self.config.zones}
+        out = []
+        for zone_id, alarm in self.state.technical.items():
+            zone = names.get(zone_id)
+            out.append(
+                {
+                    "zone_id": zone_id,
+                    "name": zone.name if zone else zone_id,
+                    "area_id": zone.area_id if zone else None,
+                    "since": alarm.since.isoformat(),
+                    "active": zone_id in self.state.active_zones,
+                    "acknowledged": alarm.acknowledged,
+                }
+            )
+        return out
+
+    def incident_status(self) -> dict[str, Any] | None:
+        incident = self.state.incident
+        if incident is None:
+            return None
+        return {
+            "id": incident.id,
+            "opened_at": incident.opened_at.isoformat(),
+            "zone_ids": list(incident.zone_ids),
+            "area_ids": list(incident.area_ids),
+            "acknowledged": incident.acknowledged,
         }
