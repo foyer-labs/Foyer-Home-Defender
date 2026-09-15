@@ -656,7 +656,7 @@ const HELP = {
      ['If open when arming', 'block stops arming and names this zone · auto_bypass excludes it, notifies, and lets it rejoin when it closes · ignore arms regardless.'],
      ['Trigger count', 'How many activations within the window before alarming. Raise it on zones prone to nuisance triggers; every step up adds real delay.'],
      ['Cross-zone', 'Require a second zone to confirm within a window before alarming. Strong against false alarms, and it means a single zone alone will never fire.'],
-     ['Supervision timeout', 'No state change within this window is reported as a fault, never as "all quiet". Leave off for entities that legitimately sit still for days.']]],
+     ['Supervision timeout', 'No report within this window — a heartbeat counts even without a change — is a fault, never "all quiet". Set it per sensor, longer than its reporting interval; off by default.']]],
 
   scenarios: ['What a scenario is',
     'A named preset over areas: choosing it arms exactly the areas you list. There is no limit on how many you create, which is what lets the system express "night, ground floor only" or "dog at home".',
@@ -921,7 +921,6 @@ R.zones = () => {
           <span class="hint">Confirm this. NC and NO contacts behave in opposite ways, and a wrong guess here is a system that never fires.</span></label>
         <div class="row">
           <label class="field"><span class="lbl">Entry delay</span><input type="number" id="z-entry" value="30"></label>
-          <label class="field"><span class="lbl">Exit delay</span><input type="text" id="z-exit" value="inherit (45 s)"></label>
         </div>
         <label class="field"><span class="lbl">If open when arming</span>
           <select id="z-pol"><option>block — arming fails and names this zone</option><option>auto_bypass — exclude, notify, rejoin when closed</option><option>ignore — arm normally</option></select></label>
@@ -937,7 +936,7 @@ R.zones = () => {
         <label class="field"><span class="lbl">Cross-zone verification</span>
           <select id="z-cross"><option>None</option><option>Hall motion — within 60 s</option><option>Living room PIR — within 60 s</option></select>
           <span class="hint">Require a second zone before alarming. Cuts false alarms on exposed zones.</span></label>
-        <label class="field"><span class="lbl">Supervision timeout</span><input type="text" id="z-sup" value="Off"><span class="hint">No state change within this window is a fault, never "all quiet"</span></label>
+        <label class="field"><span class="lbl">Supervision timeout</span><input type="text" id="z-sup" value="Off"><span class="hint">No report within this window is a fault, never "all quiet". Off by default</span></label>
       </div>
     `, { actions: '<button class="btn sm">Save</button>' })}
   </div>`;

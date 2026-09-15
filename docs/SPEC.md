@@ -240,7 +240,6 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `alarm_kind` | enum | `intrusion` \| `tamper` \| `panic` — what an intrusion trigger means, for events and the log |
 | `trigger` | TriggerSpec | how "triggered" is determined — see 4.4 |
 | `entry_delay` | seconds \| null | null = inherit from area |
-| `exit_delay` | seconds \| null | null = inherit from area |
 | `arm_policy` | enum | `block` (default) \| `auto_bypass` \| `arm_after_closing` \| `ignore` — what happens if open at arming. `arm_after_closing` holds the area in `arming` and completes the moment the zone closes, for the person who presses arm and *then* pulls the patio door shut |
 | `arm_hold_timeout` | seconds \| null | only with `arm_after_closing`: how long after the exit delay the zone may stay open before arming fails as `block`; null = the global default (300 s, bounds 60–1800) |
 | `chime` | bool | sound a chime when this zone opens while it is **not monitored by the active scenario** (§6.5) |
@@ -253,7 +252,7 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `cross_zone_id` | uuid \| null | require a second zone to trigger within `cross_zone_window` |
 | `cross_zone_window` | seconds | |
 | `allow_arm_when_faulted` | bool | default false; a zone in fault does not block arming (§5.4, INV-4) |
-| `supervision_timeout` | seconds \| null | no state change within this window ⇒ fault (INV-4) |
+| `supervision_timeout` | seconds \| null | per zone, **off (null) by default**. No report from the entity within this window — a heartbeat counts even when the state has not changed (Home Assistant's `last_reported`) — ⇒ fault (INV-4). Set it per sensor, longer than that sensor's own reporting interval; leave it off for sensors that report only when they change |
 | `battery_entity_id` | str \| null | optional, for diagnostics and low-battery faults |
 | `response_profile_id` | uuid \| null | null = inherit from area |
 | `enabled` | bool | |
@@ -429,11 +428,11 @@ independent state holder.
 
 | Timer | Owner | Default | Bound |
 |---|---|---|---|
-| exit delay | area / scenario override | 30 s | 0–300 s |
+| exit delay | scenario override ?? area default (no per-zone exit delay: the exit timer belongs to the area) | 30 s | 0–300 s |
 | entry delay | zone, else area | 30 s | 0–300 s |
 | siren cutoff | global | 180 s | **hard max 900 s** (EN 50131 reference for external sounders) |
 | escalation steps | response profile | — | |
-| supervision | zone | off | |
+| supervision | zone, per sensor | off | 60 s – 7 days |
 | walk test auto-exit | global | 15 min | mandatory, non-disableable |
 
 ### 5.4 Arming preconditions
@@ -1579,3 +1578,5 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 35 | Panel, card, help and notification strings in `translations/panel/<lang>.json`, served over `foyer/translations` | hassfest validates `translations/<lang>.json` against a closed schema with no room for them; a subdirectory keeps one translation home without breaking the CI gate for the default HACS repository (decision 32) |
 | 36 | Zone roles are explicit properties (`channel`, `entry_mode`, `alarm_kind`); the type is only the preset that filled them | "The engine reads only properties" needs properties that say what a follower, a technical zone or a key is; without them the type silently becomes behaviour |
 | 37 | Siren cutoff returns an area to its pre-trigger state | An `always_on` zone fires on a disarmed house; a cutoff that always re-arms would arm it |
+| 38 | No per-zone exit delay | The exit timer belongs to the area; a zone-level value had no defined meaning |
+| 39 | Supervision counts heartbeats, per sensor, off by default | Sensors report at different intervals and some only on change: the window must be set sensor by sensor, and "no change" would fault a door that stays shut |

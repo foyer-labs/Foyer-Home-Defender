@@ -260,7 +260,7 @@
     "entry_delay_hint": "Vuoto: il predefinito dell'area.",
     "hold_hint": "Vuoto: il predefinito globale. Conta dalla fine del ritardo di uscita.",
     "off": "disattivata",
-    "supervision_hint": "Silenziosa oltre questo tempo è un guasto. Conta ogni segnalazione, anche senza cambi di stato.",
+    "supervision_hint": "Silenziosa oltre questo tempo è un guasto; conta ogni segnalazione, anche senza cambi di stato. Impostala più lunga dell'intervallo con cui questo sensore si fa sentire. Vuoto: disattivata, che è il predefinito ed è giusto per i sensori che segnalano solo quando cambiano.",
     "always_on_hint": "Scatta anche a impianto disinserito.",
     "bypassable_hint": "Serve per l'esclusione automatica o forzata.",
     "allow_faulted_hint": "L'inserimento procede anche se questa zona non è visibile. Lascialo spento se non sai perché.",

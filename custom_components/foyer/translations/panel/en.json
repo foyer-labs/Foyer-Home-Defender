@@ -260,7 +260,7 @@
     "entry_delay_hint": "Empty: the area's default.",
     "hold_hint": "Empty: the global default. Counted from the end of the exit delay.",
     "off": "off",
-    "supervision_hint": "Silent longer than this is a fault. Any report counts, even without a change.",
+    "supervision_hint": "Silent longer than this is a fault; any report counts, even without a change. Set it longer than this sensor's own reporting interval. Empty: off, which is the default and right for sensors that report only when they change.",
     "always_on_hint": "Fires even when disarmed.",
     "bypassable_hint": "Needed for automatic or forced exclusion.",
     "allow_faulted_hint": "Arming proceeds even if this zone cannot be seen. Leave off unless you know why.",
