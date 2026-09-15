@@ -387,7 +387,7 @@ Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
 
 ```
 Binding decisions taken by the user in Phase 1. The spec has been amended to
-match (SPEC §21, decisions 36-47); this list is the quick reference. None of
+match (SPEC §21, decisions 36-55); this list is the quick reference. None of
 them may be "fixed back" without asking.
 
  1. Zone type is a preset label only. The engine reads explicit properties:
@@ -433,6 +433,31 @@ them may be "fixed back" without asking.
 14. A zone's first readable value is its baseline, not an activation (so a
     newly saved key zone already "on" does not arm the house).
 
+Taken in part 2 (SPEC decisions 48-55):
+17. A technical zone in fault blocks arming its area like any zone, unless
+    allow_arm_when_faulted.
+18. One technical acknowledgement acts on every technical alarm pending then.
+19. An incident opens at triggered, never at entry_started; the zones of an
+    expired entry route contribute.
+20. Disarming an area the incident touched acknowledges the incident.
+21. A zone joining after the acknowledgement clears it (history kept).
+22. Cross-zone is symmetric (A->B forms {A,B}) and never suppresses: each
+    zone still alarms alone. Suppression is only an explicit group's
+    suppress_members.
+23. A non-suppressed group member alarms normally (area -> triggered/entry,
+    incident opens); the satisfied group adds its own Occurrence.
+24. Only activations that would alarm at once count towards a group or a
+    trigger_count; entry-absorbed ones act normally and never count.
+25. Group members may be in different areas; each acts in its own and
+    counts only while its area watches it.
+26. Chime is read per area; chiming during the exit delay is a global
+    setting, off by default.
+27. Until response profiles exist, technical_raised has a persistent
+    notification (added to the Phase 0 action by the 2.2 -> 2.3 migration);
+    part 3 must move it into the technical default profile.
+28. Group membership is stored once, on the group (members); a zone's
+    group_id is derived.
+
 Engine and runtime shape after part 1 (do not work around it):
 - decide(snapshot, event, config, now) returns a Decision holding the
   COMPLETE next RuntimeState; the runtime persists it verbatim in
@@ -444,7 +469,7 @@ Engine and runtime shape after part 1 (do not work around it):
   channel, detail). They are the single source for notifications today, for
   response profiles in part 3 and for log rows in part 4. New behaviour adds
   Occurrences; it never bypasses them.
-- Configuration is stored as schema 2.1 in .storage/foyer.config; every
+- Configuration is stored as schema 2.3 in .storage/foyer.config; every
   schema change is a new step in store/migrations with a test that migrates a
   real previous document. Config edits go through store/editing.py (pure,
   validated) and reload the entry; edits touching an armed area or the
@@ -453,6 +478,27 @@ Engine and runtime shape after part 1 (do not work around it):
   it survives reloads.
 - Tests: tests/core and tests/repo run with no Home Assistant; tests/ha run in
   WSL (see project memory) on HA 2025.1.4 and the latest release.
+
+Added in part 2:
+- RuntimeState also holds technical (the technical channel, never in an
+  AreaRuntime), incident + incident_seq, windows (verification activations)
+  and chime_enabled. The state file keeps version 1.1; new keys are read
+  with defaults, so an older file restores safely.
+- core/verification.py is the ONE windowed engine for groups, cross-zone
+  pairs (derived id "cross:<a>+<b>") and trigger counts. Windows expire
+  through next_wakeup like timers. A test asserts cross-zone == 2-of-2.
+- Incident contributors carry profile_id and severity (None until part 3)
+  and the incident carries actions_started (empty until part 3): fill them,
+  do not reshape them. Every occurrence in an incident's area carries
+  incident_id; the technical channel's never do.
+- Occurrence gained incident_id and group_id; ActionIntent gained params
+  (the chime's targets travel in the Decision, the executor looks up
+  nothing).
+- SystemSnapshot carries the installation's timezone; core/clock.py has
+  in_daily_window() for quiet hours, to be reused by part 3's time
+  conditions.
+- Operation.ACKNOWLEDGE runs through check_code for both acknowledgements
+  (foyer/acknowledge with target incident | technical).
 ```
 
 ### Phase 1, part 2
@@ -554,9 +600,9 @@ Continue on branch phase-1. Commit as Foyer Labs <foyerlabs@gmail.com>.
 5. Panel page 13 (verification groups) with its help panel, and the chime
    settings, both through translations/panel/<lang>.json in en and it.
 
-6. Storage: schema 2.1 -> 2.2 (additive) with a migration test from a real
-   2.1 document; runtime state additions default safely on an older
-   .storage/foyer.state.
+6. Storage: schema 2.2 -> 2.3 (additive) with a migration test from a real
+   2.2 document (0.1.0-alpha.2 already took 2.2 for follows); runtime state
+   additions default safely on an older .storage/foyer.state.
 
 7. Tests from SPEC §19 for this part: incidents (join, no restart, highest
    severity recorded, one ack closes, new incident after closure), technical

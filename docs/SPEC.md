@@ -243,15 +243,15 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `follows` | list[uuid] | follower only: delayed zones, **in any area**, whose running entry window this zone also inherits. Empty = only its own area's window (the default) |
 | `arm_policy` | enum | `block` (default) \| `auto_bypass` \| `arm_after_closing` \| `ignore` — what happens if open at arming. `arm_after_closing` holds the area in `arming` once the exit delay has elapsed and completes the moment the zone closes — both conditions — for the person who presses arm and *then* pulls the patio door shut; if the zone is still open `arm_hold_timeout` after the exit delay, arming fails as for `block` |
 | `arm_hold_timeout` | seconds \| null | only with `arm_after_closing`: how long after the exit delay the zone may stay open before arming fails as `block`; null = the global default (300 s, bounds 60–1800) |
-| `chime` | bool | sound a chime when this zone opens while it is **not monitored by the active scenario** (§6.5) |
-| `group_id` | uuid \| null | membership of an N-of-M verification group (§4.8) |
+| `chime` | bool | sound a chime when this zone opens while its area is **not monitoring it** (§6.6) |
+| `group_id` | uuid \| null | membership of an N-of-M verification group (§4.8). Derived: membership is stored once, as the group's `members` |
 | `bypassable` | bool | may the user manually exclude it |
 | `always_on` | bool | true for 24h/tamper/technical zones |
 | `silent` | bool | triggers response without local sounders |
-| `trigger_count` | int | N activations within `trigger_window` before alarming (default 1) |
-| `trigger_window` | seconds | |
-| `cross_zone_id` | uuid \| null | require a second zone to trigger within `cross_zone_window` |
-| `cross_zone_window` | seconds | |
+| `trigger_count` | int | N activations within `trigger_window` before alarming (default 1, at most 10). Only activations that would alarm at once count, as in a group (§4.8) |
+| `trigger_window` | seconds | 1–3600, default 60 |
+| `cross_zone_id` | uuid \| null | a second zone that confirms this one within `cross_zone_window`: the pair is a 2-of-2 group that does **not** suppress its members, symmetric whichever end declares it (§4.8) |
+| `cross_zone_window` | seconds | 1–3600, default 60; a pair declared from both ends has one window |
 | `allow_arm_when_faulted` | bool | default false; a zone in fault does not block arming (§5.4, INV-4) |
 | `supervision_timeout` | seconds \| null | per zone, **off (null) by default**. No report from the entity within this window — a heartbeat counts even when the state has not changed (Home Assistant's `last_reported`) — ⇒ fault (INV-4). Set it per sensor, longer than that sensor's own reporting interval; leave it off for sensors that report only when they change |
 | `battery_entity_id` | str \| null | optional, for diagnostics and low-battery faults |
@@ -407,6 +407,24 @@ zones produce nothing at all until the group is satisfied. It is not the default
 a single sensor detecting a real intruder and producing complete silence is
 indistinguishable from the system working.
 
+What a member does and what counts (decisions 51–53):
+
+- A member that is not suppressed **alarms normally** on its own: its area
+  goes to `triggered` (or `entry`) and an incident opens. The satisfied group
+  adds its own record and, with profiles, its own response.
+- Only an activation that would alarm **at once** counts towards a group: an
+  instant or 24h zone, a follower with no window to inherit, anything in an
+  area already triggered. An activation the entry delay absorbs — the delayed
+  zone that opens it, a follower that inherits it — acts normally and never
+  counts, so coming home can never satisfy a group. With `suppress_members`,
+  it is the would-alarm activation that is held back, and released if the
+  group is satisfied in time.
+- Members may sit in **different areas**; each counts only while its own area
+  watches it, and acts in its own area. The group's `area_id` is where it is
+  shown and, with profiles, where its profile inherits from.
+- A zone belongs to one group or cross-zone pair at most, or its activation
+  would count twice.
+
 #### Relationship with cross-zone verification
 
 `cross_zone_id` on a zone (§4.2) stays exactly as it is in the UI: one field on
@@ -414,6 +432,14 @@ the zone, for the common case of one sensor confirming another. Behind it,
 **the engine evaluates it through the group code as a degenerate 2-of-2 group.**
 One engine to write, one to test, one representation in the simulator trace; two
 ways to configure it, chosen by how complex the case is.
+
+The pair is **symmetric** — A pointing at B forms {A, B}, B need not point
+back — and it **does not suppress** its members: each zone still alarms on
+its own, and the pair records the confirmation (decision 50). A cross-zone
+field is therefore a confirmation, not a filter; the suppressing case is an
+explicit group with `suppress_members`. `trigger_count` on a zone is the same
+engine again: a window over one zone that counts repeats instead of
+distinct zones.
 
 #### Simulator requirement
 
@@ -508,9 +534,10 @@ systems announce a burglary while the kitchen is on fire.
 | State | `binary_sensor.foyer_technical_alarm` plus `sensor.foyer_technical_cause` naming the zone |
 | When active | **Always.** Arming state is irrelevant; a technical zone is live whether the house is armed, disarmed or arming |
 | Disarming | **Does not silence it.** Disarming is an intrusion command and has no authority here |
-| Clearing | Requires an explicit acknowledgement **and** the underlying entity returning to normal. Until both, the state and its memory persist and stay visible on every card |
+| Clearing | Requires an explicit acknowledgement **and** the underlying entity returning to normal. Until both, the state and its memory persist and stay visible on every card. One acknowledgement acts on every technical alarm pending at that moment (decision 49) |
 | Actions | Its own response profile, its own escalation, independent of any intrusion incident in progress |
 | Coexistence | A technical alarm and an intrusion incident can be active at the same time and never merge |
+| Faults | A technical zone in fault blocks arming its area like any zone (INV-4), unless it is marked `allow_arm_when_faulted` (decision 48) |
 
 **Mandatory documentation statement, non-negotiable:** Foyer is not a fire alarm
 system. A smoke detector wired into Home Assistant does not replace certified,
@@ -526,15 +553,21 @@ moment when the household needs to understand what is happening.
 
 So an **incident** is the unit, not the zone:
 
-- The first intrusion trigger **opens an incident**.
+- The first intrusion trigger **opens an incident** — the transition to
+  `triggered`, not the start of an entry delay, which is the normal way home.
+  When an entry delay runs out, the zones of that entry route contribute.
 - Every subsequent trigger **joins it**, adding its zone to the incident and
-  updating the notification text rather than starting anything new.
+  updating the notification text rather than starting anything new. A zone
+  that joins after the incident was acknowledged clears the acknowledgement:
+  whoever acknowledged what looked like the cat must hear that a second zone
+  went. The history of acknowledgements is kept (decision 54).
 - Actions are the **union**, deduplicated: a siren already sounding is not
   restarted; a light not yet on comes on.
 - The escalation policy is the one belonging to the **highest-severity**
   contributing profile. This is what the `severity` field on a response profile
   (an integer the user orders) exists for, and it is used for nothing else.
-- **One acknowledgement closes the whole incident.**
+- **One acknowledgement closes the whole incident.** Disarming an area the
+  incident touched is an acknowledgement, as it is for escalation (§7.2).
 - The incident closes when it is acknowledged *and* every contributing area is
   disarmed or has returned to `armed`. A trigger after that opens a new incident.
 
@@ -629,6 +662,12 @@ with the system off.
 It needs no special case for walk test: during a walk test the area is genuinely
 armed, so its zones are monitored and no chime fires.
 
+"Monitored" is read **per area**, however the area came to be armed or not —
+an area can be armed on its own, outside any scenario (§4.6.1). An area
+counting down its exit delay is not yet monitoring; whether its zones chime
+then is a setting, off by default, because the door you leave by is expected
+to open (decision 55).
+
 Configuration is one global block plus one switch per zone, the way real panels
 do it — not a response profile, which would be disproportionate for a checkbox:
 
@@ -638,6 +677,7 @@ do it — not a response profile, which would be disproportionate for a checkbox
 | Mode | **single sound**, or **spoken zone name** via `tts.speak` — "Front door", "Garage shutter". In Home Assistant the second costs the same as the first and tells you *what* opened from the next room |
 | Volume | |
 | Quiet hours | a window in which chime is suppressed |
+| During the exit delay | whether zones chime while their area counts down to armed; off by default |
 | Per zone | the `chime` boolean on the zone (§4.2) |
 
 Exposed as `switch.foyer_chime` so it can be silenced from a card, a keypad or an
@@ -1633,3 +1673,11 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 45 | `arm_after_closing` waits for the exit delay and the closure, with a per-zone cap | Completing on closure alone would arm while the person is still walking to the other door; holding forever leaves a house that believes it is arming and protects nothing |
 | 46 | Event triggers match `event_type`; no subtype | Home Assistant event entities have no standard subtype attribute and a tag has only the scan; a field nobody can fill meaningfully is removed rather than kept |
 | 47 | A follower can follow delayed zones in other areas, by explicit choice | Areas are grouped by function (perimeter, interior day, interior night), so the front door and the hall sensor sit in different areas; a same-area-only follower would sound the alarm the moment you walk in |
+| 48 | A technical zone in fault blocks arming like any zone, unless `allow_arm_when_faulted` | INV-4 has no exception for the technical channel; the per-zone flag is the way out, chosen knowingly, for the flood sensor with a dead battery on the morning you leave |
+| 49 | One technical acknowledgement acts on every pending technical alarm | The same rule as the incident: one person, one button, everything they have seen |
+| 50 | Cross-zone is symmetric and does not suppress its members | A pair is a pair whichever end declares it; and a filter that silences a lone sensor is the explicit `suppress_members` group, never the default |
+| 51 | A non-suppressed group member alarms normally on its own | "Members keep their own profile": the area state is the area's, and the profile decides whether a lone member is only a notification |
+| 52 | Only activations that would alarm at once count towards a group or a trigger count | Coming home through the entry delay must never satisfy a group; otherwise the group profile fires on every homecoming |
+| 53 | Group members may sit in different areas; each acts in its own | Areas are grouped by function (decision 47): a perimeter window confirmed by an interior PIR is the common case |
+| 54 | An incident opens at `triggered`; disarming acknowledges it; a zone joining after the acknowledgement clears it | An entry delay is the normal way home, not an incident; §7.2 already makes disarm an acknowledgement; and a second zone after "it was the cat" must be heard |
+| 55 | Chime is read per area; chiming during the exit delay is a setting, off by default | Decision 40 makes per-area arming possible; the door you leave by is expected to open |

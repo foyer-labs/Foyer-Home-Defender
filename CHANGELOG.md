@@ -5,6 +5,40 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [Unreleased] — Phase 1, part 2: technical channel, incidents, groups, chime
+
+Still not for protecting a house: no sirens or response profiles, no event
+log, no codes.
+
+### Changed — read this if you run an alpha
+- Stored configuration moves from schema 2.2 to 2.3. Nothing that works today
+  changes: no groups, no cross-zone, one detection to alarm, no chime.
+- **Technical zones (smoke, gas, water) are accepted again**, now that their
+  channel exists. A technical zone in fault blocks arming its area like any
+  zone, unless "Allow arming while in fault" is set on it.
+- The notification action also announces a technical alarm.
+- A triggered alarm is now one *incident*: zones that trigger later join it
+  instead of starting anything new. Disarming acknowledges it.
+
+### Added
+- **Technical alarm channel**: `binary_sensor.foyer_technical_alarm` and
+  `sensor.foyer_technical_cause`. Live whether armed or not, never reported
+  through any alarm panel, not cleared by disarming: it clears once
+  acknowledged *and* back to normal. Foyer is not a fire alarm system, and the
+  zone editor says so wherever a technical zone is configured.
+- **Incidents**: `sensor.foyer_incident` with the zones and areas involved; an
+  Acknowledge button on the overview and on every card. A zone that joins
+  after the acknowledgement asks for a new one.
+- **Verification groups** (panel page 13): an alarm confirmed when N of M
+  zones detect within a window, members optionally silent until then.
+  **Cross-zone** on a zone is the same engine as a 2-of-2 group, and
+  **activations needed** counts detections of one zone. Only detections that
+  would alarm at once count: coming home through the entry delay never does.
+- **Chime**: a zone opening where its area is not armed plays a sound or
+  speaks the zone name on media players and sirens, with quiet hours and an
+  option for the exit delay; `switch.foyer_chime` silences it. Set up in the
+  new Settings page.
+
 ## [0.1.0-alpha.3] — deleting from the panel works
 
 **Pre-release, for testing only**, like the previous alphas.

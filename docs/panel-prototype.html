@@ -655,7 +655,7 @@ const HELP = {
      ['Entry delay', 'Seconds between this zone triggering and the alarm sounding. Only meaningful on delayed and follower zones.'],
      ['If open when arming', 'block stops arming and names this zone · auto_bypass excludes it, notifies, and lets it rejoin when it closes · ignore arms regardless.'],
      ['Trigger count', 'How many activations within the window before alarming. Raise it on zones prone to nuisance triggers; every step up adds real delay.'],
-     ['Cross-zone', 'Require a second zone to confirm within a window before alarming. Strong against false alarms, and it means a single zone alone will never fire.'],
+     ['Cross-zone', 'A second zone that confirms this one within a window. Each still alarms on its own; the pair records the confirmation. To silence a lone sensor, use a group with members suppressed.'],
      ['Supervision timeout', 'No report within this window — a heartbeat counts even without a change — is a fault, never "all quiet". Set it per sensor, longer than its reporting interval; off by default.']]],
 
   scenarios: ['What a scenario is',
