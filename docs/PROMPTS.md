@@ -336,14 +336,22 @@ order, each part still leaving something that runs:
 Do not split it by layer — backend first, then frontend — because that produces
 two halves neither of which can be verified until both are done.
 
+As run (decided by the user in part 1): each panel page ships in the part that
+builds its feature, so every part can be used on a real Home Assistant and not
+only tested. Part 1 delivered pages 1–4; part 2 delivers page 13 and the chime
+settings; part 3 page 5; part 4 pages 10 and 11, the first-run wizard, config
+backup/restore and the card layouts. The appendices below are the authoritative
+scope of each part.
+
 ---
 
 ## Session appendices
 
 A fresh session knows the spec but not what earlier sessions decided or
 discovered. When a phase (or part of one) is run, paste in this order: the
-session preamble, the phase prompt, then the appendix for that session below.
-Each appendix is written at the end of the session before it.
+session preamble, the phase prompt, then the appendix for that session below,
+then any shared block the appendix names. Each appendix is written at the end
+of the session before it.
 
 ### Phase 1, part 1
 
@@ -375,58 +383,354 @@ Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
   checkout; CI runs all of it on every push.
 ```
 
+### Phase 1 decisions (paste after the appendix, in every session from Phase 1 part 2 on)
+
+```
+Binding decisions taken by the user in Phase 1. Where they differ from
+docs/SPEC.md they win until the spec is amended; the spec amendments are
+tracked separately and must not be "fixed back" without asking.
+
+ 1. Zone type is a preset label only. The engine reads explicit properties:
+    channel (intrusion | technical | key), entry_mode (instant | delayed |
+    follower), alarm_kind (intrusion | tamper | panic). Validation rejects
+    combinations that make no sense.
+ 2. Siren cutoff returns an area to its pre-trigger state: disarmed stays
+    disarmed with alarm memory; armed or entry -> armed; arming resumes with
+    the normal expiry checks. Disarm clears memory and is accepted on a
+    disarmed area that holds it.
+ 3. arm_after_closing completes when the exit delay has elapsed AND the zone
+    has closed; if still open after a cap it fails like block. The cap is per
+    zone (arm_hold_timeout), inheriting a global default of 300 s (60-1800).
+ 4. An area's own alarm_control_panel arms only that area, outside any
+    scenario. Scenarios are armed from the master, select.foyer_scenario, the
+    panel and the card.
+ 5. Zone-level exit_delay is dropped. Exit delay = scenario override ?? area.
+ 6. Forced arm and scenario change while armed need no code until Phase 2.
+    Forced arm stays a distinct command and is recorded as forced.
+ 7. The master's arm_<mode> is refused when two scenarios share the mode, and
+    the master only advertises unambiguous modes.
+ 8. Switching scenario A -> B while armed: areas armed by A and absent from B
+    are disarmed, shared ones stay armed, B's new ones go through their exit
+    delay; areas armed on their own are untouched. Refused while any affected
+    area is in entry or triggered.
+ 9. The master reports armed_custom_bypass whenever the armed set differs from
+    the active scenario's areas; select.foyer_scenario keeps the scenario.
+10. Supervision resets on any report (HA last_reported), not only on a state
+    change.
+11. EventTrigger: event.* fires on each new event whose event_type attribute
+    matches; tag.* fires on every scan; subtype is refused by validation.
+12. A key zone's disarm and toggle act on every area; toggle disarms all if
+    any area is armed, otherwise arms its scenario.
+13. Each panel page ships in the part that builds its feature (see "As run"
+    under "If a phase turns out too big").
+14. A zone's first readable value is its baseline, not an activation (so a
+    newly saved key zone already "on" does not arm the house).
+
+Engine and runtime shape after part 1 (do not work around it):
+- decide(snapshot, event, config, now) returns a Decision holding the
+  COMPLETE next RuntimeState; the runtime persists it verbatim in
+  .storage/foyer.state (saved on every change, alive stamp every 5 min).
+- Timers are data (Timer on AreaRuntime); the scheduler wakes once at
+  core.engine.next_wakeup() and sends Tick. New timers (bypass expiry,
+  action delays, group windows) must follow the same pattern.
+- Every decision emits Occurrences (moment, area, zone, scenario, zone_ids,
+  channel, detail). They are the single source for notifications today, for
+  response profiles in part 3 and for log rows in part 4. New behaviour adds
+  Occurrences; it never bypasses them.
+- Configuration is stored as schema 2.1 in .storage/foyer.config; every
+  schema change is a new step in store/migrations with a test that migrates a
+  real previous document. Config edits go through store/editing.py (pure,
+  validated) and reload the entry; edits touching an armed area or the
+  running scenario are refused (core.validation.edit_conflicts).
+- The status subscription is bound to the SIGNAL_UPDATE dispatcher signal so
+  it survives reloads.
+- Tests: tests/core and tests/repo run with no Home Assistant; tests/ha run in
+  WSL (see project memory) on HA 2025.1.4 and the latest release.
+```
+
 ### Phase 1, part 2
 
 ```
-Scope for THIS session: Phase 1, part 2 only — the technical channel (§5.5),
-incidents with profile severity (§5.6), verification groups with the
-cross-zone field built on them (§4.8) and panel page 13, and chime (§6.6).
-Trigger counting (trigger_count / trigger_window, §4.2) also lands here: it
-is windowed activation counting and must share the group engine's
-machinery rather than grow a second one. Parts 3-4 are separate sessions.
+Scope for THIS session: Phase 1, part 2 — the technical channel, incidents,
+verification groups (with cross-zone and trigger counting on the same
+engine), chime, panel page 13 and the chime settings. Parts 3 and 4 are
+separate sessions. Paste "Phase 1 decisions" after this appendix.
 
-Context from part 1 (branch phase-1):
-- Continue on branch phase-1. Commit as Foyer Labs <foyerlabs@gmail.com>.
-- The user resolved these spec ambiguities before part 1; they are binding
-  and the spec has not yet been amended to match:
-  1. Zone type is a preset label only. The engine reads explicit
-     properties: channel (intrusion | technical | key), entry_mode
-     (instant | delayed | follower), alarm_kind (intrusion | tamper | panic).
-  2. Siren cutoff returns an area to its pre-trigger state (disarmed stays
-     disarmed with alarm memory; armed/entry -> armed; arming resumes).
-     Disarm clears memory and is accepted on a disarmed area holding it.
-  3. arm_after_closing completes when the exit delay has elapsed AND the
-     zone has closed; it fails like block after a cap, per zone with a
-     global default of 300 s.
-  4. An area's own alarm_control_panel arms only that area, outside any
-     scenario. Scenarios are armed from the master, select.foyer_scenario,
-     the panel and the card.
-  5. Zone-level exit_delay is dropped. Exit = scenario override ?? area.
-  6. Forced arm and scenario change need no code until Phase 2.
-  7. The master's arm_<mode> is refused when two scenarios share the mode.
-  8. Switching scenario A -> B while armed disarms areas armed by A that B
-     does not list; areas armed on their own are untouched.
-  9. The master reports armed_custom_bypass whenever the armed set differs
-     from the active scenario's areas.
-  10. Supervision resets on any report (HA last_reported), not only on a
-      state change.
-  11. EventTrigger: event.* matches the event_type attribute; tag.* fires
-      on every scan; subtype is refused by validation for now.
-  12. A key zone's disarm and toggle act on every area.
-- The technical type exists as a preset but validation refuses channel
-  "technical" (problem channel_not_available) and the panel greys it out,
-  because a stored smoke detector that does nothing is worse than none.
-  Part 2 lifts that refusal when the channel exists.
-- Engine shape: decide() returns the complete RuntimeState, persisted
-  verbatim in .storage/foyer.state; timers are data (Timer on AreaRuntime)
-  and the scheduler wakes at core.engine.next_wakeup(). Every decision emits
-  Occurrences (moment + area/zone/scenario/channel/detail): these become log
-  rows in part 4 and the input of response profiles in part 3. Incidents
-  should hang off them, not bypass them.
-- Panel pages 1-4 already exist (the user moved 2-4 into part 1). Part 4
-  keeps the log, settings (page 11), the first-run wizard, backup/restore,
-  pages 5 and 10, and the card layouts full and compact.
-- Config edits reload the entry; the status subscription is bound to a
-  dispatcher signal so it survives. Edits touching an armed area or the
-  running scenario are refused (core.validation.edit_conflicts).
+Continue on branch phase-1. Commit as Foyer Labs <foyerlabs@gmail.com>.
+
+1. Technical channel (SPEC §5.5), a separate machine, not an area state:
+   - Lift the part-1 refusal: validation currently rejects channel
+     "technical" (problem channel_not_available) and the panel greys the
+     type out. Only lift it once the channel below works end to end.
+   - Its own runtime state inside RuntimeState (persisted, INV-3): which
+     technical zones are in alarm, which are in memory, which are
+     acknowledged. It never appears in AreaRuntime, never reaches
+     master_state() and never changes any alarm_control_panel.
+   - Live whatever the arming state: disarmed, arming, armed, entry,
+     triggered.
+   - Disarming has no authority over it. Clearing needs BOTH an explicit
+     acknowledgement AND the entity back to normal; until both, the alarm
+     and its memory persist and are visible on every card and on the
+     overview page.
+   - Entities: binary_sensor.foyer_technical_alarm and
+     sensor.foyer_technical_cause (the zone name).
+   - An acknowledgement command over WebSocket and a panel/card button. The
+     code policy for it is a Phase 2 question; until then it follows the
+     Phase 1 rule (no code), and the engine must still route it through the
+     code check so Phase 2 only changes policy, not plumbing.
+   - Occurrences for technical alarm raised, acknowledged and cleared, so
+     part 3 can attach a technical response profile and part 4 can log them.
+   - A technical alarm and an intrusion incident can be active at once and
+     never merge.
+   - The mandatory statement that Foyer is not a fire alarm system appears in
+     the zone editor wherever a technical zone is configured.
+   OPEN QUESTION for the user before building: does a technical zone in
+   fault (INV-4) block intrusion arming? INV-4 says every zone fault blocks
+   arming; a flooded-basement sensor with a dead battery blocking "Away" may
+   or may not be what they want.
+
+2. Incidents (SPEC §5.6):
+   - The first intrusion trigger opens an incident; later triggers join it
+     (zone added, notification text updated, nothing restarted).
+   - Every related Occurrence carries the incident id, so part 4 can put it on
+     every log row.
+   - Persisted (INV-3); exposed as sensor.foyer_incident with contributing
+     zones and severity as attributes.
+   - One acknowledgement closes the whole incident. It closes when
+     acknowledged AND every contributing area is disarmed or back to armed;
+     a trigger after that opens a new incident.
+   - Severity: the incident records, for part 3 to fill, the effective
+     profile of each contributing zone; "highest-severity contributing
+     profile supplies the escalation" becomes real in part 3 (profiles) and
+     Phase 4 (escalation). Shape the data now so neither needs a migration of
+     the incident model.
+   - Action union without restarting what runs is an executor concern that
+     lands with the actions in part 3; the incident must already record which
+     actions it has started.
+   - Technical alarms never join an intrusion incident.
+   OPEN QUESTIONS for the user before building: does an entry delay starting
+   open the incident, or only the transition to triggered? Does disarming
+   count as the acknowledgement (§7.2 says so for escalation)?
+
+3. Verification groups, cross-zone and trigger counting — ONE engine
+   (SPEC §4.8, §4.2):
+   - Group {id, name, area_id, members[], n, window_seconds,
+     response_profile_id, suppress_members}. response_profile_id is stored
+     only when part 3 can act on it; until then a satisfied group emits its
+     own Occurrence, and suppress_members decides whether members act alone.
+   - Zone fields added: group_id, cross_zone_id, cross_zone_window,
+     trigger_count (default 1), trigger_window.
+   - cross_zone_id is evaluated by the group code as a degenerate 2-of-2
+     group. A test asserts that a zone with cross_zone_id and the equivalent
+     explicit 2-of-2 group produce identical Decisions.
+   - trigger_count/trigger_window reuse the same windowed-activation state.
+   - Window state is persisted and expires by the Timer/next_wakeup pattern.
+   - Occurrences carry group state ("1 of 2 within 60 s, not satisfied" /
+     "SATISFIED") for the Phase 3 simulator trace.
+   OPEN QUESTIONS for the user before building: is cross-zone symmetric (A
+   needs B and B needs A) or one-way? Does a cross-zone zone act alone at
+   all, i.e. is it suppress_members=true? (The prototype help says "a single
+   zone alone will never fire".)
+
+4. Chime (SPEC §6.6):
+   - Fires when a zone with chime=true opens while it is not monitored,
+     meaning its area is not armed — however that area came to be armed or
+     not (decision 4 makes per-area arming possible). No special case for walk
+     test: a walk-test area is armed.
+   - Global block: targets (media_player or siren), mode single sound or
+     spoken zone name via tts.speak, volume, quiet hours; per-zone chime bool.
+   - switch.foyer_chime to silence it.
+   - The chime is an ActionIntent from decide(); the executor plays it.
+   - Its settings need a UI in this part (decision 13): the chime block of
+     page 11, the rest of page 11 stays in part 4.
+
+5. Panel page 13 (verification groups) with its help panel, and the chime
+   settings, both through translations/panel/<lang>.json in en and it.
+
+6. Storage: schema 2.1 -> 2.2 (additive) with a migration test from a real
+   2.1 document; runtime state additions default safely on an older
+   .storage/foyer.state.
+
+7. Tests from SPEC §19 for this part: incidents (join, no restart, highest
+   severity recorded, one ack closes, new incident after closure), technical
+   (fires disarmed, disarm does not clear, never touches any
+   alarm_control_panel, never joins an incident), groups (N-of-M in window,
+   window expiry, member vs group Occurrences, cross-zone == 2-of-2), trigger
+   counting, chime only while unmonitored.
+```
+
+### Phase 1, part 3
+
+```
+Scope for THIS session: Phase 1, part 3 — response profiles, conditions, the
+action catalogue, templates, severity, silent zones, manual and timed
+bypass, and panel page 5. Paste "Phase 1 decisions" after this appendix.
+
+1. Response profiles (SPEC §6):
+   - Inheritance zone -> area -> scenario -> global default; groups (part 2)
+     and the technical channel have their own. Add response_profile_id to
+     zones, areas, scenarios and groups now.
+   - The UI always shows the effective profile and where it was inherited
+     from.
+   - Moments per §6.1. Some are produced only later and must be selectable
+     but documented as such: code_rejected and lockout (Phase 2),
+     walk_test_started/ended and low_battery (Phase 3), escalation_exhausted
+     (Phase 4).
+   - severity (§6.5): an integer the user orders; it decides which profile an
+     incident adopts, nothing else.
+   - The Phase 0 NotificationAction (a persistent notification on armed,
+     disarmed, zone_fault, arm_failed, zone_bypassed) is migrated into the
+     global default profile so behaviour is unchanged, with a migration test.
+     "triggered" has no notification today; the default profile should add
+     one — ask the user.
+
+2. The nine actions (§6.2): notify (to a notify.* service directly: no
+   contact book, no escalation, no actionable buttons until Phase 4), siren
+   (duration never beyond the siren cutoff, stopped on cutoff and disarm),
+   light, camera (snapshot/record, attachable to notify), scene, switch
+   (optional auto-revert), tts, call_service (domain, service, target, data;
+   YAML editor), delay.
+   - decide() produces the plan; the executor only executes. Delays and
+     auto-reverts are timers owned by the scheduler, as data in the runtime
+     state (INV-1, INV-3).
+   - Within an incident actions are unioned and deduplicated: a siren already
+     sounding is not restarted, a light not yet on comes on (§5.6).
+   - The executor reports success/failure of every call, for the "action" log
+     category in part 4.
+   - silent zones (§4.2): the response runs without local sounders.
+   OPEN QUESTION for the user: must a pending delay step survive a restart
+   (INV-3 lists "escalation progress", not action sequences)?
+
+3. Conditions (§6.3): at most two per action; time window (after/before,
+   crossing midnight) and entity state (is / is_not). core/conditions.py,
+   pure, reading entity states from the snapshot — so the snapshot must also
+   carry the entities that conditions reference. Tests include midnight.
+
+4. Templates (§6.4): exactly the fixed variable set, including
+   incident_zones; no arbitrary Jinja.
+
+5. Bypass:
+   - Manual bypass and unbypass of a zone (zone.bypassable enforced) from the
+     panel, the card and a WebSocket command; services foyer.bypass_zone and
+     foyer.unbypass_zone belong to the Phase 2 service contract.
+   - Timed temporary bypass: a duration, automatic return as a Timer, and a
+     notification (Occurrence) on return (§16 Phase 1).
+   - Manual bypasses are a new BypassReason next to auto_bypass and forced.
+   OPEN QUESTION for the user: §8.2 says bypass requires a code by default.
+   Fail closed until Phase 2 (bypass unusable), or codeless like decision 6?
+
+6. Panel page 5 (response profiles) with its help panel, en and it.
+
+7. Storage migration with a test from a real previous document.
+
+8. Tests from SPEC §19 for this part: profile inheritance resolution;
+   conditions including windows crossing midnight; groups giving graduated
+   response — member profiles below the threshold, the group profile at it
+   (the Phase 1 "a group produces graduated response" acceptance item needs
+   this part); incident action union without restarting a running siren and
+   the highest-severity profile adopted; timed bypass returning on time,
+   including across a restart; silent zones never reaching a sounder.
+```
+
+### Phase 1, part 4
+
+```
+Scope for THIS session: Phase 1, part 4 — the event log, panel pages 10 and
+11, the first-run wizard, config backup/restore and the card layouts full
+and compact. After it, run the Phase 1 acceptance ("a real house can be
+protected with it", every bullet of the Phase 1 "Done when"). Paste "Phase 1
+decisions" after this appendix.
+
+1. Event log (SPEC §10.1-10.3):
+   - Dedicated SQLite through aiosqlite with the §10.1 schema and indices.
+     Check first that aiosqlite can be declared in manifest.json for both HA
+     versions tested; if not, ask before substituting anything.
+   - Rows come from Occurrences plus: refused requests (outcome blocked /
+     failed with the reason), executor results (category action), config
+     edits with who and a diff summary (category config), and raw zone state
+     changes (zone_armed on by default, zone_disarmed OFF by default).
+   - The restart gap: every HA_RESTARTED Occurrence carries down_since, up_at
+     and cause (ha_start | reload); log it as system_unavailable from T1 to T2.
+     INV-3 is only complete once this lands.
+   - Incident ids from part 2 on every related row; channel on every row;
+     user_name denormalised (users arrive in Phase 2; the column exists now).
+   - Per-category retention (default 30 days), daily purge, CSV/JSON export
+     honouring the current filters, deleting the log is an edit_config
+     operation and is itself logged.
+   - Every write also fires the foyer_event HA event (§10.3, §14.2).
+   - A log failure must never block or delay the alarm path.
+   - sensor.foyer_last_event.
+
+2. Page 10 (log): filters by date, area, zone, user, category, outcome;
+   export. Page 11 (settings): global defaults (siren duration, the
+   arm_after_closing wait default, default delays for new areas), log
+   retention per category, backup/restore; the chime block already exists
+   from part 2. The WebSocket command foyer/config/settings exists since
+   part 1. §15.1 lists "language" on page 11: the UI follows each Home
+   Assistant user's language today — ask the user what that setting is for.
+
+3. First-run wizard (§15.1): area -> three zones with confirmed triggers ->
+   one scenario -> (user with a code: Phase 2, skip and say so) -> send a
+   test notification (part 3's notify action). Decide with the user how it
+   relates to the config flow, which today seeds one area, zone and scenario.
+
+4. Config backup/restore: JSON export of the stored document with its schema
+   version; import goes through store/migrations, then validation, then the
+   armed-area guard, never around them. Admin only now; the
+   foyer.export_config / foyer.import_config services and their code check
+   belong to Phase 2's service contract.
+
+5. Card layouts full and compact (§15.3) with a visual editor. full: area
+   states, scenario selector, not-ready list, countdown (keypad needs codes:
+   Phase 2). compact: state, arm/disarm, scenario dropdown. Clear feedback on
+   refusal naming the zone; both HA themes.
+
+6. Tests: log categories and default verbosity, retention purge, export
+   filters, restart gap row, incident ids on rows, foyer_event fired,
+   restore refusing an invalid or newer-major document.
+```
+
+### Carry-overs from Phase 1 into later phases
+
+```
+Paste the relevant block after that phase's prompt. These are things Phase 1
+deliberately left for the phase that owns them.
+
+Phase 2 (security and arming channels):
+- Area fields require_code_to_arm / require_code_to_disarm and scenario
+  fields require_code_to_arm / require_code_to_disarm / allowed_user_ids
+  (§4.5, §4.6) were not added in Phase 1: add them with the code policy
+  resolution (§8.2), with a storage migration.
+- Decision 6 ends here: force arm and change scenario go to the §8.2
+  defaults (code required). Say so in the changelog; it changes behaviour.
+- Permissions force_arm, bypass_zone, change_scenario, edit_config enforced
+  on every WebSocket command. Config commands are admin-only today; they
+  become edit_config + code.
+- Key zones get identity: user_id (§4.7) for the log.
+- WebSocket foyer/arm and foyer/disarm already return the §9.1 structured
+  result; the foyer.* services must return the same shape. skip_exit_delay
+  is part of the contract.
+- The acknowledgement commands from parts 2 and 3 get their code policy.
+- The card's keypad (layout keypad, and the keypad in layout full).
+
+Phase 3 (test and simulation):
+- battery_entity_id on zones (§4.2) and the low_battery moment were not
+  added in Phase 1; they belong with diagnostics (§11.1).
+- The simulator calls core.engine.decide() with a fabricated snapshot and
+  clock and uses core.engine.next_wakeup() to step time; it must never grow
+  its own evaluation path.
+- Walk test: areas genuinely armed, actions inhibited, always_on zones
+  fully live; chime stays silent because the area is armed.
+
+Phase 4 (contacts, escalation, automatic rules):
+- is_perimeter on areas (§4.5) was not added in Phase 1; add it with the
+  automatic rules and the regression test that a disarm rule never disarms a
+  perimeter area.
+- Escalation adopts the incident's highest-severity contributing profile
+  (parts 2 and 3 record it).
+
+Phase 5 (hardening and release readiness):
+- The "Learn more" deep link in every help panel (§15.2) was left out
+  because the docs/ pages it points to do not exist yet; add the links with
+  the documentation.
 ```
