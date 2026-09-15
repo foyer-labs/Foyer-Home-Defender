@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime, tzinfo
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
@@ -106,20 +106,36 @@ class BypassReason(StrEnum):
     FORCED = "forced"  # excluded by a forced arm
 
 
+class ChimeMode(StrEnum):
+    """What the chime plays (SPEC §6.6)."""
+
+    SOUND = "sound"  # one sound on every target
+    SPEECH = "speech"  # the zone's name, spoken through tts.speak
+
+
 class Operation(StrEnum):
-    """Operations subject to the code policy (SPEC §8.2)."""
+    """Operations subject to the code policy (SPEC §8.2).
+
+    ``acknowledge`` covers both the incident and the technical channel. §8.2
+    does not list it: its policy is a Phase 2 question, but the check already
+    runs so that Phase 2 changes policy, not plumbing.
+    """
 
     ARM = "arm"
     DISARM = "disarm"
     FORCE_ARM = "force_arm"
     CHANGE_SCENARIO = "change_scenario"
+    ACKNOWLEDGE = "acknowledge"
 
 
 class Moment(StrEnum):
     """What happened. Every Occurrence carries one (SPEC §6.1).
 
-    ``zone_rejoined`` is not a profile moment in §6.1; it exists so that the
-    log can say when an automatically bypassed zone came back.
+    Not every moment is a profile moment in §6.1. ``zone_rejoined`` lets the
+    log say when an automatically bypassed zone came back; the incident,
+    verification and chime moments exist for the log and for the simulator's
+    trace (§4.8, §5.6, §11.2). The technical moments are what the technical
+    channel's own profile will attach to in part 3.
     """
 
     ARMED = "armed"
@@ -133,6 +149,18 @@ class Moment(StrEnum):
     SIREN_CUTOFF = "siren_cutoff"
     ZONE_FAULT = "zone_fault"
     HA_RESTARTED = "ha_restarted"
+    TECHNICAL_RAISED = "technical_raised"
+    TECHNICAL_ACKNOWLEDGED = "technical_acknowledged"
+    TECHNICAL_CLEARED = "technical_cleared"
+    INCIDENT_OPENED = "incident_opened"
+    INCIDENT_JOINED = "incident_joined"
+    INCIDENT_ACKNOWLEDGED = "incident_acknowledged"
+    INCIDENT_CLOSED = "incident_closed"
+    VERIFICATION_PENDING = "verification_pending"
+    VERIFICATION_SATISFIED = "verification_satisfied"
+    VERIFICATION_EXPIRED = "verification_expired"
+    CHIME = "chime"
+    CHIME_SWITCHED = "chime_switched"
 
 
 class Reason(StrEnum):
@@ -149,6 +177,7 @@ class Reason(StrEnum):
     ZONE_OPEN = "zone_open"
     ZONE_NOT_BYPASSABLE = "zone_not_bypassable"
     ARM_HOLD_EXPIRED = "arm_hold_expired"
+    NOTHING_TO_ACKNOWLEDGE = "nothing_to_acknowledge"
 
 
 # Entity states that mean "we do not know" — a fault, never calm (INV-4).
@@ -177,6 +206,11 @@ MIN_ARM_HOLD_TIMEOUT = 60
 MAX_ARM_HOLD_TIMEOUT = 1800
 MIN_SUPERVISION_TIMEOUT = 60
 MAX_SUPERVISION_TIMEOUT = 7 * 24 * 3600
+# Verification windows: groups, cross-zone and trigger counting (§4.2, §4.8).
+DEFAULT_VERIFICATION_WINDOW = 60
+MIN_VERIFICATION_WINDOW = 1
+MAX_VERIFICATION_WINDOW = 3600
+MAX_TRIGGER_COUNT = 10
 
 
 # --- configuration -----------------------------------------------------------
@@ -263,6 +297,55 @@ class Zone:
     supervision_timeout: int | None = None  # None: not supervised
     enabled: bool = True
     key: KeyAction | None = None
+    # Sound the chime when it opens while its area does not monitor it (§6.6).
+    chime: bool = False
+    # A second zone that confirms this one: the pair is a 2-of-2 group that
+    # does not suppress its members (§4.8; part 2 decisions 4 and 9).
+    cross_zone_id: str | None = None
+    cross_zone_window: int = DEFAULT_VERIFICATION_WINDOW
+    # N activations of this zone within the window before it alarms (§4.2).
+    trigger_count: int = 1
+    trigger_window: int = DEFAULT_VERIFICATION_WINDOW
+
+
+@dataclass(frozen=True, slots=True)
+class Group:
+    """An N-of-M verification group (SPEC §4.8).
+
+    Membership is stored here, on the group, and nowhere else: a zone's
+    ``group_id`` is derived from it. Members may sit in different areas; each
+    acts in its own. ``area_id`` is where the group is shown and, in part 3,
+    where its profile inherits from.
+    """
+
+    id: str
+    name: str
+    area_id: str
+    members: tuple[str, ...]
+    n: int
+    window_seconds: int = DEFAULT_VERIFICATION_WINDOW
+    suppress_members: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ChimeSettings:
+    """The one global chime block (SPEC §6.6). Per-zone opt-in is Zone.chime.
+
+    ``sound`` is the media to play on media players in sound mode; sirens
+    beep in either mode. ``volume`` is a percentage, None to leave the
+    player's volume alone. Quiet hours are local "HH:MM" times and may cross
+    midnight. ``during_exit`` lets zones chime while their area counts down
+    its exit delay (part 2 decision 7; off by default).
+    """
+
+    targets: tuple[str, ...] = ()
+    mode: ChimeMode = ChimeMode.SOUND
+    sound: str | None = None
+    tts_entity: str | None = None
+    volume: int | None = None
+    quiet_start: str | None = None
+    quiet_end: str | None = None
+    during_exit: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -312,6 +395,7 @@ class CodePolicy:
     disarm: bool = False
     force_arm: bool = False
     change_scenario: bool = False
+    acknowledge: bool = False
 
     def requires_code(self, operation: Operation) -> bool:
         return bool(getattr(self, operation.value))
@@ -333,9 +417,14 @@ class FoyerConfig:
     actions: tuple[NotificationAction, ...] = ()
     code_policy: CodePolicy = field(default_factory=CodePolicy)
     settings: Settings = field(default_factory=Settings)
+    groups: tuple[Group, ...] = ()
+    chime: ChimeSettings = field(default_factory=ChimeSettings)
 
     def area(self, area_id: str | None) -> Area | None:
         return next((a for a in self.areas if a.id == area_id), None)
+
+    def group(self, group_id: str | None) -> Group | None:
+        return next((g for g in self.groups if g.id == group_id), None)
 
     def zone(self, zone_id: str | None) -> Zone | None:
         return next((z for z in self.zones if z.id == zone_id), None)
@@ -407,6 +496,91 @@ class AreaRuntime:
 
 
 @dataclass(frozen=True, slots=True)
+class TechnicalAlarm:
+    """One technical zone in alarm or in memory (SPEC §5.5).
+
+    It exists from the moment the zone fires until it has been acknowledged
+    **and** the zone is back to normal, in either order. Whether the zone is
+    still active is read from ``RuntimeState.active_zones``, never duplicated.
+    """
+
+    since: datetime
+    acknowledged_at: datetime | None = None
+    acknowledged_channel: str | None = None
+
+    @property
+    def acknowledged(self) -> bool:
+        return self.acknowledged_at is not None
+
+
+@dataclass(frozen=True, slots=True)
+class Contributor:
+    """A zone that joined an incident (SPEC §5.6).
+
+    ``profile_id`` and ``severity`` are the zone's effective response profile
+    when it joined: filled in part 3, read by Phase 4's escalation to pick
+    the highest-severity contributor. They exist now so the incident model
+    needs no migration then.
+    """
+
+    area_id: str
+    zone_id: str | None
+    at: datetime
+    group_id: str | None = None
+    profile_id: str | None = None
+    severity: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Acknowledgement:
+    """Who acknowledged, and how: an explicit command or a disarm (§7.2)."""
+
+    at: datetime
+    channel: str | None
+    via: str  # "acknowledge" | "disarm"
+
+
+@dataclass(frozen=True, slots=True)
+class Incident:
+    """The unit of an intrusion alarm, not the zone (SPEC §5.6).
+
+    ``acknowledged`` is the current state; ``acknowledgements`` is the whole
+    history, because a zone that joins after an acknowledgement clears it
+    (part 2 decision 8) and both must stay on record. ``actions_started``
+    records the actions this incident has set running, so that part 3 can
+    union new ones without restarting them.
+    """
+
+    id: str
+    opened_at: datetime
+    contributors: tuple[Contributor, ...] = ()
+    acknowledged: bool = False
+    acknowledgements: tuple[Acknowledgement, ...] = ()
+    actions_started: tuple[str, ...] = ()
+
+    @property
+    def area_ids(self) -> tuple[str, ...]:
+        return tuple(dict.fromkeys(c.area_id for c in self.contributors))
+
+    @property
+    def zone_ids(self) -> tuple[str, ...]:
+        return tuple(dict.fromkeys(c.zone_id for c in self.contributors if c.zone_id))
+
+
+@dataclass(frozen=True, slots=True)
+class Activation:
+    """One activation held in a verification window (SPEC §4.2, §4.8).
+
+    ``held`` is True when a group suppresses its members: the activation did
+    nothing on its own and fires if the group is satisfied in time.
+    """
+
+    zone_id: str
+    at: datetime
+    held: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeState:
     """Everything that must survive a restart (INV-3).
 
@@ -416,6 +590,11 @@ class RuntimeState:
     readable value is its baseline, not an activation, so adding a key switch
     that is already on does not arm the house. ``faults`` holds the zones
     already announced as faulted, so each fault is announced once.
+
+    ``technical`` is the technical channel's own state (§5.5): it never
+    appears in an area. ``windows`` holds the activations of every
+    verification window still open, keyed by core.verification; they expire
+    through next_wakeup like any timer.
     """
 
     areas: Mapping[str, AreaRuntime] = field(default_factory=dict)
@@ -424,10 +603,17 @@ class RuntimeState:
     active_zones: frozenset[str] = frozenset()
     seen_zones: frozenset[str] = frozenset()
     faults: frozenset[str] = frozenset()
+    technical: Mapping[str, TechnicalAlarm] = field(default_factory=dict)
+    incident: Incident | None = None
+    incident_seq: int = 0
+    windows: Mapping[str, tuple[Activation, ...]] = field(default_factory=dict)
+    chime_enabled: bool = True
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "areas", _frozen(self.areas))
         object.__setattr__(self, "bypassed", _frozen(self.bypassed))
+        object.__setattr__(self, "technical", _frozen(self.technical))
+        object.__setattr__(self, "windows", _frozen(self.windows))
 
     def area(self, area_id: str) -> AreaRuntime:
         return self.areas.get(area_id) or AreaRuntime()
@@ -464,11 +650,16 @@ class SystemSnapshot:
     still appearing: faults are not announced until it ends, so a restart does
     not produce one notification per zone. They are announced then if they
     persist. Alarms are never held back.
+
+    ``timezone`` is the installation's, for anything read on the wall clock
+    (chime quiet hours, and part 3's time conditions): the engine is given
+    it like the clock, never looks it up.
     """
 
     state: RuntimeState
     entities: Mapping[str, EntityState]
     settling: bool = False
+    timezone: tzinfo = UTC
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _frozen(self.entities))
@@ -545,6 +736,34 @@ class Startup:
     cause: str = "ha_start"
 
 
+@dataclass(frozen=True, slots=True)
+class AcknowledgeIncident:
+    """Acknowledge the open intrusion incident (SPEC §5.6)."""
+
+    code: str | None = None
+    channel: str = "api"
+
+
+@dataclass(frozen=True, slots=True)
+class AcknowledgeTechnical:
+    """Acknowledge every technical alarm pending now (§5.5, part 2 decision 11).
+
+    A separate command from the incident's on purpose: a different channel,
+    a different acknowledgement (§5.5).
+    """
+
+    code: str | None = None
+    channel: str = "api"
+
+
+@dataclass(frozen=True, slots=True)
+class SetChime:
+    """switch.foyer_chime: silence the chime, or let it sound again (§6.6)."""
+
+    enabled: bool
+    channel: str = "api"
+
+
 Event = (
     ArmRequest
     | ArmModeRequest
@@ -553,6 +772,9 @@ Event = (
     | ZoneStateChanged
     | Tick
     | Startup
+    | AcknowledgeIncident
+    | AcknowledgeTechnical
+    | SetChime
 )
 
 
@@ -561,7 +783,12 @@ Event = (
 
 @dataclass(frozen=True, slots=True)
 class Occurrence:
-    """One thing that happened, with enough context for a log row and a message."""
+    """One thing that happened, with enough context for a log row and a message.
+
+    ``incident_id`` is set on every occurrence that belongs to the open
+    incident, so the log can be read as "what happened that night" (§5.6).
+    ``group_id`` names the verification group involved, when one is.
+    """
 
     moment: Moment
     area_id: str | None = None
@@ -570,6 +797,8 @@ class Occurrence:
     zone_ids: tuple[str, ...] = ()
     channel: str | None = None
     detail: Mapping[str, str] = field(default_factory=dict)
+    incident_id: str | None = None
+    group_id: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "detail", _frozen(self.detail))
@@ -577,7 +806,11 @@ class Occurrence:
 
 @dataclass(frozen=True, slots=True)
 class ActionIntent:
-    """An action that *should* run. The executor decides nothing about it."""
+    """An action that *should* run. The executor decides nothing about it.
+
+    ``params`` carries what the executor needs and must not look up itself,
+    such as the chime's targets: the Decision is the whole instruction.
+    """
 
     action_id: str
     kind: str
@@ -586,9 +819,11 @@ class ActionIntent:
     # A variant of the message, e.g. "area" for an area armed outside any
     # scenario, which has no scenario name to show.
     variant: str | None = None
+    params: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "placeholders", _frozen(self.placeholders))
+        object.__setattr__(self, "params", _frozen(self.params))
 
 
 @dataclass(frozen=True, slots=True)

@@ -50,10 +50,10 @@ PRESETS: dict[ZoneType, dict[str, Any]] = {
     },
 }
 
-# Types whose channel is not implemented yet. The technical channel (§5.5) is
-# Phase 1 part 2: until then a technical zone would be stored and never act,
-# which for a smoke detector is worse than refusing it.
-UNAVAILABLE_TYPES: frozenset[ZoneType] = frozenset({ZoneType.TECHNICAL})
+# Types whose channel is not implemented yet. None since the technical
+# channel (§5.5) landed in Phase 1 part 2; kept so a future type can be
+# refused the same way rather than stored and never acted on.
+UNAVAILABLE_TYPES: frozenset[ZoneType] = frozenset()
 
 
 def preset(zone_type: ZoneType) -> dict[str, Any]:

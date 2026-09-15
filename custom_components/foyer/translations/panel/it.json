@@ -8,13 +8,16 @@
     "seconds": "{n} s",
     "save": "Salva",
     "cancel": "Annulla",
-    "delete": "Elimina"
+    "delete": "Elimina",
+    "acknowledge": "Riconosci"
   },
   "nav": {
     "overview": "Panoramica",
     "areas": "Aree",
     "zones": "Zone",
-    "scenarios": "Scenari"
+    "scenarios": "Scenari",
+    "groups": "Gruppi di verifica",
+    "settings": "Impostazioni"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -56,7 +59,8 @@
     "zone_open": "Impossibile inserire: zona aperta: {zones}.",
     "zone_not_bypassable": "Impossibile forzare: queste zone non possono essere escluse: {zones}.",
     "arm_hold_expired": "Inserimento fallito: ancora aperta: {zones}.",
-    "unknown": "La richiesta è stata rifiutata."
+    "unknown": "La richiesta è stata rifiutata.",
+    "nothing_to_acknowledge": "Non c'è nulla da riconoscere."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -76,7 +80,6 @@
     "eq_hysteresis": "Un trigger di uguaglianza non ha isteresi.",
     "event_type_required": "Scegli quale tipo di evento fa scattare la zona.",
     "event_type_not_allowed": "Un tag ha un solo evento, la scansione: lascia il tipo vuoto.",
-    "channel_not_available": "Le zone tecniche (fumo, gas, acqua) arrivano con un aggiornamento successivo. Foyer le rifiuta invece di salvare un rilevatore che non fa nulla.",
     "key_action_required": "Una zona chiave ha bisogno di un'azione.",
     "key_scenario_required": "Scegli lo scenario che questa chiave inserisce.",
     "key_always_on": "Una zona chiave comanda: non può essere sempre attiva.",
@@ -95,7 +98,27 @@
     "invalid": "Alcuni valori non sono validi.",
     "follows_needs_follower": "Solo una zona follower può seguire altre zone.",
     "follows_not_delayed": "Un follower può seguire solo zone di intrusione ritardate.",
-    "request_failed": "Home Assistant non ha accettato la richiesta ({detail}). Non è stato modificato nulla. Ricarica la pagina e riprova."
+    "request_failed": "Home Assistant non ha accettato la richiesta ({detail}). Non è stato modificato nulla. Ricarica la pagina e riprova.",
+    "area_has_groups": "In quest'area è mostrato un gruppo di verifica. Spostalo o eliminalo prima.",
+    "zone_in_group": "Questa zona fa parte di un gruppo di verifica. Toglila prima dal gruppo.",
+    "zone_is_cross_partner": "Un'altra zona usa questa per la verifica incrociata. Modifica prima quella zona.",
+    "cross_zone_invalid": "La verifica incrociata richiede un'altra zona antintrusione.",
+    "cross_zone_window_mismatch": "Le due zone di questa coppia puntano l'una all'altra con finestre diverse. Usa la stessa finestra.",
+    "group_members": "Un gruppo richiede almeno due membri diversi.",
+    "group_member_invalid": "Solo zone antintrusione esistenti possono essere membri.",
+    "group_threshold": "La soglia deve essere almeno 2 e non superiore al numero di membri.",
+    "window_out_of_range": "{field}: tra 1 e 3600 secondi.",
+    "zone_in_two_groups": "Una zona può appartenere a un solo gruppo o coppia incrociata, altrimenti conterebbe due volte.",
+    "count_out_of_range": "{field}: tra 1 e 10.",
+    "intrusion_only": "{field} vale solo per le zone antintrusione.",
+    "technical_always_on": "Una zona tecnica è sempre attiva: deve essere impostata come sempre attiva (24h).",
+    "chime_always_on": "Una zona sempre attiva è sempre sorvegliata, quindi non può mai suonare il campanello.",
+    "chime_target_invalid": "Il campanello suona solo su media player e sirene.",
+    "chime_tts_required": "Per pronunciare il nome della zona serve un'entità di sintesi vocale.",
+    "chime_sound_required": "I media player richiedono un suono: imposta il contenuto da riprodurre.",
+    "volume_out_of_range": "{field}: tra 0 e 100.",
+    "time_invalid": "{field}: un orario come 23:00.",
+    "quiet_hours_incomplete": "Le ore di silenzio richiedono sia un inizio sia una fine."
   },
   "field": {
     "name": "Nome",
@@ -126,7 +149,24 @@
     "exit_delay_override": "Ritardo di uscita",
     "siren_duration_override": "Durata delle sirene",
     "siren_duration": "Durata delle sirene",
-    "follows": "Segue anche"
+    "follows": "Segue anche",
+    "members": "Membri",
+    "n": "Soglia",
+    "window_seconds": "Finestra",
+    "suppress_members": "I membri non producono nulla sotto la soglia",
+    "cross_zone_id": "Verifica incrociata",
+    "cross_zone_window": "Entro",
+    "trigger_count": "Attivazioni necessarie",
+    "trigger_window": "Entro",
+    "chime": "Campanello",
+    "targets": "Suona su",
+    "mode": "Modalità",
+    "sound": "Contenuto da riprodurre",
+    "tts_entity": "Sintesi vocale",
+    "volume": "Volume",
+    "quiet_start": "Silenzio dalle",
+    "quiet_end": "alle",
+    "during_exit": "Anche durante il ritardo d'uscita"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -148,7 +188,7 @@
   "channel": {
     "intrusion": "Intrusione",
     "key": "Chiave (comandi)",
-    "technical": "Tecnico (aggiornamento successivo)"
+    "technical": "Tecnico (fumo, gas, acqua)"
   },
   "entry_mode": {
     "instant": "Istantanea",
@@ -212,7 +252,14 @@
     "zone": "Zona",
     "status": "Stato",
     "entity_state": "Stato dell'entità",
-    "all_ready": "Tutte le zone sono pronte."
+    "all_ready": "Tutte le zone sono pronte.",
+    "technical_title": "Allarme tecnico",
+    "technical_banner": "Allarme tecnico: {zones}. È un canale separato: l'inserimento non lo influenza e il disinserimento non lo cancella. Si cancella una volta riconosciuto e tornato normale.",
+    "incident_title": "Incidente {id}",
+    "incident_zones": "Zone: {zones}",
+    "incident_open": "Non riconosciuto",
+    "incident_acknowledged": "Riconosciuto — si chiude quando ogni area è disinserita o di nuovo inserita",
+    "incident_hint": "Un incidente raccoglie tutte le zone di un allarme. Anche il disinserimento lo riconosce."
   },
   "areas": {
     "title": "Aree",
@@ -273,7 +320,15 @@
     "key_hint": "Una chiave inserisce o disinserisce come farebbe una persona. Non va mai in allarme.",
     "area_armed": "L'area di questa zona è inserita: le modifiche vengono rifiutate finché non la disinserisci.",
     "follows_hint": "Il ritardo di ingresso della sua area vale sempre. Spunta le zone ritardate di altre aree da cui deve ereditare anche il ritardo, come la porta d'ingresso per un sensore dell'ingresso in un'area interna.",
-    "no_delayed_zones": "Ancora nessuna zona ritardata."
+    "no_delayed_zones": "Ancora nessuna zona ritardata.",
+    "fire_statement": "Foyer non è un sistema antincendio. Un rilevatore di fumo o gas collegato a Home Assistant non sostituisce rilevatori di fumo certificati e interconnessi.",
+    "technical_hint": "Una zona tecnica attiva l'allarme tecnico qualunque cosa facciano le aree. Non fa mai scattare un'area e il disinserimento non lo cancella mai.",
+    "verification_title": "Verifica",
+    "no_cross_zone": "Nessuna",
+    "cross_zone_hint": "Un'altra zona che conferma questa entro la finestra. Ciascuna allarma comunque da sola; quando rilevano entrambe, la coppia viene registrata come confermata. Impostala su una delle due zone.",
+    "trigger_count_hint": "Quante volte deve rilevare entro la finestra prima di allarmare. 1: subito. Contano solo i rilevamenti che allarmerebbero subito: aprire il percorso d'ingresso no.",
+    "chime_hint": "Suona il campanello quando si apre mentre la sua area non è inserita.",
+    "in_group": "Membro del gruppo di verifica {group}. Si modifica nella pagina Gruppi di verifica."
   },
   "scenarios": {
     "title": "Scenari",
@@ -294,7 +349,9 @@
     "disarm": "Disinserisci",
     "no_entity": "Imposta un'entità: un alarm_control_panel di Foyer.",
     "entity_missing": "Entità non trovata: {entity}",
-    "area_countdown": "{area} — {countdown}"
+    "area_countdown": "{area} — {countdown}",
+    "technical": "Allarme tecnico: {zones}",
+    "incident": "Incidente: {zones}"
   },
   "help": {
     "toggle": "Informazioni su questa sezione",
@@ -322,6 +379,14 @@
         "memory": {
           "term": "Memoria d'allarme",
           "text": "Resta dopo che le sirene si fermano, finché qualcuno non disinserisce."
+        },
+        "technical": {
+          "term": "Allarme tecnico",
+          "text": "Fumo, gas, acqua: un canale a sé. Il disinserimento non lo cancella; va riconosciuto."
+        },
+        "incident": {
+          "term": "Incidente",
+          "text": "Tutte le zone di un allarme, riconosciute una volta sola."
         }
       }
     },
@@ -378,6 +443,10 @@
         "supervision": {
           "term": "Supervisione",
           "text": "Un sensore silenzioso troppo a lungo è un guasto, mai “tutto tranquillo”."
+        },
+        "verification": {
+          "term": "Verifica",
+          "text": "Verifica incrociata e attivazioni necessarie riducono i falsi allarmi; un gruppo lo fa per più zone."
         }
       }
     },
@@ -404,6 +473,50 @@
         "siren": {
           "term": "Durata delle sirene",
           "text": "Uno scenario notturno può suonare meno. Mai più di 900 s."
+        }
+      }
+    },
+    "groups": {
+      "title": "Cos'è un gruppo di verifica",
+      "intro": "Un gruppo conferma un allarme quando almeno N delle sue zone rilevano entro una finestra: lo strumento più forte contro i falsi allarmi negli ambienti grandi. Il campo verifica incrociata di una zona è lo stesso motore, come gruppo 2 su 2.",
+      "items": {
+        "threshold": {
+          "term": "Soglia e finestra",
+          "text": "Quanti membri, entro quanto tempo. Una finestra più lunga si soddisfa più facilmente."
+        },
+        "members": {
+          "term": "Membri",
+          "text": "Qualsiasi zona antintrusione, di qualsiasi area. Aprire il percorso d'ingresso non conta mai."
+        },
+        "suppress": {
+          "term": "Membri sotto la soglia",
+          "text": "Spento di default: ogni membro allarma comunque da solo. Acceso: nulla finché il gruppo non è soddisfatto."
+        },
+        "derived": {
+          "term": "Dal campo zona",
+          "text": "Le coppie a verifica incrociata, mostrate qui e modificate sulla zona."
+        }
+      }
+    },
+    "settings": {
+      "title": "Cosa fanno queste impostazioni",
+      "intro": "Impostazioni che valgono per tutta l'installazione. Per ora: il campanello.",
+      "items": {
+        "targets": {
+          "term": "Suona su",
+          "text": "Dove suona il campanello. Nulla suona finché non ne scegli uno."
+        },
+        "mode": {
+          "term": "Modalità",
+          "text": "Un suono, oppure il nome della zona pronunciato, che ti dice cosa si è aperto."
+        },
+        "quiet": {
+          "term": "Ore di silenzio",
+          "text": "Nessun campanello in questa fascia."
+        },
+        "during_exit": {
+          "term": "Durante il ritardo d'uscita",
+          "text": "Se le zone suonano mentre la loro area conta alla rovescia verso l'inserimento."
         }
       }
     }
@@ -456,6 +569,96 @@
     "ha_restarted": {
       "title": "Foyer: di nuovo attivo",
       "message": "Foyer è rimasto fermo per un periodo. In quel lasso di tempo la casa non era protetta."
+    },
+    "technical_raised": {
+      "title": "Foyer: ALLARME TECNICO",
+      "message": "{zone} in {area} rileva un allarme tecnico. Il disinserimento non lo cancella: riconoscilo quando è sicuro. Foyer non è un sistema antincendio."
+    },
+    "technical_acknowledged": {
+      "title": "Foyer: allarme tecnico riconosciuto",
+      "message": "Riconosciuto: {zones}. Si cancella quando torna normale."
+    },
+    "technical_cleared": {
+      "title": "Foyer: allarme tecnico cessato",
+      "message": "{zone} è tornato normale ed è riconosciuto."
+    },
+    "incident_opened": {
+      "title": "Foyer: incidente aperto",
+      "message": "Allarme in {area}: {zones}."
+    },
+    "incident_joined": {
+      "title": "Foyer: aggiornamento incidente",
+      "message": "Un'altra zona si è aggiunta all'allarme: {zones}."
+    },
+    "incident_acknowledged": {
+      "title": "Foyer: incidente riconosciuto",
+      "message": "L'allarme è stato riconosciuto: {zones}."
+    },
+    "incident_closed": {
+      "title": "Foyer: incidente chiuso",
+      "message": "L'incidente è concluso: {zones}."
+    },
+    "verification_pending": {
+      "title": "Foyer: rilevamento da confermare",
+      "message": "{zone} ha rilevato; in attesa di conferma."
+    },
+    "verification_satisfied": {
+      "title": "Foyer: rilevamento confermato",
+      "message": "Confermato da {zones}."
+    },
+    "verification_expired": {
+      "title": "Foyer: rilevamento non confermato",
+      "message": "Non confermato in tempo: {zones}."
+    },
+    "chime": {
+      "title": "Foyer: campanello",
+      "message": "{zone} si è aperto."
+    },
+    "chime_switched": {
+      "title": "Foyer: campanello",
+      "message": "Il campanello è stato acceso o spento."
     }
+  },
+  "chime_mode": {
+    "sound": "Suono singolo",
+    "speech": "Pronuncia il nome della zona"
+  },
+  "technical_state": {
+    "active": "In allarme",
+    "memory": "Tornato normale, non riconosciuto",
+    "acknowledged": "Riconosciuto, non ancora tornato normale"
+  },
+  "groups": {
+    "title": "Gruppi di verifica",
+    "add": "Aggiungi gruppo",
+    "new": "Nuovo gruppo",
+    "none": "Nessun gruppo.",
+    "from_zone": "dal campo zona",
+    "from_zone_hint": "Le coppie a verifica incrociata compaiono qui come gruppi 2 su 2. Si modificano sulla zona, non qui.",
+    "threshold": "{n} su {m}",
+    "suppressed": "Non producono nulla",
+    "not_suppressed": "Allarmano da soli",
+    "members_hint": "Zone antintrusione di qualsiasi area. Un membro conta solo mentre la sua area è inserita, e contano solo i rilevamenti che allarmerebbero subito.",
+    "suppress_hint": "Spento: ogni membro allarma comunque da solo e il gruppo aggiunge la sua conferma. Acceso: i membri non fanno nulla finché il gruppo non è soddisfatto — un solo sensore davanti a un vero intruso produce allora silenzio.",
+    "window_hint": "Secondi entro cui i membri devono rilevare.",
+    "area_hint": "Dove viene mostrato il gruppo.",
+    "no_zones": "Nessuna zona antintrusione disponibile: ogni zona può stare in un solo gruppo o coppia.",
+    "members_below": "Membri sotto la soglia"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "chime_title": "Campanello",
+    "chime_intro": "Suona quando si apre una zona con il campanello attivo mentre la sua area non è inserita — non solo quando la casa è disinserita. Con il solo perimetro inserito, una porta interna suona comunque.",
+    "targets_hint": "Media player e sirene.",
+    "no_targets": "Nessun media player o sirena trovato.",
+    "sound_hint": "Per i media player: un id di contenuto o un URL, come media-source://media_source/local/chime.mp3. Le sirene suonano semplicemente per un attimo.",
+    "tts_hint": "Usata per pronunciare il nome della zona.",
+    "pick_tts": "Scegli…",
+    "volume_hint": "Percentuale. Vuoto: lascia il volume del lettore com'è.",
+    "quiet_hint": "Nessun campanello in questa fascia, che può attraversare la mezzanotte. Vuoto: mai silenzio.",
+    "during_exit_hint": "Spento: la porta da cui esci non suona mentre l'area conta alla rovescia.",
+    "switch_hint": "switch.foyer_chime lo silenzia senza cambiare queste impostazioni.",
+    "saved": "Salvato.",
+    "later": "Le altre impostazioni arriveranno in un aggiornamento successivo."
   }
 }

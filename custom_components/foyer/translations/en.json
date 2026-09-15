@@ -87,6 +87,9 @@
     },
     "rejected_arm_hold_expired": {
       "message": "Arming failed: still open: {zones}."
+    },
+    "rejected_nothing_to_acknowledge": {
+      "message": "There is nothing to acknowledge."
     }
   },
   "entity": {
@@ -106,6 +109,9 @@
       },
       "fault": {
         "name": "Zone fault"
+      },
+      "technical_alarm": {
+        "name": "Technical alarm"
       }
     },
     "sensor": {
@@ -114,6 +120,17 @@
       },
       "countdown": {
         "name": "Countdown"
+      },
+      "technical_cause": {
+        "name": "Technical alarm cause"
+      },
+      "incident": {
+        "name": "Incident"
+      }
+    },
+    "switch": {
+      "chime": {
+        "name": "Chime"
       }
     }
   }

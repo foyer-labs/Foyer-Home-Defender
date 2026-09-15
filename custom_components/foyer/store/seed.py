@@ -24,7 +24,8 @@ from ..core.models import (
 
 # The notifications every installation gets until response profiles exist.
 # zone_fault is not optional: INV-4 requires a fault to be announced. A failed
-# arming and an automatic bypass are announced because §5.4 says so.
+# arming and an automatic bypass are announced because §5.4 says so, and a
+# technical alarm because it must never be silent (part 2 decision 10).
 SEED_MOMENTS = frozenset(
     {
         Moment.ARMED,
@@ -32,6 +33,7 @@ SEED_MOMENTS = frozenset(
         Moment.ZONE_FAULT,
         Moment.ARM_FAILED,
         Moment.ZONE_BYPASSED,
+        Moment.TECHNICAL_RAISED,
     }
 )
 

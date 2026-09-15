@@ -19,11 +19,13 @@ from ..core.validation import Problem, edit_conflicts, validate
 from .schema import (
     ConfigError,
     area_from_dict,
+    chime_from_dict,
+    group_from_dict,
     scenario_from_dict,
     zone_from_dict,
 )
 
-KINDS = ("area", "zone", "scenario")
+KINDS = ("area", "zone", "scenario", "group")
 
 _AREA_DEFAULTS: dict[str, Any] = {
     "default_entry_delay": 30,
@@ -38,6 +40,15 @@ _ZONE_DEFAULTS: dict[str, Any] = {
     "supervision_timeout": None,
     "enabled": True,
     "key": None,
+    "chime": False,
+    "cross_zone_id": None,
+    "cross_zone_window": 60,
+    "trigger_count": 1,
+    "trigger_window": 60,
+}
+_GROUP_DEFAULTS: dict[str, Any] = {
+    "window_seconds": 60,
+    "suppress_members": False,
 }
 
 
@@ -74,6 +85,9 @@ def upsert(
         elif kind == "scenario":
             obj = scenario_from_dict(data)
             new = replace(config, scenarios=_replace_in(config.scenarios, obj))
+        elif kind == "group":
+            obj = group_from_dict({**_GROUP_DEFAULTS, **data})
+            new = replace(config, groups=_replace_in(config.groups, obj))
         else:
             zone_type = ZoneType(data.get("type", "instant"))
             obj = zone_from_dict({**_ZONE_DEFAULTS, **preset(zone_type), **data})
@@ -103,11 +117,23 @@ def delete(
             return _fail(Problem("area_has_zones", kind, item_id))
         if any(item_id in s.areas for s in config.scenarios):
             return _fail(Problem("area_in_scenario", kind, item_id))
+        if any(g.area_id == item_id for g in config.groups):
+            return _fail(Problem("area_has_groups", kind, item_id))
         new = replace(config, areas=tuple(a for a in config.areas if a.id != item_id))
     elif kind == "zone":
         if config.zone(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))
+        # Say why, instead of letting validation report a dangling reference:
+        # a group or a cross-zone partner must be edited first, knowingly.
+        if any(item_id in g.members for g in config.groups):
+            return _fail(Problem("zone_in_group", kind, item_id))
+        if any(z.cross_zone_id == item_id for z in config.zones):
+            return _fail(Problem("zone_is_cross_partner", kind, item_id))
         new = replace(config, zones=tuple(z for z in config.zones if z.id != item_id))
+    elif kind == "group":
+        if config.group(item_id) is None:
+            return _fail(Problem("not_found", kind, item_id))
+        new = replace(config, groups=tuple(g for g in config.groups if g.id != item_id))
     elif kind == "scenario":
         if config.scenario(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))
@@ -134,6 +160,17 @@ def update_settings(
         )
     except (KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "settings"))
+    return _check(config, new, state, None)
+
+
+def update_chime(
+    config: FoyerConfig, state: RuntimeState, chime: dict[str, Any]
+) -> EditResult:
+    """The global chime block (§6.6). Whether each zone chimes is on the zone."""
+    try:
+        new = replace(config, chime=chime_from_dict(chime))
+    except (ConfigError, KeyError, TypeError, ValueError):
+        return _fail(Problem("invalid", "chime"))
     return _check(config, new, state, None)
 
 

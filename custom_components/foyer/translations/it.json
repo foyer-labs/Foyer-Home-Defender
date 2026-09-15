@@ -87,6 +87,9 @@
     },
     "rejected_arm_hold_expired": {
       "message": "Inserimento fallito: ancora aperta: {zones}."
+    },
+    "rejected_nothing_to_acknowledge": {
+      "message": "Non c'è nulla da riconoscere."
     }
   },
   "entity": {
@@ -106,6 +109,9 @@
       },
       "fault": {
         "name": "Guasto zona"
+      },
+      "technical_alarm": {
+        "name": "Allarme tecnico"
       }
     },
     "sensor": {
@@ -114,6 +120,17 @@
       },
       "countdown": {
         "name": "Conto alla rovescia"
+      },
+      "technical_cause": {
+        "name": "Causa allarme tecnico"
+      },
+      "incident": {
+        "name": "Incidente"
+      }
+    },
+    "switch": {
+      "chime": {
+        "name": "Campanello"
       }
     }
   }

@@ -77,10 +77,52 @@ def _v2_1_to_v2_2(data: Document) -> Document:
     return out
 
 
+def _v2_2_to_v2_3(data: Document) -> Document:
+    """0.1.0-alpha.3 → Phase 1 part 2: technical channel, incidents,
+    verification groups, cross-zone, trigger counting and chime.
+
+    Every new setting is chosen to change nothing that already works: no
+    groups, no cross-zone, one activation to alarm, no chime anywhere (the
+    chime block has no targets), and acknowledgement needs no code, as
+    nothing does before Phase 2.
+
+    One behaviour is added on purpose (part 2 decision 10): a technical alarm
+    gets the persistent notification every existing action already sends for
+    faults. Without it a smoke detector would fire in an empty house and say
+    nothing until response profiles exist.
+    """
+    out = copy.deepcopy(data)
+    for zone in out["zones"]:
+        zone.setdefault("chime", False)
+        zone.setdefault("cross_zone_id", None)
+        zone.setdefault("cross_zone_window", 60)
+        zone.setdefault("trigger_count", 1)
+        zone.setdefault("trigger_window", 60)
+    out.setdefault("groups", [])
+    out["code_policy"].setdefault("acknowledge", False)
+    out.setdefault(
+        "chime",
+        {
+            "targets": [],
+            "mode": "sound",
+            "sound": None,
+            "tts_entity": None,
+            "volume": None,
+            "quiet_start": None,
+            "quiet_end": None,
+            "during_exit": False,
+        },
+    )
+    for action in out["actions"]:
+        action["moments"] = sorted({*action["moments"], "technical_raised"})
+    return out
+
+
 # (from_major, from_minor) -> (step, (to_major, to_minor))
 STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (1, 1): (_v1_1_to_v2_1, (2, 1)),
     (2, 1): (_v2_1_to_v2_2, (2, 2)),
+    (2, 2): (_v2_2_to_v2_3, (2, 3)),
 }
 
 

@@ -8,13 +8,16 @@
     "seconds": "{n} s",
     "save": "Save",
     "cancel": "Cancel",
-    "delete": "Delete"
+    "delete": "Delete",
+    "acknowledge": "Acknowledge"
   },
   "nav": {
     "overview": "Overview",
     "areas": "Areas",
     "zones": "Zones",
-    "scenarios": "Scenarios"
+    "scenarios": "Scenarios",
+    "groups": "Verification groups",
+    "settings": "Settings"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -56,7 +59,8 @@
     "zone_open": "Cannot arm: zone open: {zones}.",
     "zone_not_bypassable": "Cannot force arming: these zones may not be excluded: {zones}.",
     "arm_hold_expired": "Arming failed: still open: {zones}.",
-    "unknown": "The request was refused."
+    "unknown": "The request was refused.",
+    "nothing_to_acknowledge": "There is nothing to acknowledge."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -76,7 +80,6 @@
     "eq_hysteresis": "An equality trigger has no hysteresis.",
     "event_type_required": "Choose which event type triggers the zone.",
     "event_type_not_allowed": "A tag has only one event, the scan: leave the type empty.",
-    "channel_not_available": "Technical zones (smoke, gas, water) arrive in a later update. Foyer refuses them rather than store a detector that does nothing.",
     "key_action_required": "A key zone needs an action.",
     "key_scenario_required": "Choose the scenario this key arms.",
     "key_always_on": "A key zone commands; it cannot be always on.",
@@ -95,7 +98,27 @@
     "invalid": "Some values are not valid.",
     "follows_needs_follower": "Only a follower zone can follow other zones.",
     "follows_not_delayed": "A follower can follow only delayed intrusion zones.",
-    "request_failed": "Home Assistant did not accept the request ({detail}). Nothing was changed. Reload the page and try again."
+    "request_failed": "Home Assistant did not accept the request ({detail}). Nothing was changed. Reload the page and try again.",
+    "area_has_groups": "A verification group is shown in this area. Move or delete it first.",
+    "zone_in_group": "This zone is a member of a verification group. Remove it from the group first.",
+    "zone_is_cross_partner": "Another zone uses this one for cross-zone verification. Change that zone first.",
+    "cross_zone_invalid": "Cross-zone needs another intrusion zone.",
+    "cross_zone_window_mismatch": "Both zones of this pair point at each other with different windows. Give them the same window.",
+    "group_members": "A group needs at least two different members.",
+    "group_member_invalid": "Only existing intrusion zones can be members.",
+    "group_threshold": "The threshold must be at least 2 and no more than the number of members.",
+    "window_out_of_range": "{field}: between 1 and 3600 seconds.",
+    "zone_in_two_groups": "A zone can belong to one group or cross-zone pair only, or it would count twice.",
+    "count_out_of_range": "{field}: between 1 and 10.",
+    "intrusion_only": "{field} applies to intrusion zones only.",
+    "technical_always_on": "A technical zone is always live: it must be always on.",
+    "chime_always_on": "An always-on zone is always watched, so it can never chime.",
+    "chime_target_invalid": "The chime plays on media players and sirens only.",
+    "chime_tts_required": "Speaking the zone name needs a text-to-speech entity.",
+    "chime_sound_required": "Media players need a sound to play: set the media to play.",
+    "volume_out_of_range": "{field}: between 0 and 100.",
+    "time_invalid": "{field}: a time such as 23:00.",
+    "quiet_hours_incomplete": "Quiet hours need both a start and an end."
   },
   "field": {
     "name": "Name",
@@ -126,7 +149,24 @@
     "exit_delay_override": "Exit delay",
     "siren_duration_override": "Sounders run for",
     "siren_duration": "Sounders run for",
-    "follows": "Also follows"
+    "follows": "Also follows",
+    "members": "Members",
+    "n": "Threshold",
+    "window_seconds": "Window",
+    "suppress_members": "Members produce nothing below the threshold",
+    "cross_zone_id": "Cross-zone verification",
+    "cross_zone_window": "Within",
+    "trigger_count": "Activations needed",
+    "trigger_window": "Within",
+    "chime": "Chime",
+    "targets": "Play on",
+    "mode": "Mode",
+    "sound": "Media to play",
+    "tts_entity": "Text-to-speech",
+    "volume": "Volume",
+    "quiet_start": "Quiet from",
+    "quiet_end": "until",
+    "during_exit": "Also during the exit delay"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -148,7 +188,7 @@
   "channel": {
     "intrusion": "Intrusion",
     "key": "Key (commands)",
-    "technical": "Technical (later update)"
+    "technical": "Technical (smoke, gas, water)"
   },
   "entry_mode": {
     "instant": "Instant",
@@ -212,7 +252,14 @@
     "zone": "Zone",
     "status": "Status",
     "entity_state": "Entity state",
-    "all_ready": "Every zone is ready."
+    "all_ready": "Every zone is ready.",
+    "technical_title": "Technical alarm",
+    "technical_banner": "Technical alarm: {zones}. A separate channel: arming does not affect it and disarming does not clear it. It clears once acknowledged and back to normal.",
+    "incident_title": "Incident {id}",
+    "incident_zones": "Zones: {zones}",
+    "incident_open": "Not acknowledged",
+    "incident_acknowledged": "Acknowledged — it closes once every area is disarmed or armed again",
+    "incident_hint": "One incident gathers every zone of one alarm. Disarming also acknowledges it."
   },
   "areas": {
     "title": "Areas",
@@ -273,7 +320,15 @@
     "key_hint": "A key arms or disarms as a person would. It never alarms.",
     "area_armed": "This zone's area is armed: changes are refused until it is disarmed.",
     "follows_hint": "Its own area's entry delay always counts. Tick the delayed zones of other areas whose entry delay it should also inherit, such as the front door for a hall sensor in an interior area.",
-    "no_delayed_zones": "No delayed zones yet."
+    "no_delayed_zones": "No delayed zones yet.",
+    "fire_statement": "Foyer is not a fire alarm system. A smoke or gas detector connected to Home Assistant does not replace certified, interconnected smoke alarms.",
+    "technical_hint": "A technical zone raises the technical alarm whatever the areas are doing. It never triggers an area and disarming never clears it.",
+    "verification_title": "Verification",
+    "no_cross_zone": "None",
+    "cross_zone_hint": "Another zone that confirms this one within the window. Each still alarms on its own; when both detect, the pair is recorded as confirmed. Set it on either zone.",
+    "trigger_count_hint": "How many times it must detect within the window before it alarms. 1: at once. Only detections that would alarm at once are counted: opening the entry route is not.",
+    "chime_hint": "Plays the chime when it opens while its area is not armed.",
+    "in_group": "Member of the verification group {group}. Change it on the Verification groups page."
   },
   "scenarios": {
     "title": "Scenarios",
@@ -294,7 +349,9 @@
     "disarm": "Disarm",
     "no_entity": "Set an entity: a Foyer alarm_control_panel.",
     "entity_missing": "Entity not found: {entity}",
-    "area_countdown": "{area} — {countdown}"
+    "area_countdown": "{area} — {countdown}",
+    "technical": "Technical alarm: {zones}",
+    "incident": "Incident: {zones}"
   },
   "help": {
     "toggle": "About this section",
@@ -322,6 +379,14 @@
         "memory": {
           "term": "Alarm memory",
           "text": "Stays after the sounders stop, until someone disarms."
+        },
+        "technical": {
+          "term": "Technical alarm",
+          "text": "Smoke, gas, water: its own channel. Disarming does not clear it; acknowledge it."
+        },
+        "incident": {
+          "term": "Incident",
+          "text": "Every zone of one alarm, acknowledged once."
         }
       }
     },
@@ -378,6 +443,10 @@
         "supervision": {
           "term": "Supervision",
           "text": "A sensor silent too long is a fault, never “all quiet”."
+        },
+        "verification": {
+          "term": "Verification",
+          "text": "Cross-zone and activations needed cut false alarms; a group does it for several zones."
         }
       }
     },
@@ -404,6 +473,50 @@
         "siren": {
           "term": "Sounders run for",
           "text": "A night scenario may sound for less. Never more than 900 s."
+        }
+      }
+    },
+    "groups": {
+      "title": "What a verification group is",
+      "intro": "A group confirms an alarm when at least N of its member zones detect within a window: the strongest tool against false alarms in large spaces. A zone's cross-zone field is the same engine, as a 2-of-2 group.",
+      "items": {
+        "threshold": {
+          "term": "Threshold and window",
+          "text": "How many members, within how long. A longer window is easier to satisfy."
+        },
+        "members": {
+          "term": "Members",
+          "text": "Any intrusion zone, in any area. Opening the entry route never counts."
+        },
+        "suppress": {
+          "term": "Members below threshold",
+          "text": "Off by default: each member still alarms alone. On: nothing until the group is satisfied."
+        },
+        "derived": {
+          "term": "From zone field",
+          "text": "Cross-zone pairs, shown here and edited on the zone."
+        }
+      }
+    },
+    "settings": {
+      "title": "What these settings do",
+      "intro": "Settings that apply to the whole installation. Today: the chime.",
+      "items": {
+        "targets": {
+          "term": "Play on",
+          "text": "Where the chime sounds. Nothing chimes until one is set."
+        },
+        "mode": {
+          "term": "Mode",
+          "text": "A sound, or the zone's name spoken, which tells you what opened."
+        },
+        "quiet": {
+          "term": "Quiet hours",
+          "text": "No chime inside this window."
+        },
+        "during_exit": {
+          "term": "During the exit delay",
+          "text": "Whether zones chime while their area counts down to armed."
         }
       }
     }
@@ -456,6 +569,96 @@
     "ha_restarted": {
       "title": "Foyer: back online",
       "message": "Foyer was not running for a while. The house was not protected during that time."
+    },
+    "technical_raised": {
+      "title": "Foyer: TECHNICAL ALARM",
+      "message": "{zone} in {area} detects a technical alarm. Disarming does not clear it: acknowledge it once it is safe. Foyer is not a fire alarm system."
+    },
+    "technical_acknowledged": {
+      "title": "Foyer: technical alarm acknowledged",
+      "message": "Acknowledged: {zones}. It clears once back to normal."
+    },
+    "technical_cleared": {
+      "title": "Foyer: technical alarm cleared",
+      "message": "{zone} is back to normal and acknowledged."
+    },
+    "incident_opened": {
+      "title": "Foyer: incident opened",
+      "message": "Alarm in {area}: {zones}."
+    },
+    "incident_joined": {
+      "title": "Foyer: incident update",
+      "message": "Another zone joined the alarm: {zones}."
+    },
+    "incident_acknowledged": {
+      "title": "Foyer: incident acknowledged",
+      "message": "The alarm has been acknowledged: {zones}."
+    },
+    "incident_closed": {
+      "title": "Foyer: incident closed",
+      "message": "The incident is over: {zones}."
+    },
+    "verification_pending": {
+      "title": "Foyer: detection to confirm",
+      "message": "{zone} detected; waiting for confirmation."
+    },
+    "verification_satisfied": {
+      "title": "Foyer: detection confirmed",
+      "message": "Confirmed by {zones}."
+    },
+    "verification_expired": {
+      "title": "Foyer: detection not confirmed",
+      "message": "Not confirmed in time: {zones}."
+    },
+    "chime": {
+      "title": "Foyer: chime",
+      "message": "{zone} opened."
+    },
+    "chime_switched": {
+      "title": "Foyer: chime",
+      "message": "The chime was switched on or off."
     }
+  },
+  "chime_mode": {
+    "sound": "Single sound",
+    "speech": "Speak the zone name"
+  },
+  "technical_state": {
+    "active": "In alarm",
+    "memory": "Back to normal, not acknowledged",
+    "acknowledged": "Acknowledged, not back to normal yet"
+  },
+  "groups": {
+    "title": "Verification groups",
+    "add": "Add group",
+    "new": "New group",
+    "none": "No groups yet.",
+    "from_zone": "from zone field",
+    "from_zone_hint": "Cross-zone pairs appear here as 2-of-2 groups. They are edited on the zone, not here.",
+    "threshold": "{n} of {m}",
+    "suppressed": "Produce nothing",
+    "not_suppressed": "Alarm on their own",
+    "members_hint": "Intrusion zones of any area. A member counts only while its own area is armed, and only detections that would alarm at once count.",
+    "suppress_hint": "Off: each member still alarms on its own, and the group adds its confirmation. On: members do nothing until the group is satisfied — a single sensor facing a real intruder then produces silence.",
+    "window_hint": "Seconds within which the members must detect.",
+    "area_hint": "Where the group is shown.",
+    "no_zones": "No intrusion zones available: each zone can be in one group or pair only.",
+    "members_below": "Members below threshold"
+  },
+  "settings": {
+    "title": "Settings",
+    "chime_title": "Chime",
+    "chime_intro": "Sounds when a zone with the chime switched on opens while its area is not armed — not merely when the house is disarmed. With only the perimeter armed, an internal door still chimes.",
+    "targets_hint": "Media players and sirens.",
+    "no_targets": "No media player or siren found.",
+    "sound_hint": "For media players: a media id or URL, such as media-source://media_source/local/chime.mp3. Sirens simply sound briefly.",
+    "tts_hint": "Used to speak the zone name.",
+    "pick_tts": "Choose…",
+    "volume_hint": "Percent. Empty: leave the player's volume as it is.",
+    "quiet_hint": "No chime in this window, which may cross midnight. Empty: never quiet.",
+    "during_exit_hint": "Off: the door you leave by does not chime while the area counts down.",
+    "switch_hint": "switch.foyer_chime silences it without changing these settings.",
+    "saved": "Saved.",
+    "later": "The other settings arrive in a later update."
   }
 }

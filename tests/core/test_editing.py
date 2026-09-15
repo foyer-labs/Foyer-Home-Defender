@@ -74,12 +74,90 @@ def test_explicit_properties_override_the_preset(config):
     assert result.config.zone(result.id).entry_mode is EntryMode.INSTANT
 
 
-def test_technical_zones_are_refused_until_their_channel_exists(config):
+def test_technical_zones_are_accepted_now_their_channel_exists(config):
+    """Part 1 refused them; the technical channel (§5.5) lifts the refusal."""
     item = {**ZONE_ITEM, "type": ZoneType.TECHNICAL.value}
     result = upsert(
         config, RuntimeState(), "zone", item, trigger_confirmed=True, new_id=new_id
     )
-    assert [p.code for p in result.problems] == ["channel_not_available"]
+    assert result.problems == ()
+    zone = result.config.zone(result.id)
+    assert (zone.channel, zone.always_on, zone.bypassable) == (
+        Channel.TECHNICAL,
+        True,
+        False,
+    )
+
+
+GROUP_ITEM = {
+    "name": "Open plan",
+    "area_id": "ground",
+    "members": ["window", "patio"],
+    "n": 2,
+    "window_seconds": 60,
+}
+
+
+def test_groups_are_created_edited_and_deleted(config):
+    created = upsert(config, RuntimeState(), "group", GROUP_ITEM, new_id=new_id)
+    assert created.problems == ()
+    group = created.config.group(created.id)
+    assert (group.members, group.n, group.suppress_members) == (
+        ("window", "patio"),
+        2,
+        False,
+    )
+    removed = delete(created.config, RuntimeState(), "group", created.id)
+    assert removed.config.groups == ()
+
+
+def test_a_zone_in_a_group_cannot_be_deleted_first(config):
+    created = upsert(config, RuntimeState(), "group", GROUP_ITEM, new_id=new_id)
+    refused = delete(created.config, RuntimeState(), "zone", "window")
+    assert [p.code for p in refused.problems] == ["zone_in_group"]
+
+
+def test_a_cross_zone_partner_cannot_be_deleted_first(config):
+    item = {"id": "window", **ZONE_ITEM, "area_id": "ground", "cross_zone_id": "patio"}
+    item["trigger"] = {"kind": "state", "states": ["on"]}
+    paired = upsert(config, RuntimeState(), "zone", item)
+    assert paired.problems == ()
+    refused = delete(paired.config, RuntimeState(), "zone", "patio")
+    assert [p.code for p in refused.problems] == ["zone_is_cross_partner"]
+
+
+def test_group_edits_are_refused_while_a_member_area_is_armed():
+    world = World()
+    world.arm("night")  # arms the ground floor only
+    item = {**GROUP_ITEM, "area_id": "upstairs", "members": ["bath", "window"]}
+    result = upsert(world.config, world.state, "group", item, new_id=new_id)
+    assert [p.code for p in result.problems] == ["area_not_disarmed"]
+
+
+def test_chime_settings_are_validated(config):
+    from custom_components.foyer.store.editing import update_chime
+
+    chime = {
+        "targets": ["media_player.kitchen"],
+        "mode": "speech",
+        "tts_entity": None,
+        "volume": 140,
+        "quiet_start": "23:00",
+        "quiet_end": None,
+        "during_exit": False,
+    }
+    bad = update_chime(config, RuntimeState(), chime)
+    assert sorted(p.code for p in bad.problems) == [
+        "chime_tts_required",
+        "quiet_hours_incomplete",
+        "volume_out_of_range",
+    ]
+    good = update_chime(
+        config,
+        RuntimeState(),
+        {**chime, "tts_entity": "tts.piper", "volume": 40, "quiet_end": "07:00"},
+    )
+    assert good.config.chime.targets == ("media_player.kitchen",)
 
 
 def test_garbage_is_a_problem_not_an_exception(config):

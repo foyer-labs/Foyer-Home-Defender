@@ -12,6 +12,8 @@ from datetime import datetime
 from typing import Any
 
 from ..core.models import (
+    Acknowledgement,
+    Activation,
     AlarmKind,
     Area,
     AreaRuntime,
@@ -19,10 +21,15 @@ from ..core.models import (
     ArmPolicy,
     BypassReason,
     Channel,
+    ChimeMode,
+    ChimeSettings,
     CodePolicy,
+    Contributor,
     EntryMode,
     EventTrigger,
     FoyerConfig,
+    Group,
+    Incident,
     KeyAction,
     KeyCommand,
     KeyRelease,
@@ -34,6 +41,7 @@ from ..core.models import (
     Scenario,
     Settings,
     StateTrigger,
+    TechnicalAlarm,
     Timer,
     TimerKind,
     TriggerSpec,
@@ -48,8 +56,12 @@ from ..core.models import (
 # zones) are not additive. A Phase 0 build reading this file would treat a key
 # switch or a 24h zone as an ordinary instant zone, so it must refuse instead.
 STORAGE_VERSION = 2
-STORAGE_MINOR_VERSION = 2
+STORAGE_MINOR_VERSION = 3
 
+# The runtime state grows additively and is read with defaults (a 1.1 file
+# from an older build restores as "nothing technical, no incident, chime
+# on"), so its version does not move: Home Assistant's Store would otherwise
+# demand a migration function for a change that needs none.
 STATE_VERSION = 1
 STATE_MINOR_VERSION = 1
 
@@ -80,6 +92,8 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
                 siren_duration=int(data["settings"]["siren_duration"]),
                 arm_hold_timeout=int(data["settings"]["arm_hold_timeout"]),
             ),
+            groups=tuple(group_from_dict(g) for g in data["groups"]),
+            chime=chime_from_dict(data["chime"]),
         )
     except (KeyError, TypeError, ValueError) as err:
         raise ConfigError(f"invalid Foyer configuration: {err!r}") from err
@@ -90,6 +104,7 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
         "areas": [area_to_dict(a) for a in config.areas],
         "zones": [zone_to_dict(z) for z in config.zones],
         "scenarios": [scenario_to_dict(s) for s in config.scenarios],
+        "groups": [group_to_dict(g) for g in config.groups],
         "actions": [
             {
                 "id": a.id,
@@ -103,11 +118,63 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
             "disarm": config.code_policy.disarm,
             "force_arm": config.code_policy.force_arm,
             "change_scenario": config.code_policy.change_scenario,
+            "acknowledge": config.code_policy.acknowledge,
         },
         "settings": {
             "siren_duration": config.settings.siren_duration,
             "arm_hold_timeout": config.settings.arm_hold_timeout,
         },
+        "chime": chime_to_dict(config.chime),
+    }
+
+
+def group_from_dict(g: dict[str, Any]) -> Group:
+    return Group(
+        id=g["id"],
+        name=g["name"],
+        area_id=g["area_id"],
+        members=tuple(g["members"]),
+        n=int(g["n"]),
+        window_seconds=int(g["window_seconds"]),
+        suppress_members=bool(g["suppress_members"]),
+    )
+
+
+def group_to_dict(g: Group) -> dict[str, Any]:
+    return {
+        "id": g.id,
+        "name": g.name,
+        "area_id": g.area_id,
+        "members": list(g.members),
+        "n": g.n,
+        "window_seconds": g.window_seconds,
+        "suppress_members": g.suppress_members,
+    }
+
+
+def chime_from_dict(c: dict[str, Any]) -> ChimeSettings:
+    return ChimeSettings(
+        targets=tuple(c["targets"]),
+        mode=ChimeMode(c["mode"]),
+        sound=c.get("sound") or None,
+        tts_entity=c.get("tts_entity") or None,
+        volume=_opt_int(c.get("volume")),
+        quiet_start=c.get("quiet_start") or None,
+        quiet_end=c.get("quiet_end") or None,
+        during_exit=bool(c["during_exit"]),
+    )
+
+
+def chime_to_dict(c: ChimeSettings) -> dict[str, Any]:
+    return {
+        "targets": list(c.targets),
+        "mode": c.mode.value,
+        "sound": c.sound,
+        "tts_entity": c.tts_entity,
+        "volume": c.volume,
+        "quiet_start": c.quiet_start,
+        "quiet_end": c.quiet_end,
+        "during_exit": c.during_exit,
     }
 
 
@@ -187,6 +254,11 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
             scenario_id=key.get("scenario_id"),
             on_deactivate=KeyRelease(key.get("on_deactivate", "none")),
         ),
+        chime=bool(z["chime"]),
+        cross_zone_id=z.get("cross_zone_id") or None,
+        cross_zone_window=int(z["cross_zone_window"]),
+        trigger_count=int(z["trigger_count"]),
+        trigger_window=int(z["trigger_window"]),
     )
 
 
@@ -217,6 +289,11 @@ def zone_to_dict(z: Zone) -> dict[str, Any]:
             "scenario_id": z.key.scenario_id,
             "on_deactivate": z.key.on_deactivate.value,
         },
+        "chime": z.chime,
+        "cross_zone_id": z.cross_zone_id,
+        "cross_zone_window": z.cross_zone_window,
+        "trigger_count": z.trigger_count,
+        "trigger_window": z.trigger_window,
     }
 
 
@@ -255,6 +332,13 @@ def trigger_to_dict(trigger: TriggerSpec) -> dict[str, Any]:
 
 def _dt(value: str | None) -> datetime | None:
     return None if value is None else datetime.fromisoformat(value)
+
+
+def _required_dt(value: str) -> datetime:
+    parsed = _dt(value)
+    if parsed is None:
+        raise ValueError("missing timestamp")
+    return parsed
 
 
 def _timer_from(data: dict[str, Any] | None) -> Timer | None:
@@ -296,7 +380,93 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
         "active_zones": sorted(state.active_zones),
         "seen_zones": sorted(state.seen_zones),
         "faults": sorted(state.faults),
+        "technical": {
+            zone_id: {
+                "since": alarm.since.isoformat(),
+                "acknowledged_at": _iso(alarm.acknowledged_at),
+                "acknowledged_channel": alarm.acknowledged_channel,
+            }
+            for zone_id, alarm in state.technical.items()
+        },
+        "incident": _incident_to(state.incident),
+        "incident_seq": state.incident_seq,
+        "windows": {
+            key: [
+                {"zone_id": a.zone_id, "at": a.at.isoformat(), "held": a.held}
+                for a in activations
+            ]
+            for key, activations in state.windows.items()
+        },
+        "chime_enabled": state.chime_enabled,
     }
+
+
+def _iso(value: datetime | None) -> str | None:
+    return value.isoformat() if value else None
+
+
+def _incident_to(incident: Incident | None) -> dict[str, Any] | None:
+    if incident is None:
+        return None
+    return {
+        "id": incident.id,
+        "opened_at": incident.opened_at.isoformat(),
+        "contributors": [
+            {
+                "area_id": c.area_id,
+                "zone_id": c.zone_id,
+                "at": c.at.isoformat(),
+                "group_id": c.group_id,
+                "profile_id": c.profile_id,
+                "severity": c.severity,
+            }
+            for c in incident.contributors
+        ],
+        "acknowledged": incident.acknowledged,
+        "acknowledgements": [
+            {"at": a.at.isoformat(), "channel": a.channel, "via": a.via}
+            for a in incident.acknowledgements
+        ],
+        "actions_started": list(incident.actions_started),
+    }
+
+
+def _incident_from(data: dict[str, Any] | None) -> Incident | None:
+    """The open incident survives a restart (INV-3), even if the areas it
+    touched were edited since: its record is what happened, not config."""
+    if data is None:
+        return None
+    opened = _dt(data["opened_at"])
+    assert opened is not None
+    contributors = []
+    for c in data.get("contributors", ()):
+        at = _dt(c["at"])
+        assert at is not None
+        contributors.append(
+            Contributor(
+                area_id=c["area_id"],
+                zone_id=c.get("zone_id"),
+                at=at,
+                group_id=c.get("group_id"),
+                profile_id=c.get("profile_id"),
+                severity=c.get("severity"),
+            )
+        )
+    acknowledgements = []
+    for a in data.get("acknowledgements", ()):
+        at = _dt(a["at"])
+        assert at is not None
+        acknowledgements.append(
+            Acknowledgement(at=at, channel=a.get("channel"), via=a["via"])
+        )
+    return Incident(
+        id=data["id"],
+        opened_at=opened,
+        contributors=tuple(contributors),
+        acknowledged=bool(data.get("acknowledged", False)),
+        acknowledgements=tuple(acknowledgements),
+        actions_started=tuple(data.get("actions_started", ())),
+    )
 
 
 def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
@@ -343,6 +513,30 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 z for z in data.get("seen_zones", ()) if z in zone_ids
             ),
             faults=frozenset(z for z in data.get("faults", ()) if z in zone_ids),
+            technical={
+                zone_id: TechnicalAlarm(
+                    since=_required_dt(alarm["since"]),
+                    acknowledged_at=_dt(alarm.get("acknowledged_at")),
+                    acknowledged_channel=alarm.get("acknowledged_channel"),
+                )
+                for zone_id, alarm in data.get("technical", {}).items()
+                if zone_id in zone_ids
+            },
+            incident=_incident_from(data.get("incident")),
+            incident_seq=int(data.get("incident_seq", 0)),
+            windows={
+                key: tuple(
+                    Activation(
+                        zone_id=a["zone_id"],
+                        at=_required_dt(a["at"]),
+                        held=bool(a.get("held", False)),
+                    )
+                    for a in activations
+                    if a["zone_id"] in zone_ids
+                )
+                for key, activations in data.get("windows", {}).items()
+            },
+            chime_enabled=bool(data.get("chime_enabled", True)),
         )
     except (KeyError, TypeError, ValueError, AssertionError) as err:
         raise ConfigError(f"invalid Foyer runtime state: {err!r}") from err

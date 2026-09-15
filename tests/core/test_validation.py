@@ -52,7 +52,16 @@ def test_the_test_house_is_valid(config):
             "fault_state_as_trigger",
         ),
         ({"area_id": "nowhere"}, "unknown_area"),
-        ({"channel": Channel.TECHNICAL}, "channel_not_available"),
+        ({"channel": Channel.TECHNICAL}, "technical_always_on"),
+        (
+            {"channel": Channel.TECHNICAL, "always_on": True, "chime": True},
+            "intrusion_only",
+        ),
+        ({"chime": True, "always_on": True}, "chime_always_on"),
+        ({"trigger_count": 11}, "count_out_of_range"),
+        ({"trigger_window": 0}, "window_out_of_range"),
+        ({"cross_zone_id": "window"}, "cross_zone_invalid"),
+        ({"cross_zone_id": "nope"}, "cross_zone_invalid"),
         (
             {"always_on": True, "entry_mode": EntryMode.DELAYED},
             "always_on_must_be_instant",
@@ -133,10 +142,7 @@ def test_every_preset_produces_a_zone_the_validator_accepts_or_names(config):
         if zone.channel is Channel.KEY:
             zone = replace(zone, key=KeyAction(KeyCommand.TOGGLE, "night"))
         found = codes(replace(config, zones=(zone,)))
-        if zone_type is ZoneType.TECHNICAL:
-            assert found == {"channel_not_available"}
-        else:
-            assert found == set(), zone_type
+        assert found == set(), zone_type
 
 
 def test_presets_are_plain_json():
@@ -193,3 +199,85 @@ def test_follows_rules(config):
     )
     assert "follows_not_delayed" in codes(with_zone(config, "hall", follows=("nope",)))
     assert validate(with_zone(config, "landing", follows=("door", "garage_door"))) == []
+
+
+# --- verification groups and cross-zone (§4.8) -------------------------------------
+
+
+def with_group(config, **changes):
+    from custom_components.foyer.core.models import Group
+
+    group = Group("open", "Open plan", "ground", ("window", "patio"), 2, 60)
+    return replace(config, groups=(replace(group, **changes),))
+
+
+def test_a_valid_group_and_a_valid_pair(config):
+    assert validate(with_group(config)) == []
+    # Members in different areas are allowed (part 2 decision 9).
+    assert validate(with_group(config, members=("window", "bath"))) == []
+    assert validate(with_zone(config, cross_zone_id="bath")) == []
+
+
+@pytest.mark.parametrize(
+    ("changes", "code"),
+    [
+        ({"members": ("window",)}, "group_members"),
+        ({"members": ("window", "window")}, "group_members"),
+        ({"members": ("window", "nope")}, "group_member_invalid"),
+        ({"n": 3}, "group_threshold"),
+        ({"n": 1}, "group_threshold"),
+        ({"window_seconds": 0}, "window_out_of_range"),
+        ({"area_id": "nowhere"}, "unknown_area"),
+        ({"name": ""}, "name_required"),
+    ],
+)
+def test_group_problems(config, changes, code):
+    assert code in codes(with_group(config, **changes))
+
+
+def test_a_zone_belongs_to_one_group_at_most(config):
+    # In a group and in a cross-zone pair: its activation would count twice.
+    both = with_zone(with_group(config), "window", cross_zone_id="bath")
+    assert "zone_in_two_groups" in codes(both)
+    # Two pairs through the same zone.
+    two_pairs = with_zone(
+        with_zone(config, "window", cross_zone_id="bath"), "patio", cross_zone_id="bath"
+    )
+    assert "zone_in_two_groups" in codes(two_pairs)
+    # A pair declared from both ends is one pair.
+    mutual = with_zone(
+        with_zone(config, "window", cross_zone_id="bath"),
+        "bath",
+        cross_zone_id="window",
+    )
+    assert validate(mutual) == []
+
+
+def test_a_mutual_pair_has_one_window(config):
+    mutual = with_zone(
+        with_zone(config, "window", cross_zone_id="bath"),
+        "bath",
+        cross_zone_id="window",
+        cross_zone_window=90,
+    )
+    assert "cross_zone_window_mismatch" in codes(mutual)
+
+
+def test_chime_targets_must_be_players_or_sirens(config):
+    from custom_components.foyer.core.models import ChimeSettings
+
+    bad = replace(config, chime=ChimeSettings(targets=("light.hall",)))
+    assert "chime_target_invalid" in codes(bad)
+    sound = replace(config, chime=ChimeSettings(targets=("media_player.kitchen",)))
+    assert "chime_sound_required" in codes(sound)
+    siren = replace(config, chime=ChimeSettings(targets=("siren.hall",)))
+    assert validate(siren) == []
+
+
+def test_editing_a_cross_zone_partner_in_an_armed_area_is_refused():
+    world = World()
+    world.arm("night")  # ground armed; bath is upstairs, disarmed
+    paired = with_zone(world.config, "bath", cross_zone_id="window")
+    assert [p.code for p in edit_conflicts(world.config, paired, world.state)] == [
+        "area_not_disarmed"
+    ]

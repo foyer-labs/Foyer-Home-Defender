@@ -7,12 +7,19 @@ this same function with a fabricated snapshot and clock and never execute it.
 
 One call runs in a fixed order, so that the result depends only on its inputs:
 
-1. timers that fell due by ``now`` are processed, whatever the event;
-2. the event's entity change, if any, is applied to the world;
-3. zones whose trigger became active (or fired, for event zones) act;
-4. the event itself is handled;
-5. bypassed zones that have closed rejoin;
-6. faults are reconciled, and each new one is announced once.
+1. verification windows that ran out by ``now`` are emptied;
+2. timers that fell due by ``now`` are processed, whatever the event;
+3. the event's entity change, if any, is applied to the world;
+4. zones whose trigger became active (or fired, for event zones) act;
+5. the event itself is handled;
+6. bypassed zones that have closed rejoin;
+7. faults are reconciled, and each new one is announced once;
+8. the incident closes if it is acknowledged and every area it touched
+   has settled.
+
+Three machines share the call and never touch each other's state: the areas
+(intrusion, §5), the technical channel (§5.5) and the incident (§5.6), which
+records what the areas did but decides nothing for them.
 """
 
 from __future__ import annotations
@@ -20,9 +27,14 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
+from .clock import in_daily_window
 from .models import (
     CUSTOM_BYPASS,
+    AcknowledgeIncident,
+    Acknowledgement,
+    AcknowledgeTechnical,
     ActionIntent,
+    Activation,
     AreaRuntime,
     AreaState,
     ArmAreaRequest,
@@ -31,12 +43,14 @@ from .models import (
     ArmRequest,
     BypassReason,
     Channel,
+    Contributor,
     Decision,
     DisarmRequest,
     EntityState,
     EntryMode,
     Event,
     FoyerConfig,
+    Incident,
     KeyCommand,
     KeyRelease,
     Moment,
@@ -45,8 +59,10 @@ from .models import (
     Reason,
     RuntimeState,
     Scenario,
+    SetChime,
     Startup,
     SystemSnapshot,
+    TechnicalAlarm,
     Tick,
     Timer,
     TimerKind,
@@ -60,8 +76,29 @@ from .triggers import (
     is_unavailable,
     supervision_due,
 )
+from .verification import Verification, all_windows, counter_of, groups
 
 KEY_ZONE_CHANNEL = "key_zone"
+
+# What an intrusion zone's activation does to its area right now (§5.2).
+_TRIGGER = "trigger"
+_START_ENTRY = "start_entry"
+_INHERIT_ENTRY = "inherit_entry"
+_JOIN_ENTRY = "join_entry"
+
+# Occurrences that never carry an incident id, even in an incident's area:
+# the technical channel never joins an intrusion incident (§5.5), and a
+# chime or a restart is not part of one.
+_NOT_INCIDENT = frozenset(
+    {
+        Moment.TECHNICAL_RAISED,
+        Moment.TECHNICAL_ACKNOWLEDGED,
+        Moment.TECHNICAL_CLEARED,
+        Moment.CHIME,
+        Moment.CHIME_SWITCHED,
+        Moment.HA_RESTARTED,
+    }
+)
 
 
 def decide(
@@ -72,6 +109,7 @@ def decide(
 ) -> Decision:
     """Return what should happen in response to ``event``. Executes nothing."""
     run = _Run(snapshot, config, now)
+    run.expire_windows()
     run.process_due_timers()
 
     changed: str | None = None
@@ -94,6 +132,12 @@ def decide(
         outcome = run.arm_area(event)
     elif isinstance(event, DisarmRequest):
         outcome = run.disarm(event.area_ids, event.code, event.channel)
+    elif isinstance(event, AcknowledgeIncident):
+        outcome = run.acknowledge_incident(event.code, event.channel)
+    elif isinstance(event, AcknowledgeTechnical):
+        outcome = run.acknowledge_technical(event.code, event.channel)
+    elif isinstance(event, SetChime):
+        run.set_chime(event.enabled, event.channel)
     elif isinstance(event, Startup):
         run.occur(
             Moment.HA_RESTARTED,
@@ -109,6 +153,7 @@ def decide(
     run.rejoin_closed_bypasses()
     if not snapshot.settling or isinstance(event, Startup):
         run.reconcile_faults()
+    run.close_incident_if_settled()
     return run.decision(outcome)
 
 
@@ -160,10 +205,15 @@ def master_state(
 def next_wakeup(
     snapshot: SystemSnapshot, config: FoyerConfig, now: datetime
 ) -> datetime | None:
-    """When the scheduler must next send a Tick: a timer or a supervision lapse."""
+    """When the scheduler must next send a Tick: a timer, a verification window
+    running out, or a supervision lapse."""
     dues: list[datetime] = [
         rt.timer.due for rt in snapshot.state.areas.values() if rt.timer is not None
     ]
+    windows = all_windows(config)
+    for key, activations in snapshot.state.windows.items():
+        if (window := windows.get(key)) is not None:
+            dues.extend(window.expires_at(a) for a in activations)
     for zone in config.zones:
         if not zone.enabled:
             continue
@@ -213,8 +263,27 @@ class _Run:
         self.seen = set(state.seen_zones & zone_ids)
         self.faults = frozenset(state.faults & zone_ids)
         self.entities: dict[str, EntityState] = dict(snapshot.entities)
+        self.timezone = snapshot.timezone
         self.occurrences: list[Occurrence] = []
         self.new_bypasses: list[str] = []
+        # The technical channel: never read or written by the area machine.
+        self.technical: dict[str, TechnicalAlarm] = {
+            z: a for z, a in state.technical.items() if z in zone_ids
+        }
+        self.incident: Incident | None = state.incident
+        self.incident_seq = state.incident_seq
+        self.chime_enabled = state.chime_enabled
+        # Verification windows (§4.8): one engine for groups, cross-zone pairs
+        # and trigger counts. A window whose setting is gone is dropped.
+        self.verifications: dict[str, Verification] = all_windows(config)
+        self.group_of: dict[str, Verification] = {
+            member: group for group in groups(config) for member in group.members
+        }
+        self.windows: dict[str, tuple[Activation, ...]] = {}
+        for key, activations in state.windows.items():
+            kept = tuple(a for a in activations if a.zone_id in zone_ids)
+            if key in self.verifications and kept:
+                self.windows[key] = kept
 
     # --- world ----------------------------------------------------------------
 
@@ -228,11 +297,114 @@ class _Run:
         return zone.channel is Channel.INTRUSION and zone.id in self.active
 
     def occur(self, moment: Moment, **kwargs) -> None:
+        """Record an occurrence, tagged with the open incident when related.
+
+        An occurrence belongs to the incident when it happens in an area the
+        incident touched (§5.6: the id goes on every related log row), except
+        the technical channel's, which never joins one (§5.5).
+        """
+        incident = self.incident
+        if (
+            incident is not None
+            and "incident_id" not in kwargs
+            and moment not in _NOT_INCIDENT
+            and (
+                moment.value.startswith("incident_")
+                or kwargs.get("area_id") in incident.area_ids
+            )
+        ):
+            kwargs["incident_id"] = incident.id
         self.occurrences.append(Occurrence(moment=moment, **kwargs))
 
     def set_area(self, area_id: str, **changes) -> AreaRuntime:
         self.areas[area_id] = replace(self.areas[area_id], **changes)
         return self.areas[area_id]
+
+    # --- verification windows (§4.2, §4.8) ----------------------------------------
+
+    def expire_windows(self) -> None:
+        """Activations older than their window no longer count."""
+        for key, activations in list(self.windows.items()):
+            window = self.verifications[key]
+            kept = tuple(a for a in activations if not window.expired(a, self.now))
+            if len(kept) == len(activations):
+                continue
+            if kept:
+                self.windows[key] = kept
+            else:
+                del self.windows[key]
+            gone = tuple(dict.fromkeys(a.zone_id for a in activations if a not in kept))
+            self.occur(
+                Moment.VERIFICATION_EXPIRED,
+                area_id=window.area_id,
+                zone_ids=gone,
+                group_id=window.group_id,
+                detail=_window_detail(window, kept),
+            )
+
+    def record(self, window: Verification, zone: Zone) -> tuple[Activation, ...] | None:
+        """Add an activation; return the window's activations if it is now
+        satisfied (and empty it), None if it is still short of its threshold."""
+        activations = (
+            *self.windows.get(window.key, ()),
+            Activation(zone.id, self.now, held=window.suppress),
+        )
+        satisfied = window.count(activations) >= window.n
+        if satisfied:
+            self.windows.pop(window.key, None)
+        else:
+            self.windows[window.key] = activations
+        self.occur(
+            Moment.VERIFICATION_SATISFIED if satisfied else Moment.VERIFICATION_PENDING,
+            area_id=window.area_id,
+            zone_id=zone.id,
+            zone_ids=tuple(dict.fromkeys(a.zone_id for a in activations)),
+            group_id=window.group_id,
+            detail=_window_detail(window, activations),
+        )
+        return activations if satisfied else None
+
+    def verify(self, zone: Zone) -> tuple[bool, str | None]:
+        """Whether an activation that would trigger may act now (§4.2, §4.8).
+
+        The zone's own trigger count comes first: below it the zone does
+        nothing. Then its group: a member acts on its own unless the group
+        suppresses members; when the group is satisfied, members it held back
+        fire too. Returns (act, group id for the record).
+        """
+        counter = counter_of(zone)
+        if counter is not None and self.record(counter, zone) is None:
+            return False, None
+        group = self.group_of.get(zone.id)
+        if group is None:
+            return True, None
+        activations = self.record(group, zone)
+        if activations is None:
+            return not group.suppress, group.group_id
+        held = dict.fromkeys(a.zone_id for a in activations if a.held)
+        held.pop(zone.id, None)
+        for held_id in held:
+            member = self.config.zone(held_id)
+            if member is None or member.id in self.bypassed:
+                continue
+            rt = self.areas.get(member.area_id)
+            if rt is not None and self.effect(member, rt) is not None:
+                self.trigger(member.area_id, member, group_id=group.group_id)
+        return True, group.group_id
+
+    def forget_activations(self, area_id: str) -> None:
+        """An area that stops monitoring drops its zones' pending activations:
+        an activation counts only while its area watches the zone. 24h zones
+        are watched whatever the area does, so theirs stay."""
+        watched = {
+            z.id for z in self.config.zones if z.area_id == area_id and not z.always_on
+        }
+        for key, activations in list(self.windows.items()):
+            kept = tuple(a for a in activations if a.zone_id not in watched)
+            if not kept:
+                del self.windows[key]
+            elif len(kept) != len(activations):
+                self.windows[key] = kept
 
     # --- timers ---------------------------------------------------------------
 
@@ -349,37 +521,146 @@ class _Run:
             if zone.key is not None:
                 self.key_command(zone, zone.key.on_activate)
             return
+        if zone.channel is Channel.TECHNICAL:
+            # Live whatever the areas are doing, bypass or not (§5.5).
+            self.technical_raised(zone)
+            return
         if zone.channel is not Channel.INTRUSION or zone.id in self.bypassed:
             return
         rt = self.areas.get(zone.area_id)
         if rt is None:
             return
+        effect = self.effect(zone, rt)
+        if effect is None:
+            self.chime(zone, rt)
+        elif effect is _TRIGGER:
+            act, group_id = self.verify(zone)
+            if act:
+                self.trigger(zone.area_id, zone, group_id=group_id)
+        elif effect is _START_ENTRY:
+            self.start_entry(zone.area_id, zone)
+        elif effect is _INHERIT_ENTRY:
+            inherited = self.followed_window(zone)
+            assert inherited is not None
+            self.inherit_entry(zone.area_id, zone, *inherited)
+        else:
+            # Delayed or follower inside the entry window: it inherits the
+            # time that remains, it does not restart it.
+            self.set_area(zone.area_id, causes=(*rt.causes, zone.id))
+
+    def effect(self, zone: Zone, rt: AreaRuntime) -> str | None:
+        """What an intrusion zone's activation does to its area now (§5.2).
+
+        None when the area does not monitor the zone (disarmed or arming).
+        Only ``_TRIGGER`` is an alarm at once, and only it goes through
+        verification: an activation the entry delay absorbs acts normally
+        and never counts towards a group or a trigger count, so coming home
+        can never satisfy one (part 2 decisions 6 and 12).
+        """
         if zone.always_on or rt.state is AreaState.TRIGGERED:
-            self.trigger(zone.area_id, zone)
-        elif rt.state is AreaState.ARMED:
+            return _TRIGGER
+        if rt.state is AreaState.ARMED:
             if zone.entry_mode is EntryMode.DELAYED:
-                self.start_entry(zone.area_id, zone)
-            elif zone.entry_mode is EntryMode.FOLLOWER and (
-                inherited := self.followed_window(zone)
-            ):
-                self.inherit_entry(zone.area_id, zone, *inherited)
-            else:
-                # A follower with no entry window to inherit is instant (§5.2).
-                self.trigger(zone.area_id, zone)
-        elif rt.state is AreaState.ENTRY:
-            if zone.entry_mode is EntryMode.INSTANT:
-                # The entry delay protects the entry route, not other zones.
-                self.trigger(zone.area_id, zone)
-            else:
-                # Delayed or follower inside the entry window: it inherits the
-                # time that remains, it does not restart it.
-                self.set_area(zone.area_id, causes=(*rt.causes, zone.id))
-        # Disarmed or arming: not monitored. Chime is part 2.
+                return _START_ENTRY if self.config.entry_delay(zone) > 0 else _TRIGGER
+            if zone.entry_mode is EntryMode.FOLLOWER and self.followed_window(zone):
+                return _INHERIT_ENTRY
+            # A follower with no entry window to inherit is instant (§5.2).
+            return _TRIGGER
+        if rt.state is AreaState.ENTRY:
+            # The entry delay protects the entry route, not other zones.
+            return _TRIGGER if zone.entry_mode is EntryMode.INSTANT else _JOIN_ENTRY
+        return None
+
+    def chime(self, zone: Zone, rt: AreaRuntime) -> None:
+        """A zone opened where nothing watches it (§6.6).
+
+        "Not monitored" is read per area, however it came to be armed or not
+        (decision 4 allows one area armed on its own). An area counting down
+        its exit delay chimes only if the user chose so (part 2 decision 7).
+        """
+        settings = self.config.chime
+        if not zone.chime or not self.chime_enabled or not settings.targets:
+            return
+        if rt.state is AreaState.ARMING and not settings.during_exit:
+            return
+        if (
+            settings.quiet_start
+            and settings.quiet_end
+            and in_daily_window(
+                self.now, self.timezone, settings.quiet_start, settings.quiet_end
+            )
+        ):
+            return
+        self.occur(Moment.CHIME, area_id=zone.area_id, zone_id=zone.id)
+
+    def set_chime(self, enabled: bool, channel: str) -> None:
+        if enabled != self.chime_enabled:
+            self.chime_enabled = enabled
+            self.occur(
+                Moment.CHIME_SWITCHED,
+                channel=channel,
+                detail={"enabled": "true" if enabled else "false"},
+            )
+
+    # --- technical channel (§5.5) ------------------------------------------------
+
+    def technical_raised(self, zone: Zone) -> None:
+        """A technical zone fired. Its alarm stands until acknowledged and back
+        to normal; a repeat before then is announced again, not reset."""
+        alarm = self.technical.get(zone.id)
+        if alarm is None or alarm.acknowledged:
+            self.technical[zone.id] = TechnicalAlarm(since=self.now)
+        self.occur(
+            Moment.TECHNICAL_RAISED,
+            area_id=zone.area_id,
+            zone_id=zone.id,
+            detail={"repeat": "true"} if alarm is not None else {},
+        )
+
+    def technical_normal(self, zone: Zone) -> None:
+        """Back to normal: that clears the alarm only once acknowledged."""
+        alarm = self.technical.get(zone.id)
+        if alarm is not None and alarm.acknowledged:
+            self.clear_technical(zone.id)
+
+    def clear_technical(self, zone_id: str) -> None:
+        del self.technical[zone_id]
+        zone = self.config.zone(zone_id)
+        self.occur(
+            Moment.TECHNICAL_CLEARED,
+            area_id=zone.area_id if zone else None,
+            zone_id=zone_id,
+        )
+
+    def acknowledge_technical(self, code: str | None, channel: str) -> _Outcome:
+        """One acknowledgement for every technical alarm pending now (part 2
+        decision 11). Disarming has no authority here: only this clears it."""
+        pending = [z for z, alarm in self.technical.items() if not alarm.acknowledged]
+        if not pending:
+            return _reject(Reason.NOTHING_TO_ACKNOWLEDGE)
+        if (reason := self.check_code(Operation.ACKNOWLEDGE)) is not None:
+            return _reject(reason)
+        for zone_id in pending:
+            self.technical[zone_id] = replace(
+                self.technical[zone_id],
+                acknowledged_at=self.now,
+                acknowledged_channel=channel,
+            )
+        self.occur(
+            Moment.TECHNICAL_ACKNOWLEDGED, zone_ids=tuple(pending), channel=channel
+        )
+        for zone_id in pending:
+            if zone_id not in self.active:
+                self.clear_technical(zone_id)
+        return _ACCEPTED
 
     def zone_deactivated(self, zone: Zone) -> None:
         if zone.channel is Channel.KEY:
             if zone.key is not None and zone.key.on_deactivate is KeyRelease.DISARM:
                 self.key_command(zone, KeyCommand.DISARM)
+            return
+        if zone.channel is Channel.TECHNICAL:
+            self.technical_normal(zone)
             return
         rt = self.areas.get(zone.area_id)
         if (
@@ -458,13 +739,21 @@ class _Run:
     # --- alarm transitions ------------------------------------------------------
 
     def trigger(
-        self, area_id: str, zone: Zone | None, detail: dict[str, str] | None = None
+        self,
+        area_id: str,
+        zone: Zone | None,
+        detail: dict[str, str] | None = None,
+        group_id: str | None = None,
     ) -> None:
         rt = self.areas[area_id]
         zone_id = zone.id if zone else None
         if rt.state is AreaState.TRIGGERED:
             if zone_id and zone_id not in rt.causes:
                 self.set_area(area_id, causes=(*rt.causes, zone_id))
+                # Joins the incident: the zone is added, nothing restarts.
+                self.announce_incident(
+                    area_id, *self.join_incident(area_id, (zone_id,), group_id)
+                )
             return
         if rt.state is AreaState.DISARMED:
             resume = AreaState.DISARMED
@@ -486,13 +775,118 @@ class _Run:
             resume_timer=rt.timer if resume is AreaState.ARMING else None,
             causes=causes,
         )
+        # The incident exists before the occurrence, so the trigger carries
+        # its id; the entry route that led here contributes too.
+        joined = self.join_incident(area_id, causes, group_id, group_zone=zone_id)
         self.occur(
             Moment.TRIGGERED,
             area_id=area_id,
             zone_id=zone_id,
             scenario_id=rt.scenario_id,
+            group_id=group_id,
             detail={"kind": zone.alarm_kind.value if zone else "", **(detail or {})},
         )
+        self.announce_incident(area_id, *joined)
+
+    # --- incidents (§5.6) -----------------------------------------------------------
+
+    def join_incident(
+        self,
+        area_id: str,
+        zone_ids: tuple[str, ...],
+        group_id: str | None,
+        group_zone: str | None = None,
+    ) -> tuple[bool, tuple[str, ...]]:
+        """Open the incident, or add to it. Returns (opened, new zones).
+
+        The first intrusion trigger opens it; every later one joins it. A zone
+        joining after an acknowledgement clears it: someone who acknowledged
+        what looked like the cat must hear that a second zone went (part 2
+        decision 8). The history of acknowledgements is kept.
+        """
+        opened = self.incident is None
+        if self.incident is None:
+            self.incident_seq += 1
+            self.incident = Incident(
+                id=f"{self.now:%Y%m%d-%H%M%S}-{self.incident_seq}",
+                opened_at=self.now,
+            )
+        incident = self.incident
+        known = {(c.area_id, c.zone_id) for c in incident.contributors}
+        new = [
+            Contributor(
+                area_id=area_id,
+                zone_id=z,
+                at=self.now,
+                group_id=group_id if group_zone is None or z == group_zone else None,
+            )
+            for z in (zone_ids or (None,))
+            if (area_id, z) not in known
+        ]
+        if new:
+            self.incident = replace(
+                incident,
+                contributors=(*incident.contributors, *new),
+                acknowledged=False,
+            )
+        return opened, tuple(c.zone_id for c in new if c.zone_id is not None)
+
+    def announce_incident(
+        self, area_id: str, opened: bool, new_zones: tuple[str, ...]
+    ) -> None:
+        incident = self.incident
+        assert incident is not None
+        if opened:
+            self.occur(
+                Moment.INCIDENT_OPENED, area_id=area_id, zone_ids=incident.zone_ids
+            )
+        elif new_zones:
+            self.occur(
+                Moment.INCIDENT_JOINED,
+                area_id=area_id,
+                zone_ids=new_zones,
+                detail={"incident_zones": ",".join(incident.zone_ids)},
+            )
+
+    def acknowledge(self, channel: str | None, via: str) -> None:
+        incident = self.incident
+        assert incident is not None
+        self.incident = replace(
+            incident,
+            acknowledged=True,
+            acknowledgements=(
+                *incident.acknowledgements,
+                Acknowledgement(at=self.now, channel=channel, via=via),
+            ),
+        )
+        self.occur(
+            Moment.INCIDENT_ACKNOWLEDGED,
+            zone_ids=incident.zone_ids,
+            channel=channel,
+            detail={"via": via},
+        )
+
+    def acknowledge_incident(self, code: str | None, channel: str) -> _Outcome:
+        """One acknowledgement acknowledges the whole incident (§5.6)."""
+        if self.incident is None or self.incident.acknowledged:
+            return _reject(Reason.NOTHING_TO_ACKNOWLEDGE)
+        if (reason := self.check_code(Operation.ACKNOWLEDGE)) is not None:
+            return _reject(reason)
+        self.acknowledge(channel, "acknowledge")
+        return _ACCEPTED
+
+    def close_incident_if_settled(self) -> None:
+        """Closed once acknowledged and every area it touched is disarmed or
+        back to armed; a trigger after that opens a new incident (§5.6)."""
+        incident = self.incident
+        if incident is None or not incident.acknowledged:
+            return
+        settled = (AreaState.DISARMED, AreaState.ARMED)
+        if all(
+            self.areas.get(a, AreaRuntime()).state in settled for a in incident.area_ids
+        ):
+            self.occur(Moment.INCIDENT_CLOSED, zone_ids=incident.zone_ids)
+            self.incident = None
 
     def followed_window(self, zone: Zone) -> tuple[Timer, str] | None:
         """The running entry window, in another area, of a zone this follows.
@@ -816,6 +1210,9 @@ class _Run:
         return _ACCEPTED
 
     def disarm_area(self, area_id: str, channel: str | None) -> None:
+        """Disarm one area. Disarming an area the incident touched is also its
+        acknowledgement (§7.2, part 2 decision 3). It never touches the
+        technical channel (§5.5)."""
         rt = self.areas[area_id]
         self.occur(
             Moment.DISARMED,
@@ -825,6 +1222,13 @@ class _Run:
             channel=channel,
             detail={"from": rt.state.value},
         )
+        incident = self.incident
+        if (
+            incident is not None
+            and not incident.acknowledged
+            and area_id in incident.area_ids
+        ):
+            self.acknowledge(channel, "disarm")
         self.clear_area(area_id)
 
     def clear_area(self, area_id: str) -> None:
@@ -832,6 +1236,7 @@ class _Run:
         self.areas[area_id] = AreaRuntime()
         for zone in self.config.zones_in((area_id,)):
             self.bypassed.pop(zone.id, None)
+        self.forget_activations(area_id)
         self.refresh_active_scenario()
 
     def refresh_active_scenario(self) -> None:
@@ -855,6 +1260,11 @@ class _Run:
             active_zones=frozenset(self.active),
             seen_zones=frozenset(self.seen),
             faults=self.faults,
+            technical=self.technical,
+            incident=self.incident,
+            incident_seq=self.incident_seq,
+            windows=self.windows,
+            chime_enabled=self.chime_enabled,
         )
         occurrences = tuple(self.occurrences)
         return Decision(
@@ -913,4 +1323,37 @@ def _intents(
                     },
                 )
             )
+    chime = config.chime
+    for occurrence in occurrences:
+        if occurrence.moment is not Moment.CHIME or occurrence.zone_id is None:
+            continue
+        # The Decision carries everything the executor needs: it never reads
+        # the configuration to find out where or how to play (INV-1).
+        intents.append(
+            ActionIntent(
+                action_id="chime",
+                kind="chime",
+                moment=Moment.CHIME,
+                placeholders={"zone": zones.get(occurrence.zone_id, "")},
+                params={
+                    "targets": chime.targets,
+                    "mode": chime.mode.value,
+                    "sound": chime.sound,
+                    "tts_entity": chime.tts_entity,
+                    "volume": chime.volume,
+                },
+            )
+        )
     return tuple(intents)
+
+
+def _window_detail(
+    window: Verification, activations: tuple[Activation, ...]
+) -> dict[str, str]:
+    """What the trace shows: "Group X: 1 of 2 within 60 s" (§4.8)."""
+    return {
+        "verification": window.kind,
+        "count": str(window.count(activations)),
+        "n": str(window.n),
+        "window": str(window.window),
+    }

@@ -76,7 +76,7 @@ def test_entry_delay_expiring_triggers():
     assert rt.memory
     assert rt.timer.kind is TimerKind.SIREN
     assert rt.causes == ("door",)
-    assert decision.moments == (Moment.TRIGGERED,)
+    assert decision.moments == (Moment.TRIGGERED, Moment.INCIDENT_OPENED)
     assert decision.occurrences[0].detail["cause"] == "entry_expired"
 
 
@@ -201,7 +201,8 @@ def test_later_triggers_join_without_restarting_the_siren():
     rt = world.area("ground")
     assert rt.timer.due == due
     assert rt.causes == ("window", "hall")
-    assert decision.moments == ()
+    # It joins the incident; nothing is triggered again.
+    assert decision.moments == (Moment.INCIDENT_JOINED,)
 
 
 def test_scenario_siren_override_and_global_default():

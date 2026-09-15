@@ -163,6 +163,7 @@ class World:
         self.config = config or make_house()
         self.now = NOW
         self.settling = False
+        self.timezone = UTC
         self.last: Decision | None = None
         self.state = RuntimeState(
             areas={a.id: AreaRuntime() for a in self.config.areas}
@@ -177,7 +178,7 @@ class World:
     # --- driving -----------------------------------------------------------------
 
     def snapshot(self) -> SystemSnapshot:
-        return SystemSnapshot(self.state, self.entities, self.settling)
+        return SystemSnapshot(self.state, self.entities, self.settling, self.timezone)
 
     def send(self, event: Event) -> Decision:
         decision = decide(self.snapshot(), event, self.config, self.now)

@@ -182,6 +182,7 @@ def test_migration_keeps_the_code_policy_and_adds_the_required_notifications():
         Moment.ZONE_FAULT,
         Moment.ARM_FAILED,
         Moment.ZONE_BYPASSED,
+        Moment.TECHNICAL_RAISED,  # added by 2.2 -> 2.3 (part 2 decision 10)
     }
 
 
@@ -313,3 +314,139 @@ def test_alpha_1_document_migrates_with_followers_unchanged():
     from custom_components.foyer.core.validation import validate
 
     assert validate(config) == []
+
+
+# A document exactly as 0.1.0-alpha.3 (schema 2.2) wrote .storage/foyer.config.
+ALPHA_3_DOCUMENT = {
+    "areas": [
+        {
+            "id": "a1",
+            "name": "Perimetro",
+            "ha_state_when_armed": "armed_away",
+            "default_entry_delay": 30,
+            "default_exit_delay": 30,
+        },
+        {
+            "id": "a2",
+            "name": "Interni",
+            "ha_state_when_armed": "armed_home",
+            "default_entry_delay": 30,
+            "default_exit_delay": 30,
+        },
+    ],
+    "zones": [
+        {
+            **ALPHA_1_ZONE,
+            "id": "door",
+            "name": "Porta",
+            "entity_id": "binary_sensor.porta",
+            "type": "delayed",
+            "entry_mode": "delayed",
+            "follows": [],
+        },
+        {**ALPHA_1_ZONE, "area_id": "a2", "follows": ["door"]},
+    ],
+    "scenarios": [
+        {
+            "id": "s1",
+            "name": "Fuori casa",
+            "areas": ["a1", "a2"],
+            "ha_master_state": "armed_away",
+            "icon": None,
+            "exit_delay_override": None,
+            "siren_duration_override": None,
+        }
+    ],
+    "actions": [
+        {
+            "id": "n1",
+            "kind": "notification",
+            "moments": [
+                "arm_failed",
+                "armed",
+                "disarmed",
+                "zone_bypassed",
+                "zone_fault",
+            ],
+        }
+    ],
+    "code_policy": {
+        "arm": False,
+        "disarm": False,
+        "force_arm": False,
+        "change_scenario": False,
+    },
+    "settings": {"siren_duration": 180, "arm_hold_timeout": 300},
+}
+
+
+def test_alpha_3_document_migrates_to_part_2_changing_nothing_that_works():
+    """2.2 -> 2.3: no groups, no cross-zone, one activation, no chime."""
+    from custom_components.foyer.core.models import ChimeSettings, CodePolicy
+    from custom_components.foyer.core.validation import validate
+
+    before = json.dumps(ALPHA_3_DOCUMENT, sort_keys=True)
+    config = config_from_dict(migrate((2, 2), CURRENT, ALPHA_3_DOCUMENT))
+    assert json.dumps(ALPHA_3_DOCUMENT, sort_keys=True) == before  # input untouched
+
+    assert validate(config) == []
+    assert config.groups == ()
+    assert config.chime == ChimeSettings()
+    assert config.code_policy == CodePolicy()
+    for zone in config.zones:
+        assert (zone.chime, zone.cross_zone_id, zone.trigger_count) == (False, None, 1)
+    assert config.zone("hall").follows == ("door",)
+    # The one addition on purpose: a technical alarm is announced (decision 10).
+    assert config.actions[0].moments == {
+        Moment.ARMED,
+        Moment.DISARMED,
+        Moment.ZONE_FAULT,
+        Moment.ARM_FAILED,
+        Moment.ZONE_BYPASSED,
+        Moment.TECHNICAL_RAISED,
+    }
+    assert config_from_dict(config_to_dict(config)) == config
+
+
+def test_groups_and_chime_round_trip(config):
+    from dataclasses import replace
+
+    from custom_components.foyer.core.models import ChimeMode, ChimeSettings, Group
+
+    richer = replace(
+        config,
+        groups=(Group("g", "Open plan", "ground", ("window", "patio"), 2, 45, True),),
+        chime=ChimeSettings(
+            targets=("media_player.kitchen", "siren.hall"),
+            mode=ChimeMode.SPEECH,
+            tts_entity="tts.piper",
+            volume=35,
+            quiet_start="23:00",
+            quiet_end="07:00",
+            during_exit=True,
+        ),
+        zones=tuple(
+            replace(z, chime=True, trigger_count=2, trigger_window=30)
+            if z.id == "window"
+            else replace(z, cross_zone_id="bath")
+            if z.id == "hall"
+            else z
+            for z in config.zones
+        ),
+    )
+    assert config_from_dict(config_to_dict(richer)) == richer
+
+
+def test_an_older_state_file_restores_with_safe_defaults(config):
+    """A foyer.state written before part 2 has none of the new keys."""
+    world = World()
+    world.arm("away")
+    document = state_to_dict(world.state)
+    for key in ("technical", "incident", "incident_seq", "windows", "chime_enabled"):
+        del document[key]
+
+    state = state_from_dict(document, config)
+    assert state.technical == {} and state.windows == {}
+    assert state.incident is None and state.incident_seq == 0
+    assert state.chime_enabled is True
+    assert state.areas == world.state.areas
