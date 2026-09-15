@@ -240,7 +240,7 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `alarm_kind` | enum | `intrusion` \| `tamper` \| `panic` — what an intrusion trigger means, for events and the log |
 | `trigger` | TriggerSpec | how "triggered" is determined — see 4.4 |
 | `entry_delay` | seconds \| null | null = inherit from area |
-| `arm_policy` | enum | `block` (default) \| `auto_bypass` \| `arm_after_closing` \| `ignore` — what happens if open at arming. `arm_after_closing` holds the area in `arming` and completes the moment the zone closes, for the person who presses arm and *then* pulls the patio door shut |
+| `arm_policy` | enum | `block` (default) \| `auto_bypass` \| `arm_after_closing` \| `ignore` — what happens if open at arming. `arm_after_closing` holds the area in `arming` once the exit delay has elapsed and completes the moment the zone closes — both conditions — for the person who presses arm and *then* pulls the patio door shut; if the zone is still open `arm_hold_timeout` after the exit delay, arming fails as for `block` |
 | `arm_hold_timeout` | seconds \| null | only with `arm_after_closing`: how long after the exit delay the zone may stay open before arming fails as `block`; null = the global default (300 s, bounds 60–1800) |
 | `chime` | bool | sound a chime when this zone opens while it is **not monitored by the active scenario** (§6.5) |
 | `group_id` | uuid \| null | membership of an N-of-M verification group (§4.8) |
@@ -1617,3 +1617,4 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 42 | Switching scenario disarms what only the old one armed, and never silences an alarm | A scenario defines what is armed; a switch that left the old areas armed would not be a switch |
 | 43 | The master reports `armed_custom_bypass` whenever the armed set differs from the active scenario | HomeKit and voice assistants must not be told "night" when what is armed is not Night |
 | 44 | A key zone's disarm and toggle act on every area | A key has no area to choose; it behaves like the master |
+| 45 | `arm_after_closing` waits for the exit delay and the closure, with a per-zone cap | Completing on closure alone would arm while the person is still walking to the other door; holding forever leaves a house that believes it is arming and protects nothing |
