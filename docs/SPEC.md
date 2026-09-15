@@ -234,11 +234,15 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `name` | str | |
 | `entity_id` | str | any domain: `binary_sensor`, `sensor`, `cover`, `lock`, `switch`, `input_boolean`, `device_tracker`, `person`, `event`, `tag` |
 | `area_id` | uuid | exactly one area |
-| `type` | enum | preset, see 4.3 |
+| `type` | enum | preset, see 4.3 — a label recording which preset the zone started from; the engine never reads it |
+| `channel` | enum | `intrusion` \| `technical` \| `key` — which machine the zone feeds: the intrusion state machine, the technical channel (§5.5), or arming commands (§4.7) |
+| `entry_mode` | enum | `instant` \| `delayed` \| `follower` — what an intrusion zone does when it triggers in an armed area (§5.2) |
+| `alarm_kind` | enum | `intrusion` \| `tamper` \| `panic` — what an intrusion trigger means, for events and the log |
 | `trigger` | TriggerSpec | how "triggered" is determined — see 4.4 |
 | `entry_delay` | seconds \| null | null = inherit from area |
 | `exit_delay` | seconds \| null | null = inherit from area |
 | `arm_policy` | enum | `block` (default) \| `auto_bypass` \| `arm_after_closing` \| `ignore` — what happens if open at arming. `arm_after_closing` holds the area in `arming` and completes the moment the zone closes, for the person who presses arm and *then* pulls the patio door shut |
+| `arm_hold_timeout` | seconds \| null | only with `arm_after_closing`: how long after the exit delay the zone may stay open before arming fails as `block`; null = the global default (300 s, bounds 60–1800) |
 | `chime` | bool | sound a chime when this zone opens while it is **not monitored by the active scenario** (§6.5) |
 | `group_id` | uuid \| null | membership of an N-of-M verification group (§4.8) |
 | `bypassable` | bool | may the user manually exclude it |
@@ -248,6 +252,7 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `trigger_window` | seconds | |
 | `cross_zone_id` | uuid \| null | require a second zone to trigger within `cross_zone_window` |
 | `cross_zone_window` | seconds | |
+| `allow_arm_when_faulted` | bool | default false; a zone in fault does not block arming (§5.4, INV-4) |
 | `supervision_timeout` | seconds \| null | no state change within this window ⇒ fault (INV-4) |
 | `battery_entity_id` | str \| null | optional, for diagnostics and low-battery faults |
 | `response_profile_id` | uuid \| null | null = inherit from area |
@@ -256,7 +261,10 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 ### 4.3 Zone types (presets)
 
 Types are **UI sugar only**. They pre-fill the properties above; the engine reads
-only properties. Every property remains editable after choosing a type.
+only properties. Every property remains editable after choosing a type. The
+table below says which properties each type sets; validation rejects
+combinations that make no sense (an always-on zone with an entry delay, a key
+zone that is always on).
 
 The division that matters is **not** "always on or not" — it is **intrusion or
 non-intrusion**. Tamper and panic are security events; smoke, gas and flood have
@@ -269,16 +277,16 @@ nothing to do with a burglary and must never reach the intrusion state machine
 | `technical` | **technical** — separate channel, separate entities, separate acknowledgement |
 | `key` | neither: it commands, it does not alarm |
 
-| Type | Pre-filled behaviour |
-|---|---|
-| `instant` | fires immediately when the area is armed |
-| `delayed` | grants entry delay (front door) |
-| `follower` | inherits the entry delay if it triggers *after* a delayed zone in the same area within the entry window; instant otherwise (hallway PIR) |
-| `24h` | `always_on = true`; fires even when disarmed |
-| `tamper` | `always_on = true`, dedicated tamper semantics and events |
-| `technical` | `always_on = true`, non-intrusion alarm (smoke, gas, flood) |
-| `panic` | `always_on = true`, `silent` configurable, manual activation |
-| `key` | does **not** trigger; its state change arms or disarms — see 4.7 |
+| Type | Pre-filled behaviour | Properties it sets |
+|---|---|---|
+| `instant` | fires immediately when the area is armed | `channel=intrusion`, `entry_mode=instant` |
+| `delayed` | grants entry delay (front door) | `channel=intrusion`, `entry_mode=delayed` |
+| `follower` | inherits the entry delay if it triggers *after* a delayed zone in the same area within the entry window; instant otherwise (hallway PIR) | `channel=intrusion`, `entry_mode=follower` |
+| `24h` | `always_on = true`; fires even when disarmed | `channel=intrusion`, `always_on=true`, `bypassable=false` |
+| `tamper` | `always_on = true`, dedicated tamper semantics and events | `channel=intrusion`, `alarm_kind=tamper`, `always_on=true`, `bypassable=false` |
+| `technical` | `always_on = true`, non-intrusion alarm (smoke, gas, flood) | `channel=technical`, `always_on=true`, `bypassable=false` |
+| `panic` | `always_on = true`, `silent` configurable, manual activation | `channel=intrusion`, `alarm_kind=panic`, `always_on=true`, `bypassable=false` |
+| `key` | does **not** trigger; its state change arms or disarms — see 4.7 | `channel=key`, `arm_policy=ignore` |
 
 ### 4.4 TriggerSpec
 
@@ -1568,3 +1576,4 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 33 | Alarmo import as an explicitly best-effort tool | Reads an internal format that may change without notice and without fault |
 | 34 | RF interference detected by correlated unavailability, gated on the coordinator still answering | Jamming cannot be measured from Home Assistant, but many zones on one radio falling silent at once is its signature — and the coordinator check is what separates it from a dead switch |
 | 35 | Panel, card, help and notification strings in `translations/panel/<lang>.json`, served over `foyer/translations` | hassfest validates `translations/<lang>.json` against a closed schema with no room for them; a subdirectory keeps one translation home without breaking the CI gate for the default HACS repository (decision 32) |
+| 36 | Zone roles are explicit properties (`channel`, `entry_mode`, `alarm_kind`); the type is only the preset that filled them | "The engine reads only properties" needs properties that say what a follower, a technical zone or a key is; without them the type silently becomes behaviour |
