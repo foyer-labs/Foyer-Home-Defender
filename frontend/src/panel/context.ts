@@ -42,7 +42,7 @@ export function reasonText(s: Strings, result: CommandResult): string {
 
 export function problemText(s: Strings, problem: Problem): string {
   const field = problem.field ? t(s, `field.${problem.field}`) : "";
-  return t(s, `problem.${problem.code}`, { field });
+  return t(s, `problem.${problem.code}`, { field, detail: problem.detail ?? "" });
 }
 
 /** "" becomes null: an empty number field means "inherit" or "off". */

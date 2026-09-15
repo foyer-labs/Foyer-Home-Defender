@@ -814,7 +814,10 @@ function Ae(e, t) {
 }
 function Z(e, t) {
 	let n = t.field ? J(e, `field.${t.field}`) : "";
-	return J(e, `problem.${t.code}`, { field: n });
+	return J(e, `problem.${t.code}`, {
+		field: n,
+		detail: t.detail ?? ""
+	});
 }
 function Q(e) {
 	let t = e.trim();
@@ -2287,24 +2290,36 @@ var $ = [
 				type: "foyer/disarm",
 				...t ? { area_ids: t } : {}
 			}),
-			save: async (t, n, r = !1) => {
-				let i = await e.callWS({
-					type: "foyer/config/save",
-					kind: t,
-					item: n,
-					trigger_confirmed: r
-				});
-				return i.success && await this._reloadConfigSoon(), i;
-			},
-			remove: async (t, n) => {
-				let r = await e.callWS({
-					type: "foyer/config/delete",
-					kind: t,
-					item_id: n
-				});
-				return r.success && await this._reloadConfigSoon(), r;
-			}
+			save: (e, t, n = !1) => this._edit(e, {
+				type: "foyer/config/save",
+				kind: e,
+				item: t,
+				trigger_confirmed: n
+			}),
+			remove: (e, t) => this._edit(e, {
+				type: "foyer/config/delete",
+				kind: e,
+				item_id: t
+			})
 		};
+	}
+	async _edit(e, t) {
+		let n;
+		try {
+			n = await this.hass.callWS(t);
+		} catch (t) {
+			return {
+				success: !1,
+				problems: [{
+					code: "request_failed",
+					kind: e,
+					ref: null,
+					field: null,
+					detail: String(t?.message ?? t)
+				}]
+			};
+		}
+		return n.success && await this._reloadConfigSoon(), n;
 	}
 	async _reloadConfigSoon() {
 		for (let e = 0; e < 10; e++) {

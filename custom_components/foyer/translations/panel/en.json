@@ -94,7 +94,8 @@
     "unknown_kind": "Unknown kind of object.",
     "invalid": "Some values are not valid.",
     "follows_needs_follower": "Only a follower zone can follow other zones.",
-    "follows_not_delayed": "A follower can follow only delayed intrusion zones."
+    "follows_not_delayed": "A follower can follow only delayed intrusion zones.",
+    "request_failed": "Home Assistant did not accept the request ({detail}). Nothing was changed. Reload the page and try again."
   },
   "field": {
     "name": "Name",

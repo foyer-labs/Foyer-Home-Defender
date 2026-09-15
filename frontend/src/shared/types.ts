@@ -174,6 +174,7 @@ export interface Problem {
   kind: string;
   ref: string | null;
   field: string | null;
+  detail?: string; // only for request_failed: what Home Assistant said
 }
 
 export interface EditResult {

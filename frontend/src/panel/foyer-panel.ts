@@ -157,26 +157,34 @@ class FoyerPanel extends LitElement {
           type: "foyer/disarm",
           ...(areaIds ? { area_ids: areaIds } : {}),
         }),
-      save: async (kind, item, triggerConfirmed = false) => {
-        const result = await hass.callWS<EditResult>({
+      save: (kind, item, triggerConfirmed = false) =>
+        this._edit(kind, {
           type: "foyer/config/save",
           kind,
           item,
           trigger_confirmed: triggerConfirmed,
-        });
-        if (result.success) await this._reloadConfigSoon();
-        return result;
-      },
-      remove: async (kind, id) => {
-        const result = await hass.callWS<EditResult>({
-          type: "foyer/config/delete",
-          kind,
-          item_id: id,
-        });
-        if (result.success) await this._reloadConfigSoon();
-        return result;
-      },
+        }),
+      remove: (kind, id) =>
+        this._edit(kind, { type: "foyer/config/delete", kind, item_id: id }),
     };
+  }
+
+  // Every configuration write goes through here. A request that fails outright
+  // (connection lost, integration reloading, command rejected) comes back as a
+  // problem the page shows, never as a silent no-op.
+  private async _edit(kind: string, message: Record<string, unknown>): Promise<EditResult> {
+    let result: EditResult;
+    try {
+      result = await this.hass!.callWS<EditResult>(message);
+    } catch (err) {
+      const detail = String((err as { message?: string })?.message ?? err);
+      return {
+        success: false,
+        problems: [{ code: "request_failed", kind, ref: null, field: null, detail }],
+      };
+    }
+    if (result.success) await this._reloadConfigSoon();
+    return result;
   }
 
   // A saved change reloads the integration; read the configuration back once

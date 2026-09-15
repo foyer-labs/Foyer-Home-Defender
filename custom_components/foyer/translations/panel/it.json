@@ -94,7 +94,8 @@
     "unknown_kind": "Tipo di oggetto sconosciuto.",
     "invalid": "Alcuni valori non sono validi.",
     "follows_needs_follower": "Solo una zona follower può seguire altre zone.",
-    "follows_not_delayed": "Un follower può seguire solo zone di intrusione ritardate."
+    "follows_not_delayed": "Un follower può seguire solo zone di intrusione ritardate.",
+    "request_failed": "Home Assistant non ha accettato la richiesta ({detail}). Non è stato modificato nulla. Ricarica la pagina e riprova."
   },
   "field": {
     "name": "Nome",
