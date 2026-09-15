@@ -5,7 +5,10 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased]
+## [0.1.0-alpha.2] — cross-area followers
+
+**Pre-release, for testing only**, like alpha.1: still no sirens, log,
+technical channel or codes.
 
 ### Added
 - A follower zone can follow delayed zones in **other areas** ("Also follows"
