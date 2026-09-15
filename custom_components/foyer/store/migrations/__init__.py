@@ -77,9 +77,13 @@ def _v2_1_to_v2_2(data: Document) -> Document:
     return out
 
 
-def _v2_2_to_v2_3(data: Document) -> Document:
+def _v2_2_to_v3_1(data: Document) -> Document:
     """0.1.0-alpha.3 → Phase 1 part 2: technical channel, incidents,
     verification groups, cross-zone, trigger counting and chime.
+
+    A major step although every field is additive: a 2.x build would read a
+    technical zone and never act on it, so it must refuse the file instead
+    (see STORAGE_VERSION).
 
     Every new setting is chosen to change nothing that already works: no
     groups, no cross-zone, one activation to alarm, no chime anywhere (the
@@ -122,7 +126,7 @@ def _v2_2_to_v2_3(data: Document) -> Document:
 STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (1, 1): (_v1_1_to_v2_1, (2, 1)),
     (2, 1): (_v2_1_to_v2_2, (2, 2)),
-    (2, 2): (_v2_2_to_v2_3, (2, 3)),
+    (2, 2): (_v2_2_to_v3_1, (3, 1)),
 }
 
 

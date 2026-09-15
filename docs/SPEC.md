@@ -538,6 +538,7 @@ systems announce a burglary while the kitchen is on fire.
 | Actions | Its own response profile, its own escalation, independent of any intrusion incident in progress |
 | Coexistence | A technical alarm and an intrusion incident can be active at the same time and never merge |
 | Faults | A technical zone in fault blocks arming its area like any zone (INV-4), unless it is marked `allow_arm_when_faulted` (decision 48) |
+| First reading | As for every zone (§4.7), the first reading is a baseline: a detector already detecting when its zone is saved alarms only once it has returned to normal and detects again. The zone editor says so (decision 56) |
 
 **Mandatory documentation statement, non-negotiable:** Foyer is not a fire alarm
 system. A smoke detector wired into Home Assistant does not replace certified,
@@ -567,7 +568,9 @@ So an **incident** is the unit, not the zone:
   contributing profile. This is what the `severity` field on a response profile
   (an integer the user orders) exists for, and it is used for nothing else.
 - **One acknowledgement closes the whole incident.** Disarming an area the
-  incident touched is an acknowledgement, as it is for escalation (§7.2).
+  incident touched is an acknowledgement, as it is for escalation (§7.2);
+  disarming an area it did not touch is not — whoever disarms the bedrooms in
+  the morning has not seen the alarm on the perimeter (decision 57).
 - The incident closes when it is acknowledged *and* every contributing area is
   disarmed or has returned to `armed`. A trigger after that opens a new incident.
 
@@ -1265,7 +1268,7 @@ enough for the user to tell the cases apart.
 | `sensor.foyer_open_zones` | 1 | count, with the list as an attribute |
 | `sensor.foyer_last_event` | 1 | last significant event, for dashboards |
 | `sensor.foyer_countdown` | per area | remaining exit/entry seconds |
-| `button.foyer_acknowledge` | 1 | acknowledge an ongoing escalation |
+| `button.foyer_acknowledge` | 1 | acknowledge an ongoing escalation. **Deferred to Phase 2** (decision 59): a button cannot carry a code, so it exists only if acknowledging needs none |
 | `switch.foyer_walk_test` | 1 | walk test on/off, reflecting the timeout |
 | `binary_sensor.foyer_technical_alarm` | 1 | the technical channel (§5.5), independent of arming |
 | `sensor.foyer_technical_cause` | 1 | which technical zone is in alarm |
@@ -1681,3 +1684,7 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 53 | Group members may sit in different areas; each acts in its own | Areas are grouped by function (decision 47): a perimeter window confirmed by an interior PIR is the common case |
 | 54 | An incident opens at `triggered`; disarming acknowledges it; a zone joining after the acknowledgement clears it | An entry delay is the normal way home, not an incident; §7.2 already makes disarm an acknowledgement; and a second zone after "it was the cat" must be heard |
 | 55 | Chime is read per area; chiming during the exit delay is a setting, off by default | Decision 40 makes per-area arming possible; the door you leave by is expected to open |
+| 56 | A technical zone's first reading is a baseline too, stated in the zone editor | One rule for every zone; the case is a detector saved while already detecting, and the editor is where the user is at that moment |
+| 57 | Only disarming an area the incident touched acknowledges it | Acknowledgement means someone has seen the alarm; disarming an unrelated area proves nothing of the kind, and in Phase 4 it would stop an escalation nobody saw |
+| 58 | The part 2 schema is a major version (3.1), though additive | An older build reading it would keep technical zones and never act on them; refusing the file is the only safe downgrade |
+| 59 | `button.foyer_acknowledge` is deferred to Phase 2 | A button cannot carry a code: whether it may exist depends on the acknowledgement's code policy, which is Phase 2's to set |

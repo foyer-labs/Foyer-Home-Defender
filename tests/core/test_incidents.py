@@ -153,6 +153,16 @@ def test_disarming_one_area_acknowledges_but_the_other_keeps_it_open():
     assert world.state.incident is None
 
 
+def test_disarming_an_area_the_incident_never_touched_is_no_acknowledgement():
+    """Decision 57: whoever disarms the bedrooms has not seen the perimeter."""
+    world = armed()
+    world.set(BATH, "on")  # upstairs only
+    decision = world.disarm("garage")
+
+    assert Moment.INCIDENT_ACKNOWLEDGED not in decision.moments
+    assert not world.state.incident.acknowledged
+
+
 def test_a_zone_joining_after_the_acknowledgement_clears_it():
     """Part 2 decision 8: someone must hear that a second zone went."""
     world = armed()

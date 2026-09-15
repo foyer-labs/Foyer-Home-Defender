@@ -69,6 +69,38 @@ async def _add_smoke_detector(hass, client) -> None:
     await hass.async_block_till_done()
 
 
+async def test_an_alpha_3_configuration_is_migrated_to_the_new_major(
+    hass, entry, hass_storage
+):
+    """Schema 3.1 (decision 58): a 2.2 file is upgraded, never reset."""
+    from custom_components.foyer.store.config_store import STORAGE_KEY
+    from custom_components.foyer.store.migrations import migrate
+    from custom_components.foyer.store.schema import (
+        STORAGE_MINOR_VERSION,
+        STORAGE_VERSION,
+    )
+
+    from .test_integration import PHASE_0_DOCUMENT
+
+    alpha_3 = migrate((1, 1), (2, 2), PHASE_0_DOCUMENT["data"])
+    hass_storage[STORAGE_KEY] = {
+        "version": 2,
+        "minor_version": 2,
+        "key": STORAGE_KEY,
+        "data": alpha_3,
+    }
+    hass.states.async_set(ZONE, "off")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert (STORAGE_VERSION, STORAGE_MINOR_VERSION) == (3, 1)
+    system = hass.data[DOMAIN]
+    assert system.config.zones[0].name == "Shutter"
+    assert system.config.groups == ()
+    assert _state(hass, TECHNICAL) == "off"
+
+
 async def test_the_new_entities_exist_and_start_quiet(hass, loaded):
     assert _state(hass, TECHNICAL) == "off"
     assert _state(hass, CAUSE) == "none"

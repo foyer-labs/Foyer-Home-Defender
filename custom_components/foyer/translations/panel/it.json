@@ -322,7 +322,7 @@
     "follows_hint": "Il ritardo di ingresso della sua area vale sempre. Spunta le zone ritardate di altre aree da cui deve ereditare anche il ritardo, come la porta d'ingresso per un sensore dell'ingresso in un'area interna.",
     "no_delayed_zones": "Ancora nessuna zona ritardata.",
     "fire_statement": "Foyer non è un sistema antincendio. Un rilevatore di fumo o gas collegato a Home Assistant non sostituisce rilevatori di fumo certificati e interconnessi.",
-    "technical_hint": "Una zona tecnica attiva l'allarme tecnico qualunque cosa facciano le aree. Non fa mai scattare un'area e il disinserimento non lo cancella mai.",
+    "technical_hint": "Una zona tecnica attiva l'allarme tecnico qualunque cosa facciano le aree. Non fa mai scattare un'area e il disinserimento non lo cancella mai. Salvala mentre il rilevatore è a riposo: un rilevatore che sta già rilevando quando lo salvi vale come punto di partenza e allarma solo dopo essere tornato normale e aver rilevato di nuovo.",
     "verification_title": "Verifica",
     "no_cross_zone": "Nessuna",
     "cross_zone_hint": "Un'altra zona che conferma questa entro la finestra. Ciascuna allarma comunque da sola; quando rilevano entrambe, la coppia viene registrata come confermata. Impostala su una delle due zone.",

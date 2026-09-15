@@ -182,7 +182,7 @@ def test_migration_keeps_the_code_policy_and_adds_the_required_notifications():
         Moment.ZONE_FAULT,
         Moment.ARM_FAILED,
         Moment.ZONE_BYPASSED,
-        Moment.TECHNICAL_RAISED,  # added by 2.2 -> 2.3 (part 2 decision 10)
+        Moment.TECHNICAL_RAISED,  # added by 2.2 -> 3.1 (part 2 decision 10)
     }
 
 
@@ -381,7 +381,7 @@ ALPHA_3_DOCUMENT = {
 
 
 def test_alpha_3_document_migrates_to_part_2_changing_nothing_that_works():
-    """2.2 -> 2.3: no groups, no cross-zone, one activation, no chime."""
+    """2.2 -> 3.1: no groups, no cross-zone, one activation, no chime."""
     from custom_components.foyer.core.models import ChimeSettings, CodePolicy
     from custom_components.foyer.core.validation import validate
 

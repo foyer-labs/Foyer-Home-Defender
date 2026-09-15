@@ -55,8 +55,12 @@ from ..core.models import (
 # 2.1 is a major bump on purpose: zone semantics (entry mode, channel, key
 # zones) are not additive. A Phase 0 build reading this file would treat a key
 # switch or a 24h zone as an ordinary instant zone, so it must refuse instead.
-STORAGE_VERSION = 2
-STORAGE_MINOR_VERSION = 3
+#
+# 3.1 is a major bump for the same reason: a 2.x build reading it would store
+# a technical zone and silently never act on it — a smoke detector switched
+# off without a word. Refusing the file is the only safe downgrade.
+STORAGE_VERSION = 3
+STORAGE_MINOR_VERSION = 1
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime

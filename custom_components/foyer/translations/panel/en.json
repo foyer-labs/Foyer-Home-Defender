@@ -322,7 +322,7 @@
     "follows_hint": "Its own area's entry delay always counts. Tick the delayed zones of other areas whose entry delay it should also inherit, such as the front door for a hall sensor in an interior area.",
     "no_delayed_zones": "No delayed zones yet.",
     "fire_statement": "Foyer is not a fire alarm system. A smoke or gas detector connected to Home Assistant does not replace certified, interconnected smoke alarms.",
-    "technical_hint": "A technical zone raises the technical alarm whatever the areas are doing. It never triggers an area and disarming never clears it.",
+    "technical_hint": "A technical zone raises the technical alarm whatever the areas are doing. It never triggers an area and disarming never clears it. Save it while the detector is quiet: a detector already detecting when saved counts as its starting point and alarms only once it has returned to normal and detects again.",
     "verification_title": "Verification",
     "no_cross_zone": "None",
     "cross_zone_hint": "Another zone that confirms this one within the window. Each still alarms on its own; when both detect, the pair is recorded as confirmed. Set it on either zone.",

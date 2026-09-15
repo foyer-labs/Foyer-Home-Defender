@@ -387,7 +387,7 @@ Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
 
 ```
 Binding decisions taken by the user in Phase 1. The spec has been amended to
-match (SPEC §21, decisions 36-55); this list is the quick reference. None of
+match (SPEC §21, decisions 36-59); this list is the quick reference. None of
 them may be "fixed back" without asking.
 
  1. Zone type is a preset label only. The engine reads explicit properties:
@@ -453,10 +453,16 @@ Taken in part 2 (SPEC decisions 48-55):
 26. Chime is read per area; chiming during the exit delay is a global
     setting, off by default.
 27. Until response profiles exist, technical_raised has a persistent
-    notification (added to the Phase 0 action by the 2.2 -> 2.3 migration);
+    notification (added to the Phase 0 action by the 2.2 -> 3.1 migration);
     part 3 must move it into the technical default profile.
 28. Group membership is stored once, on the group (members); a zone's
     group_id is derived.
+29. A technical zone's first reading is a baseline like any zone's (decision
+    14); the zone editor tells the user to save it while the detector is quiet.
+30. Only disarming an area the incident touched acknowledges the incident.
+31. Schema 3.1 (major bump, though additive): an older build must refuse the
+    file rather than ignore technical zones.
+32. button.foyer_acknowledge is deferred to Phase 2 (see carry-overs).
 
 Engine and runtime shape after part 1 (do not work around it):
 - decide(snapshot, event, config, now) returns a Decision holding the
@@ -469,7 +475,7 @@ Engine and runtime shape after part 1 (do not work around it):
   channel, detail). They are the single source for notifications today, for
   response profiles in part 3 and for log rows in part 4. New behaviour adds
   Occurrences; it never bypasses them.
-- Configuration is stored as schema 2.3 in .storage/foyer.config; every
+- Configuration is stored as schema 3.1 in .storage/foyer.config; every
   schema change is a new step in store/migrations with a test that migrates a
   real previous document. Config edits go through store/editing.py (pure,
   validated) and reload the entry; edits touching an armed area or the
@@ -600,8 +606,10 @@ Continue on branch phase-1. Commit as Foyer Labs <foyerlabs@gmail.com>.
 5. Panel page 13 (verification groups) with its help panel, and the chime
    settings, both through translations/panel/<lang>.json in en and it.
 
-6. Storage: schema 2.2 -> 2.3 (additive) with a migration test from a real
-   2.2 document (0.1.0-alpha.2 already took 2.2 for follows); runtime state
+6. Storage: schema 2.2 -> 3.1 (additive, but a major bump so that an
+   older build refuses the file rather than ignore technical zones; decided
+   by the user) with a migration test from a real 2.2 document
+   (0.1.0-alpha.2 already took 2.2 for follows); runtime state
    additions default safely on an older .storage/foyer.state.
 
 7. Tests from SPEC §19 for this part: incidents (join, no restart, highest
@@ -764,6 +772,11 @@ Phase 2 (security and arming channels):
   result; the foyer.* services must return the same shape. skip_exit_delay
   is part of the contract.
 - The acknowledgement commands from parts 2 and 3 get their code policy.
+  Operation.ACKNOWLEDGE already runs through check_code (no code today); §8.2
+  does not list it, so ask the user for its default.
+- button.foyer_acknowledge (§13) was deferred here (decision 59): a button
+  cannot carry a code. Build it only if acknowledging needs no code;
+  otherwise amend §13 to drop it, with the user's agreement.
 - The card's keypad (layout keypad, and the keypad in layout full).
 
 Phase 3 (test and simulation):

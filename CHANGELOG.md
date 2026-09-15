@@ -11,8 +11,11 @@ Still not for protecting a house: no sirens or response profiles, no event
 log, no codes.
 
 ### Changed — read this if you run an alpha
-- Stored configuration moves from schema 2.2 to 2.3. Nothing that works today
+- Stored configuration moves from schema 2.2 to 3.1. Nothing that works today
   changes: no groups, no cross-zone, one detection to alarm, no chime.
+  **Do not go back to an earlier alpha afterwards**: it refuses the new file
+  on purpose, because it would otherwise keep your technical zones and
+  silently never act on them.
 - **Technical zones (smoke, gas, water) are accepted again**, now that their
   channel exists. A technical zone in fault blocks arming its area like any
   zone, unless "Allow arming while in fault" is set on it.
