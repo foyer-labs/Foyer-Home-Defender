@@ -420,7 +420,8 @@ independent state holder.
 | `entry` | `disarm_request` accepted | `disarmed` | the normal homecoming path |
 | `entry` | instant zone triggers | `triggered` | entry delay does not protect other zones |
 | `triggered` | `disarm_request` accepted | `disarmed` | stops sirens and escalation |
-| `triggered` | siren cutoff elapsed | `armed` | sounders stop; area re-arms; alarm memory flag stays set until disarm |
+| `triggered` | siren cutoff elapsed | the pre-trigger state | sounders stop; alarm memory stays set until disarm. Triggered from `armed` or `entry` → `armed`; from `disarmed` (an `always_on` zone) → `disarmed`, never armed by the cutoff; from `arming` → `arming` resumes with its original exit deadline and the normal expiry checks |
+| `disarmed` with alarm memory | `disarm_request` accepted | `disarmed` | clears the memory; the only transition allowed from `disarmed` by a disarm |
 | any | `always_on` zone triggers | `triggered` | including from `disarmed` |
 | any | supervision/availability fault | `fault` overlay | `fault` is a flag alongside the state, not a replacement |
 
@@ -1577,3 +1578,4 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 34 | RF interference detected by correlated unavailability, gated on the coordinator still answering | Jamming cannot be measured from Home Assistant, but many zones on one radio falling silent at once is its signature — and the coordinator check is what separates it from a dead switch |
 | 35 | Panel, card, help and notification strings in `translations/panel/<lang>.json`, served over `foyer/translations` | hassfest validates `translations/<lang>.json` against a closed schema with no room for them; a subdirectory keeps one translation home without breaking the CI gate for the default HACS repository (decision 32) |
 | 36 | Zone roles are explicit properties (`channel`, `entry_mode`, `alarm_kind`); the type is only the preset that filled them | "The engine reads only properties" needs properties that say what a follower, a technical zone or a key is; without them the type silently becomes behaviour |
+| 37 | Siren cutoff returns an area to its pre-trigger state | An `always_on` zone fires on a disarmed house; a cutoff that always re-arms would arm it |
