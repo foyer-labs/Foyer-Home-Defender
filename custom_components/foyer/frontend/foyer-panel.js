@@ -2300,7 +2300,7 @@ var $ = [
 				let r = await e.callWS({
 					type: "foyer/config/delete",
 					kind: t,
-					id: n
+					item_id: n
 				});
 				return r.success && await this._reloadConfigSoon(), r;
 			}

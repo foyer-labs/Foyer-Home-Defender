@@ -304,7 +304,9 @@ async def ws_config_save(
     {
         vol.Required("type"): "foyer/config/delete",
         vol.Required("kind"): vol.In(["area", "zone", "scenario"]),
-        vol.Required("id"): str,
+        # Not "id": that is the WebSocket message id, and a clash makes Home
+        # Assistant drop the command as invalid.
+        vol.Required("item_id"): str,
     }
 )
 @websocket_api.require_admin
@@ -316,7 +318,7 @@ async def ws_config_delete(
 ) -> None:
     if (system := _system(hass, connection, msg["id"])) is None:
         return
-    result = delete(system.config, system.state, msg["kind"], msg["id"])
+    result = delete(system.config, system.state, msg["kind"], msg["item_id"])
     await _apply(hass, connection, msg["id"], system, result)
 
 

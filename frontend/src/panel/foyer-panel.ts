@@ -171,7 +171,7 @@ class FoyerPanel extends LitElement {
         const result = await hass.callWS<EditResult>({
           type: "foyer/config/delete",
           kind,
-          id,
+          item_id: id,
         });
         if (result.success) await this._reloadConfigSoon();
         return result;

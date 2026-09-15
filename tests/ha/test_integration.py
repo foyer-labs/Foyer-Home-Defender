@@ -482,3 +482,47 @@ async def test_ws_subscription_survives_a_configuration_reload(
             if "Attic" in names:
                 break
     assert "Attic" in names
+
+
+async def test_ws_area_delete_removes_it_and_its_entities(hass, loaded, hass_ws_client):
+    client = await hass_ws_client(hass)
+    await client.send_json(
+        {
+            "id": 1,
+            "type": "foyer/config/save",
+            "kind": "area",
+            "item": {"name": "Attic"},
+        }
+    )
+    result = (await client.receive_json())["result"]
+    assert result["success"], result
+    await hass.async_block_till_done()
+    assert hass.states.get("alarm_control_panel.foyer_attic") is not None
+
+    await client.send_json(
+        {
+            "id": 2,
+            "type": "foyer/config/delete",
+            "kind": "area",
+            "item_id": result["id"],
+        }
+    )
+    deleted = (await client.receive_json())["result"]
+    assert deleted["success"], deleted
+    await hass.async_block_till_done()
+
+    assert hass.states.get("alarm_control_panel.foyer_attic") is None
+    assert all(a.name != "Attic" for a in hass.data[DOMAIN].config.areas)
+
+
+async def test_ws_area_delete_is_refused_while_it_has_zones(
+    hass, loaded, hass_ws_client
+):
+    client = await hass_ws_client(hass)
+    area_id = hass.data[DOMAIN].config.areas[0].id
+    await client.send_json(
+        {"id": 1, "type": "foyer/config/delete", "kind": "area", "item_id": area_id}
+    )
+    result = (await client.receive_json())["result"]
+    assert result["success"] is False
+    assert result["problems"][0]["code"] == "area_has_zones"
