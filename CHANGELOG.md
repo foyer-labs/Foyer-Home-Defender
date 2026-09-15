@@ -5,10 +5,10 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased] — Phase 1, part 2: technical channel, incidents, groups, chime
+## [0.1.0-alpha.4] — Phase 1, part 2: technical channel, incidents, groups, chime
 
-Still not for protecting a house: no sirens or response profiles, no event
-log, no codes.
+**Pre-release, for testing only.** Still not for protecting a house: no sirens
+or response profiles, no event log, no codes.
 
 ### Changed — read this if you run an alpha
 - Stored configuration moves from schema 2.2 to 3.1. Nothing that works today
