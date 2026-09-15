@@ -5,6 +5,18 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.3] — deleting from the panel works
+
+**Pre-release, for testing only**, like the previous alphas.
+
+### Fixed
+- Deleting an area, a zone or a scenario from the panel never worked: the
+  command was rejected by Home Assistant before reaching Foyer. It now works,
+  and the refusals it can meet are shown under the form — an area that still
+  has zones, an area used by a scenario, an area that is not disarmed.
+- A configuration change that Home Assistant rejects, for any reason, now says
+  so under the form instead of doing nothing silently.
+
 ## [0.1.0-alpha.2] — cross-area followers
 
 **Pre-release, for testing only**, like alpha.1: still no sirens, log,
