@@ -247,7 +247,7 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `group_id` | uuid \| null | membership of an N-of-M verification group (§4.8). Derived: membership is stored once, as the group's `members` |
 | `bypassable` | bool | may the user manually exclude it |
 | `always_on` | bool | true for 24h/tamper/technical zones |
-| `silent` | bool | triggers response without local sounders |
+| `silent` | bool | the response runs without the action kinds the global silent list names (§6.2, decision 66) |
 | `trigger_count` | int | N activations within `trigger_window` before alarming (default 1, at most 10). Only activations that would alarm at once count, as in a group (§4.8) |
 | `trigger_window` | seconds | 1–3600, default 60 |
 | `cross_zone_id` | uuid \| null | a second zone that confirms this one within `cross_zone_window`: the pair is a 2-of-2 group that does **not** suppress its members, symmetric whichever end declares it (§4.8) |
@@ -255,7 +255,7 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `allow_arm_when_faulted` | bool | default false; a zone in fault does not block arming (§5.4, INV-4) |
 | `supervision_timeout` | seconds \| null | per zone, **off (null) by default**. No report from the entity within this window — a heartbeat counts even when the state has not changed (Home Assistant's `last_reported`) — ⇒ fault (INV-4). Set it per sensor, longer than that sensor's own reporting interval; leave it off for sensors that report only when they change |
 | `battery_entity_id` | str \| null | optional, for diagnostics and low-battery faults |
-| `response_profile_id` | uuid \| null | null = inherit from area |
+| `response_profile_id` | uuid \| null | read **only for this zone's own alarm** (§6, decision 61); null = the area answers |
 | `enabled` | bool | |
 
 ### 4.3 Zone types (presets)
@@ -518,6 +518,19 @@ A blocked arming can be overridden by a **forced arm** request, which is a
 distinct command, requires the `force_arm` permission, and is logged as such.
 Forced arming is never the default and never implicit.
 
+A zone can also be excluded **by hand**, from the panel, the card or a service
+(§16, "timed temporary bypass"). Two rules, both chosen to match real panels
+(decision 70):
+
+- an exclusion **without a duration** lasts for this arming and ends when the
+  area is disarmed;
+- an exclusion **with a duration** outlives the disarm and ends when its time is
+  up, announcing the zone's return — because a zone excluded and forgotten is
+  exactly the window somebody comes through.
+
+Closing the zone never cancels a manual exclusion; that is what it was excluded
+for. An automatic bypass, by contrast, rejoins the moment the zone closes.
+
 ### 5.5 The technical alarm channel
 
 Non-intrusion zones (`technical`: smoke, gas, flood, temperature) run on a
@@ -535,7 +548,7 @@ systems announce a burglary while the kitchen is on fire.
 | When active | **Always.** Arming state is irrelevant; a technical zone is live whether the house is armed, disarmed or arming |
 | Disarming | **Does not silence it.** Disarming is an intrusion command and has no authority here |
 | Clearing | Requires an explicit acknowledgement **and** the underlying entity returning to normal. Until both, the state and its memory persist and stay visible on every card. One acknowledgement acts on every technical alarm pending at that moment (decision 49) |
-| Actions | Its own response profile, its own escalation, independent of any intrusion incident in progress |
+| Actions | Its own response profile — the zone's, else a dedicated global technical profile, else the default (§6, decision 62) — its own escalation, independent of any intrusion incident in progress |
 | Coexistence | A technical alarm and an intrusion incident can be active at the same time and never merge |
 | Faults | A technical zone in fault blocks arming its area like any zone (INV-4), unless it is marked `allow_arm_when_faulted` (decision 48) |
 | First reading | As for every zone (§4.7), the first reading is a baseline: a detector already detecting when its zone is saved alarms only once it has returned to normal and detects again. The zone editor says so (decision 56) |
@@ -594,6 +607,21 @@ zone.response_profile_id
   ?? global default profile
 ```
 
+**The area is the unit of response** (decision 61). The chain above starts at
+the zone for one thing only: a zone's **own alarm** — the trigger, the entry it
+opens, the verification group it satisfies. Everything else that happens in an
+area — armed, disarmed, a fault, an exclusion — answers with the area's chain,
+area → scenario → global default. That is one rule to hold in mind when asking
+"why did it sound?", and it is exactly where a zone profile is needed: quiet
+member profiles and a loud group profile are what make a group's response
+graduated (§4.8).
+
+A satisfied **group** answers with the group's own profile, falling back to its
+area's chain. The **technical channel** answers with the zone's own profile, then
+a dedicated global technical profile, then the default (§5.5, decision 62): a
+smoke detector must not respond differently depending on how the house is armed,
+and the scenario is meaningless to it.
+
 The UI must always show the *effective* profile and where it was inherited from,
 otherwise the behaviour looks arbitrary.
 
@@ -618,11 +646,31 @@ A profile can attach actions to three distinct moments, not just alarms:
 | `scene` | scene entity |
 | `switch` | entity ids, on/off, optional auto-revert after N seconds |
 | `tts` | media players, message template |
-| `call_service` | **arbitrary HA service**: domain, service, target, data (YAML editor) |
+| `call_service` | **arbitrary HA service**: domain, service, target, data |
 | `delay` | wait N seconds before the next action in the list |
+| `persistent_notification` | a Home Assistant notification, with no contact book behind it — the tenth kind, and the one Phase 0 already used (decision 71) |
 
 `call_service` is the escape hatch that keeps the user out of the automation
 editor for anything Foyer does not model natively.
+
+Four rules the catalogue depends on:
+
+- A `delay` holds the rest of *that moment's* sequence. It is **state, not a
+  task**: a restart in the middle of a sequence resumes it, and a `switch` with
+  an auto-revert is switched back even if Home Assistant restarted meanwhile
+  (decision 65). Without that, a restart during an alarm leaves a siren sounding
+  for ever.
+- A `siren` never sounds beyond the siren cutoff (§5.3), and a disarm or the
+  cutoff stops what it started.
+- A `camera` writes its file under a **configurable folder, `media/foyer` by
+  default, and never under `www`**, which Home Assistant serves without
+  authentication. A notification that wants the picture attaches
+  `/api/camera_proxy/<entity>`, which is authenticated and needs no file at all
+  (decision 67).
+- A `silent` zone (§4.2) runs its response without the action kinds a **global
+  list** names — `siren`, `tts` and the chime by default (decision 66). Silence
+  belongs to the zone: another zone contributing to the same incident still
+  sounds.
 
 ### 6.3 Conditions
 
@@ -634,6 +682,11 @@ automations.
 |---|---|
 | time window | `after: HH:MM`, `before: HH:MM`, correctly handling windows that cross midnight |
 | entity state | `entity_id`, `operator: is / is_not`, `state: str` |
+
+Two conditions combine with **and** or **or**, chosen by the user (decision 64):
+"only at night *and* only if nobody is home" is the common case, but "either"
+is worth the one selector. An entity that cannot be read satisfies nothing —
+the same reasoning as INV-4.
 
 Conditions are evaluated by `core/conditions.py`, which is pure and receives
 entity states from the snapshot — so the simulator evaluates them identically.
@@ -679,7 +732,7 @@ do it — not a response profile, which would be disproportionate for a checkbox
 | Targets | one or more `media_player` or `siren` entities, **and `notify` targets** — a `notify.*` service (Companion app, Telegram, …) or a `notify` entity — which receive the zone name as a message (decision 60). Free channels the household already has; quiet hours apply to them as well |
 | Mode | **single sound**, or **spoken zone name** via `tts.speak` — "Front door", "Garage shutter". In Home Assistant the second costs the same as the first and tells you *what* opened from the next room |
 | Volume | |
-| Quiet hours | a window in which chime is suppressed |
+| Quiet hours | a window in which chime is suppressed. **Each target may carry a window of its own**, which replaces the global one: the speakers all day, the phone only between nine and ten (decision 68) |
 | During the exit delay | whether zones chime while their area counts down to armed; off by default |
 | Per zone | the `chime` boolean on the zone (§4.2) |
 
@@ -1689,3 +1742,14 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 58 | The part 2 schema is a major version (3.1), though additive | An older build reading it would keep technical zones and never act on them; refusing the file is the only safe downgrade |
 | 59 | `button.foyer_acknowledge` is deferred to Phase 2 | A button cannot carry a code: whether it may exist depends on the acknowledgement's code policy, which is Phase 2's to set |
 | 60 | The chime can also go to `notify` targets (app, Telegram) | The user wants the free channels the house already has, not only speakers; built with the `notify` action in Phase 1 part 3, which discovers and calls the same services |
+| 61 | The area is the unit of response; a zone's profile is read only for its own alarm | One rule to hold in mind when asking why it sounded, and the zone profile is kept exactly where graduated response needs it (§4.8) |
+| 62 | The technical channel has its own global default profile | A smoke detector must not answer differently depending on how the house is armed, and a scenario is meaningless to a channel that is always live |
+| 63 | The default profile notifies `triggered` too | Phase 0 had no notification on an alarm at all; an alarm that says nothing is the worst failure there is |
+| 64 | An action's two conditions combine with a selectable *and* / *or* | "Only at night and only if nobody is home" is the common case, but one selector buys the other half |
+| 65 | Action delays and auto-reverts are persisted timers | A restart mid-alarm must not leave a siren sounding for ever or a sequence half-run; INV-3 lists pending timers |
+| 66 | What a `silent` zone suppresses is a global list of action kinds | Which actions make a noise is an installation's business, not something to fix in code |
+| 67 | Camera files go to a configurable folder, `media/foyer` by default, never `www`; notifications attach the camera proxy | `www` is served without authentication, and the inside of a house is not something to publish |
+| 68 | A chime target may carry quiet hours of its own | The chime on a phone rings for every door opened; the speakers do not need the same window |
+| 69 | Manual bypass needs no code until Phase 2, but runs through the check | The same reasoning as decision 6, and Phase 2 then changes policy rather than plumbing |
+| 70 | A manual bypass without a duration ends at the disarm; a timed one survives until it expires | What real panels do, and it keeps the timed form meaningful: a two-hour exclusion must not vanish at the next disarm |
+| 71 | `persistent_notification` is a tenth action kind | It is what Phase 0 did; the 3.1 → 4.1 migration moves it into the default profile so no installation loses a notification it already had |

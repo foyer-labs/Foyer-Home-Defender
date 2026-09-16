@@ -5,6 +5,64 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [Unreleased] — Phase 1, part 3: response profiles, actions, bypass
+
+**Pre-release, for testing only.** Still not for protecting a house: no event
+log, no codes, no escalation across contacts.
+
+### Changed — read this if you run an alpha
+- Stored configuration moves from schema 3.1 to 4.1. **Do not go back to an
+  earlier alpha afterwards**: it refuses the new file on purpose, because it
+  would otherwise find profiles it does not understand and run no action at all.
+- The notification you have today is not lost: the migration turns it into a
+  **"Default" response profile** with exactly the moments it already had. One
+  moment is added, deliberately: **an alarm now sends a notification**, which
+  Phase 0 never did.
+- A zone excluded by hand no longer rejoins the moment it closes. Being closed
+  again is why it was excluded; it comes back when the area is disarmed, or
+  when the duration you gave it runs out.
+
+### Added
+- **Response profiles** (panel page 5): a named list of actions, each with the
+  moments it answers and up to two conditions. The **area is the unit of
+  response** — area, then scenario, then the global default — and a zone's own
+  profile is read only for its own alarm, which is what makes a verification
+  group's graduated response work: one detector notifies, two sound the siren.
+- **Ten actions**: notification to a `notify` service or entity, Home Assistant
+  notification, siren, light, camera, scene, switch, spoken message, call any
+  service, and wait. A wait holds the rest of the sequence and **survives a
+  restart**, as does a switch's automatic return: a restart during an alarm
+  never leaves a siren sounding for ever.
+- **Conditions**: a time window that may cross midnight, and one entity's
+  state, combined with *and* or *or*. Anything more complex belongs in a Home
+  Assistant automation subscribed to `foyer_event`.
+- **Templates** over a fixed, documented set of variables — the zone, the area,
+  the scenario, the time, every zone in the incident — with no arbitrary Jinja.
+- **Severity** on a profile, recorded on every zone that joins an incident, so
+  Phase 4's escalation can take the strongest.
+- **Silent zones**: the response runs without the action kinds the settings
+  name (siren, spoken message and chime by default). Silence belongs to the
+  zone: another zone in the same incident still sounds.
+- **Manual and timed exclusion of a zone**, from the panel, the card and the
+  WebSocket API. Without a duration it lasts for this arming; with one the zone
+  comes back on its own and says so, because a zone excluded and forgotten is
+  exactly the window somebody comes through.
+- **A dedicated technical profile** in the settings: smoke, gas and flood
+  answer with it whatever the house is doing.
+- **The chime reaches `notify` targets too** — the Companion app, Telegram —
+  and each target may carry quiet hours of its own, so the speakers can chime
+  all day while the phone only chimes between nine and ten.
+- A notification can carry the **camera picture**, through Home Assistant's
+  authenticated proxy. Snapshots and recordings are written under a
+  configurable folder, `media/foyer` by default and never `www`, which is
+  served to anyone who guesses the URL.
+
+### Not yet
+- Escalation across contacts, acknowledgement by push button, actionable
+  notifications: Phase 4. A notification goes to one service, once.
+- The event log, so what an action did is not yet recorded anywhere but in
+  Home Assistant's own logs. That is part 4.
+
 ## [0.1.0-alpha.4] — Phase 1, part 2: technical channel, incidents, groups, chime
 
 **Pre-release, for testing only.** Still not for protecting a house: no sirens

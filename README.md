@@ -10,13 +10,16 @@ response engine, identified users, physical keypads, an auditable event log, and
 a simulator that lets you check the configuration before you trust it.
 
 > **Status: Phase 1 in progress — the alarm core. Not yet something to rely on.**
-> Areas, zones and scenarios are configured from the sidebar panel; the state
-> machine has exit and entry delays, instant, delayed, follower, 24h, tamper and
-> panic zones, arm policies, forced arming, a siren cutoff with alarm memory, and
-> alarm state that survives a restart. What is still missing matters: there are
-> no sirens, lights or response profiles yet — an alarm changes state and can
-> send a Home Assistant notification, nothing more — no event log, and no
-> technical channel for smoke, gas or water. There are no users or codes:
+> Areas, zones, scenarios, verification groups and response profiles are
+> configured from the sidebar panel. The state machine has exit and entry
+> delays, instant, delayed, follower, 24h, tamper and panic zones, arm
+> policies, forced arming, manual and timed exclusion of a zone, a siren cutoff
+> with alarm memory, and alarm state that survives a restart. Smoke, gas and
+> water run on their own channel, which disarming cannot silence. An alarm now
+> sounds sirens, flashes lights, records a camera and sends notifications.
+> What is still missing matters: there is **no event log**, so the panel cannot
+> yet tell you what happened last night; notifications go to one service and do
+> not escalate until somebody answers; and there are no users or codes, so
 > **anyone who can reach Home Assistant can disarm it.**
 
 The full design is in [docs/SPEC.md](docs/SPEC.md).

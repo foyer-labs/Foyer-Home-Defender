@@ -464,6 +464,31 @@ Taken in part 2 (SPEC decisions 48-59):
     file rather than ignore technical zones.
 32. button.foyer_acknowledge is deferred to Phase 2 (see carry-overs).
 
+Taken in part 3 (SPEC decisions 61-71):
+33. The AREA is the unit of response: area -> scenario -> global default. A
+    zone's own profile is read only for its own alarm (triggered,
+    entry_started, a group it satisfies). One rule, and it is where
+    graduated response needs it.
+34. The technical channel answers with the zone's profile, else a dedicated
+    global technical profile, else the default. Never the scenario's.
+35. The default profile notifies `triggered` too (Phase 0 did not).
+36. An action's two conditions combine with a selectable and/or.
+37. Action delays and switch auto-reverts are persisted timers, like every
+    other timer: data in the runtime state, one wake-up.
+38. What a `silent` zone suppresses is a global list of action kinds
+    (siren, tts, chime by default), not a per-action flag.
+39. Camera files go to a configurable folder, media/foyer by default, never
+    www. A notification attaches /api/camera_proxy/<entity>, not a file.
+40. Each chime target may carry quiet hours of its own, replacing the
+    global window.
+41. Manual bypass needs no code until Phase 2, and still runs through
+    check_code (Operation.BYPASS_ZONE).
+42. A manual bypass without a duration ends when the area is disarmed; one
+    with a duration survives the disarm until it expires. Closing the zone
+    never cancels either.
+43. persistent_notification is a tenth action kind, so the Phase 0
+    notification survives the 3.1 -> 4.1 migration unchanged.
+
 Engine and runtime shape after part 1 (do not work around it):
 - decide(snapshot, event, config, now) returns a Decision holding the
   COMPLETE next RuntimeState; the runtime persists it verbatim in
@@ -505,6 +530,28 @@ Added in part 2:
   conditions.
 - Operation.ACKNOWLEDGE runs through check_code for both acknowledgements
   (foyer/acknowledge with target incident | technical).
+
+Added in part 3:
+- core/response.py is the ONE place that turns Occurrences into
+  ActionIntents: it resolves the profile, evaluates the conditions, renders
+  the templates and produces the complete instruction. The executor looks
+  nothing up. New behaviour adds to the plan; it never calls a service
+  directly.
+- core/conditions.py and core/templates.py are pure and are what the
+  simulator (Phase 3) will show in its trace: response.condition_summary()
+  already says WHY an action was skipped.
+- RuntimeState gained pending_runs (a sequence a delay holds), running
+  (what an action switched on and must switch off), bypass_until and
+  run_seq. All four go through next_wakeup like any timer.
+- Incident contributors now carry profile_id and severity, filled as each
+  zone joins; Incident.actions_started is filled by the planner, which is
+  what deduplicates a siren already sounding (SPEC §5.6).
+- The stored configuration is schema 4.1: `actions` is gone and `profiles`
+  replaces it, settings gained default_profile_id, technical_profile_id,
+  silent_suppresses and camera_dir, and chime targets are objects with
+  their own quiet hours.
+- The panel has pages Overview, Areas, Zones, Scenarios, Response profiles,
+  Verification groups and Settings (chime plus the response block).
 ```
 
 ### Phase 1, part 2
@@ -734,6 +781,21 @@ Scope for THIS session: Phase 1, part 4 — the event log, panel pages 10 and
 and compact. After it, run the Phase 1 acceptance ("a real house can be
 protected with it", every bullet of the Phase 1 "Done when"). Paste "Phase 1
 decisions" after this appendix.
+
+Context from part 3 (schema 4.1):
+- Response profiles, the nine actions plus persistent_notification,
+  conditions, templates, silent zones and manual and timed bypass exist and
+  are tested. Build the log ON them: the executor already returns an
+  ActionResult per intent (ok / error), which is the `action` category of
+  §10.2, and every Occurrence already carries its incident id.
+- The settings page (11) already has the chime block and the response
+  block; part 4 adds the global defaults, log retention and backup/restore
+  beside them.
+- The notify action exists, so the wizard's "send a test notification" step
+  has something to call.
+- A pending delay, a running siren and a timed bypass are all in
+  .storage/foyer.state; the log must not duplicate them, only record what
+  happened.
 
 1. Event log (SPEC §10.1-10.3):
    - Dedicated SQLite through aiosqlite with the §10.1 schema and indices.
