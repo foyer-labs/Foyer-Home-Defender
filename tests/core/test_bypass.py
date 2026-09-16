@@ -83,9 +83,7 @@ def test_a_timed_bypass_outlives_the_disarm_and_returns_on_time():
 
     world.advance(3600 - 30)
     assert bypassed(world) == {}
-    [rejoined] = [
-        o for o in world.last.occurrences if o.moment is Moment.ZONE_REJOINED
-    ]
+    [rejoined] = [o for o in world.last.occurrences if o.moment is Moment.ZONE_REJOINED]
     assert rejoined.zone_id == "window"
     assert rejoined.detail == {"bypass": "manual", "cause": "expired"}
 

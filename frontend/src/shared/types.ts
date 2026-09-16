@@ -69,6 +69,9 @@ export interface StatusZone {
   fault: string | null;
   open: boolean;
   bypassed: string | null;
+  bypassable: boolean;
+  /** When a timed manual bypass ends (SPEC §16), ISO, or null. */
+  bypass_until: string | null;
 }
 
 export interface StatusScenario {
@@ -138,6 +141,43 @@ export interface AreaConfig {
   ha_state_when_armed: string;
   default_entry_delay: number;
   default_exit_delay: number;
+  response_profile_id: string | null;
+}
+
+// --- response profiles (SPEC §6) --------------------------------------------------
+
+export type ActionKind =
+  | "notify"
+  | "persistent_notification"
+  | "siren"
+  | "light"
+  | "camera"
+  | "scene"
+  | "switch"
+  | "tts"
+  | "call_service"
+  | "delay";
+
+export type Condition =
+  | { kind: "time"; after: string; before: string }
+  | { kind: "state"; entity_id: string; operator: "is" | "is_not"; state: string };
+
+export interface ActionConfig {
+  id?: string;
+  kind: ActionKind;
+  moments: string[];
+  name: string;
+  params: Record<string, unknown>;
+  conditions: Condition[];
+  condition_mode: "all" | "any";
+  enabled: boolean;
+}
+
+export interface ProfileConfig {
+  id?: string;
+  name: string;
+  severity: number;
+  actions: ActionConfig[];
 }
 
 export interface KeyConfig {
@@ -171,6 +211,8 @@ export interface ZoneConfig {
   cross_zone_window: number;
   trigger_count: number;
   trigger_window: number;
+  response_profile_id: string | null;
+  silent: boolean;
 }
 
 export interface GroupConfig {
@@ -181,10 +223,18 @@ export interface GroupConfig {
   n: number;
   window_seconds: number;
   suppress_members: boolean;
+  response_profile_id: string | null;
+}
+
+export interface ChimeTarget {
+  entity_id: string;
+  /** Quiet hours of this target alone; null falls back to the global ones. */
+  quiet_start: string | null;
+  quiet_end: string | null;
 }
 
 export interface ChimeConfig {
-  targets: string[];
+  targets: ChimeTarget[];
   mode: "sound" | "speech";
   sound: string | null;
   tts_entity: string | null;
@@ -202,6 +252,16 @@ export interface ScenarioConfig {
   icon: string | null;
   exit_delay_override: number | null;
   siren_duration_override: number | null;
+  response_profile_id: string | null;
+}
+
+export interface SettingsConfig {
+  siren_duration: number;
+  arm_hold_timeout: number;
+  default_profile_id: string | null;
+  technical_profile_id: string | null;
+  silent_suppresses: string[];
+  camera_dir: string;
 }
 
 export interface FoyerConfig {
@@ -209,7 +269,8 @@ export interface FoyerConfig {
   zones: ZoneConfig[];
   scenarios: ScenarioConfig[];
   groups: GroupConfig[];
-  settings: { siren_duration: number; arm_hold_timeout: number };
+  profiles: ProfileConfig[];
+  settings: SettingsConfig;
   chime: ChimeConfig;
 }
 
@@ -219,6 +280,15 @@ export interface ConfigMeta {
   chime_domains: string[];
   ha_states: string[];
   bounds: Record<string, [number, number]>;
+  action_kinds: ActionKind[];
+  /** Which entity domains each action kind may point at. */
+  action_domains: Record<string, string[]>;
+  silenceable: string[];
+  moments: string[];
+  /** Moments no phase raises yet: selectable, and labelled as such. */
+  future_moments: string[];
+  template_variables: string[];
+  max_conditions: number;
 }
 
 export interface Problem {
@@ -246,4 +316,11 @@ export interface ZoneProposal {
   zone_type: string | null;
 }
 
-export type PageId = "overview" | "areas" | "zones" | "scenarios" | "groups" | "settings";
+export type PageId =
+  | "overview"
+  | "areas"
+  | "zones"
+  | "scenarios"
+  | "profiles"
+  | "groups"
+  | "settings";

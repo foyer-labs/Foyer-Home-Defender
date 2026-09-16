@@ -559,7 +559,7 @@
     },
     "settings": {
       "title": "Cosa fanno queste impostazioni",
-      "intro": "Impostazioni che valgono per tutta l'installazione. Per ora: il campanello.",
+      "intro": "Impostazioni che valgono per tutta l'installazione: il campanello, e dove finisce ogni catena di risposta.",
       "items": {
         "targets": {
           "term": "Suona su",
@@ -571,11 +571,15 @@
         },
         "quiet": {
           "term": "Ore di silenzio",
-          "text": "Nessun campanello in questa fascia."
+          "text": "Nessun campanello in questa fascia. Un singolo target può avere la sua."
         },
         "during_exit": {
           "term": "Durante il ritardo d'uscita",
           "text": "Se le zone suonano mentre la loro area conta alla rovescia verso l'inserimento."
+        },
+        "response": {
+          "term": "Risposta predefinita",
+          "text": "Il profilo che tutto eredita, quello del canale tecnico, e cosa tace in una zona silenziosa."
         }
       }
     },
@@ -758,7 +762,7 @@
     "title": "Impostazioni",
     "chime_title": "Campanello",
     "chime_intro": "Suona quando si apre una zona con il campanello attivo mentre la sua area non è inserita — non solo quando la casa è disinserita. Con il solo perimetro inserito, una porta interna suona comunque.",
-    "targets_hint": "Media player e sirene.",
+    "targets_hint": "Media player, sirene e servizi o entità notify: il campanello arriva anche sul telefono e su Telegram. Ogni target può avere le sue ore di silenzio.",
     "no_targets": "Nessun media player o sirena trovato.",
     "sound_hint": "Per i media player: un id di contenuto o un URL, come media-source://media_source/local/chime.mp3. Una sirena suona per un secondo, se supporta una durata impostata; altrimenti viene saltata.",
     "tts_hint": "Usata per pronunciare il nome della zona.",
@@ -867,8 +871,16 @@
     "delay_hint": "Trattiene le azioni che seguono in questa lista. Sopravvive a un riavvio.",
     "revert_hint": "Vuoto: lascialo com'è.",
     "camera_hint": "La notifica allega l'immagine dal vivo; il file finisce nella cartella telecamere.",
-    "call_service_hint": "Tutto ciò che Foyer non modella nativamente. I dati sono YAML.",
+    "call_service_hint": "Tutto ciò che Foyer non modella nativamente. I dati sono JSON.",
     "escalation_later": "L'escalation fra contatti arriva nella Fase 4.",
     "future_moment": "Prodotto da una fase successiva."
+  },
+  "camera_mode": {
+    "snapshot": "Scatto",
+    "record": "Registrazione"
+  },
+  "on_off": {
+    "on": "Acceso",
+    "off": "Spento"
   }
 }

@@ -94,7 +94,7 @@ async def test_an_alpha_3_configuration_is_migrated_to_the_new_major(
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    assert (STORAGE_VERSION, STORAGE_MINOR_VERSION) == (3, 1)
+    assert (STORAGE_VERSION, STORAGE_MINOR_VERSION) == (4, 1)
     system = hass.data[DOMAIN]
     assert system.config.zones[0].name == "Shutter"
     assert system.config.groups == ()
@@ -183,7 +183,7 @@ async def test_the_chime_plays_through_the_executor(hass, loaded, hass_ws_client
     )["success"]
     await hass.async_block_till_done()
     chime = {
-        "targets": ["media_player.kitchen"],
+        "targets": [{"entity_id": "media_player.kitchen"}],
         "mode": "sound",
         "sound": "media-source://media_source/local/chime.mp3",
         "tts_entity": None,

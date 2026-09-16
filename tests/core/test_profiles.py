@@ -73,9 +73,7 @@ def house(*profiles: ResponseProfile, default: str | None = None, **changes):
     return replace(
         config,
         profiles=profiles,
-        settings=replace(
-            config.settings, default_profile_id=default or profiles[0].id
-        ),
+        settings=replace(config.settings, default_profile_id=default or profiles[0].id),
         **changes,
     )
 

@@ -16,6 +16,7 @@ import type {
   ZoneProposal,
 } from "../../shared/types";
 import { optionalNumber, problemText, type PanelContext } from "../context";
+import { profileField } from "../profile-picker";
 
 const EVENT_DOMAINS = new Set(["event", "tag"]);
 const FAULT_STATES = new Set(["unavailable", "unknown"]);
@@ -41,6 +42,8 @@ function blankZone(areaId: string): ZoneConfig {
     enabled: true,
     key: null,
     chime: false,
+    silent: false,
+    response_profile_id: null,
     cross_zone_id: null,
     cross_zone_window: 60,
     trigger_count: 1,
@@ -52,7 +55,7 @@ function blankZone(areaId: string): ZoneConfig {
 // them elsewhere): reset them whenever a zone leaves the intrusion channel.
 function intrusionOnly(draft: ZoneConfig): ZoneConfig {
   if (draft.channel === "intrusion") return draft;
-  return { ...draft, chime: false, cross_zone_id: null, trigger_count: 1 };
+  return { ...draft, chime: false, cross_zone_id: null, trigger_count: 1, silent: false };
 }
 
 const sameTrigger = (a?: Trigger, b?: Trigger) => JSON.stringify(a) === JSON.stringify(b);
@@ -743,9 +746,16 @@ class FoyerPageZones extends LitElement {
           ${intrusion ? check("always_on", "zones.always_on_hint") : nothing}
           ${intrusion ? check("bypassable", "zones.bypassable_hint") : nothing}
           ${intrusion && !draft.always_on ? check("chime", "zones.chime_hint") : nothing}
+          ${intrusion ? check("silent", "zones.silent_hint") : nothing}
           ${check("allow_arm_when_faulted", "zones.allow_faulted_hint")}
           ${check("enabled", "zones.enabled_hint")}
         </div>
+        ${profileField(
+          ctx,
+          draft.response_profile_id,
+          (value) => this._set("response_profile_id", value),
+          t(s, "profiles.zone_hint"),
+        )}
         ${draft.channel === "technical"
           ? html`<p class="hint">${t(s, "zones.technical_hint")}</p>
               <div class="notice fire" role="note">${t(s, "zones.fire_statement")}</div>`

@@ -6,12 +6,14 @@ import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { AreaConfig, Problem } from "../../shared/types";
 import { problemText, type PanelContext } from "../context";
+import { effectiveHint, profileField } from "../profile-picker";
 
 const NEW_AREA: AreaConfig = {
   name: "",
   ha_state_when_armed: "armed_away",
   default_entry_delay: 30,
   default_exit_delay: 30,
+  response_profile_id: null,
 };
 
 class FoyerPageAreas extends LitElement {
@@ -167,7 +169,11 @@ class FoyerPageAreas extends LitElement {
               />
               <span class="hint">${t(s, "areas.exit_hint")}</span>
             </label>
+            ${profileField(this.ctx!, draft.response_profile_id, (value) =>
+              this._set("response_profile_id", value),
+            )}
           </div>
+          ${effectiveHint(this.ctx!, draft.id ?? null)}
           ${this._problems.length
             ? html`<div class="problems" role="alert">
                 <ul>

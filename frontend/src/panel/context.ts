@@ -12,6 +12,7 @@ import type {
   HomeAssistant,
   PageId,
   Problem,
+  SettingsConfig,
 } from "../shared/types";
 
 export interface PanelContext {
@@ -31,6 +32,9 @@ export interface PanelContext {
   save(kind: string, item: object, triggerConfirmed?: boolean): Promise<EditResult>;
   remove(kind: string, id: string): Promise<EditResult>;
   saveChime(chime: ChimeConfig): Promise<EditResult>;
+  saveSettings(settings: Partial<SettingsConfig>): Promise<EditResult>;
+  /** Exclude a zone by hand, with an optional duration (SPEC §16). */
+  bypass(zoneId: string, bypass: boolean, seconds?: number): Promise<CommandResult>;
 }
 
 /** Seconds left on a timer, never negative. */

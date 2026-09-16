@@ -22,12 +22,21 @@ import "./pages/overview";
 import "./pages/areas";
 import "./pages/zones";
 import "./pages/scenarios";
+import "./pages/profiles";
 import "./pages/groups";
 import "./pages/settings";
 
-// In the order of SPEC §15.1: 1–4, then 11 and 13 as they arrive.
-const PAGES: PageId[] = ["overview", "areas", "zones", "scenarios", "groups", "settings"];
-const CONFIG_PAGES: PageId[] = ["areas", "zones", "scenarios", "groups", "settings"];
+// In the order of SPEC §15.1: 1–5, then 11 and 13 as they arrive.
+const PAGES: PageId[] = [
+  "overview",
+  "areas",
+  "zones",
+  "scenarios",
+  "profiles",
+  "groups",
+  "settings",
+];
+const CONFIG_PAGES: PageId[] = ["areas", "zones", "scenarios", "profiles", "groups", "settings"];
 
 // One line per setting in each page's help (translations: help.<page>.items).
 const HELP_ITEMS: Record<PageId, string[]> = {
@@ -44,8 +53,9 @@ const HELP_ITEMS: Record<PageId, string[]> = {
     "verification",
   ],
   scenarios: ["areas", "reports_master", "switching", "exit_override", "siren"],
+  profiles: ["inheritance", "moments", "conditions", "severity", "silent"],
   groups: ["threshold", "members", "suppress", "derived"],
-  settings: ["targets", "mode", "quiet", "during_exit"],
+  settings: ["targets", "mode", "quiet", "during_exit", "response"],
 };
 
 interface Prefs {
@@ -174,6 +184,18 @@ class FoyerPanel extends LitElement {
       acknowledge: (target) =>
         hass.callWS<CommandResult>({ type: "foyer/acknowledge", target }),
       saveChime: (chime) => this._edit("chime", { type: "foyer/config/chime", chime }),
+      saveSettings: (settings) =>
+        this._edit("settings", {
+          type: "foyer/config/settings",
+          settings: { ...this._config?.settings, ...settings },
+        }),
+      bypass: (zoneId, bypass, seconds) =>
+        hass.callWS<CommandResult>({
+          type: "foyer/bypass",
+          zone_id: zoneId,
+          bypass,
+          ...(seconds ? { seconds } : {}),
+        }),
       save: (kind, item, triggerConfirmed = false) =>
         this._edit(kind, {
           type: "foyer/config/save",
@@ -305,6 +327,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-zones .ctx=${ctx}></foyer-page-zones>`;
       case "scenarios":
         return html`<foyer-page-scenarios .ctx=${ctx}></foyer-page-scenarios>`;
+      case "profiles":
+        return html`<foyer-page-profiles .ctx=${ctx}></foyer-page-profiles>`;
       case "groups":
         return html`<foyer-page-groups .ctx=${ctx}></foyer-page-groups>`;
       case "settings":

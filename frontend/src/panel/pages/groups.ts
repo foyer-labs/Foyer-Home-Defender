@@ -7,6 +7,7 @@ import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { GroupConfig, Problem, ZoneConfig } from "../../shared/types";
 import { optionalNumber, problemText, type PanelContext } from "../context";
+import { profileField } from "../profile-picker";
 
 interface Row {
   group: GroupConfig;
@@ -37,6 +38,7 @@ class FoyerPageGroups extends LitElement {
           n: 2,
           window_seconds: 60,
           suppress_members: false,
+          response_profile_id: null,
         };
     this._problems = [];
   }
@@ -90,6 +92,7 @@ class FoyerPageGroups extends LitElement {
           n: 2,
           window_seconds: zone.cross_zone_window,
           suppress_members: false,
+          response_profile_id: null,
         },
       });
     }
@@ -242,6 +245,12 @@ class FoyerPageGroups extends LitElement {
               />
               <span class="hint">${t(s, "groups.window_hint")}</span>
             </label>
+            ${profileField(
+              this.ctx!,
+              draft.response_profile_id,
+              (value) => this._set("response_profile_id", value),
+              t(s, "profiles.group_hint"),
+            )}
           </div>
           <fieldset>
             <legend>${t(s, "field.members")}</legend>

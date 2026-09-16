@@ -6,6 +6,7 @@ import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { Problem, ScenarioConfig } from "../../shared/types";
 import { optionalNumber, problemText, type PanelContext } from "../context";
+import { profileField } from "../profile-picker";
 
 const NEW_SCENARIO: ScenarioConfig = {
   name: "",
@@ -14,6 +15,7 @@ const NEW_SCENARIO: ScenarioConfig = {
   icon: null,
   exit_delay_override: null,
   siren_duration_override: null,
+  response_profile_id: null,
 };
 
 class FoyerPageScenarios extends LitElement {
@@ -202,6 +204,9 @@ class FoyerPageScenarios extends LitElement {
               />
               <span class="hint">${t(s, "scenarios.siren_hint")}</span>
             </label>
+            ${profileField(this.ctx!, draft.response_profile_id, (value) =>
+              this._set("response_profile_id", value),
+            )}
           </div>
           <fieldset>
             <legend>${t(s, "field.areas")}</legend>

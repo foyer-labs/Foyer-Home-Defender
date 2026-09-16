@@ -559,7 +559,7 @@
     },
     "settings": {
       "title": "What these settings do",
-      "intro": "Settings that apply to the whole installation. Today: the chime.",
+      "intro": "Settings that apply to the whole installation: the chime, and where every response chain ends.",
       "items": {
         "targets": {
           "term": "Play on",
@@ -571,11 +571,15 @@
         },
         "quiet": {
           "term": "Quiet hours",
-          "text": "No chime inside this window."
+          "text": "No chime inside this window. A target may carry a window of its own."
         },
         "during_exit": {
           "term": "During the exit delay",
           "text": "Whether zones chime while their area counts down to armed."
+        },
+        "response": {
+          "term": "Response defaults",
+          "text": "The profile everything inherits, the one the technical channel uses, and what a silent zone keeps quiet."
         }
       }
     },
@@ -758,7 +762,7 @@
     "title": "Settings",
     "chime_title": "Chime",
     "chime_intro": "Sounds when a zone with the chime switched on opens while its area is not armed — not merely when the house is disarmed. With only the perimeter armed, an internal door still chimes.",
-    "targets_hint": "Media players and sirens.",
+    "targets_hint": "Media players, sirens, and notify services or entities — the phone and Telegram chime too. Each target may carry quiet hours of its own.",
     "no_targets": "No media player or siren found.",
     "sound_hint": "For media players: a media id or URL, such as media-source://media_source/local/chime.mp3. A siren sounds for one second, if it supports a set duration; otherwise it is skipped.",
     "tts_hint": "Used to speak the zone name.",
@@ -867,8 +871,16 @@
     "delay_hint": "Holds the actions after it in this list. It survives a restart.",
     "revert_hint": "Empty: leave it as it is.",
     "camera_hint": "The notification attaches the live picture; the file is written to the camera folder.",
-    "call_service_hint": "Anything Foyer does not model natively. Data is YAML.",
+    "call_service_hint": "Anything Foyer does not model natively. Data is JSON.",
     "escalation_later": "Escalation across contacts arrives in Phase 4.",
     "future_moment": "Raised from a later phase on."
+  },
+  "camera_mode": {
+    "snapshot": "Snapshot",
+    "record": "Recording"
+  },
+  "on_off": {
+    "on": "On",
+    "off": "Off"
   }
 }

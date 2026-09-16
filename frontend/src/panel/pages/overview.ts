@@ -319,6 +319,7 @@ class FoyerPageOverview extends LitElement {
                     <th>${t(s, "overview.area")}</th>
                     <th>${t(s, "overview.status")}</th>
                     <th>${t(s, "overview.entity_state")}</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -328,6 +329,7 @@ class FoyerPageOverview extends LitElement {
                       <td>${areas.get(zone.area_id) ?? ""}</td>
                       <td>${this._zoneStatus(s, zone)}</td>
                       <td class="mono">${zone.state ?? "—"}</td>
+                      <td>${this._renderBypass(s, zone)}</td>
                     </tr>`,
                   )}
                 </tbody>
@@ -338,12 +340,59 @@ class FoyerPageOverview extends LitElement {
     `;
   }
 
+  /** Excluding a zone by hand, with or without a duration (SPEC §16).
+
+   * Without one it comes back when the area is disarmed; with one it comes
+   * back on its own and says so, because a zone excluded and forgotten is
+   * exactly the window somebody comes through.
+   */
+  private _renderBypass(s: Strings, zone: StatusZone) {
+    const ctx = this.ctx!;
+    if (zone.bypassed) {
+      return html`<button
+        class="btn sm"
+        ?disabled=${this._busy}
+        @click=${() => this._run(() => ctx.bypass(zone.id, false))}
+      >
+        ${t(s, "zones.unbypass")}
+      </button>`;
+    }
+    if (!zone.bypassable) return nothing;
+    return html`<div class="bypass">
+      <button
+        class="btn sm"
+        ?disabled=${this._busy}
+        @click=${() => this._run(() => ctx.bypass(zone.id, true))}
+      >
+        ${t(s, "zones.bypass")}
+      </button>
+      ${[1, 8].map(
+        (hours) => html`<button
+          class="btn sm ghost"
+          ?disabled=${this._busy}
+          @click=${() => this._run(() => ctx.bypass(zone.id, true, hours * 3600))}
+        >
+          ${t(s, "zones.bypass_hours", { hours })}
+        </button>`,
+      )}
+    </div>`;
+  }
+
   private _zoneStatus(s: Strings, zone: StatusZone) {
     if (zone.fault) {
       return html`<span class="state fault">${t(s, `fault.${zone.fault}`)}</span>`;
     }
     if (zone.bypassed) {
-      return html`<span class="state bypassed">${t(s, `bypass.${zone.bypassed}`)}</span>`;
+      const until = zone.bypass_until
+        ? t(s, "zones.bypass_until", {
+            time: new Date(zone.bypass_until).toLocaleTimeString(undefined, {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })
+        : t(s, "zones.bypass_indefinite");
+      return html`<span class="state bypassed">${t(s, `bypass.${zone.bypassed}`)}</span>
+        <span class="hint">${zone.bypassed === "manual" ? until : ""}</span>`;
     }
     return html`<span class="state open">${t(s, "zone_status.open")}</span>`;
   }
@@ -352,6 +401,11 @@ class FoyerPageOverview extends LitElement {
     stateStyles,
     formStyles,
     css`
+      .bypass {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
       .tiles {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
