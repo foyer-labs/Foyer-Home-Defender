@@ -5,7 +5,7 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased] — Phase 1, part 3: response profiles, actions, bypass
+## [0.1.0-alpha.5] — Phase 1, part 3: response profiles, actions, bypass
 
 **Pre-release, for testing only.** Still not for protecting a house: no event
 log, no codes, no escalation across contacts.
