@@ -2,6 +2,8 @@
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/logo/foyer-hd-app-192.png" alt="Foyer Home Defender" width="120">
 </p>
 
+<p align="center"><strong>English</strong> · <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/README.it.md">Italiano</a></p>
+
 # Foyer Home Defender
 
 Foyer Home Defender turns Home Assistant into a real intruder alarm panel: areas
