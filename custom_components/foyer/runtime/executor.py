@@ -113,7 +113,13 @@ class Executor:
         data: dict[str, Any] = {"message": intent.params.get("message", "")}
         if title := intent.params.get("title"):
             data["title"] = title
-        if extra := intent.params.get("data"):
+        extra = dict(intent.params.get("data") or {})
+        if camera := intent.params.get("camera_entity_id"):
+            # The live picture, through Home Assistant's authenticated proxy:
+            # no file on disk, and nothing published to anyone who guesses a
+            # URL (§6.2, part 3 decision 7).
+            extra.setdefault("image", f"/api/camera_proxy/{camera}")
+        if extra:
             data["data"] = extra
         await self._async_notify_call(service, data)
 

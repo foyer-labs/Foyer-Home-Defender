@@ -216,7 +216,8 @@
     "camera_dir": "Cartella telecamere",
     "default_profile_id": "Profilo predefinito",
     "technical_profile_id": "Profilo tecnico",
-    "actions": "Azioni"
+    "actions": "Azioni",
+    "camera_entity_id": "Allega una telecamera"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -873,7 +874,8 @@
     "camera_hint": "La notifica allega l'immagine dal vivo; il file finisce nella cartella telecamere.",
     "call_service_hint": "Tutto ciò che Foyer non modella nativamente. I dati sono JSON.",
     "escalation_later": "L'escalation fra contatti arriva nella Fase 4.",
-    "future_moment": "Prodotto da una fase successiva."
+    "future_moment": "Prodotto da una fase successiva.",
+    "attach_hint": "L'immagine dal vivo accompagna la notifica, attraverso il proxy autenticato di Home Assistant. Nessun file viene scritto."
   },
   "camera_mode": {
     "snapshot": "Scatto",

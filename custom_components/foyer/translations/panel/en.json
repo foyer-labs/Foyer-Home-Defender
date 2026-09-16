@@ -216,7 +216,8 @@
     "camera_dir": "Camera folder",
     "default_profile_id": "Default profile",
     "technical_profile_id": "Technical profile",
-    "actions": "Actions"
+    "actions": "Actions",
+    "camera_entity_id": "Attach a camera"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -873,7 +874,8 @@
     "camera_hint": "The notification attaches the live picture; the file is written to the camera folder.",
     "call_service_hint": "Anything Foyer does not model natively. Data is JSON.",
     "escalation_later": "Escalation across contacts arrives in Phase 4.",
-    "future_moment": "Raised from a later phase on."
+    "future_moment": "Raised from a later phase on.",
+    "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written."
   },
   "camera_mode": {
     "snapshot": "Snapshot",

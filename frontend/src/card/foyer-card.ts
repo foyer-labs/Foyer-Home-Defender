@@ -136,7 +136,7 @@ class FoyerCard extends LitElement {
       <ha-card>
         <div class="content">
           ${this._renderAlerts(s)} ${this._head(area.name, area.state, area.memory)}
-          ${this._countdown(s, area)}
+          ${this._countdown(s, area)} ${this._renderBlocking(s, area)}
           <div class="buttons">
             ${area.state === "disarmed"
               ? html`<button
@@ -159,6 +159,39 @@ class FoyerCard extends LitElement {
           ${this._renderFeedback()}
         </div>
       </ha-card>
+    `;
+  }
+
+  /** The zones that stop this area arming, each with a way out (§5.4, §16).
+   *
+   * Excluding a zone from the card is the same command the panel sends; the
+   * engine decides whether it may be excluded at all (INV-2).
+   */
+  private _renderBlocking(s: Strings, area: StatusArea) {
+    if (area.state !== "disarmed" || area.ready) return nothing;
+    const zones = this._status?.zones ?? [];
+    const blocking = [...area.blocking.fault, ...area.blocking.open]
+      .map((id) => zones.find((z) => z.id === id))
+      .filter((zone): zone is NonNullable<typeof zone> => Boolean(zone));
+    if (!blocking.length) return nothing;
+    return html`
+      <div class="blocking">
+        ${blocking.map(
+          (zone) => html`<div class="row">
+            <span>${zone.name}</span>
+            ${zone.bypassable
+              ? html`<button
+                  class="link"
+                  ?disabled=${this._busy}
+                  @click=${() =>
+                    this._run({ type: "foyer/bypass", zone_id: zone.id, bypass: true })}
+                >
+                  ${t(s, "zones.bypass")}
+                </button>`
+              : nothing}
+          </div>`,
+        )}
+      </div>
     `;
   }
 
@@ -298,6 +331,25 @@ class FoyerCard extends LitElement {
         font-size: 15px;
         font-weight: 500;
         font-variant-numeric: tabular-nums;
+      }
+      .blocking {
+        margin: 8px 0 0;
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+      .blocking .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 2px 0;
+      }
+      .blocking .link {
+        background: none;
+        border: 0;
+        padding: 0;
+        color: var(--primary-color);
+        font: inherit;
+        cursor: pointer;
       }
       .buttons {
         display: flex;

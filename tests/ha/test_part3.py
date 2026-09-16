@@ -212,3 +212,40 @@ async def test_a_persistent_notification_still_reaches_home_assistant(
         "Foyer" in str(notification.get("title", ""))
         for notification in _notifications(hass)
     ), _notifications(hass)
+
+
+async def test_a_notification_can_carry_the_camera_picture(
+    hass, loaded, hass_ws_client, freezer
+):
+    """§6.2: the attachment is the authenticated camera proxy, not a file
+    under www, which is served to anyone who guesses the URL."""
+    calls = async_mock_service(hass, "notify", "mobile_app_luca")
+    client = await hass_ws_client(hass)
+    await _profile(
+        client,
+        [
+            {
+                "kind": "notify",
+                "moments": ["triggered"],
+                "name": "Tell Luca",
+                "params": {
+                    "service": "notify.mobile_app_luca",
+                    "message": "{{ zone }} in {{ area }}",
+                    "camera_entity_id": "camera.front",
+                },
+                "conditions": [],
+                "condition_mode": "all",
+                "enabled": True,
+            }
+        ],
+        name="Notify",
+    )
+    await hass.async_block_till_done()
+    await _use_profile(hass, client, hass.data[DOMAIN].config.profiles[-1].id)
+
+    await _arm_away(hass, freezer)
+    await _set(hass, ZONE, "on", friendly_name="Front door")
+
+    assert len(calls) == 1
+    assert calls[0].data["message"] == "Front door in Casa"
+    assert calls[0].data["data"]["image"] == "/api/camera_proxy/camera.front"

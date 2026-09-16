@@ -485,6 +485,10 @@ class FoyerPageProfiles extends LitElement {
         parts.push(this._text(s, action, index, "service"));
         parts.push(this._text(s, action, index, "title"));
         parts.push(this._text(s, action, index, "message", messageHint));
+        parts.push(
+          this._picker(s, action, index, "camera_entity_id", ["camera"], false),
+        );
+        parts.push(html`<span class="hint">${t(s, "profiles.attach_hint")}</span>`);
         break;
       case "persistent_notification":
         parts.push(this._text(s, action, index, "title"));

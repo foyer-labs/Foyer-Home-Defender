@@ -2826,7 +2826,7 @@ var Xe = class extends U {
 		let r = this.ctx?.meta?.action_domains[t.kind] ?? [], i = q(e, "profiles.message_hint", { variables: (this.ctx?.meta?.template_variables ?? []).map((e) => `{{ ${e} }}`).join(" ") }), a = [];
 		switch (qe.includes(t.kind) && a.push(this._picker(e, t, n, "entity_ids", r, !0)), Je.includes(t.kind) && a.push(this._picker(e, t, n, "entity_id", r, !1)), t.kind) {
 			case "notify":
-				a.push(this._text(e, t, n, "service")), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i));
+				a.push(this._text(e, t, n, "service")), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i)), a.push(this._picker(e, t, n, "camera_entity_id", ["camera"], !1)), a.push(M`<span class="hint">${q(e, "profiles.attach_hint")}</span>`);
 				break;
 			case "persistent_notification":
 				a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i));

@@ -332,6 +332,9 @@ def _params_problems(action: ProfileAction, add) -> list[Problem]:
             add("notify_service_required", "service")
         if not str(params.get("message") or "").strip():
             add("message_required", "message")
+        camera = params.get("camera_entity_id")
+        if camera is not None and not str(camera).startswith("camera."):
+            add("entity_domain", "camera_entity_id")
     elif kind is ActionKind.DELAY:
         if not _in_range(_int_or_none(params.get("seconds")), 1, MAX_ACTION_DELAY):
             add("delay_out_of_range", "seconds")

@@ -825,7 +825,7 @@ var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", 
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)} ${this._head(t.name, t.state, t.memory)}
-          ${this._countdown(e, t)}
+          ${this._countdown(e, t)} ${this._renderBlocking(e, t)}
           <div class="buttons">
             ${t.state === "disarmed" ? z`<button
                   class="primary"
@@ -851,6 +851,28 @@ var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", 
         </div>
       </ha-card>
     `;
+	}
+	_renderBlocking(e, t) {
+		if (t.state !== "disarmed" || t.ready) return V;
+		let n = this._status?.zones ?? [], r = [...t.blocking.fault, ...t.blocking.open].map((e) => n.find((t) => t.id === e)).filter((e) => !!e);
+		return r.length ? z`
+      <div class="blocking">
+        ${r.map((t) => z`<div class="row">
+            <span>${t.name}</span>
+            ${t.bypassable ? z`<button
+                  class="link"
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({
+			type: "foyer/bypass",
+			zone_id: t.id,
+			bypass: !0
+		})}
+                >
+                  ${$(e, "zones.bypass")}
+                </button>` : V}
+          </div>`)}
+      </div>
+    ` : V;
 	}
 	_renderMaster(e) {
 		let t = this._status;
@@ -967,6 +989,25 @@ var ge = "alarm_control_panel.foyer_", _e = "alarm_control_panel.foyer_master", 
         font-size: 15px;
         font-weight: 500;
         font-variant-numeric: tabular-nums;
+      }
+      .blocking {
+        margin: 8px 0 0;
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+      .blocking .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 2px 0;
+      }
+      .blocking .link {
+        background: none;
+        border: 0;
+        padding: 0;
+        color: var(--primary-color);
+        font: inherit;
+        cursor: pointer;
       }
       .buttons {
         display: flex;
