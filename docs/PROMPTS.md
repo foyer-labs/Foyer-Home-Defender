@@ -625,7 +625,30 @@ Continue on branch phase-1. Commit as Foyer Labs <foyerlabs@gmail.com>.
 ```
 Scope for THIS session: Phase 1, part 3 — response profiles, conditions, the
 action catalogue, templates, severity, silent zones, manual and timed
-bypass, and panel page 5. Paste "Phase 1 decisions" after this appendix.
+bypass, and panel page 5. Part 4 is a separate session. Paste "Phase 1
+decisions" after this appendix.
+
+Context from part 2 (released as v0.1.0-alpha.4):
+- Continue on branch phase-1, which is where master and the tag sit. Commit
+  as Foyer Labs <foyerlabs@gmail.com>; it is already in the repo's local git
+  config. Never commit with any other identity.
+- Stored configuration is schema 3.1; the runtime state file is 1.1 and
+  grows by keys read with defaults. Every schema change is a new step in
+  store/migrations with a test that migrates a real previous document.
+- The technical channel, incidents, verification groups and the chime exist
+  and are tested: build profiles ON them, do not rebuild them. What part 2
+  deliberately left for this part is marked in the code: Contributor
+  .profile_id / .severity, Incident.actions_started, and the group's
+  response_profile_id, which is not stored yet.
+- Until this part, the only response is the Phase 0 persistent notification,
+  whose moments now include technical_raised (part 2 decision 10, added by
+  the 2.2 -> 3.1 migration). Moving it into the default profiles must keep
+  every one of those notifications working, technical included.
+- Home Assistant integration tests do not run on Windows. See the project
+  memory for the WSL environments (HA 2025.1.4 and latest) and the hassfest
+  checkout; CI runs all of it on every push.
+- The panel has pages Overview, Areas, Zones, Scenarios, Verification groups
+  and Settings (its chime block only). Page 5 joins them here.
 
 1. Response profiles (SPEC §6):
    - Inheritance zone -> area -> scenario -> global default; groups (part 2)
