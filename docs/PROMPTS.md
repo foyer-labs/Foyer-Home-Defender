@@ -387,7 +387,7 @@ Context from Phase 0 (released as v0.0.1, accepted on a real Home Assistant):
 
 ```
 Binding decisions taken by the user in Phase 1. The spec has been amended to
-match (SPEC §21, decisions 36-59); this list is the quick reference. None of
+match (SPEC §21, decisions 36-60); this list is the quick reference. None of
 them may be "fixed back" without asking.
 
  1. Zone type is a preset label only. The engine reads explicit properties:
