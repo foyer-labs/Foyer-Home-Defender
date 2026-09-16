@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo/foyer-hd-lockup-light-bg.png" alt="Foyer Home Defender" width="360">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/logo/foyer-hd-app-192.png" alt="Foyer Home Defender" width="120">
 </p>
 
 # Foyer Home Defender
@@ -22,7 +22,7 @@ a simulator that lets you check the configuration before you trust it.
 > not escalate until somebody answers; and there are no users or codes, so
 > **anyone who can reach Home Assistant can disarm it.**
 
-The full design is in [docs/SPEC.md](docs/SPEC.md).
+The full design is in [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md).
 
 ## Prior art, and how Foyer differs
 
@@ -113,4 +113,4 @@ key sets differ.
 
 ## Licence
 
-Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Apache-2.0. See [LICENSE](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE) and [NOTICE](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/NOTICE).
