@@ -27,7 +27,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
-from .clock import in_daily_window
 from .models import (
     CUSTOM_BYPASS,
     AcknowledgeIncident,
@@ -42,6 +41,7 @@ from .models import (
     ArmPolicy,
     ArmRequest,
     BypassReason,
+    BypassZone,
     Channel,
     Contributor,
     Decision,
@@ -68,6 +68,16 @@ from .models import (
     TimerKind,
     Zone,
     ZoneStateChanged,
+)
+from .response import (
+    PlanContext,
+    audible_targets,
+    chime_suppressed,
+    effective_profile,
+    plan_occurrences,
+    resume,
+    revert_intent,
+    without,
 )
 from .triggers import (
     fault_cause,
@@ -110,6 +120,8 @@ def decide(
     """Return what should happen in response to ``event``. Executes nothing."""
     run = _Run(snapshot, config, now)
     run.expire_windows()
+    run.expire_bypasses()
+    run.expire_running()
     run.process_due_timers()
 
     changed: str | None = None
@@ -136,6 +148,8 @@ def decide(
         outcome = run.acknowledge_incident(event.code, event.channel)
     elif isinstance(event, AcknowledgeTechnical):
         outcome = run.acknowledge_technical(event.code, event.channel)
+    elif isinstance(event, BypassZone):
+        outcome = run.bypass_zone(event)
     elif isinstance(event, SetChime):
         run.set_chime(event.enabled, event.channel)
     elif isinstance(event, Startup):
@@ -207,11 +221,17 @@ def next_wakeup(
 ) -> datetime | None:
     """When the scheduler must next send a Tick: a timer, a verification window
     running out, or a supervision lapse."""
+    state = snapshot.state
     dues: list[datetime] = [
-        rt.timer.due for rt in snapshot.state.areas.values() if rt.timer is not None
+        rt.timer.due for rt in state.areas.values() if rt.timer is not None
     ]
+    # Timed bypasses, sequences held by a delay, and auto-reverts are timers
+    # like any other: data in the state, one wake-up (part 3 decision 5).
+    dues.extend(state.bypass_until.values())
+    dues.extend(run.due for run in state.pending_runs)
+    dues.extend(r.until for r in state.running if r.until is not None)
     windows = all_windows(config)
-    for key, activations in snapshot.state.windows.items():
+    for key, activations in state.windows.items():
         if (window := windows.get(key)) is not None:
             dues.extend(window.expires_at(a) for a in activations)
     for zone in config.zones:
@@ -248,6 +268,7 @@ class _Run:
     def __init__(self, snapshot: SystemSnapshot, config: FoyerConfig, now: datetime):
         self.config = config
         self.now = now
+        self.snapshot = snapshot
         state = snapshot.state
         self.areas: dict[str, AreaRuntime] = {
             a.id: state.area(a.id) for a in config.areas
@@ -273,6 +294,17 @@ class _Run:
         self.incident: Incident | None = state.incident
         self.incident_seq = state.incident_seq
         self.chime_enabled = state.chime_enabled
+        # Manual bypasses with a duration (part 3 decision 10) and the profile
+        # machinery: sequences held by a delay, and what is still switched on.
+        self.bypass_until = {
+            z: due for z, due in state.bypass_until.items() if z in self.bypassed
+        }
+        self.pending_runs = list(state.pending_runs)
+        self.running = list(state.running)
+        self.run_seq = state.run_seq
+        # Intents that no occurrence produces: switching off what an action
+        # switched on, and resuming a sequence a delay held back.
+        self.extra: list[ActionIntent] = []
         # Verification windows (§4.8): one engine for groups, cross-zone pairs
         # and trigger counts. A window whose setting is gone is dropped.
         self.verifications: dict[str, Verification] = all_windows(config)
@@ -450,6 +482,7 @@ class _Run:
             scenario_id=rt.scenario_id,
             zone_ids=rt.causes,
         )
+        self.stop_running(area_id, Moment.SIREN_CUTOFF)
         resume = rt.resume or AreaState.ARMED
         if resume is AreaState.DISARMED:
             self.set_area(
@@ -583,15 +616,19 @@ class _Run:
             return
         if rt.state is AreaState.ARMING and not settings.during_exit:
             return
-        if (
-            settings.quiet_start
-            and settings.quiet_end
-            and in_daily_window(
-                self.now, self.timezone, settings.quiet_start, settings.quiet_end
-            )
-        ):
+        if chime_suppressed(self.config, zone):
             return
-        self.occur(Moment.CHIME, area_id=zone.area_id, zone_id=zone.id)
+        # Each target may have quiet hours of its own (part 3 decision 8): the
+        # chime happens if at least one target can still hear it.
+        targets = audible_targets(settings, self.now, self.timezone)
+        if not targets:
+            return
+        self.occur(
+            Moment.CHIME,
+            area_id=zone.area_id,
+            zone_id=zone.id,
+            detail={"targets": ",".join(targets)},
+        )
 
     def set_chime(self, enabled: bool, channel: str) -> None:
         if enabled != self.chime_enabled:
@@ -703,11 +740,97 @@ class _Run:
                 detail={"reason": outcome.reason.value if outcome.reason else ""},
             )
 
+    def expire_bypasses(self) -> None:
+        """A timed manual bypass ends on its own, with a notification: a zone
+        excluded and forgotten is the window somebody comes through (§16)."""
+        for zone_id, due in sorted(self.bypass_until.items(), key=lambda i: i[1]):
+            if due > self.now:
+                continue
+            del self.bypass_until[zone_id]
+            self.bypassed.pop(zone_id, None)
+            zone = self.config.zone(zone_id)
+            self.occur(
+                Moment.ZONE_REJOINED,
+                area_id=zone.area_id if zone else None,
+                zone_id=zone_id,
+                detail={"bypass": BypassReason.MANUAL.value, "cause": "expired"},
+            )
+
+    def expire_running(self) -> None:
+        """Switch off what an action switched on, when its time is up (§6.2)."""
+        done = [r for r in self.running if r.until is not None and r.until <= self.now]
+        for running in done:
+            self.extra.append(revert_intent(running, Moment.SIREN_CUTOFF))
+        self.running = list(without(self.running, done))
+
+    def stop_running(self, area_id: str, moment: Moment) -> None:
+        """Stop this area's sounders, and the incident's if it shares one."""
+        incident = self.incident
+        in_incident = incident is not None and area_id in incident.area_ids
+        stopped = [
+            r
+            for r in self.running
+            if r.area_id == area_id
+            or (in_incident and incident is not None and r.incident_id == incident.id)
+        ]
+        for running in stopped:
+            self.extra.append(revert_intent(running, moment))
+        self.running = list(without(self.running, stopped))
+
+    def bypass_zone(self, event: BypassZone) -> _Outcome:
+        """Exclude a zone by hand, or let it back in (SPEC §5.4, §16).
+
+        No code is required before Phase 2 (part 3 decision 9), but the request
+        still goes through the code check, so Phase 2 changes the policy and
+        not the plumbing (INV-2).
+        """
+        zone = self.config.zone(event.zone_id)
+        if zone is None or not zone.enabled:
+            return _reject(Reason.UNKNOWN_ZONE)
+        if event.bypass and not zone.bypassable:
+            return _reject(Reason.ZONE_NOT_BYPASSABLE, (zone.id,))
+        already = self.bypassed.get(zone.id)
+        if event.bypass == (already is not None) and (
+            not event.bypass or already is BypassReason.MANUAL
+        ):
+            return _reject(Reason.INVALID_STATE, (zone.id,))
+        if (reason := self.check_code(Operation.BYPASS_ZONE)) is not None:
+            return _reject(reason)
+        if not event.bypass:
+            del self.bypassed[zone.id]
+            self.bypass_until.pop(zone.id, None)
+            self.occur(
+                Moment.ZONE_REJOINED,
+                area_id=zone.area_id,
+                zone_id=zone.id,
+                channel=event.channel,
+                detail={"bypass": BypassReason.MANUAL.value, "cause": "manual"},
+            )
+            return _ACCEPTED
+        self.bypassed[zone.id] = BypassReason.MANUAL
+        self.new_bypasses.append(zone.id)
+        detail = {"bypass": BypassReason.MANUAL.value}
+        if event.seconds:
+            self.bypass_until[zone.id] = self.now + timedelta(seconds=event.seconds)
+            detail["seconds"] = str(event.seconds)
+        else:
+            self.bypass_until.pop(zone.id, None)
+        self.occur(
+            Moment.ZONE_BYPASSED,
+            area_id=zone.area_id,
+            zone_id=zone.id,
+            channel=event.channel,
+            detail=detail,
+        )
+        return _ACCEPTED
+
     def rejoin_closed_bypasses(self) -> None:
         """Bypassed zones rejoin automatically once seen closed (§5.4)."""
         for zone_id, reason in list(self.bypassed.items()):
             zone = self.config.zone(zone_id)
-            if zone is None:
+            if zone is None or reason is BypassReason.MANUAL:
+                # A manual exclusion is deliberate: closing the window is
+                # precisely why it was excluded (part 3 decision 10).
                 continue
             if zone.id not in self.active and self.fault(zone) is None:
                 del self.bypassed[zone_id]
@@ -813,16 +936,34 @@ class _Run:
             )
         incident = self.incident
         known = {(c.area_id, c.zone_id) for c in incident.contributors}
-        new = [
-            Contributor(
+        new = []
+        for zone_id in zone_ids or (None,):
+            if (area_id, zone_id) in known:
+                continue
+            of_group = group_id if group_zone is None or zone_id == group_zone else None
+            # The profile this zone answered with, recorded as it joins: Phase
+            # 4's escalation takes the highest-severity contributor (§5.6), and
+            # by then the configuration may have changed.
+            profile = effective_profile(
+                self.config,
                 area_id=area_id,
-                zone_id=z,
-                at=self.now,
-                group_id=group_id if group_zone is None or z == group_zone else None,
+                zone_id=zone_id,
+                group_id=of_group,
+                scenario_id=self.areas[area_id].scenario_id
+                if area_id in self.areas
+                else None,
+                moment=Moment.TRIGGERED,
             )
-            for z in (zone_ids or (None,))
-            if (area_id, z) not in known
-        ]
+            new.append(
+                Contributor(
+                    area_id=area_id,
+                    zone_id=zone_id,
+                    at=self.now,
+                    group_id=of_group,
+                    profile_id=profile.id if profile else None,
+                    severity=profile.severity if profile else None,
+                )
+            )
         if new:
             self.incident = replace(
                 incident,
@@ -1229,13 +1370,24 @@ class _Run:
             and area_id in incident.area_ids
         ):
             self.acknowledge(channel, "disarm")
+        # Disarming stops the sirens and abandons what a delay was still
+        # holding for this area: the alarm is over (§5.2).
+        self.stop_running(area_id, Moment.DISARMED)
+        self.pending_runs = [r for r in self.pending_runs if r.area_id != area_id]
         self.clear_area(area_id)
 
     def clear_area(self, area_id: str) -> None:
         """Back to a plain disarmed area: no timer, no memory, no bypasses."""
         self.areas[area_id] = AreaRuntime()
         for zone in self.config.zones_in((area_id,)):
-            self.bypassed.pop(zone.id, None)
+            # A manual exclusion with a duration outlives the disarm; one
+            # without ends with this arming, as on a real panel (decision 10).
+            if self.bypassed.get(zone.id) is BypassReason.MANUAL and (
+                zone.id in self.bypass_until
+            ):
+                continue
+            if self.bypassed.pop(zone.id, None) is not None:
+                self.bypass_until.pop(zone.id, None)
         self.forget_activations(area_id)
         self.refresh_active_scenario()
 
@@ -1253,6 +1405,26 @@ class _Run:
     # --- result -----------------------------------------------------------------
 
     def decision(self, outcome: _Outcome) -> Decision:
+        occurrences = tuple(self.occurrences)
+        ctx = PlanContext(
+            config=self.config,
+            snapshot=replace(self.snapshot, entities=self.entities),
+            now=self.now,
+            areas=self.areas,
+            incident=self.incident,
+            active_zones=frozenset(self.active),
+        )
+        plan, self.run_seq = plan_occurrences(ctx, occurrences, self.run_seq)
+        # Sequences a delay held back and whose time has come (decision 5).
+        due = [r for r in self.pending_runs if r.due <= self.now]
+        self.pending_runs = [r for r in self.pending_runs if r.due > self.now]
+        for run in due:
+            plan.extend(resume(ctx, run))
+        self.pending_runs.extend(plan.pending)
+        self.running.extend(plan.running)
+        if self.incident is not None and plan.started:
+            started = dict.fromkeys((*self.incident.actions_started, *plan.started))
+            self.incident = replace(self.incident, actions_started=tuple(started))
         state = RuntimeState(
             areas=self.areas,
             active_scenario_id=self.active_scenario_id,
@@ -1265,8 +1437,11 @@ class _Run:
             incident_seq=self.incident_seq,
             windows=self.windows,
             chime_enabled=self.chime_enabled,
+            bypass_until=self.bypass_until,
+            pending_runs=tuple(self.pending_runs),
+            running=tuple(self.running),
+            run_seq=self.run_seq,
         )
-        occurrences = tuple(self.occurrences)
         return Decision(
             at=self.now,
             accepted=outcome.accepted,
@@ -1275,76 +1450,44 @@ class _Run:
             blocking_zones=outcome.blocking,
             bypassed_zones=tuple(self.new_bypasses),
             occurrences=occurrences,
-            actions=_intents(self.config, occurrences),
+            actions=(
+                *self.extra,
+                *plan.intents,
+                *self.chime_intents(occurrences),
+            ),
         )
 
-
-# --- actions -----------------------------------------------------------------------
-
-
-def _names(ids: list[str | None], lookup: dict[str, str]) -> str:
-    seen: list[str] = []
-    for item in ids:
-        if item and (name := lookup.get(item, item)) not in seen:
-            seen.append(name)
-    return ", ".join(seen)
-
-
-def _intents(
-    config: FoyerConfig, occurrences: tuple[Occurrence, ...]
-) -> tuple[ActionIntent, ...]:
-    """One intent per action and moment: three areas arming together send one
-    notification that names all three, not three notifications."""
-    areas = {a.id: a.name for a in config.areas}
-    zones = {z.id: z.name for z in config.zones}
-    scenarios = {s.id: s.name for s in config.scenarios}
-    moments = list(dict.fromkeys(o.moment for o in occurrences))
-    intents: list[ActionIntent] = []
-    for action in config.actions:
-        for moment in moments:
-            if moment not in action.moments:
+    def chime_intents(
+        self, occurrences: tuple[Occurrence, ...]
+    ) -> tuple[ActionIntent, ...]:
+        """The chime is a setting, not a profile (§6.6). The Decision carries
+        everything the executor needs: it never reads the configuration."""
+        chime = self.config.chime
+        names = {z.id: z.name for z in self.config.zones}
+        intents = []
+        for occurrence in occurrences:
+            if occurrence.moment is not Moment.CHIME or occurrence.zone_id is None:
                 continue
-            group = [o for o in occurrences if o.moment is moment]
-            zone_ids = [o.zone_id for o in group] + [
-                z for o in group for z in o.zone_ids
-            ]
-            scenario = _names([o.scenario_id for o in group], scenarios)
             intents.append(
                 ActionIntent(
-                    action_id=action.id,
-                    kind="notification",
-                    moment=moment,
-                    variant="area" if moment is Moment.ARMED and not scenario else None,
-                    placeholders={
-                        "area": _names([o.area_id for o in group], areas),
-                        "scenario": scenario,
-                        "zone": _names([o.zone_id for o in group], zones),
-                        "zones": _names(zone_ids, zones),
+                    action_id="chime",
+                    kind="chime",
+                    moment=Moment.CHIME,
+                    placeholders={"zone": names.get(occurrence.zone_id, "")},
+                    params={
+                        "targets": tuple(
+                            t
+                            for t in occurrence.detail.get("targets", "").split(",")
+                            if t
+                        ),
+                        "mode": chime.mode.value,
+                        "sound": chime.sound,
+                        "tts_entity": chime.tts_entity,
+                        "volume": chime.volume,
                     },
                 )
             )
-    chime = config.chime
-    for occurrence in occurrences:
-        if occurrence.moment is not Moment.CHIME or occurrence.zone_id is None:
-            continue
-        # The Decision carries everything the executor needs: it never reads
-        # the configuration to find out where or how to play (INV-1).
-        intents.append(
-            ActionIntent(
-                action_id="chime",
-                kind="chime",
-                moment=Moment.CHIME,
-                placeholders={"zone": zones.get(occurrence.zone_id, "")},
-                params={
-                    "targets": chime.targets,
-                    "mode": chime.mode.value,
-                    "sound": chime.sound,
-                    "tts_entity": chime.tts_entity,
-                    "volume": chime.volume,
-                },
-            )
-        )
-    return tuple(intents)
+        return tuple(intents)
 
 
 def _window_detail(

@@ -104,6 +104,7 @@ class TimerKind(StrEnum):
 class BypassReason(StrEnum):
     AUTO = "auto_bypass"  # open at arming with arm_policy auto_bypass
     FORCED = "forced"  # excluded by a forced arm
+    MANUAL = "manual"  # excluded by a person, with or without a duration
 
 
 class ChimeMode(StrEnum):
@@ -111,6 +112,53 @@ class ChimeMode(StrEnum):
 
     SOUND = "sound"  # one sound on every target
     SPEECH = "speech"  # the zone's name, spoken through tts.speak
+
+
+class ActionKind(StrEnum):
+    """The action catalogue (SPEC §6.2).
+
+    ``persistent_notification`` is not in §6.2: it is what Phase 0 did, and the
+    global default profile inherits it at the 3.1 → 4.1 migration so that no
+    installation loses a notification it already had. It needs no contact book,
+    which ``notify`` will need from Phase 4 on.
+    """
+
+    NOTIFY = "notify"
+    PERSISTENT_NOTIFICATION = "persistent_notification"
+    SIREN = "siren"
+    LIGHT = "light"
+    CAMERA = "camera"
+    SCENE = "scene"
+    SWITCH = "switch"
+    TTS = "tts"
+    CALL_SERVICE = "call_service"
+    DELAY = "delay"
+
+
+# What a ``silent`` zone suppresses by default (part 3 decision 6): the action
+# kinds that make a noise inside the house. The list is a global setting.
+DEFAULT_SILENT_SUPPRESSES: tuple[str, ...] = (
+    ActionKind.SIREN.value,
+    ActionKind.TTS.value,
+    "chime",
+)
+SILENCEABLE: frozenset[str] = frozenset({*(k.value for k in ActionKind), "chime"})
+
+# Where camera snapshots and recordings go, relative to the configuration
+# directory. Never ``www``: that is served without authentication (§10.4).
+DEFAULT_CAMERA_DIR = "media/foyer"
+
+
+class ConditionMode(StrEnum):
+    """How an action's two conditions combine (part 3 decision 4)."""
+
+    ALL = "all"
+    ANY = "any"
+
+
+class StateOperator(StrEnum):
+    IS = "is"
+    IS_NOT = "is_not"
 
 
 class Operation(StrEnum):
@@ -126,6 +174,7 @@ class Operation(StrEnum):
     FORCE_ARM = "force_arm"
     CHANGE_SCENARIO = "change_scenario"
     ACKNOWLEDGE = "acknowledge"
+    BYPASS_ZONE = "bypass_zone"
 
 
 class Moment(StrEnum):
@@ -162,6 +211,16 @@ class Moment(StrEnum):
     CHIME = "chime"
     CHIME_SWITCHED = "chime_switched"
 
+    # Moments no phase produces yet. They exist so a profile can be written
+    # against them now and keep working when the phase that raises them lands;
+    # the editor says which phase each one waits for.
+    CODE_REJECTED = "code_rejected"  # Phase 2
+    LOCKOUT = "lockout"  # Phase 2
+    LOW_BATTERY = "low_battery"  # Phase 3
+    WALK_TEST_STARTED = "walk_test_started"  # Phase 3
+    WALK_TEST_ENDED = "walk_test_ended"  # Phase 3
+    ESCALATION_EXHAUSTED = "escalation_exhausted"  # Phase 4
+
 
 class Reason(StrEnum):
     """Why a request was rejected. Stable identifiers: UIs translate them."""
@@ -169,6 +228,7 @@ class Reason(StrEnum):
     INVALID_STATE = "invalid_state"
     UNKNOWN_SCENARIO = "unknown_scenario"
     UNKNOWN_AREA = "unknown_area"
+    UNKNOWN_ZONE = "unknown_zone"
     NO_SCENARIO_FOR_MODE = "no_scenario_for_mode"
     AMBIGUOUS_MODE = "ambiguous_mode"
     ALARM_IN_PROGRESS = "alarm_in_progress"
@@ -306,6 +366,12 @@ class Zone:
     # N activations of this zone within the window before it alarms (§4.2).
     trigger_count: int = 1
     trigger_window: int = DEFAULT_VERIFICATION_WINDOW
+    # Read only for this zone's own alarm (part 3 decision 1): everything else
+    # responds from the area. None inherits the area's chain.
+    response_profile_id: str | None = None
+    # The response runs without the action kinds the global silent list names
+    # (§4.2, part 3 decision 6).
+    silent: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -325,6 +391,84 @@ class Group:
     n: int
     window_seconds: int = DEFAULT_VERIFICATION_WINDOW
     suppress_members: bool = False
+    # What a satisfied group does (§4.8). None inherits from its area.
+    response_profile_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class TimeCondition:
+    """A daily window, which may cross midnight (SPEC §6.3)."""
+
+    after: str  # "HH:MM"
+    before: str
+
+
+@dataclass(frozen=True, slots=True)
+class StateCondition:
+    """One entity, read from the snapshot so the simulator agrees (§6.3)."""
+
+    entity_id: str
+    operator: StateOperator
+    state: str
+
+
+Condition = TimeCondition | StateCondition
+
+# At most two conditions per action (SPEC §6.3). The bound is the line between
+# a response engine and a second automation engine, and it is enforced.
+MAX_CONDITIONS = 2
+
+
+@dataclass(frozen=True, slots=True)
+class ProfileAction:
+    """One action in a profile (SPEC §6.2).
+
+    ``moments`` is when it runs; ``params`` is what the executor needs, already
+    complete, so it never reads the configuration itself (INV-1). ``delay`` is
+    the one kind that acts on the list rather than on the world: it holds the
+    actions after it for ``seconds``.
+    """
+
+    id: str
+    kind: ActionKind
+    moments: frozenset[Moment]
+    name: str = ""
+    params: Mapping[str, Any] = field(default_factory=dict)
+    conditions: tuple[Condition, ...] = ()
+    condition_mode: ConditionMode = ConditionMode.ALL
+    enabled: bool = True
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "params", _frozen(self.params))
+
+
+@dataclass(frozen=True, slots=True)
+class ResponseProfile:
+    """A reusable, named list of actions (SPEC §6).
+
+    ``severity`` is an integer the user orders and has exactly one use: which
+    escalation an incident adopts when profiles of different strength
+    contribute to it (§6.5). It changes nothing when a profile runs alone.
+    """
+
+    id: str
+    name: str
+    severity: int = 1
+    actions: tuple[ProfileAction, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ChimeTarget:
+    """One chime target, with quiet hours of its own (part 3 decision 8).
+
+    A `media_player` or `siren` entity, or a `notify.*` service or entity
+    (decision 60). Its own quiet window, when set, replaces the global one:
+    speakers all day, the phone only between nine and ten.
+    """
+
+    entity_id: str
+    quiet_start: str | None = None
+    quiet_end: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -338,7 +482,7 @@ class ChimeSettings:
     its exit delay (part 2 decision 7; off by default).
     """
 
-    targets: tuple[str, ...] = ()
+    targets: tuple[ChimeTarget, ...] = ()
     mode: ChimeMode = ChimeMode.SOUND
     sound: str | None = None
     tts_entity: str | None = None
@@ -356,6 +500,9 @@ class Area:
     ha_state_when_armed: str
     default_entry_delay: int = DEFAULT_ENTRY_DELAY
     default_exit_delay: int = DEFAULT_EXIT_DELAY
+    # The area is the unit of response (part 3 decision 1): this is what
+    # answers for everything happening in it. None inherits from the scenario.
+    response_profile_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -367,18 +514,7 @@ class Scenario:
     icon: str | None = None
     exit_delay_override: int | None = None
     siren_duration_override: int | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class NotificationAction:
-    """The single response action until response profiles exist.
-
-    ``moments`` lists when it runs. The message itself is resolved from the
-    translation files by the executor; the engine only names it.
-    """
-
-    id: str
-    moments: frozenset[Moment]
+    response_profile_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -396,6 +532,7 @@ class CodePolicy:
     force_arm: bool = False
     change_scenario: bool = False
     acknowledge: bool = False
+    bypass_zone: bool = False
 
     def requires_code(self, operation: Operation) -> bool:
         return bool(getattr(self, operation.value))
@@ -403,10 +540,21 @@ class CodePolicy:
 
 @dataclass(frozen=True, slots=True)
 class Settings:
-    """Global settings the engine reads."""
+    """Global settings the engine reads.
+
+    ``default_profile_id`` is the end of every inheritance chain (§6);
+    ``technical_profile_id`` is the technical channel's own default, separate
+    because a smoke alarm must not respond differently depending on how the
+    house is armed (part 3 decision 2). ``silent_suppresses`` names the action
+    kinds a ``silent`` zone does not run (decision 6).
+    """
 
     siren_duration: int = DEFAULT_SIREN_DURATION
     arm_hold_timeout: int = DEFAULT_ARM_HOLD_TIMEOUT
+    default_profile_id: str | None = None
+    technical_profile_id: str | None = None
+    silent_suppresses: tuple[str, ...] = DEFAULT_SILENT_SUPPRESSES
+    camera_dir: str = DEFAULT_CAMERA_DIR
 
 
 @dataclass(frozen=True, slots=True)
@@ -414,7 +562,7 @@ class FoyerConfig:
     areas: tuple[Area, ...]
     zones: tuple[Zone, ...]
     scenarios: tuple[Scenario, ...]
-    actions: tuple[NotificationAction, ...] = ()
+    profiles: tuple[ResponseProfile, ...] = ()
     code_policy: CodePolicy = field(default_factory=CodePolicy)
     settings: Settings = field(default_factory=Settings)
     groups: tuple[Group, ...] = ()
@@ -425,6 +573,9 @@ class FoyerConfig:
 
     def group(self, group_id: str | None) -> Group | None:
         return next((g for g in self.groups if g.id == group_id), None)
+
+    def profile(self, profile_id: str | None) -> ResponseProfile | None:
+        return next((p for p in self.profiles if p.id == profile_id), None)
 
     def zone(self, zone_id: str | None) -> Zone | None:
         return next((z for z in self.zones if z.id == zone_id), None)
@@ -581,6 +732,50 @@ class Activation:
 
 
 @dataclass(frozen=True, slots=True)
+class PendingRun:
+    """The rest of a profile's action list, held by a ``delay`` step (§6.2).
+
+    It is state, not a task: the scheduler wakes at ``due`` and the engine
+    emits the remaining actions, so a restart in the middle of a sequence
+    resumes it instead of losing it (INV-3, part 3 decision 5). Everything the
+    actions need is here, because the profile may have been edited since.
+    """
+
+    id: str
+    profile_id: str
+    moment: Moment
+    index: int  # the next action in the profile's list
+    due: datetime
+    area_id: str | None = None
+    zone_id: str | None = None
+    incident_id: str | None = None
+    silent: bool = False
+    placeholders: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "placeholders", _frozen(self.placeholders))
+
+
+@dataclass(frozen=True, slots=True)
+class RunningAction:
+    """Something an action switched on that must be switched off again.
+
+    A siren with a duration, a switch with an auto-revert. Recorded so that a
+    disarm and the siren cutoff can stop it (§6.2), so an incident does not
+    restart what is already running (§5.6), and so a restart does not leave it
+    on for ever (INV-3).
+    """
+
+    action_id: str
+    kind: str
+    entity_ids: tuple[str, ...]
+    until: datetime | None = None
+    restore: str | None = None  # the state a switch goes back to
+    area_id: str | None = None
+    incident_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeState:
     """Everything that must survive a restart (INV-3).
 
@@ -608,12 +803,19 @@ class RuntimeState:
     incident_seq: int = 0
     windows: Mapping[str, tuple[Activation, ...]] = field(default_factory=dict)
     chime_enabled: bool = True
+    # When a timed manual bypass ends. A manual bypass without an entry here
+    # lasts until the area is disarmed (part 3 decision 10).
+    bypass_until: Mapping[str, datetime] = field(default_factory=dict)
+    pending_runs: tuple[PendingRun, ...] = ()
+    running: tuple[RunningAction, ...] = ()
+    run_seq: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "areas", _frozen(self.areas))
         object.__setattr__(self, "bypassed", _frozen(self.bypassed))
         object.__setattr__(self, "technical", _frozen(self.technical))
         object.__setattr__(self, "windows", _frozen(self.windows))
+        object.__setattr__(self, "bypass_until", _frozen(self.bypass_until))
 
     def area(self, area_id: str) -> AreaRuntime:
         return self.areas.get(area_id) or AreaRuntime()
@@ -757,6 +959,22 @@ class AcknowledgeTechnical:
 
 
 @dataclass(frozen=True, slots=True)
+class BypassZone:
+    """Exclude a zone by hand, or let it back in (§5.4, SPEC §16).
+
+    ``seconds`` makes it a timed temporary bypass: the zone rejoins on its own
+    when the time is up, with a notification, because a zone excluded and
+    forgotten is exactly the window somebody comes through.
+    """
+
+    zone_id: str
+    bypass: bool = True
+    seconds: int | None = None
+    code: str | None = None
+    channel: str = "api"
+
+
+@dataclass(frozen=True, slots=True)
 class SetChime:
     """switch.foyer_chime: silence the chime, or let it sound again (§6.6)."""
 
@@ -774,6 +992,7 @@ Event = (
     | Startup
     | AcknowledgeIncident
     | AcknowledgeTechnical
+    | BypassZone
     | SetChime
 )
 
@@ -815,6 +1034,8 @@ class ActionIntent:
     action_id: str
     kind: str
     moment: Moment
+    # Which profile decided this, for the log and the simulator's trace.
+    profile_id: str | None = None
     placeholders: Mapping[str, str] = field(default_factory=dict)
     # A variant of the message, e.g. "area" for an area armed outside any
     # scenario, which has no scenario name to show.

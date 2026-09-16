@@ -16,6 +16,7 @@ from .models import (
     ARMED_HA_STATES,
     FAULT_STATES,
     MAX_ARM_HOLD_TIMEOUT,
+    MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
     MAX_EXIT_DELAY,
     MAX_SIREN_DURATION,
@@ -25,6 +26,8 @@ from .models import (
     MIN_ARM_HOLD_TIMEOUT,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
+    SILENCEABLE,
+    ActionKind,
     AreaState,
     ArmPolicy,
     Channel,
@@ -36,14 +39,37 @@ from .models import (
     KeyCommand,
     NumericOperator,
     NumericTrigger,
+    ProfileAction,
+    ResponseProfile,
     RuntimeState,
+    StateCondition,
     StateTrigger,
+    TimeCondition,
     Zone,
 )
+from .templates import unknown_variables
 from .verification import cross_zone_id
 
-# What the chime can play on (SPEC §6.6).
-CHIME_DOMAINS: tuple[str, ...] = ("media_player", "siren")
+# What the chime can play on (SPEC §6.6): speakers, sirens, and the free
+# channels the house already has (decision 60).
+CHIME_DOMAINS: tuple[str, ...] = ("media_player", "siren", "notify")
+
+# Bounds for the action catalogue (SPEC §6.2).
+MAX_ACTION_DELAY = 3600
+MAX_CAMERA_DURATION = 300
+MAX_SEVERITY = 10
+# Which domains each action kind may target. An action that names the wrong
+# domain fails at the worst possible time, so it is refused at save time.
+ACTION_DOMAINS: dict[str, tuple[str, ...]] = {
+    ActionKind.SIREN.value: ("siren", "switch"),
+    ActionKind.LIGHT.value: ("light",),
+    ActionKind.CAMERA.value: ("camera",),
+    ActionKind.SCENE.value: ("scene",),
+    ActionKind.SWITCH.value: ("switch", "input_boolean", "light"),
+    ActionKind.TTS.value: ("tts",),
+}
+# Templates are checked wherever the user writes free text.
+TEMPLATED_FIELDS: tuple[str, ...] = ("title", "message")
 
 # Entity domains a zone may watch (SPEC §4.2).
 ZONE_DOMAINS: tuple[str, ...] = (
@@ -64,7 +90,7 @@ EVENT_DOMAINS: frozenset[str] = frozenset({"event", "tag"})
 @dataclass(frozen=True, slots=True)
 class Problem:
     code: str
-    kind: str  # "area" | "zone" | "scenario" | "settings" | "action"
+    kind: str  # "area" | "zone" | "scenario" | "group" | "profile" | "settings"
     ref: str | None = None  # the id of the offending object
     field: str | None = None
 
@@ -145,6 +171,19 @@ def validate(config: FoyerConfig) -> list[Problem]:
             )
 
     settings = config.settings
+    profile_ids = {p.id for p in config.profiles}
+    for label, ref in (
+        ("default_profile_id", settings.default_profile_id),
+        ("technical_profile_id", settings.technical_profile_id),
+    ):
+        if ref is not None and ref not in profile_ids:
+            add(Problem("unknown_profile", "settings", None, label))
+    if any(kind not in SILENCEABLE for kind in settings.silent_suppresses):
+        add(Problem("unknown_action_kind", "settings", None, "silent_suppresses"))
+    if not _valid_directory(settings.camera_dir):
+        # Never www: Home Assistant serves it without authentication, and the
+        # inside of a house is not something to publish (part 3 decision 7).
+        add(Problem("camera_dir_invalid", "settings", None, "camera_dir"))
     if not _in_range(settings.siren_duration, 1, MAX_SIREN_DURATION):
         add(Problem("siren_out_of_range", "settings", None, "siren_duration"))
     if not _in_range(
@@ -192,7 +231,167 @@ def validate(config: FoyerConfig) -> list[Problem]:
 
     problems.extend(_group_problems(config, zones, area_ids))
     problems.extend(_chime_problems(config.chime))
+    for profile in config.profiles:
+        problems.extend(_profile_problems(profile))
+    # A reference to a profile that does not exist would silently fall through
+    # to the default, which is exactly the kind of "why is it quiet?" this
+    # project exists to avoid.
+    for kind, objects in (
+        ("area", config.areas),
+        ("zone", config.zones),
+        ("scenario", config.scenarios),
+        ("group", config.groups),
+    ):
+        for obj in objects:
+            ref = obj.response_profile_id
+            if ref is not None and ref not in profile_ids:
+                problems.append(
+                    Problem("unknown_profile", kind, obj.id, "response_profile_id")
+                )
     return problems
+
+
+def _valid_directory(path: str) -> bool:
+    """A relative directory under the configuration folder, and not ``www``."""
+    if not path or path.startswith(("/", "\\")) or ":" in path:
+        return False
+    parts = re.split(r"[\\/]+", path.strip("/"))
+    return bool(parts) and all(parts) and ".." not in parts and parts[0] != "www"
+
+
+def _profile_problems(profile: ResponseProfile) -> list[Problem]:
+    problems: list[Problem] = []
+
+    def add(code: str, field: str | None = None, ref: str = profile.id) -> None:
+        problems.append(Problem(code, "profile", ref, field))
+
+    if not profile.name.strip():
+        add("name_required", "name")
+    if not 1 <= profile.severity <= MAX_SEVERITY:
+        add("severity_out_of_range", "severity")
+    ids = [a.id for a in profile.actions]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        add("duplicate_id", None, dup)
+    for action in profile.actions:
+        problems.extend(_action_problems(action))
+    return problems
+
+
+def _action_problems(action: ProfileAction) -> list[Problem]:
+    problems: list[Problem] = []
+
+    def add(code: str, field: str | None = None) -> None:
+        problems.append(Problem(code, "action", action.id, field))
+
+    if not action.moments:
+        add("moments_required", "moments")
+    if len(action.conditions) > MAX_CONDITIONS:
+        # The bound of §6.3 is the line between a response engine and a second
+        # automation engine. It is enforced, not documented.
+        add("too_many_conditions", "conditions")
+    for condition in action.conditions:
+        if isinstance(condition, TimeCondition):
+            if parse_hhmm(condition.after) is None or (
+                parse_hhmm(condition.before) is None
+            ):
+                add("time_invalid", "conditions")
+            elif condition.after == condition.before:
+                # An empty window would silence the action for ever.
+                add("empty_window", "conditions")
+        elif isinstance(condition, StateCondition) and (
+            "." not in condition.entity_id or not condition.state
+        ):
+            add("condition_entity_invalid", "conditions")
+    for field in TEMPLATED_FIELDS:
+        value = action.params.get(field)
+        if isinstance(value, str) and unknown_variables(value):
+            add("unknown_variable", field)
+    problems.extend(_params_problems(action, add))
+    return problems
+
+
+def _params_problems(action: ProfileAction, add) -> list[Problem]:
+    """What each action kind needs to be runnable at all (SPEC §6.2)."""
+    params = action.params
+    entity_ids = params.get("entity_ids") or []
+    if isinstance(entity_ids, str):
+        entity_ids = [entity_ids]
+    domains = ACTION_DOMAINS.get(action.kind.value)
+    kind = action.kind
+
+    def entity_field() -> str:
+        return (
+            "entity_id"
+            if kind in (ActionKind.CAMERA, ActionKind.SCENE, ActionKind.TTS)
+            else "entity_ids"
+        )
+
+    if kind is ActionKind.NOTIFY:
+        service = str(params.get("service") or "")
+        if not service.startswith("notify."):
+            add("notify_service_required", "service")
+        if not str(params.get("message") or "").strip():
+            add("message_required", "message")
+    elif kind is ActionKind.DELAY:
+        if not _in_range(_int_or_none(params.get("seconds")), 1, MAX_ACTION_DELAY):
+            add("delay_out_of_range", "seconds")
+    elif kind is ActionKind.CALL_SERVICE:
+        if not _is_slug(params.get("domain")) or not _is_slug(params.get("service")):
+            add("service_required", "service")
+        if params.get("data") is not None and not isinstance(params.get("data"), dict):
+            add("data_invalid", "data")
+    elif kind is ActionKind.TTS:
+        if not str(params.get("entity_id") or "").startswith("tts."):
+            add("entity_required", "entity_id")
+        if not params.get("media_player_entity_ids"):
+            add("entity_required", "media_player_entity_ids")
+        if not str(params.get("message") or "").strip():
+            add("message_required", "message")
+    elif kind in (ActionKind.CAMERA, ActionKind.SCENE):
+        entity = str(params.get("entity_id") or "")
+        if not entity or entity.split(".", 1)[0] not in (domains or ()):
+            add("entity_required", "entity_id")
+        if kind is ActionKind.CAMERA:
+            if params.get("mode") not in ("snapshot", "record"):
+                add("camera_mode_invalid", "mode")
+            if params.get("mode") == "record" and not _in_range(
+                _int_or_none(params.get("duration")), 1, MAX_CAMERA_DURATION
+            ):
+                add("duration_out_of_range", "duration")
+    elif domains is not None:
+        if not entity_ids:
+            add("entity_required", entity_field())
+        elif any("." not in e or e.split(".", 1)[0] not in domains for e in entity_ids):
+            add("entity_domain", entity_field())
+        if kind is ActionKind.SIREN and not _in_range(
+            _int_or_none(params.get("duration")), 1, MAX_SIREN_DURATION
+        ):
+            add("siren_out_of_range", "duration")
+        if kind is ActionKind.SWITCH:
+            if params.get("state") not in ("on", "off"):
+                add("switch_state_invalid", "state")
+            if params.get("revert_after") is not None and not _in_range(
+                _int_or_none(params.get("revert_after")), 1, MAX_ACTION_DELAY
+            ):
+                add("delay_out_of_range", "revert_after")
+        if kind is ActionKind.LIGHT and not _in_range(
+            _int_or_none(params.get("brightness")), 0, 255
+        ):
+            add("brightness_out_of_range", "brightness")
+    return []
+
+
+def _int_or_none(value) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None if value is None else 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0  # not a number: out of every range
+
+
+def _is_slug(value) -> bool:
+    return isinstance(value, str) and bool(re.fullmatch(r"[a-z0-9_]+", value))
 
 
 def _group_problems(
@@ -246,12 +445,24 @@ def _chime_problems(chime: ChimeSettings) -> list[Problem]:
     def add(code: str, field: str) -> None:
         problems.append(Problem(code, "chime", None, field))
 
-    domains = [t.split(".", 1)[0] for t in chime.targets]
+    ids = [t.entity_id for t in chime.targets]
+    domains = [t.split(".", 1)[0] for t in ids]
     if any(
         "." not in t or d not in CHIME_DOMAINS
-        for t, d in zip(chime.targets, domains, strict=True)
+        for t, d in zip(ids, domains, strict=True)
     ):
         add("chime_target_invalid", "targets")
+    if len(set(ids)) != len(ids):
+        add("chime_target_invalid", "targets")
+    for target in chime.targets:
+        # A target's own quiet hours replace the global ones (decision 8), so
+        # they follow the same rules: both ends, or neither.
+        for field in ("quiet_start", "quiet_end"):
+            value = getattr(target, field)
+            if value is not None and parse_hhmm(value) is None:
+                add("time_invalid", "targets")
+        if (target.quiet_start is None) != (target.quiet_end is None):
+            add("quiet_hours_incomplete", "targets")
     if chime.mode is ChimeMode.SPEECH and not (
         chime.tts_entity and chime.tts_entity.startswith("tts.")
     ):
@@ -313,6 +524,9 @@ def _zone_problems(
             add("intrusion_only", "trigger_count")
         if zone.chime:
             add("intrusion_only", "chime")
+        if zone.silent and zone.channel is Channel.KEY:
+            # A key zone commands; it has no response to silence (§4.7).
+            add("intrusion_only", "silent")
     if zone.channel is Channel.TECHNICAL and not zone.always_on:
         # The technical channel is live whatever the arming state (§5.5):
         # the property must say so, not contradict it.
@@ -424,4 +638,50 @@ def edit_conflicts(
     active = state.active_scenario_id
     if active is not None and old.scenario(active) != new.scenario(active):
         problems.append(Problem("scenario_active", "scenario", active))
+
+    # A response profile is what an armed area would do if something happened
+    # now: changing it under an armed area changes that, without a disarm.
+    live_profiles = _live_profiles(old, live_areas) | _live_profiles(new, live_areas)
+    old_profiles = {p.id: p for p in old.profiles}
+    new_profiles = {p.id: p for p in new.profiles}
+    for profile_id in old_profiles.keys() | new_profiles.keys():
+        if old_profiles.get(profile_id) == new_profiles.get(profile_id):
+            continue
+        if profile_id in live_profiles:
+            problems.append(Problem("area_not_disarmed", "profile", profile_id))
+    if live_areas and old.settings != new.settings:
+        for field in (
+            "default_profile_id",
+            "technical_profile_id",
+            "silent_suppresses",
+        ):
+            if getattr(old.settings, field) != getattr(new.settings, field):
+                problems.append(Problem("area_not_disarmed", "settings", None, field))
     return problems
+
+
+def _live_profiles(config: FoyerConfig, live_areas: set[str]) -> set[str]:
+    """Every profile an area that is not disarmed could run right now."""
+    out: set[str] = set()
+    for area_id in live_areas:
+        area = config.area(area_id)
+        if area is None:
+            continue
+        out.update(
+            ref
+            for ref in (area.response_profile_id, config.settings.default_profile_id)
+            if ref
+        )
+        for scenario in config.scenarios:
+            if area_id in scenario.areas and scenario.response_profile_id:
+                out.add(scenario.response_profile_id)
+    for zone in config.zones:
+        if zone.area_id in live_areas and zone.response_profile_id:
+            out.add(zone.response_profile_id)
+    for group in config.groups:
+        members = {config.zone(m) for m in group.members}
+        if group.response_profile_id and any(
+            z is not None and z.area_id in live_areas for z in members
+        ):
+            out.add(group.response_profile_id)
+    return out

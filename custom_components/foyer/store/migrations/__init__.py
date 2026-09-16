@@ -122,11 +122,82 @@ def _v2_2_to_v3_1(data: Document) -> Document:
     return out
 
 
+# The id of the profile the 3.1 -> 4.1 migration builds. A constant, not a
+# uuid: a migration is a pure function of the document and must give the same
+# result every time it runs.
+DEFAULT_PROFILE_ID = "default"
+
+
+def _v3_1_to_v4_1(data: Document) -> Document:
+    """Phase 1 part 2 -> part 3: response profiles, conditions, actions.
+
+    The Phase 0 notification is not thrown away and not reimplemented: every
+    action it had becomes a ``persistent_notification`` action inside the new
+    global default profile, with the same moments, so an installation that
+    updates hears exactly what it heard yesterday — plus ``triggered``, which
+    had no notification at all and is the one moment that must never be silent
+    (part 3 decision 3).
+
+    Everything else is chosen to change nothing: no zone, area, scenario or
+    group overrides the default yet, no zone is silent, and the chime keeps its
+    targets, now able to carry quiet hours of their own.
+    """
+    out = copy.deepcopy(data)
+    actions = []
+    for action in out.pop("actions", []):
+        actions.append(
+            {
+                "id": action["id"],
+                "kind": "persistent_notification",
+                # A notification on an alarm: Phase 0 had none (decision 3).
+                "moments": sorted({*action["moments"], "triggered"}),
+                "name": "",
+                # No title and no message: the executor keeps using the
+                # translated text it already uses, so nothing changes.
+                "params": {},
+                "conditions": [],
+                "condition_mode": "all",
+                "enabled": True,
+            }
+        )
+    out["profiles"] = [
+        {
+            "id": DEFAULT_PROFILE_ID,
+            "name": "Default",
+            "severity": 1,
+            "actions": actions,
+        }
+    ]
+    settings = out["settings"]
+    settings["default_profile_id"] = DEFAULT_PROFILE_ID
+    # The technical channel falls back to the default profile until the user
+    # gives it one: the default already carries technical_raised (part 2).
+    settings["technical_profile_id"] = None
+    settings["silent_suppresses"] = ["siren", "tts", "chime"]
+    settings["camera_dir"] = "media/foyer"
+    out["code_policy"]["bypass_zone"] = False
+    for area in out["areas"]:
+        area["response_profile_id"] = None
+    for scenario in out["scenarios"]:
+        scenario["response_profile_id"] = None
+    for group in out["groups"]:
+        group["response_profile_id"] = None
+    for zone in out["zones"]:
+        zone["response_profile_id"] = None
+        zone["silent"] = False
+    out["chime"]["targets"] = [
+        {"entity_id": target, "quiet_start": None, "quiet_end": None}
+        for target in out["chime"]["targets"]
+    ]
+    return out
+
+
 # (from_major, from_minor) -> (step, (to_major, to_minor))
 STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (1, 1): (_v1_1_to_v2_1, (2, 1)),
     (2, 1): (_v2_1_to_v2_2, (2, 2)),
     (2, 2): (_v2_2_to_v3_1, (3, 1)),
+    (3, 1): (_v3_1_to_v4_1, (4, 1)),
 }
 
 

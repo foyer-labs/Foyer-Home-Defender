@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from custom_components.foyer.core.models import (
     ChimeMode,
     ChimeSettings,
+    ChimeTarget,
     Moment,
     SetChime,
 )
@@ -26,7 +27,7 @@ def house(chime: ChimeSettings | None = None, zones=("window", "bath")):
         ),
         chime=chime
         or ChimeSettings(
-            targets=(KITCHEN,),
+            targets=(ChimeTarget(KITCHEN),),
             mode=ChimeMode.SPEECH,
             tts_entity="tts.piper",
             volume=40,

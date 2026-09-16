@@ -90,6 +90,9 @@
     },
     "rejected_nothing_to_acknowledge": {
       "message": "There is nothing to acknowledge."
+    },
+    "rejected_unknown_zone": {
+      "message": "That zone does not exist."
     }
   },
   "entity": {

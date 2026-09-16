@@ -17,7 +17,8 @@
     "zones": "Zone",
     "scenarios": "Scenari",
     "groups": "Gruppi di verifica",
-    "settings": "Impostazioni"
+    "settings": "Impostazioni",
+    "profiles": "Profili di risposta"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -45,7 +46,8 @@
   },
   "bypass": {
     "auto_bypass": "Esclusa all'inserimento",
-    "forced": "Esclusa da inserimento forzato"
+    "forced": "Esclusa da inserimento forzato",
+    "manual": "Esclusa a mano"
   },
   "reason": {
     "invalid_state": "L'area non è in uno stato che lo permette.",
@@ -60,7 +62,8 @@
     "zone_not_bypassable": "Impossibile forzare: queste zone non possono essere escluse: {zones}.",
     "arm_hold_expired": "Inserimento fallito: ancora aperta: {zones}.",
     "unknown": "La richiesta è stata rifiutata.",
-    "nothing_to_acknowledge": "Non c'è nulla da riconoscere."
+    "nothing_to_acknowledge": "Non c'è nulla da riconoscere.",
+    "unknown_zone": "Quella zona non esiste."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -118,7 +121,27 @@
     "chime_sound_required": "I media player richiedono un suono: imposta il contenuto da riprodurre.",
     "volume_out_of_range": "{field}: tra 0 e 100.",
     "time_invalid": "{field}: un orario come 23:00.",
-    "quiet_hours_incomplete": "Le ore di silenzio richiedono sia un inizio sia una fine."
+    "quiet_hours_incomplete": "Le ore di silenzio richiedono sia un inizio sia una fine.",
+    "unknown_profile": "Quel profilo di risposta non esiste.",
+    "unknown_action_kind": "Tipo di azione sconosciuto.",
+    "camera_dir_invalid": "Usa una cartella dentro la directory di configurazione, mai www: è servita senza autenticazione.",
+    "severity_out_of_range": "La severità è un numero da 1 a 10.",
+    "moments_required": "Scegli almeno un momento per questa azione.",
+    "too_many_conditions": "Un'azione porta al massimo due condizioni.",
+    "empty_window": "Una finestra che inizia quando finisce non si applica mai.",
+    "condition_entity_invalid": "Scegli un'entità e lo stato con cui confrontarla.",
+    "unknown_variable": "{field} usa una variabile che non esiste.",
+    "notify_service_required": "Scegli un servizio notify o un'entità notify.",
+    "message_required": "Il messaggio è obbligatorio.",
+    "service_required": "Indica un dominio e un servizio.",
+    "data_invalid": "I dati del servizio devono essere una mappa.",
+    "entity_required": "Scegli almeno un'entità per {field}.",
+    "entity_domain": "{field} punta a un'entità che questa azione non può usare.",
+    "camera_mode_invalid": "Scegli uno scatto o una registrazione.",
+    "duration_out_of_range": "Durata fuori intervallo.",
+    "switch_state_invalid": "Scegli acceso o spento.",
+    "brightness_out_of_range": "La luminosità è un numero da 0 a 255.",
+    "profile_in_use": "Qualcosa usa ancora questo profilo. Spostalo altrove prima."
   },
   "field": {
     "name": "Nome",
@@ -160,13 +183,40 @@
     "trigger_window": "Entro",
     "chime": "Campanello",
     "targets": "Suona su",
-    "mode": "Modalità",
+    "mode": "Modo",
     "sound": "Contenuto da riprodurre",
     "tts_entity": "Sintesi vocale",
     "volume": "Volume",
     "quiet_start": "Silenzio dalle",
     "quiet_end": "alle",
-    "during_exit": "Anche durante il ritardo d'uscita"
+    "during_exit": "Anche durante il ritardo d'uscita",
+    "response_profile_id": "Profilo di risposta",
+    "severity": "Severità",
+    "moments": "Quando parte",
+    "conditions": "Condizioni",
+    "condition_mode": "Le due condizioni",
+    "service": "Servizio",
+    "message": "Messaggio",
+    "title": "Titolo",
+    "seconds": "Secondi",
+    "duration": "Durata",
+    "tone": "Tono",
+    "brightness": "Luminosità",
+    "rgb_color": "Colore",
+    "flash": "Lampeggio",
+    "state": "Stato",
+    "revert_after": "Torna indietro dopo",
+    "media_player_entity_ids": "Altoparlanti",
+    "entity_ids": "Entità",
+    "domain": "Dominio",
+    "data": "Dati",
+    "target": "Destinatario",
+    "silent": "Zona silenziosa",
+    "silent_suppresses": "Una zona silenziosa sopprime",
+    "camera_dir": "Cartella telecamere",
+    "default_profile_id": "Profilo predefinito",
+    "technical_profile_id": "Profilo tecnico",
+    "actions": "Azioni"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -328,7 +378,16 @@
     "cross_zone_hint": "Un'altra zona che conferma questa entro la finestra. Ciascuna allarma comunque da sola; quando rilevano entrambe, la coppia viene registrata come confermata. Impostala su una delle due zone.",
     "trigger_count_hint": "Quante volte deve rilevare entro la finestra prima di allarmare. 1: subito. Contano solo i rilevamenti che allarmerebbero subito: aprire il percorso d'ingresso no.",
     "chime_hint": "Suona il campanello quando si apre mentre la sua area non è inserita.",
-    "in_group": "Membro del gruppo di verifica {group}. Si modifica nella pagina Gruppi di verifica."
+    "in_group": "Membro del gruppo di verifica {group}. Si modifica nella pagina Gruppi di verifica.",
+    "bypass": "Escludi",
+    "unbypass": "Reinserisci",
+    "bypass_for": "Escludi per",
+    "bypass_hours": "{hours} h",
+    "bypass_until": "rientra alle {time}",
+    "bypass_indefinite": "finché non la reinserisci",
+    "bypass_hint": "Una zona esclusa non allarma. Senza durata rientra al disinserimento dell'area; con una durata rientra da sola, e lo dice.",
+    "silent_hint": "La risposta gira senza i sonori elencati nelle impostazioni.",
+    "profile_hint": "Letto solo quando questa zona allarma. Vuoto: il profilo dell'area."
   },
   "scenarios": {
     "title": "Scenari",
@@ -519,6 +578,32 @@
           "text": "Se le zone suonano mentre la loro area conta alla rovescia verso l'inserimento."
         }
       }
+    },
+    "profiles": {
+      "title": "Che cos'è un profilo di risposta",
+      "intro": "Un profilo è una lista di azioni con un nome: cosa succede, quando, e a quali condizioni. L'area è l'unità di risposta; il profilo di una zona vale solo per il suo allarme, ed è questo che rende graduata la risposta di un gruppo di verifica.",
+      "items": {
+        "inheritance": {
+          "term": "Ereditarietà",
+          "text": "Zona, poi area, poi scenario, poi il profilo predefinito. La pagina mostra il profilo efficace e da dove arriva."
+        },
+        "moments": {
+          "term": "Quando parte",
+          "text": "Un'azione può rispondere a più momenti. Alcuni momenti arrivano con una fase successiva e sono segnalati."
+        },
+        "conditions": {
+          "term": "Condizioni",
+          "text": "Al massimo due per azione, combinate in and oppure in or. Di più appartiene a un'automazione di Home Assistant."
+        },
+        "severity": {
+          "term": "Severità",
+          "text": "Decide soltanto quale escalation adotta un incidente quando vi contribuiscono profili di forza diversa."
+        },
+        "silent": {
+          "term": "Zone silenziose",
+          "text": "Una zona marcata silenziosa esegue la sua risposta senza i tipi di azione indicati nelle impostazioni."
+        }
+      }
     }
   },
   "notification": {
@@ -617,6 +702,30 @@
     "chime_switched": {
       "title": "Foyer: campanello",
       "message": "Il campanello è stato acceso o spento."
+    },
+    "code_rejected": {
+      "title": "Foyer: codice rifiutato",
+      "message": "È stato inserito un codice errato su {channel}."
+    },
+    "lockout": {
+      "title": "Foyer: canale bloccato",
+      "message": "Troppi codici errati su {channel}. Quel canale è bloccato."
+    },
+    "low_battery": {
+      "title": "Foyer: batteria scarica",
+      "message": "{zone} segnala la batteria scarica."
+    },
+    "walk_test_started": {
+      "title": "Foyer: walk test",
+      "message": "È iniziato un walk test. Le azioni di risposta sono inibite."
+    },
+    "walk_test_ended": {
+      "title": "Foyer: walk test concluso",
+      "message": "Il walk test è finito. Il sistema risponde di nuovo normalmente."
+    },
+    "escalation_exhausted": {
+      "title": "Foyer: nessuno ha risposto",
+      "message": "L'escalation ha raggiunto l'ultimo passo senza presa in carico."
     }
   },
   "chime_mode": {
@@ -659,6 +768,107 @@
     "during_exit_hint": "Spento: la porta da cui esci non suona mentre l'area conta alla rovescia.",
     "switch_hint": "switch.foyer_chime lo silenzia senza cambiare queste impostazioni.",
     "saved": "Salvato.",
-    "later": "Le altre impostazioni arriveranno in un aggiornamento successivo."
+    "later": "Le altre impostazioni arriveranno in un aggiornamento successivo.",
+    "response_title": "Risposta",
+    "response_intro": "Dove finisce ogni catena di ereditarietà, e cosa tace in una zona silenziosa.",
+    "default_profile_hint": "Ciò che ogni area, zona e scenario eredita se non lo sovrascrive.",
+    "technical_profile_hint": "Fumo, gas e allagamento rispondono con questo, qualunque cosa stia facendo la casa. Vuoto: il profilo predefinito.",
+    "silent_hint": "Una zona marcata silenziosa esegue la sua risposta senza queste.",
+    "camera_dir_hint": "Dentro la cartella di configurazione. Mai www, che è servita senza autenticazione.",
+    "none": "Nessuno"
+  },
+  "action_kind": {
+    "notify": "Notifica",
+    "persistent_notification": "Notifica di Home Assistant",
+    "siren": "Sirena",
+    "light": "Luce",
+    "camera": "Telecamera",
+    "scene": "Scena",
+    "switch": "Interruttore",
+    "tts": "Messaggio parlato",
+    "call_service": "Chiama un servizio",
+    "delay": "Attendi"
+  },
+  "moment_group": {
+    "alarm": "All'allarme",
+    "state": "Al cambio di stato",
+    "system": "Su evento di sistema",
+    "later": "Arriva in una fase successiva"
+  },
+  "moment": {
+    "armed": "Inserito",
+    "disarmed": "Disinserito",
+    "arm_failed": "Inserimento fallito",
+    "forced_arm": "Inserimento forzato",
+    "zone_bypassed": "Zona esclusa",
+    "zone_rejoined": "Zona rientrata",
+    "entry_started": "Ritardo d'ingresso avviato",
+    "triggered": "Allarme",
+    "siren_cutoff": "Fine della sirena",
+    "zone_fault": "Guasto di zona",
+    "ha_restarted": "Home Assistant riavviato",
+    "technical_raised": "Allarme tecnico",
+    "technical_acknowledged": "Allarme tecnico preso in carico",
+    "technical_cleared": "Allarme tecnico rientrato",
+    "incident_opened": "Incidente aperto",
+    "incident_joined": "Zona aggiunta all'incidente",
+    "incident_acknowledged": "Incidente preso in carico",
+    "incident_closed": "Incidente chiuso",
+    "verification_pending": "Gruppo non ancora soddisfatto",
+    "verification_satisfied": "Gruppo soddisfatto",
+    "verification_expired": "Finestra del gruppo scaduta",
+    "chime": "Campanello",
+    "chime_switched": "Campanello acceso o spento",
+    "code_rejected": "Codice rifiutato",
+    "lockout": "Tastiera bloccata",
+    "low_battery": "Batteria scarica",
+    "walk_test_started": "Walk test avviato",
+    "walk_test_ended": "Walk test concluso",
+    "escalation_exhausted": "Escalation esaurita"
+  },
+  "condition": {
+    "add": "Aggiungi una condizione",
+    "time": "Finestra oraria",
+    "state": "Stato di un'entità",
+    "is": "è",
+    "is_not": "non è",
+    "all": "Devono valere entrambe",
+    "any": "Ne basta una",
+    "none": "Nessuna condizione",
+    "after": "Dalle",
+    "before": "Alle",
+    "midnight_hint": "Una finestra può attraversare la mezzanotte: dalle 22:00 alle 07:00 è la notte.",
+    "max": "Al massimo due condizioni per azione. Qualcosa di più complesso appartiene a un'automazione di Home Assistant in ascolto su foyer_event."
+  },
+  "profiles": {
+    "title": "Profili",
+    "add": "Aggiungi profilo",
+    "new": "Nuovo profilo",
+    "none": "Nessun profilo.",
+    "intro": "Un profilo è una lista riutilizzabile di azioni. Si risolve per ereditarietà — zona, poi area, poi scenario, poi il profilo predefinito — ed è ciò che evita che una casa da sedici zone diventi una matrice di configurazione.",
+    "used_by": "Usato da",
+    "used_default": "il profilo predefinito",
+    "used_technical": "il canale tecnico",
+    "unused": "niente, per ora",
+    "actions_count": "{count} azioni",
+    "add_action": "Aggiungi azione",
+    "no_actions": "Questo profilo non fa ancora nulla.",
+    "delete_action": "Rimuovi azione",
+    "severity_hint": "Serve a una cosa sola: quando più zone entrano in uno stesso incidente, l'incidente adotta l'escalation del profilo più severo fra quelli coinvolti. Non cambia nulla quando questo profilo gira da solo.",
+    "inherit": "Eredita",
+    "effective": "Profilo efficace: {profile}",
+    "inherited_from_area": "ereditato dall'area",
+    "inherited_from_scenario": "ereditato dallo scenario",
+    "inherited_from_default": "il profilo predefinito",
+    "inherited_none": "nessun profilo: non succederebbe nulla",
+    "zone_hint": "Il profilo della zona vale solo per il suo allarme. Tutto il resto in quest'area risponde con il profilo dell'area.",
+    "group_hint": "Cosa fa un gruppo soddisfatto. I suoi membri tengono il proprio profilo: è questo che rende graduata la risposta.",
+    "message_hint": "Variabili: {variables}",
+    "delay_hint": "Trattiene le azioni che seguono in questa lista. Sopravvive a un riavvio.",
+    "revert_hint": "Vuoto: lascialo com'è.",
+    "camera_hint": "La notifica allega l'immagine dal vivo; il file finisce nella cartella telecamere.",
+    "call_service_hint": "Tutto ciò che Foyer non modella nativamente. I dati sono YAML.",
+    "escalation_later": "L'escalation fra contatti arriva nella Fase 4.",
+    "future_moment": "Prodotto da una fase successiva."
   }
 }

@@ -13,6 +13,7 @@ from typing import Any
 
 from ..core.models import (
     Acknowledgement,
+    ActionKind,
     Activation,
     AlarmKind,
     Area,
@@ -23,7 +24,10 @@ from ..core.models import (
     Channel,
     ChimeMode,
     ChimeSettings,
+    ChimeTarget,
     CodePolicy,
+    Condition,
+    ConditionMode,
     Contributor,
     EntryMode,
     EventTrigger,
@@ -34,14 +38,20 @@ from ..core.models import (
     KeyCommand,
     KeyRelease,
     Moment,
-    NotificationAction,
     NumericOperator,
     NumericTrigger,
+    PendingRun,
+    ProfileAction,
+    ResponseProfile,
+    RunningAction,
     RuntimeState,
     Scenario,
     Settings,
+    StateCondition,
+    StateOperator,
     StateTrigger,
     TechnicalAlarm,
+    TimeCondition,
     Timer,
     TimerKind,
     TriggerSpec,
@@ -59,7 +69,11 @@ from ..core.models import (
 # 3.1 is a major bump for the same reason: a 2.x build reading it would store
 # a technical zone and silently never act on it — a smoke detector switched
 # off without a word. Refusing the file is the only safe downgrade.
-STORAGE_VERSION = 3
+# 4.1 is a major bump for the third time and for the third time the reason is
+# the same: a 3.x build reading this file would find response profiles it does
+# not understand and would run no action at all. Refusing it is the only safe
+# downgrade.
+STORAGE_VERSION = 4
 STORAGE_MINOR_VERSION = 1
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
@@ -83,19 +97,11 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
             areas=tuple(area_from_dict(a) for a in data["areas"]),
             zones=tuple(zone_from_dict(z) for z in data["zones"]),
             scenarios=tuple(scenario_from_dict(s) for s in data["scenarios"]),
-            actions=tuple(
-                NotificationAction(
-                    id=a["id"], moments=frozenset(Moment(m) for m in a["moments"])
-                )
-                for a in data["actions"]
-            ),
+            profiles=tuple(profile_from_dict(p) for p in data["profiles"]),
             code_policy=CodePolicy(
                 **{k: bool(v) for k, v in data["code_policy"].items()}
             ),
-            settings=Settings(
-                siren_duration=int(data["settings"]["siren_duration"]),
-                arm_hold_timeout=int(data["settings"]["arm_hold_timeout"]),
-            ),
+            settings=settings_from_dict(data["settings"]),
             groups=tuple(group_from_dict(g) for g in data["groups"]),
             chime=chime_from_dict(data["chime"]),
         )
@@ -109,26 +115,107 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
         "zones": [zone_to_dict(z) for z in config.zones],
         "scenarios": [scenario_to_dict(s) for s in config.scenarios],
         "groups": [group_to_dict(g) for g in config.groups],
-        "actions": [
-            {
-                "id": a.id,
-                "kind": "notification",
-                "moments": sorted(m.value for m in a.moments),
-            }
-            for a in config.actions
-        ],
+        "profiles": [profile_to_dict(p) for p in config.profiles],
         "code_policy": {
             "arm": config.code_policy.arm,
             "disarm": config.code_policy.disarm,
             "force_arm": config.code_policy.force_arm,
             "change_scenario": config.code_policy.change_scenario,
             "acknowledge": config.code_policy.acknowledge,
+            "bypass_zone": config.code_policy.bypass_zone,
         },
-        "settings": {
-            "siren_duration": config.settings.siren_duration,
-            "arm_hold_timeout": config.settings.arm_hold_timeout,
-        },
+        "settings": settings_to_dict(config.settings),
         "chime": chime_to_dict(config.chime),
+    }
+
+
+def settings_from_dict(s: dict[str, Any]) -> Settings:
+    return Settings(
+        siren_duration=int(s["siren_duration"]),
+        arm_hold_timeout=int(s["arm_hold_timeout"]),
+        default_profile_id=s.get("default_profile_id") or None,
+        technical_profile_id=s.get("technical_profile_id") or None,
+        silent_suppresses=tuple(s["silent_suppresses"]),
+        camera_dir=s["camera_dir"],
+    )
+
+
+def settings_to_dict(s: Settings) -> dict[str, Any]:
+    return {
+        "siren_duration": s.siren_duration,
+        "arm_hold_timeout": s.arm_hold_timeout,
+        "default_profile_id": s.default_profile_id,
+        "technical_profile_id": s.technical_profile_id,
+        "silent_suppresses": list(s.silent_suppresses),
+        "camera_dir": s.camera_dir,
+    }
+
+
+def condition_from_dict(c: dict[str, Any]) -> Condition:
+    kind = c.get("kind")
+    if kind == "time":
+        return TimeCondition(after=c["after"], before=c["before"])
+    if kind == "state":
+        return StateCondition(
+            entity_id=c["entity_id"],
+            operator=StateOperator(c["operator"]),
+            state=c["state"],
+        )
+    raise ConfigError(f"unsupported condition kind: {kind!r}")
+
+
+def condition_to_dict(c: Condition) -> dict[str, Any]:
+    if isinstance(c, TimeCondition):
+        return {"kind": "time", "after": c.after, "before": c.before}
+    return {
+        "kind": "state",
+        "entity_id": c.entity_id,
+        "operator": c.operator.value,
+        "state": c.state,
+    }
+
+
+def action_from_dict(a: dict[str, Any]) -> ProfileAction:
+    return ProfileAction(
+        id=a["id"],
+        kind=ActionKind(a["kind"]),
+        moments=frozenset(Moment(m) for m in a["moments"]),
+        name=a.get("name", ""),
+        params=dict(a.get("params") or {}),
+        conditions=tuple(condition_from_dict(c) for c in a.get("conditions", ())),
+        condition_mode=ConditionMode(a.get("condition_mode", "all")),
+        enabled=bool(a.get("enabled", True)),
+    )
+
+
+def action_to_dict(a: ProfileAction) -> dict[str, Any]:
+    return {
+        "id": a.id,
+        "kind": a.kind.value,
+        "moments": sorted(m.value for m in a.moments),
+        "name": a.name,
+        "params": dict(a.params),
+        "conditions": [condition_to_dict(c) for c in a.conditions],
+        "condition_mode": a.condition_mode.value,
+        "enabled": a.enabled,
+    }
+
+
+def profile_from_dict(p: dict[str, Any]) -> ResponseProfile:
+    return ResponseProfile(
+        id=p["id"],
+        name=p["name"],
+        severity=int(p["severity"]),
+        actions=tuple(action_from_dict(a) for a in p["actions"]),
+    )
+
+
+def profile_to_dict(p: ResponseProfile) -> dict[str, Any]:
+    return {
+        "id": p.id,
+        "name": p.name,
+        "severity": p.severity,
+        "actions": [action_to_dict(a) for a in p.actions],
     }
 
 
@@ -141,6 +228,7 @@ def group_from_dict(g: dict[str, Any]) -> Group:
         n=int(g["n"]),
         window_seconds=int(g["window_seconds"]),
         suppress_members=bool(g["suppress_members"]),
+        response_profile_id=g.get("response_profile_id") or None,
     )
 
 
@@ -153,12 +241,20 @@ def group_to_dict(g: Group) -> dict[str, Any]:
         "n": g.n,
         "window_seconds": g.window_seconds,
         "suppress_members": g.suppress_members,
+        "response_profile_id": g.response_profile_id,
     }
 
 
 def chime_from_dict(c: dict[str, Any]) -> ChimeSettings:
     return ChimeSettings(
-        targets=tuple(c["targets"]),
+        targets=tuple(
+            ChimeTarget(
+                entity_id=t["entity_id"],
+                quiet_start=t.get("quiet_start") or None,
+                quiet_end=t.get("quiet_end") or None,
+            )
+            for t in c["targets"]
+        ),
         mode=ChimeMode(c["mode"]),
         sound=c.get("sound") or None,
         tts_entity=c.get("tts_entity") or None,
@@ -171,7 +267,14 @@ def chime_from_dict(c: dict[str, Any]) -> ChimeSettings:
 
 def chime_to_dict(c: ChimeSettings) -> dict[str, Any]:
     return {
-        "targets": list(c.targets),
+        "targets": [
+            {
+                "entity_id": t.entity_id,
+                "quiet_start": t.quiet_start,
+                "quiet_end": t.quiet_end,
+            }
+            for t in c.targets
+        ],
         "mode": c.mode.value,
         "sound": c.sound,
         "tts_entity": c.tts_entity,
@@ -193,6 +296,7 @@ def area_from_dict(a: dict[str, Any]) -> Area:
         ha_state_when_armed=a["ha_state_when_armed"],
         default_entry_delay=int(a["default_entry_delay"]),
         default_exit_delay=int(a["default_exit_delay"]),
+        response_profile_id=a.get("response_profile_id") or None,
     )
 
 
@@ -203,6 +307,7 @@ def area_to_dict(a: Area) -> dict[str, Any]:
         "ha_state_when_armed": a.ha_state_when_armed,
         "default_entry_delay": a.default_entry_delay,
         "default_exit_delay": a.default_exit_delay,
+        "response_profile_id": a.response_profile_id,
     }
 
 
@@ -215,6 +320,7 @@ def scenario_from_dict(s: dict[str, Any]) -> Scenario:
         icon=s.get("icon"),
         exit_delay_override=_opt_int(s.get("exit_delay_override")),
         siren_duration_override=_opt_int(s.get("siren_duration_override")),
+        response_profile_id=s.get("response_profile_id") or None,
     )
 
 
@@ -227,6 +333,7 @@ def scenario_to_dict(s: Scenario) -> dict[str, Any]:
         "icon": s.icon,
         "exit_delay_override": s.exit_delay_override,
         "siren_duration_override": s.siren_duration_override,
+        "response_profile_id": s.response_profile_id,
     }
 
 
@@ -263,6 +370,8 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
         cross_zone_window=int(z["cross_zone_window"]),
         trigger_count=int(z["trigger_count"]),
         trigger_window=int(z["trigger_window"]),
+        response_profile_id=z.get("response_profile_id") or None,
+        silent=bool(z["silent"]),
     )
 
 
@@ -298,6 +407,8 @@ def zone_to_dict(z: Zone) -> dict[str, Any]:
         "cross_zone_window": z.cross_zone_window,
         "trigger_count": z.trigger_count,
         "trigger_window": z.trigger_window,
+        "response_profile_id": z.response_profile_id,
+        "silent": z.silent,
     }
 
 
@@ -402,6 +513,35 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
             for key, activations in state.windows.items()
         },
         "chime_enabled": state.chime_enabled,
+        "bypass_until": {z: due.isoformat() for z, due in state.bypass_until.items()},
+        "pending_runs": [
+            {
+                "id": r.id,
+                "profile_id": r.profile_id,
+                "moment": r.moment.value,
+                "index": r.index,
+                "due": r.due.isoformat(),
+                "area_id": r.area_id,
+                "zone_id": r.zone_id,
+                "incident_id": r.incident_id,
+                "silent": r.silent,
+                "placeholders": dict(r.placeholders),
+            }
+            for r in state.pending_runs
+        ],
+        "running": [
+            {
+                "action_id": r.action_id,
+                "kind": r.kind,
+                "entity_ids": list(r.entity_ids),
+                "until": _iso(r.until),
+                "restore": r.restore,
+                "area_id": r.area_id,
+                "incident_id": r.incident_id,
+            }
+            for r in state.running
+        ],
+        "run_seq": state.run_seq,
     }
 
 
@@ -541,6 +681,42 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 for key, activations in data.get("windows", {}).items()
             },
             chime_enabled=bool(data.get("chime_enabled", True)),
+            bypass_until={
+                z: _required_dt(due)
+                for z, due in data.get("bypass_until", {}).items()
+                if z in zone_ids
+            },
+            # A sequence held by a delay, and whatever is still switched on:
+            # both survive a restart (part 3 decision 5). A run whose profile
+            # is gone is dropped when it is resumed, not here.
+            pending_runs=tuple(
+                PendingRun(
+                    id=r["id"],
+                    profile_id=r["profile_id"],
+                    moment=Moment(r["moment"]),
+                    index=int(r["index"]),
+                    due=_required_dt(r["due"]),
+                    area_id=r.get("area_id"),
+                    zone_id=r.get("zone_id"),
+                    incident_id=r.get("incident_id"),
+                    silent=bool(r.get("silent", False)),
+                    placeholders=dict(r.get("placeholders") or {}),
+                )
+                for r in data.get("pending_runs", ())
+            ),
+            running=tuple(
+                RunningAction(
+                    action_id=r["action_id"],
+                    kind=r["kind"],
+                    entity_ids=tuple(r["entity_ids"]),
+                    until=_dt(r.get("until")),
+                    restore=r.get("restore"),
+                    area_id=r.get("area_id"),
+                    incident_id=r.get("incident_id"),
+                )
+                for r in data.get("running", ())
+            ),
+            run_seq=int(data.get("run_seq", 0)),
         )
     except (KeyError, TypeError, ValueError, AssertionError) as err:
         raise ConfigError(f"invalid Foyer runtime state: {err!r}") from err

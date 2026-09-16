@@ -221,7 +221,7 @@ def test_every_notification_the_seed_can_send_is_translated():
     )
     for language in LANGUAGES:
         notifications = load(TRANSLATIONS / "panel", language)["notification"]
-        for moment in config.actions[0].moments:
+        for moment in config.profiles[0].actions[0].moments:
             assert {"title", "message"} <= notifications[moment.value].keys()
 
 

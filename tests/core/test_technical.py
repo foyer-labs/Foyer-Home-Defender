@@ -234,10 +234,12 @@ def test_an_active_technical_zone_never_counts_as_open_at_arming():
 def test_the_technical_notification_is_an_intent():
     """Part 2 decision 10: a technical alarm is never silent."""
     config = house()
+    profile = config.profiles[0]
     action = replace(
-        config.actions[0], moments=config.actions[0].moments | {Moment.TECHNICAL_RAISED}
+        profile.actions[0],
+        moments=profile.actions[0].moments | {Moment.TECHNICAL_RAISED},
     )
-    w = World(replace(config, actions=(action,)))
+    w = World(replace(config, profiles=(replace(profile, actions=(action,)),)))
     decision = w.set(SMOKE, "on")
 
     [intent] = decision.actions

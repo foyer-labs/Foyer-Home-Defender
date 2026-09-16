@@ -206,9 +206,9 @@ def test_a_24h_zone_on_a_disarmed_house_opens_an_incident():
     assert world.state.incident is None
 
 
-def test_each_contributor_is_recorded_for_the_severity_to_come():
-    """§19: the highest-severity contributing profile will supply the
-    escalation. Profiles arrive in part 3: the record is shaped now."""
+def test_each_contributor_is_recorded_with_its_profile_and_severity():
+    """§19: the highest-severity contributing profile supplies the escalation
+    in Phase 4; part 3 fills the record as each zone joins."""
     world = armed()
     world.set(WINDOW, "on")
     world.set(BATH, "on")
@@ -218,7 +218,9 @@ def test_each_contributor_is_recorded_for_the_severity_to_come():
         ("ground", "window"),
         ("upstairs", "bath"),
     ]
-    assert all(c.profile_id is None and c.severity is None for c in contributors)
+    # Both areas inherit the house's one profile (tests/core/helpers.py).
+    assert all(c.profile_id == "default" and c.severity == 1 for c in contributors)
+    # It sends a notification on armed and disarmed, not on an alarm.
     assert world.state.incident.actions_started == ()
 
 

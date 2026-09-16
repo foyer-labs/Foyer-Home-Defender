@@ -17,7 +17,8 @@
     "zones": "Zones",
     "scenarios": "Scenarios",
     "groups": "Verification groups",
-    "settings": "Settings"
+    "settings": "Settings",
+    "profiles": "Response profiles"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -45,7 +46,8 @@
   },
   "bypass": {
     "auto_bypass": "Excluded at arming",
-    "forced": "Excluded by forced arming"
+    "forced": "Excluded by forced arming",
+    "manual": "Excluded by hand"
   },
   "reason": {
     "invalid_state": "The area is not in a state that allows this.",
@@ -60,7 +62,8 @@
     "zone_not_bypassable": "Cannot force arming: these zones may not be excluded: {zones}.",
     "arm_hold_expired": "Arming failed: still open: {zones}.",
     "unknown": "The request was refused.",
-    "nothing_to_acknowledge": "There is nothing to acknowledge."
+    "nothing_to_acknowledge": "There is nothing to acknowledge.",
+    "unknown_zone": "That zone does not exist."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -118,7 +121,27 @@
     "chime_sound_required": "Media players need a sound to play: set the media to play.",
     "volume_out_of_range": "{field}: between 0 and 100.",
     "time_invalid": "{field}: a time such as 23:00.",
-    "quiet_hours_incomplete": "Quiet hours need both a start and an end."
+    "quiet_hours_incomplete": "Quiet hours need both a start and an end.",
+    "unknown_profile": "That response profile does not exist.",
+    "unknown_action_kind": "Unknown action type.",
+    "camera_dir_invalid": "Use a folder inside the configuration directory, never www: it is served without authentication.",
+    "severity_out_of_range": "Severity is a number from 1 to 10.",
+    "moments_required": "Choose at least one moment for this action.",
+    "too_many_conditions": "An action carries at most two conditions.",
+    "empty_window": "A window that starts when it ends never applies.",
+    "condition_entity_invalid": "Choose an entity and the state to compare it with.",
+    "unknown_variable": "{field} uses a variable that does not exist.",
+    "notify_service_required": "Choose a notify service or notify entity.",
+    "message_required": "A message is required.",
+    "service_required": "Give a domain and a service.",
+    "data_invalid": "Service data must be a mapping.",
+    "entity_required": "Choose at least one entity for {field}.",
+    "entity_domain": "{field} points at an entity this action cannot use.",
+    "camera_mode_invalid": "Choose a snapshot or a recording.",
+    "duration_out_of_range": "Duration is out of range.",
+    "switch_state_invalid": "Choose on or off.",
+    "brightness_out_of_range": "Brightness is a number from 0 to 255.",
+    "profile_in_use": "Something still uses this profile. Point it elsewhere first."
   },
   "field": {
     "name": "Name",
@@ -166,7 +189,34 @@
     "volume": "Volume",
     "quiet_start": "Quiet from",
     "quiet_end": "until",
-    "during_exit": "Also during the exit delay"
+    "during_exit": "Also during the exit delay",
+    "response_profile_id": "Response profile",
+    "severity": "Severity",
+    "moments": "When it runs",
+    "conditions": "Conditions",
+    "condition_mode": "Both conditions",
+    "service": "Service",
+    "message": "Message",
+    "title": "Title",
+    "seconds": "Seconds",
+    "duration": "Duration",
+    "tone": "Tone",
+    "brightness": "Brightness",
+    "rgb_color": "Colour",
+    "flash": "Flash",
+    "state": "State",
+    "revert_after": "Switch back after",
+    "media_player_entity_ids": "Speakers",
+    "entity_ids": "Entities",
+    "domain": "Domain",
+    "data": "Data",
+    "target": "Target",
+    "silent": "Silent zone",
+    "silent_suppresses": "A silent zone suppresses",
+    "camera_dir": "Camera folder",
+    "default_profile_id": "Default profile",
+    "technical_profile_id": "Technical profile",
+    "actions": "Actions"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -328,7 +378,16 @@
     "cross_zone_hint": "Another zone that confirms this one within the window. Each still alarms on its own; when both detect, the pair is recorded as confirmed. Set it on either zone.",
     "trigger_count_hint": "How many times it must detect within the window before it alarms. 1: at once. Only detections that would alarm at once are counted: opening the entry route is not.",
     "chime_hint": "Plays the chime when it opens while its area is not armed.",
-    "in_group": "Member of the verification group {group}. Change it on the Verification groups page."
+    "in_group": "Member of the verification group {group}. Change it on the Verification groups page.",
+    "bypass": "Exclude",
+    "unbypass": "Put back",
+    "bypass_for": "Exclude for",
+    "bypass_hours": "{hours} h",
+    "bypass_until": "back at {time}",
+    "bypass_indefinite": "until you put it back",
+    "bypass_hint": "An excluded zone does not alarm. Without a duration it comes back when the area is disarmed; with one it comes back on its own, and says so.",
+    "silent_hint": "The response runs without the sounders the settings list.",
+    "profile_hint": "Read only when this zone alarms. Empty: the area's profile."
   },
   "scenarios": {
     "title": "Scenarios",
@@ -519,6 +578,32 @@
           "text": "Whether zones chime while their area counts down to armed."
         }
       }
+    },
+    "profiles": {
+      "title": "What a response profile is",
+      "intro": "A profile is a named list of actions: what happens, when, and under which conditions. The area is the unit of response; a zone's own profile is read only for its own alarm, which is what makes a verification group's graduated response work.",
+      "items": {
+        "inheritance": {
+          "term": "Inheritance",
+          "text": "Zone, then area, then scenario, then the global default. The page shows the effective profile and where it comes from."
+        },
+        "moments": {
+          "term": "When it runs",
+          "text": "One action can answer several moments. Some moments arrive with a later phase and are marked."
+        },
+        "conditions": {
+          "term": "Conditions",
+          "text": "At most two per action, combined with and or or. More than that belongs in a Home Assistant automation."
+        },
+        "severity": {
+          "term": "Severity",
+          "text": "Only decides which escalation an incident adopts when profiles of different strength contribute to it."
+        },
+        "silent": {
+          "term": "Silent zones",
+          "text": "A zone marked silent runs its response without the action kinds the settings name."
+        }
+      }
     }
   },
   "notification": {
@@ -617,6 +702,30 @@
     "chime_switched": {
       "title": "Foyer: chime",
       "message": "The chime was switched on or off."
+    },
+    "code_rejected": {
+      "title": "Foyer: code rejected",
+      "message": "A wrong code was entered on {channel}."
+    },
+    "lockout": {
+      "title": "Foyer: locked out",
+      "message": "Too many wrong codes on {channel}. That channel is locked."
+    },
+    "low_battery": {
+      "title": "Foyer: low battery",
+      "message": "{zone} reports a low battery."
+    },
+    "walk_test_started": {
+      "title": "Foyer: walk test",
+      "message": "A walk test has started. Response actions are inhibited."
+    },
+    "walk_test_ended": {
+      "title": "Foyer: walk test over",
+      "message": "The walk test has ended. The system responds normally again."
+    },
+    "escalation_exhausted": {
+      "title": "Foyer: nobody answered",
+      "message": "The escalation reached its last step without an acknowledgement."
     }
   },
   "chime_mode": {
@@ -659,6 +768,107 @@
     "during_exit_hint": "Off: the door you leave by does not chime while the area counts down.",
     "switch_hint": "switch.foyer_chime silences it without changing these settings.",
     "saved": "Saved.",
-    "later": "The other settings arrive in a later update."
+    "later": "The other settings arrive in a later update.",
+    "response_title": "Response",
+    "response_intro": "Where every inheritance chain ends, and what a silent zone keeps quiet.",
+    "default_profile_hint": "What every area, zone and scenario inherits unless it overrides it.",
+    "technical_profile_hint": "Smoke, gas and flood answer with this one, whatever the house is doing. Empty: the default profile.",
+    "silent_hint": "A zone marked silent runs its response without these.",
+    "camera_dir_hint": "Inside the configuration folder. Never www, which is served without authentication.",
+    "none": "None"
+  },
+  "action_kind": {
+    "notify": "Notification",
+    "persistent_notification": "Home Assistant notification",
+    "siren": "Siren",
+    "light": "Light",
+    "camera": "Camera",
+    "scene": "Scene",
+    "switch": "Switch",
+    "tts": "Spoken message",
+    "call_service": "Call a service",
+    "delay": "Wait"
+  },
+  "moment_group": {
+    "alarm": "On alarm",
+    "state": "On state change",
+    "system": "On system event",
+    "later": "Arrives in a later phase"
+  },
+  "moment": {
+    "armed": "Armed",
+    "disarmed": "Disarmed",
+    "arm_failed": "Arming failed",
+    "forced_arm": "Forced arming",
+    "zone_bypassed": "Zone excluded",
+    "zone_rejoined": "Zone back in",
+    "entry_started": "Entry delay started",
+    "triggered": "Alarm",
+    "siren_cutoff": "Siren cutoff",
+    "zone_fault": "Zone fault",
+    "ha_restarted": "Home Assistant restarted",
+    "technical_raised": "Technical alarm",
+    "technical_acknowledged": "Technical alarm acknowledged",
+    "technical_cleared": "Technical alarm cleared",
+    "incident_opened": "Incident opened",
+    "incident_joined": "Zone joined the incident",
+    "incident_acknowledged": "Incident acknowledged",
+    "incident_closed": "Incident closed",
+    "verification_pending": "Group not yet satisfied",
+    "verification_satisfied": "Group satisfied",
+    "verification_expired": "Group window expired",
+    "chime": "Chime",
+    "chime_switched": "Chime switched",
+    "code_rejected": "Code rejected",
+    "lockout": "Keypad locked out",
+    "low_battery": "Low battery",
+    "walk_test_started": "Walk test started",
+    "walk_test_ended": "Walk test ended",
+    "escalation_exhausted": "Escalation exhausted"
+  },
+  "condition": {
+    "add": "Add a condition",
+    "time": "Time window",
+    "state": "Entity state",
+    "is": "is",
+    "is_not": "is not",
+    "all": "Both must be met",
+    "any": "Either is enough",
+    "none": "No conditions",
+    "after": "From",
+    "before": "Until",
+    "midnight_hint": "A window may cross midnight: 22:00 to 07:00 is the night.",
+    "max": "At most two conditions per action. Anything more belongs in a Home Assistant automation subscribed to foyer_event."
+  },
+  "profiles": {
+    "title": "Profiles",
+    "add": "Add profile",
+    "new": "New profile",
+    "none": "No profiles yet.",
+    "intro": "A profile is a reusable list of actions. It resolves by inheritance — zone, then area, then scenario, then the global default — which is what stops a house of sixteen zones turning into a configuration matrix.",
+    "used_by": "Used by",
+    "used_default": "the global default",
+    "used_technical": "the technical channel",
+    "unused": "nothing yet",
+    "actions_count": "{count} actions",
+    "add_action": "Add action",
+    "no_actions": "This profile does nothing yet.",
+    "delete_action": "Remove action",
+    "severity_hint": "Used for one thing only: when several zones join one incident, the incident adopts the escalation of the highest-severity profile among them. It changes nothing when this profile runs alone.",
+    "inherit": "Inherit",
+    "effective": "Effective profile: {profile}",
+    "inherited_from_area": "inherited from the area",
+    "inherited_from_scenario": "inherited from the scenario",
+    "inherited_from_default": "the global default",
+    "inherited_none": "no profile: nothing would happen",
+    "zone_hint": "A zone's own profile is read only for its own alarm. Everything else in this area answers with the area's profile.",
+    "group_hint": "What a satisfied group does. Its members keep their own profile: that is what makes the response graduated.",
+    "message_hint": "Variables: {variables}",
+    "delay_hint": "Holds the actions after it in this list. It survives a restart.",
+    "revert_hint": "Empty: leave it as it is.",
+    "camera_hint": "The notification attaches the live picture; the file is written to the camera folder.",
+    "call_service_hint": "Anything Foyer does not model natively. Data is YAML.",
+    "escalation_later": "Escalation across contacts arrives in Phase 4.",
+    "future_moment": "Raised from a later phase on."
   }
 }

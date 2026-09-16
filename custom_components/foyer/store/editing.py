@@ -13,7 +13,13 @@ from dataclasses import dataclass, replace
 from typing import Any
 import uuid
 
-from ..core.models import FoyerConfig, RuntimeState, Settings, ZoneType
+from ..core.models import (
+    SILENCEABLE,
+    FoyerConfig,
+    RuntimeState,
+    Settings,
+    ZoneType,
+)
 from ..core.presets import preset
 from ..core.validation import Problem, edit_conflicts, validate
 from .schema import (
@@ -21,16 +27,18 @@ from .schema import (
     area_from_dict,
     chime_from_dict,
     group_from_dict,
+    profile_from_dict,
     scenario_from_dict,
     zone_from_dict,
 )
 
-KINDS = ("area", "zone", "scenario", "group")
+KINDS = ("area", "zone", "scenario", "group", "profile")
 
 _AREA_DEFAULTS: dict[str, Any] = {
     "default_entry_delay": 30,
     "default_exit_delay": 30,
     "ha_state_when_armed": "armed_away",
+    "response_profile_id": None,
 }
 _ZONE_DEFAULTS: dict[str, Any] = {
     "entry_delay": None,
@@ -45,11 +53,15 @@ _ZONE_DEFAULTS: dict[str, Any] = {
     "cross_zone_window": 60,
     "trigger_count": 1,
     "trigger_window": 60,
+    "response_profile_id": None,
+    "silent": False,
 }
 _GROUP_DEFAULTS: dict[str, Any] = {
     "window_seconds": 60,
     "suppress_members": False,
+    "response_profile_id": None,
 }
+_PROFILE_DEFAULTS: dict[str, Any] = {"severity": 1, "actions": []}
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +100,12 @@ def upsert(
         elif kind == "group":
             obj = group_from_dict({**_GROUP_DEFAULTS, **data})
             new = replace(config, groups=_replace_in(config.groups, obj))
+        elif kind == "profile":
+            data.setdefault("actions", [])
+            for action in data["actions"]:
+                action["id"] = action.get("id") or new_id()
+            obj = profile_from_dict({**_PROFILE_DEFAULTS, **data})
+            new = replace(config, profiles=_replace_in(config.profiles, obj))
         else:
             zone_type = ZoneType(data.get("type", "instant"))
             obj = zone_from_dict({**_ZONE_DEFAULTS, **preset(zone_type), **data})
@@ -134,6 +152,16 @@ def delete(
         if config.group(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))
         new = replace(config, groups=tuple(g for g in config.groups if g.id != item_id))
+    elif kind == "profile":
+        if config.profile(item_id) is None:
+            return _fail(Problem("not_found", kind, item_id))
+        # Deleting a profile something still points at would silently move
+        # that thing back to the default: say so instead.
+        if item_id in _referenced_profiles(config):
+            return _fail(Problem("profile_in_use", kind, item_id))
+        new = replace(
+            config, profiles=tuple(p for p in config.profiles if p.id != item_id)
+        )
     elif kind == "scenario":
         if config.scenario(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))
@@ -147,19 +175,52 @@ def delete(
     return _check(config, new, state, item_id)
 
 
+def _referenced_profiles(config: FoyerConfig) -> set[str]:
+    """Every profile id the configuration points at."""
+    refs = {
+        config.settings.default_profile_id,
+        config.settings.technical_profile_id,
+        *(a.response_profile_id for a in config.areas),
+        *(z.response_profile_id for z in config.zones),
+        *(s.response_profile_id for s in config.scenarios),
+        *(g.response_profile_id for g in config.groups),
+    }
+    return {ref for ref in refs if ref}
+
+
 def update_settings(
     config: FoyerConfig, state: RuntimeState, settings: dict[str, Any]
 ) -> EditResult:
+    """The global settings block. Unknown keys are ignored; known ones keep
+    their current value when the caller leaves them out."""
+    current = config.settings
     try:
+        silent = settings.get("silent_suppresses", list(current.silent_suppresses))
         new = replace(
             config,
             settings=Settings(
                 siren_duration=int(settings["siren_duration"]),
                 arm_hold_timeout=int(settings["arm_hold_timeout"]),
+                default_profile_id=settings.get(
+                    "default_profile_id", current.default_profile_id
+                )
+                or None,
+                technical_profile_id=settings.get(
+                    "technical_profile_id", current.technical_profile_id
+                )
+                or None,
+                silent_suppresses=tuple(
+                    kind for kind in silent if isinstance(kind, str)
+                ),
+                camera_dir=str(settings.get("camera_dir", current.camera_dir)),
             ),
         )
     except (KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "settings"))
+    if any(kind not in SILENCEABLE for kind in new.settings.silent_suppresses):
+        return _fail(
+            Problem("unknown_action_kind", "settings", None, "silent_suppresses")
+        )
     return _check(config, new, state, None)
 
 

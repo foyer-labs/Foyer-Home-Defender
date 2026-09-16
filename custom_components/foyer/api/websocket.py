@@ -21,6 +21,7 @@ from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
 from ..core.models import (
     ARMED_HA_STATES,
     MAX_ARM_HOLD_TIMEOUT,
+    MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
     MAX_EXIT_DELAY,
     MAX_SIREN_DURATION,
@@ -30,18 +31,29 @@ from ..core.models import (
     MIN_ARM_HOLD_TIMEOUT,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
+    SILENCEABLE,
     AcknowledgeIncident,
     AcknowledgeTechnical,
+    ActionKind,
     ArmAreaRequest,
     ArmModeRequest,
     ArmRequest,
+    BypassZone,
     Decision,
     DisarmRequest,
+    Moment,
     ZoneType,
 )
 from ..core.presets import UNAVAILABLE_TYPES, preset
 from ..core.proposals import propose_zone
-from ..core.validation import CHIME_DOMAINS, ZONE_DOMAINS
+from ..core.templates import TEMPLATE_VARIABLES
+from ..core.validation import (
+    ACTION_DOMAINS,
+    CHIME_DOMAINS,
+    MAX_ACTION_DELAY,
+    MAX_SEVERITY,
+    ZONE_DOMAINS,
+)
 from ..runtime.system import FoyerSystem
 from ..store.config_store import ConfigStore
 from ..store.editing import (
@@ -55,6 +67,17 @@ from ..store.editing import (
 from ..store.schema import config_to_dict
 
 PREFS_KEY = "foyer.prefs"
+
+# Moments a profile can already be written against, though the phase that
+# raises them has not landed (SPEC §6.1; part 3 appendix).
+FUTURE_MOMENTS: tuple[Moment, ...] = (
+    Moment.CODE_REJECTED,
+    Moment.LOCKOUT,
+    Moment.LOW_BATTERY,
+    Moment.WALK_TEST_STARTED,
+    Moment.WALK_TEST_ENDED,
+    Moment.ESCALATION_EXHAUSTED,
+)
 
 
 @callback
@@ -72,6 +95,7 @@ def async_register(hass: HomeAssistant) -> None:
         ws_arm,
         ws_disarm,
         ws_acknowledge,
+        ws_bypass,
         ws_prefs_get,
         ws_prefs_set,
     ):
@@ -252,6 +276,39 @@ async def ws_acknowledge(
     connection.send_result(msg["id"], _result(system, decision))
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/bypass",
+        vol.Required("zone_id"): str,
+        vol.Optional("bypass", default=True): bool,
+        # A timed temporary bypass: the zone rejoins on its own (SPEC §16).
+        vol.Optional("seconds"): vol.Any(vol.All(int, vol.Range(min=1)), None),
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_bypass(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Exclude a zone by hand, or let it back in. The engine checks the code
+    policy (INV-2): no code is needed before Phase 2, and the check runs
+    already so that Phase 2 changes the policy, not this command."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    decision = await system.async_handle(
+        BypassZone(
+            zone_id=msg["zone_id"],
+            bypass=msg["bypass"],
+            seconds=msg.get("seconds"),
+            code=msg.get("code"),
+            channel=CHANNEL_HA_UI,
+        )
+    )
+    connection.send_result(msg["id"], _result(system, decision))
+
+
 # --- configuration (admin only) -------------------------------------------------------
 
 
@@ -278,7 +335,19 @@ def _meta() -> dict[str, Any]:
             "window": [MIN_VERIFICATION_WINDOW, MAX_VERIFICATION_WINDOW],
             "trigger_count": [1, MAX_TRIGGER_COUNT],
             "volume": [0, 100],
+            "severity": [1, MAX_SEVERITY],
+            "delay": [1, MAX_ACTION_DELAY],
         },
+        # What page 5 needs to build an action editor without knowing the
+        # engine: the catalogue, where each kind may point, and the moments.
+        "action_kinds": [k.value for k in ActionKind],
+        "action_domains": {k: list(v) for k, v in ACTION_DOMAINS.items()},
+        "silenceable": sorted(SILENCEABLE),
+        "moments": [m.value for m in Moment],
+        # Moments no phase raises yet: selectable, and labelled as such.
+        "future_moments": [m.value for m in FUTURE_MOMENTS],
+        "template_variables": list(TEMPLATE_VARIABLES),
+        "max_conditions": MAX_CONDITIONS,
     }
 
 

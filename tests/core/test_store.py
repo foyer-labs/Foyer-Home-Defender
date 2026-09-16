@@ -131,7 +131,8 @@ def test_seed_wires_one_of_each_with_no_code_required():
     assert [a.name for a in config.areas] == ["Casa"]
     assert config.scenarios[0].areas == (config.areas[0].id,)
     assert config.zones[0].trigger.states == {"on"}
-    assert Moment.ZONE_FAULT in config.actions[0].moments
+    assert Moment.ZONE_FAULT in config.profiles[0].actions[0].moments
+    assert config.settings.default_profile_id == config.profiles[0].id
     assert config.code_policy.arm is False
     assert config.code_policy.disarm is False
     assert config_from_dict(config_to_dict(config)) == config
@@ -176,13 +177,14 @@ def test_migration_keeps_the_code_policy_and_adds_the_required_notifications():
     config = migrated()
     assert config.code_policy.arm is False
     assert config.code_policy.disarm is False
-    assert config.actions[0].moments == {
+    assert config.profiles[0].actions[0].moments == {
         Moment.ARMED,
         Moment.DISARMED,
         Moment.ZONE_FAULT,
         Moment.ARM_FAILED,
         Moment.ZONE_BYPASSED,
         Moment.TECHNICAL_RAISED,  # added by 2.2 -> 3.1 (part 2 decision 10)
+        Moment.TRIGGERED,  # added by 3.1 -> 4.1 (part 3 decision 3)
     }
 
 
@@ -396,14 +398,16 @@ def test_alpha_3_document_migrates_to_part_2_changing_nothing_that_works():
     for zone in config.zones:
         assert (zone.chime, zone.cross_zone_id, zone.trigger_count) == (False, None, 1)
     assert config.zone("hall").follows == ("door",)
-    # The one addition on purpose: a technical alarm is announced (decision 10).
-    assert config.actions[0].moments == {
+    # The additions on purpose: a technical alarm is announced (decision 10)
+    # and so is an alarm itself (part 3 decision 3).
+    assert config.profiles[0].actions[0].moments == {
         Moment.ARMED,
         Moment.DISARMED,
         Moment.ZONE_FAULT,
         Moment.ARM_FAILED,
         Moment.ZONE_BYPASSED,
         Moment.TECHNICAL_RAISED,
+        Moment.TRIGGERED,
     }
     assert config_from_dict(config_to_dict(config)) == config
 
@@ -411,13 +415,22 @@ def test_alpha_3_document_migrates_to_part_2_changing_nothing_that_works():
 def test_groups_and_chime_round_trip(config):
     from dataclasses import replace
 
-    from custom_components.foyer.core.models import ChimeMode, ChimeSettings, Group
+    from custom_components.foyer.core.models import (
+        ChimeMode,
+        ChimeSettings,
+        ChimeTarget,
+        Group,
+    )
 
     richer = replace(
         config,
         groups=(Group("g", "Open plan", "ground", ("window", "patio"), 2, 45, True),),
         chime=ChimeSettings(
-            targets=("media_player.kitchen", "siren.hall"),
+            targets=(
+                ChimeTarget("media_player.kitchen"),
+                ChimeTarget("notify.mobile_app_luca", "22:30", "07:30"),
+                ChimeTarget("siren.hall"),
+            ),
             mode=ChimeMode.SPEECH,
             tts_entity="tts.piper",
             volume=35,
@@ -450,3 +463,166 @@ def test_an_older_state_file_restores_with_safe_defaults(config):
     assert state.incident is None and state.incident_seq == 0
     assert state.chime_enabled is True
     assert state.areas == world.state.areas
+
+
+# --- 3.1 -> 4.1: response profiles ----------------------------------------------------
+
+# A real document as 0.1.0-alpha.4 wrote it: schema 3.1, one notification
+# action, no profiles anywhere.
+ALPHA_4_DOCUMENT = {
+    "areas": [
+        {
+            "id": "a1",
+            "name": "Perimetro",
+            "ha_state_when_armed": "armed_away",
+            "default_entry_delay": 30,
+            "default_exit_delay": 30,
+        },
+        {
+            "id": "a2",
+            "name": "Interni",
+            "ha_state_when_armed": "armed_home",
+            "default_entry_delay": 30,
+            "default_exit_delay": 30,
+        },
+    ],
+    "zones": [
+        {
+            "id": "door",
+            "name": "Porta",
+            "entity_id": "binary_sensor.porta",
+            "area_id": "a1",
+            "trigger": {"kind": "state", "states": ["on"]},
+            "type": "delayed",
+            "channel": "intrusion",
+            "entry_mode": "delayed",
+            "alarm_kind": "intrusion",
+            "always_on": False,
+            "entry_delay": None,
+            "arm_policy": "block",
+            "arm_hold_timeout": None,
+            "allow_arm_when_faulted": False,
+            "bypassable": True,
+            "supervision_timeout": None,
+            "enabled": True,
+            "key": None,
+            "follows": [],
+            "chime": False,
+            "cross_zone_id": None,
+            "cross_zone_window": 60,
+            "trigger_count": 1,
+            "trigger_window": 60,
+        },
+        {
+            "id": "hall",
+            "name": "Hall",
+            "entity_id": "binary_sensor.hall",
+            "area_id": "a2",
+            "trigger": {"kind": "state", "states": ["on"]},
+            "type": "follower",
+            "channel": "intrusion",
+            "entry_mode": "follower",
+            "alarm_kind": "intrusion",
+            "always_on": False,
+            "entry_delay": None,
+            "arm_policy": "block",
+            "arm_hold_timeout": None,
+            "allow_arm_when_faulted": False,
+            "bypassable": True,
+            "supervision_timeout": None,
+            "enabled": True,
+            "key": None,
+            "follows": ["door"],
+            "chime": False,
+            "cross_zone_id": None,
+            "cross_zone_window": 60,
+            "trigger_count": 1,
+            "trigger_window": 60,
+        },
+    ],
+    "scenarios": [
+        {
+            "id": "s1",
+            "name": "Fuori casa",
+            "areas": ["a1", "a2"],
+            "ha_master_state": "armed_away",
+            "icon": None,
+            "exit_delay_override": None,
+            "siren_duration_override": None,
+        }
+    ],
+    "actions": [
+        {
+            "id": "n1",
+            "kind": "notification",
+            "moments": [
+                "arm_failed",
+                "armed",
+                "disarmed",
+                "technical_raised",
+                "zone_bypassed",
+                "zone_fault",
+            ],
+        }
+    ],
+    "code_policy": {
+        "arm": False,
+        "disarm": False,
+        "force_arm": False,
+        "change_scenario": False,
+        "acknowledge": False,
+    },
+    "settings": {"siren_duration": 180, "arm_hold_timeout": 300},
+    "groups": [],
+    "chime": {
+        "targets": [],
+        "mode": "sound",
+        "sound": None,
+        "tts_entity": None,
+        "volume": None,
+        "quiet_start": None,
+        "quiet_end": None,
+        "during_exit": False,
+    },
+}
+
+
+def test_alpha_4_document_migrates_to_part_3_keeping_every_notification():
+    """3.1 -> 4.1: the Phase 0 notification becomes the default profile."""
+    from custom_components.foyer.core.models import ActionKind
+    from custom_components.foyer.core.validation import validate
+
+    before = json.dumps(ALPHA_4_DOCUMENT, sort_keys=True)
+    config = config_from_dict(migrate((3, 1), CURRENT, ALPHA_4_DOCUMENT))
+    assert json.dumps(ALPHA_4_DOCUMENT, sort_keys=True) == before  # input untouched
+
+    assert validate(config) == []
+    [profile] = config.profiles
+    assert config.settings.default_profile_id == profile.id
+    # The technical channel falls back to the default, which already carries
+    # technical_raised: nothing an installation heard yesterday is lost.
+    assert config.settings.technical_profile_id is None
+    [action] = profile.actions
+    assert action.kind is ActionKind.PERSISTENT_NOTIFICATION
+    assert action.params == {} and action.conditions == ()
+    assert Moment.TRIGGERED in action.moments
+    assert Moment.TECHNICAL_RAISED in action.moments
+    # Nothing overrides the default yet, and no zone is silent.
+    assert all(z.response_profile_id is None and not z.silent for z in config.zones)
+    assert all(a.response_profile_id is None for a in config.areas)
+    assert config.settings.silent_suppresses == ("siren", "tts", "chime")
+    assert config.settings.camera_dir == "media/foyer"
+    assert config_from_dict(config_to_dict(config)) == config
+
+
+def test_a_state_file_from_part_2_restores_with_no_runs_and_no_bypass_timers(config):
+    world = World()
+    world.arm("away")
+    document = state_to_dict(world.state)
+    for key in ("bypass_until", "pending_runs", "running", "run_seq"):
+        del document[key]
+
+    state = state_from_dict(document, config)
+    assert state.bypass_until == {}
+    assert state.pending_runs == () and state.running == ()
+    assert state.run_seq == 0

@@ -17,6 +17,9 @@ _INTRUSION: dict[str, Any] = {
     "always_on": False,
     "arm_policy": ArmPolicy.BLOCK,
     "bypassable": True,
+    # SPEC §4.3: only panic makes a point of it, but every zone may be set to
+    # respond without the sounders the global silent list names (§4.2).
+    "silent": False,
 }
 
 PRESETS: dict[ZoneType, dict[str, Any]] = {

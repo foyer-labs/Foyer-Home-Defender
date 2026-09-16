@@ -11,21 +11,25 @@ from collections.abc import Callable, Iterable
 import uuid
 
 from ..core.models import (
+    ActionKind,
     Area,
     CodePolicy,
     FoyerConfig,
     Moment,
-    NotificationAction,
+    ProfileAction,
+    ResponseProfile,
     Scenario,
+    Settings,
     StateTrigger,
     Zone,
     ZoneType,
 )
 
-# The notifications every installation gets until response profiles exist.
-# zone_fault is not optional: INV-4 requires a fault to be announced. A failed
-# arming and an automatic bypass are announced because §5.4 says so, and a
-# technical alarm because it must never be silent (part 2 decision 10).
+# What the default response profile does on a new installation. zone_fault is
+# not optional: INV-4 requires a fault to be announced. A failed arming and an
+# automatic bypass are announced because §5.4 says so, a technical alarm
+# because it must never be silent (part 2 decision 10), and an alarm because
+# an alarm that says nothing is the worst failure there is (part 3 decision 3).
 SEED_MOMENTS = frozenset(
     {
         Moment.ARMED,
@@ -34,8 +38,14 @@ SEED_MOMENTS = frozenset(
         Moment.ARM_FAILED,
         Moment.ZONE_BYPASSED,
         Moment.TECHNICAL_RAISED,
+        Moment.TRIGGERED,
     }
 )
+
+
+# A configuration value, not a user-visible string: the user renames it from
+# the panel, and a migrated installation gets the same name.
+DEFAULT_PROFILE_NAME = "Default"
 
 
 def seed_config(
@@ -48,6 +58,19 @@ def seed_config(
     new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
 ) -> FoyerConfig:
     area = Area(id=new_id(), name=area_name, ha_state_when_armed="armed_away")
+    # One profile, inherited by everything: the chain of §6 ends here, and the
+    # panel's page 5 is where the user grows it.
+    default_profile = ResponseProfile(
+        id=new_id(),
+        name=DEFAULT_PROFILE_NAME,
+        actions=(
+            ProfileAction(
+                id=new_id(),
+                kind=ActionKind.PERSISTENT_NOTIFICATION,
+                moments=SEED_MOMENTS,
+            ),
+        ),
+    )
     return FoyerConfig(
         areas=(area,),
         zones=(
@@ -68,7 +91,8 @@ def seed_config(
                 ha_master_state="armed_away",
             ),
         ),
-        actions=(NotificationAction(id=new_id(), moments=SEED_MOMENTS),),
+        profiles=(default_profile,),
+        settings=Settings(default_profile_id=default_profile.id),
         # No users or codes exist yet, so no operation can require one. The
         # engine enforces this policy and fails closed if it is ever set.
         code_policy=CodePolicy(),

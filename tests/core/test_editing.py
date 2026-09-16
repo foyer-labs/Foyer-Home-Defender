@@ -138,7 +138,7 @@ def test_chime_settings_are_validated(config):
     from custom_components.foyer.store.editing import update_chime
 
     chime = {
-        "targets": ["media_player.kitchen"],
+        "targets": [{"entity_id": "media_player.kitchen"}],
         "mode": "speech",
         "tts_entity": None,
         "volume": 140,
@@ -157,7 +157,7 @@ def test_chime_settings_are_validated(config):
         RuntimeState(),
         {**chime, "tts_entity": "tts.piper", "volume": 40, "quiet_end": "07:00"},
     )
-    assert good.config.chime.targets == ("media_player.kitchen",)
+    assert [t.entity_id for t in good.config.chime.targets] == ["media_player.kitchen"]
 
 
 def test_garbage_is_a_problem_not_an_exception(config):

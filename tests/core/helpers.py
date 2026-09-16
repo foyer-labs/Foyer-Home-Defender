@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from custom_components.foyer.core.engine import decide
 from custom_components.foyer.core.models import (
+    ActionKind,
     AlarmKind,
     Area,
     AreaRuntime,
@@ -21,10 +22,13 @@ from custom_components.foyer.core.models import (
     EntryMode,
     Event,
     FoyerConfig,
+    BypassZone,
     Moment,
-    NotificationAction,
+    ProfileAction,
+    ResponseProfile,
     RuntimeState,
     Scenario,
+    Settings,
     StateTrigger,
     SystemSnapshot,
     Tick,
@@ -121,19 +125,27 @@ def make_house() -> FoyerConfig:
                 "night", "Night", ("ground",), "armed_night", exit_delay_override=5
             ),
         ),
-        actions=(
-            NotificationAction(
-                "notify",
-                frozenset(
-                    {
-                        Moment.ARMED,
-                        Moment.DISARMED,
-                        Moment.ZONE_FAULT,
-                        Moment.ARM_FAILED,
-                    }
+        profiles=(
+            ResponseProfile(
+                "default",
+                "Default",
+                actions=(
+                    ProfileAction(
+                        "notify",
+                        ActionKind.PERSISTENT_NOTIFICATION,
+                        frozenset(
+                            {
+                                Moment.ARMED,
+                                Moment.DISARMED,
+                                Moment.ZONE_FAULT,
+                                Moment.ARM_FAILED,
+                            }
+                        ),
+                    ),
                 ),
             ),
         ),
+        settings=Settings(default_profile_id="default"),
         code_policy=CodePolicy(),
     )
 
@@ -214,6 +226,9 @@ class World:
 
     def disarm(self, *area_ids: str, **kwargs) -> Decision:
         return self.send(DisarmRequest(area_ids or None, **kwargs))
+
+    def bypass(self, zone_id: str, **kwargs) -> Decision:
+        return self.send(BypassZone(zone_id, **kwargs))
 
     # --- reading -----------------------------------------------------------------
 

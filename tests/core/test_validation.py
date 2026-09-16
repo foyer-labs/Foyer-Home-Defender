@@ -263,15 +263,31 @@ def test_a_mutual_pair_has_one_window(config):
     assert "cross_zone_window_mismatch" in codes(mutual)
 
 
-def test_chime_targets_must_be_players_or_sirens(config):
-    from custom_components.foyer.core.models import ChimeSettings
+def test_chime_targets_must_be_players_sirens_or_notify(config):
+    from custom_components.foyer.core.models import ChimeSettings, ChimeTarget
 
-    bad = replace(config, chime=ChimeSettings(targets=("light.hall",)))
+    bad = replace(config, chime=ChimeSettings(targets=(ChimeTarget("light.hall"),)))
     assert "chime_target_invalid" in codes(bad)
-    sound = replace(config, chime=ChimeSettings(targets=("media_player.kitchen",)))
+    sound = replace(
+        config, chime=ChimeSettings(targets=(ChimeTarget("media_player.kitchen"),))
+    )
     assert "chime_sound_required" in codes(sound)
-    siren = replace(config, chime=ChimeSettings(targets=("siren.hall",)))
+    siren = replace(config, chime=ChimeSettings(targets=(ChimeTarget("siren.hall"),)))
     assert validate(siren) == []
+    # The free channels the house already has (decision 60), with quiet hours
+    # of their own (part 3 decision 8).
+    phone = replace(
+        config,
+        chime=ChimeSettings(
+            targets=(ChimeTarget("notify.mobile_app_luca", "22:00", "07:30"),)
+        ),
+    )
+    assert validate(phone) == []
+    half = replace(
+        config,
+        chime=ChimeSettings(targets=(ChimeTarget("notify.x", quiet_start="22:00"),)),
+    )
+    assert "quiet_hours_incomplete" in codes(half)
 
 
 def test_editing_a_cross_zone_partner_in_an_armed_area_is_refused():

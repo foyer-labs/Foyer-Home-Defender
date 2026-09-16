@@ -28,6 +28,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from ..const import SIGNAL_UPDATE
+from ..core.conditions import condition_entities
 from ..core.engine import arm_blockers, decide, master_state, next_wakeup
 from ..core.models import (
     AreaState,
@@ -214,12 +215,21 @@ class FoyerSystem:
     def zone_entity_ids(self) -> list[str]:
         return sorted({z.entity_id for z in self.config.zones})
 
+    def watched_entity_ids(self) -> list[str]:
+        """Zones, plus every entity an action's condition reads (§6.3): the
+        engine is given the world, it never looks anything up (INV-1)."""
+        entities = {z.entity_id for z in self.config.zones}
+        for profile in self.config.profiles:
+            for action in profile.actions:
+                entities.update(condition_entities(action))
+        return sorted(entities)
+
     def _snapshot(
         self, overrides: Mapping[str, EntityState] | None = None
     ) -> SystemSnapshot:
         entities = {
             entity_id: entity_state(self.hass.states.get(entity_id))
-            for entity_id in self.zone_entity_ids()
+            for entity_id in self.watched_entity_ids()
         }
         entities.update(overrides or {})
         return SystemSnapshot(
@@ -299,6 +309,12 @@ class FoyerSystem:
                     "bypassed": (
                         self.state.bypassed[zone.id].value
                         if zone.id in self.state.bypassed
+                        else None
+                    ),
+                    "bypassable": zone.bypassable,
+                    "bypass_until": (
+                        self.state.bypass_until[zone.id].isoformat()
+                        if zone.id in self.state.bypass_until
                         else None
                     ),
                 }
