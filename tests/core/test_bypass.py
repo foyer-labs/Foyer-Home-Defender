@@ -95,13 +95,23 @@ def test_the_scheduler_is_told_when_a_timed_bypass_ends():
     assert due == world.now + timedelta(seconds=600)
 
 
-def test_a_timed_bypass_survives_a_restart():
+def test_a_timed_bypass_survives_a_restart_and_still_returns_on_time():
+    """INV-3: the zone comes back even if Home Assistant restarted meanwhile,
+    which is the case where forgetting it matters most."""
     world = World()
     world.bypass("window", seconds=600)
 
     restored = state_from_dict(state_to_dict(world.state), world.config)
     assert restored.bypassed == world.state.bypassed
     assert restored.bypass_until == world.state.bypass_until
+
+    world.state = restored
+    assert next_wakeup(world.snapshot(), world.config, world.now) == (
+        world.now + timedelta(seconds=600)
+    )
+    world.advance(600)
+    assert bypassed(world) == {}
+    assert any(o.moment is Moment.ZONE_REJOINED for o in world.last.occurrences)
 
 
 def test_unbypassing_puts_the_zone_back():
