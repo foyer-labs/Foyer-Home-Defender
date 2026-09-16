@@ -433,13 +433,14 @@ them may be "fixed back" without asking.
 14. A zone's first readable value is its baseline, not an activation (so a
     newly saved key zone already "on" does not arm the house).
 
-Taken in part 2 (SPEC decisions 48-55):
+Taken in part 2 (SPEC decisions 48-59):
 17. A technical zone in fault blocks arming its area like any zone, unless
     allow_arm_when_faulted.
 18. One technical acknowledgement acts on every technical alarm pending then.
 19. An incident opens at triggered, never at entry_started; the zones of an
     expired entry route contribute.
-20. Disarming an area the incident touched acknowledges the incident.
+20. Disarming an area the incident touched acknowledges the incident, and
+    only such an area: disarming an area it never touched does not.
 21. A zone joining after the acknowledgement clears it (history kept).
 22. Cross-zone is symmetric (A->B forms {A,B}) and never suppresses: each
     zone still alarms alone. Suppression is only an explicit group's
@@ -459,7 +460,6 @@ Taken in part 2 (SPEC decisions 48-55):
     group_id is derived.
 29. A technical zone's first reading is a baseline like any zone's (decision
     14); the zone editor tells the user to save it while the detector is quiet.
-30. Only disarming an area the incident touched acknowledges the incident.
 31. Schema 3.1 (major bump, though additive): an older build must refuse the
     file rather than ignore technical zones.
 32. button.foyer_acknowledge is deferred to Phase 2 (see carry-overs).
