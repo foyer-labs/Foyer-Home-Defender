@@ -875,7 +875,9 @@
     "call_service_hint": "Anything Foyer does not model natively. Data is JSON.",
     "escalation_later": "Escalation across contacts arrives in Phase 4.",
     "future_moment": "Raised from a later phase on.",
-    "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written."
+    "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written.",
+    "pick_or_type": "Pick one, or type it: an integration that is not loaded right now is not in the list.",
+    "notify_hint": "A notify service (the Companion app, Telegram) or a notify entity. Both work."
   },
   "camera_mode": {
     "snapshot": "Snapshot",

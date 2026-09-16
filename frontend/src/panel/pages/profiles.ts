@@ -14,6 +14,13 @@ import type {
   Problem,
 } from "../../shared/types";
 import { optionalNumber, problemText, type PanelContext } from "../context";
+import {
+  domainServices,
+  entityTargets,
+  notifyTargets,
+  serviceDomains,
+  type Target,
+} from "../ha-targets";
 
 // The three groups of SPEC §6.1, plus the moments this phase added for the
 // log and the simulator's trace.
@@ -383,14 +390,38 @@ class FoyerPageProfiles extends LitElement {
 
   // --- parameters, one shape per kind (§6.2) --------------------------------------
 
-  private _entities(domains: string[]): { id: string; name: string }[] {
-    return Object.values(this.ctx!.hass.states)
-      .filter((e) => domains.includes(e.entity_id.split(".")[0]))
-      .map((e) => ({
-        id: e.entity_id,
-        name: String(e.attributes.friendly_name ?? e.entity_id),
-      }))
-      .sort((a, b) => a.id.localeCompare(b.id));
+  private _entities(domains: string[]): Target[] {
+    return entityTargets(this.ctx!.hass, domains);
+  }
+
+  /** A text field with suggestions: the list is what Home Assistant has, but
+   * a value can still be typed, because an integration that is not loaded
+   * right now would otherwise be impossible to configure. */
+  private _suggested(
+    s: Strings,
+    action: ActionConfig,
+    index: number,
+    key: string,
+    options: Target[],
+    hint?: string,
+  ) {
+    const listId = `foyer-${key}-${index}`;
+    return html`<label class="field">
+      <span class="lbl">${t(s, `field.${key}`)}</span>
+      <input
+        list=${listId}
+        .value=${String(action.params[key] ?? "")}
+        @input=${(e: Event) => this._setParam(index, key, (e.target as HTMLInputElement).value)}
+      />
+      <datalist id=${listId}>
+        ${options.map(
+          (option) => html`<option .value=${option.id}>
+            ${option.name === option.id ? option.id : `${option.name} · ${option.id}`}
+          </option>`,
+        )}
+      </datalist>
+      <span class="hint">${hint ?? t(s, "profiles.pick_or_type")}</span>
+    </label>`;
   }
 
   private _text(s: Strings, action: ActionConfig, index: number, key: string, hint?: string) {
@@ -482,7 +513,16 @@ class FoyerPageProfiles extends LitElement {
     }
     switch (action.kind) {
       case "notify":
-        parts.push(this._text(s, action, index, "service"));
+        parts.push(
+          this._suggested(
+            s,
+            action,
+            index,
+            "service",
+            notifyTargets(this.ctx!.hass),
+            t(s, "profiles.notify_hint"),
+          ),
+        );
         parts.push(this._text(s, action, index, "title"));
         parts.push(this._text(s, action, index, "message", messageHint));
         parts.push(
@@ -522,11 +562,32 @@ class FoyerPageProfiles extends LitElement {
         );
         parts.push(this._text(s, action, index, "message", messageHint));
         break;
-      case "call_service":
-        parts.push(this._text(s, action, index, "domain"));
-        parts.push(this._text(s, action, index, "service"));
+      case "call_service": {
+        const domain = String(action.params.domain ?? "");
+        parts.push(
+          this._suggested(
+            s,
+            action,
+            index,
+            "domain",
+            serviceDomains(this.ctx!.hass).map((d) => ({ id: d, name: d })),
+          ),
+        );
+        parts.push(
+          this._suggested(
+            s,
+            action,
+            index,
+            "service",
+            domainServices(this.ctx!.hass, domain).map((name) => ({
+              id: name,
+              name,
+            })),
+          ),
+        );
         parts.push(this._json(s, action, index));
         break;
+      }
       case "delay":
         parts.push(this._number(s, action, index, "seconds", t(s, "profiles.delay_hint")));
         break;

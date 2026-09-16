@@ -7,6 +7,7 @@ import { t, type Strings } from "../../shared/i18n";
 import { formStyles } from "../../shared/styles";
 import type { ChimeConfig, ChimeTarget, Problem, SettingsConfig } from "../../shared/types";
 import { optionalNumber, problemText, type PanelContext } from "../context";
+import { chimeTargets, entityTargets } from "../ha-targets";
 
 const NO_CHIME: ChimeConfig = {
   targets: [],
@@ -103,13 +104,7 @@ class FoyerPageSettings extends LitElement {
   }
 
   private _entities(domains: string[]): { id: string; name: string }[] {
-    return Object.values(this.ctx!.hass.states)
-      .filter((e) => domains.includes(e.entity_id.split(".")[0]))
-      .map((e) => ({
-        id: e.entity_id,
-        name: String(e.attributes.friendly_name ?? e.entity_id),
-      }))
-      .sort((a, b) => a.id.localeCompare(b.id));
+    return entityTargets(this.ctx!.hass, domains);
   }
 
   // --- response defaults (SPEC §6, part 3 decisions 2, 6 and 7) -------------------
@@ -190,7 +185,12 @@ class FoyerPageSettings extends LitElement {
 
   private _renderChime(s: Strings, chime: ChimeConfig) {
     const ctx = this.ctx!;
-    const targets = this._entities(ctx.meta?.chime_domains ?? ["media_player", "siren", "notify"]);
+    // A notify target is usually a service, not an entity: read both, or the
+    // chime on the phone (decision 60) could never be configured here.
+    const targets = chimeTargets(
+      ctx.hass,
+      ctx.meta?.chime_domains ?? ["media_player", "siren", "notify"],
+    );
     // Targets configured earlier stay listed even if the entity has gone.
     for (const target of chime.targets) {
       if (!targets.some((e) => e.id === target.entity_id)) {
@@ -340,7 +340,11 @@ class FoyerPageSettings extends LitElement {
           @change=${(ev: Event) =>
             this._toggleTarget(entity.id, (ev.target as HTMLInputElement).checked)}
         />
-        <span>${t(s, "zones.entity", { name: entity.name, entity: entity.id })}</span>
+        <span>
+          ${entity.name === entity.id
+            ? entity.id
+            : t(s, "zones.entity", { name: entity.name, entity: entity.id })}
+        </span>
       </label>
       ${
         target

@@ -14,9 +14,19 @@ export interface HassConnection {
   ): Promise<() => Promise<void>>;
 }
 
+/** One service as Home Assistant's registry describes it. */
+export interface HassService {
+  name?: string;
+  description?: string;
+}
+
 export interface HomeAssistant {
   language: string;
   states: Record<string, HassEntity>;
+  /** The service registry, by domain then service name. Home Assistant keeps
+   * it on the hass object; a notify target is usually a service and not an
+   * entity, so a picker that reads only `states` would never find it. */
+  services?: Record<string, Record<string, HassService>>;
   themes?: { darkMode?: boolean };
   user?: { id: string; name: string; is_admin: boolean };
   connection: HassConnection;
