@@ -676,7 +676,7 @@ do it — not a response profile, which would be disproportionate for a checkbox
 
 | Setting | Notes |
 |---|---|
-| Targets | one or more `media_player` or `siren` entities |
+| Targets | one or more `media_player` or `siren` entities, **and `notify` targets** — a `notify.*` service (Companion app, Telegram, …) or a `notify` entity — which receive the zone name as a message (decision 60). Free channels the household already has; quiet hours apply to them as well |
 | Mode | **single sound**, or **spoken zone name** via `tts.speak` — "Front door", "Garage shutter". In Home Assistant the second costs the same as the first and tells you *what* opened from the next room |
 | Volume | |
 | Quiet hours | a window in which chime is suppressed |
@@ -1688,3 +1688,4 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 57 | Only disarming an area the incident touched acknowledges it | Acknowledgement means someone has seen the alarm; disarming an unrelated area proves nothing of the kind, and in Phase 4 it would stop an escalation nobody saw |
 | 58 | The part 2 schema is a major version (3.1), though additive | An older build reading it would keep technical zones and never act on them; refusing the file is the only safe downgrade |
 | 59 | `button.foyer_acknowledge` is deferred to Phase 2 | A button cannot carry a code: whether it may exist depends on the acknowledgement's code policy, which is Phase 2's to set |
+| 60 | The chime can also go to `notify` targets (app, Telegram) | The user wants the free channels the house already has, not only speakers; built with the `notify` action in Phase 1 part 3, which discovers and calls the same services |

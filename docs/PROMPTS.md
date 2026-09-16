@@ -659,8 +659,18 @@ bypass, and panel page 5. Paste "Phase 1 decisions" after this appendix.
    - The executor reports success/failure of every call, for the "action" log
      category in part 4.
    - silent zones (§4.2): the response runs without local sounders.
+   - The CHIME gains notify targets here (§6.6, decision 60): the user wants
+     the chime on the Companion app and Telegram as well as on speakers,
+     because those channels are free and already in the house. Part 2 built
+     the chime for media_player and siren only; extend ChimeSettings.targets
+     to notify.* services and notify entities, sending the zone name, with
+     the same quiet hours and the same switch.foyer_chime. Reuse whatever
+     the notify action uses to discover and call them: one path, not two.
    OPEN QUESTION for the user: must a pending delay step survive a restart
    (INV-3 lists "escalation progress", not action sequences)?
+   OPEN QUESTION for the user: a chime on the phone fires on every door
+   opened while the house is disarmed. Offer it per target (speakers always,
+   phone only in some hours), or leave it to quiet hours alone?
 
 3. Conditions (§6.3): at most two per action; time window (after/before,
    crossing midnight) and entity state (is / is_not). core/conditions.py,

@@ -40,7 +40,8 @@ or response profiles, no event log, no codes.
 - **Chime**: a zone opening where its area is not armed plays a sound or
   speaks the zone name on media players and sirens, with quiet hours and an
   option for the exit delay; `switch.foyer_chime` silences it. Set up in the
-  new Settings page.
+  new Settings page. Sending it to a phone or to Telegram instead comes with
+  the next part, which adds the `notify` action.
 
 ## [0.1.0-alpha.3] — deleting from the panel works
 
