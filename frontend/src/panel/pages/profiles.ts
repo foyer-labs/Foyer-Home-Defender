@@ -87,6 +87,7 @@ class FoyerPageProfiles extends LitElement {
     ctx: { attribute: false },
     _draft: { state: true },
     _open: { state: true },
+    _filters: { state: true },
     _problems: { state: true },
     _busy: { state: true },
   };
@@ -94,6 +95,9 @@ class FoyerPageProfiles extends LitElement {
   ctx?: PanelContext;
   private _draft?: ProfileConfig;
   private _open = -1; // which action is expanded
+  // One search box per entity picker, so a house with sixty switches is
+  // usable: keyed by "<action index>:<parameter>".
+  private _filters: Record<string, string> = {};
   private _problems: Problem[] = [];
   private _busy = false;
 
@@ -337,19 +341,12 @@ class FoyerPageProfiles extends LitElement {
 
   private _renderAction(s: Strings, action: ActionConfig, index: number) {
     const open = this._open === index;
-    const count = action.moments.length;
     return html`
       <div class="action" ?data-open=${open}>
         <button class="action-hd" @click=${() => (this._open = open ? -1 : index)}>
           <span class="tag">${t(s, `action_kind.${action.kind}`)}</span>
           <span class="summary">${this._summary(s, action)}</span>
-          <span class="moments">
-            ${
-              count
-                ? action.moments.map((m) => t(s, `moment.${m}`)).join(", ")
-                : t(s, "profiles.no_actions")
-            }
-          </span>
+          <span class="moments">${this._momentSummary(s, action)}</span>
           ${
             action.conditions.length
               ? html`<span class="cond">${action.conditions.length}</span>`
@@ -373,6 +370,18 @@ class FoyerPageProfiles extends LitElement {
         }
       </div>
     `;
+  }
+
+  /** The moments, short enough to read at a glance: a profile action that
+   * answers a dozen of them must not push the row to three lines. */
+  private _momentSummary(s: Strings, action: ActionConfig): string {
+    const names = action.moments.map((m) => t(s, `moment.${m}`));
+    if (!names.length) return t(s, "profiles.no_moments");
+    if (names.length <= 3) return names.join(", ");
+    return t(s, "profiles.moments_more", {
+      moments: names.slice(0, 2).join(", "),
+      count: names.length - 2,
+    });
   }
 
   /** One line saying what the action actually does, for the collapsed row. */
@@ -478,11 +487,36 @@ class FoyerPageProfiles extends LitElement {
         </select>
       </label>`;
     }
-    return html`<fieldset class="entities">
+    const filterKey = `${index}:${key}`;
+    // Every word must appear somewhere in the name or the id, in any order:
+    // "alexa cucina" finds "Alexa Cucina Ripetere" the way a person expects.
+    const words = (this._filters[filterKey] ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+    // What is chosen always stays visible, however the list is filtered:
+    // otherwise a search hides a target that is still going to sound.
+    const shown = options.filter((o) => {
+      if (selected.has(o.id)) return true;
+      const haystack = `${o.name} ${o.id}`.toLowerCase();
+      return words.every((word) => haystack.includes(word));
+    });
+    return html`<fieldset class="entities wide">
       <legend>${t(s, `field.${key}`)}</legend>
-      ${options.map(
-        (o) =>
-          html`<label class="check">
+      ${options.length > 8
+        ? html`<input
+            class="filter"
+            type="search"
+            .value=${this._filters[filterKey] ?? ""}
+            placeholder=${t(s, "profiles.filter")}
+            @input=${(e: Event) => {
+              this._filters = {
+                ...this._filters,
+                [filterKey]: (e.target as HTMLInputElement).value,
+              };
+            }}
+          />`
+        : nothing}
+      <div class="entity-list">
+        ${shown.map(
+          (o) => html`<label class="check">
             <input
               type="checkbox"
               .checked=${selected.has(o.id)}
@@ -496,7 +530,9 @@ class FoyerPageProfiles extends LitElement {
             />
             <span>${t(s, "zones.entity", { name: o.name, entity: o.id })}</span>
           </label>`,
-      )}
+        )}
+        ${shown.length ? nothing : html`<p class="hint">${t(s, "profiles.no_match")}</p>`}
+      </div>
     </fieldset>`;
   }
 
@@ -535,8 +571,10 @@ class FoyerPageProfiles extends LitElement {
         parts.push(this._text(s, action, index, "message", messageHint));
         break;
       case "siren":
-        parts.push(this._number(s, action, index, "duration"));
-        parts.push(this._text(s, action, index, "tone"));
+        parts.push(
+          this._number(s, action, index, "duration", t(s, "profiles.siren_duration_hint")),
+        );
+        parts.push(this._renderTone(s, action, index));
         break;
       case "light":
         parts.push(this._number(s, action, index, "brightness"));
@@ -595,6 +633,42 @@ class FoyerPageProfiles extends LitElement {
         break;
     }
     return html`<div class="grid-form">${parts}</div>`;
+  }
+
+  /** The tones the chosen sirens declare, and nothing else.
+   *
+   * Home Assistant publishes them as `available_tones` on the entity; a siren
+   * that has none simply has no tone to pick, so the field disappears instead
+   * of inviting a guess that would fail at the one moment it matters.
+   */
+  private _renderTone(s: Strings, action: ActionConfig, index: number) {
+    const chosen = action.params.entity_ids;
+    const ids = Array.isArray(chosen) ? (chosen as string[]) : [];
+    const tones = new Set<string>();
+    for (const id of ids) {
+      const available = this.ctx!.hass.states[id]?.attributes?.available_tones;
+      if (Array.isArray(available)) available.forEach((tone) => tones.add(String(tone)));
+      else if (available && typeof available === "object") {
+        Object.keys(available).forEach((tone) => tones.add(tone));
+      }
+    }
+    if (!tones.size) {
+      return ids.length
+        ? html`<label class="field">
+            <span class="lbl">${t(s, "field.tone")}</span>
+            <input disabled placeholder=${t(s, "profiles.no_tones")} />
+            <span class="hint">${t(s, "profiles.no_tones")}</span>
+          </label>`
+        : nothing;
+    }
+    return this._select(
+      s,
+      action,
+      index,
+      "tone",
+      ["", ...[...tones].sort()],
+      (v) => v || t(s, "profiles.default_tone"),
+    );
   }
 
   private _select(
@@ -890,9 +964,19 @@ class FoyerPageProfiles extends LitElement {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         margin-top: 12px;
       }
-      .entities {
-        max-height: 220px;
+      .entities.wide {
+        grid-column: 1 / -1;
+      }
+      .entity-list {
+        max-height: 200px;
         overflow: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 2px 16px;
+        margin-top: 6px;
+      }
+      .filter {
+        width: min(100%, 320px);
       }
       .condition {
         display: flex;

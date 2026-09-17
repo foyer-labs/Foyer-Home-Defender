@@ -2551,13 +2551,14 @@ function tt(e) {
 }
 var nt = class extends H {
 	constructor(...e) {
-		super(...e), this._open = -1, this._problems = [], this._busy = !1;
+		super(...e), this._open = -1, this._filters = {}, this._problems = [], this._busy = !1;
 	}
 	static {
 		this.properties = {
 			ctx: { attribute: !1 },
 			_draft: { state: !0 },
 			_open: { state: !0 },
+			_filters: { state: !0 },
 			_problems: { state: !0 },
 			_busy: { state: !0 }
 		};
@@ -2762,15 +2763,13 @@ var nt = class extends H {
     `;
 	}
 	_renderAction(e, t, n) {
-		let r = this._open === n, i = t.moments.length;
+		let r = this._open === n;
 		return N`
       <div class="action" ?data-open=${r}>
         <button class="action-hd" @click=${() => this._open = r ? -1 : n}>
           <span class="tag">${K(e, `action_kind.${t.kind}`)}</span>
           <span class="summary">${this._summary(e, t)}</span>
-          <span class="moments">
-            ${i ? t.moments.map((t) => K(e, `moment.${t}`)).join(", ") : K(e, "profiles.no_actions")}
-          </span>
+          <span class="moments">${this._momentSummary(e, t)}</span>
           ${t.conditions.length ? N`<span class="cond">${t.conditions.length}</span>` : F}
         </button>
         ${r ? N`<div class="action-bd">
@@ -2786,6 +2785,13 @@ var nt = class extends H {
               </div>` : F}
       </div>
     `;
+	}
+	_momentSummary(e, t) {
+		let n = t.moments.map((t) => K(e, `moment.${t}`));
+		return n.length ? n.length <= 3 ? n.join(", ") : K(e, "profiles.moments_more", {
+			moments: n.slice(0, 2).join(", "),
+			count: n.length - 2
+		}) : K(e, "profiles.no_moments");
 	}
 	_summary(e, t) {
 		let n = t.params;
@@ -2843,9 +2849,36 @@ var nt = class extends H {
 			id: e,
 			name: e
 		});
-		return a ? N`<fieldset class="entities">
+		if (!a) return N`<label class="field">
+        <span class="lbl">${K(e, `field.${r}`)}</span>
+        <select
+          @change=${(e) => this._setParam(n, r, e.target.value || null)}
+        >
+          <option value=""></option>
+          ${o.map((e) => N`<option .value=${e.id} ?selected=${c.has(e.id)}>${e.name}</option>`)}
+        </select>
+      </label>`;
+		let l = `${n}:${r}`, u = (this._filters[l] ?? "").toLowerCase().split(/\s+/).filter(Boolean), d = o.filter((e) => {
+			if (c.has(e.id)) return !0;
+			let t = `${e.name} ${e.id}`.toLowerCase();
+			return u.every((e) => t.includes(e));
+		});
+		return N`<fieldset class="entities wide">
       <legend>${K(e, `field.${r}`)}</legend>
-      ${o.map((t) => N`<label class="check">
+      ${o.length > 8 ? N`<input
+            class="filter"
+            type="search"
+            .value=${this._filters[l] ?? ""}
+            placeholder=${K(e, "profiles.filter")}
+            @input=${(e) => {
+			this._filters = {
+				...this._filters,
+				[l]: e.target.value
+			};
+		}}
+          />` : F}
+      <div class="entity-list">
+        ${d.map((t) => N`<label class="check">
             <input
               type="checkbox"
               .checked=${c.has(t.id)}
@@ -2859,15 +2892,9 @@ var nt = class extends H {
 			entity: t.id
 		})}</span>
           </label>`)}
-    </fieldset>` : N`<label class="field">
-        <span class="lbl">${K(e, `field.${r}`)}</span>
-        <select
-          @change=${(e) => this._setParam(n, r, e.target.value || null)}
-        >
-          <option value=""></option>
-          ${o.map((e) => N`<option .value=${e.id} ?selected=${c.has(e.id)}>${e.name}</option>`)}
-        </select>
-      </label>`;
+        ${d.length ? F : N`<p class="hint">${K(e, "profiles.no_match")}</p>`}
+      </div>
+    </fieldset>`;
 	}
 	_renderParams(e, t, n) {
 		let r = this.ctx?.meta?.action_domains[t.kind] ?? [], i = K(e, "profiles.message_hint", { variables: (this.ctx?.meta?.template_variables ?? []).map((e) => `{{ ${e} }}`).join(" ") }), a = [];
@@ -2879,7 +2906,7 @@ var nt = class extends H {
 				a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i));
 				break;
 			case "siren":
-				a.push(this._number(e, t, n, "duration")), a.push(this._text(e, t, n, "tone"));
+				a.push(this._number(e, t, n, "duration", K(e, "profiles.siren_duration_hint"))), a.push(this._renderTone(e, t, n));
 				break;
 			case "light":
 				a.push(this._number(e, t, n, "brightness")), a.push(this._select(e, t, n, "flash", [
@@ -2911,6 +2938,18 @@ var nt = class extends H {
 			case "delay": a.push(this._number(e, t, n, "seconds", K(e, "profiles.delay_hint")));
 		}
 		return N`<div class="grid-form">${a}</div>`;
+	}
+	_renderTone(e, t, n) {
+		let r = t.params.entity_ids, i = Array.isArray(r) ? r : [], a = /* @__PURE__ */ new Set();
+		for (let e of i) {
+			let t = this.ctx.hass.states[e]?.attributes?.available_tones;
+			Array.isArray(t) ? t.forEach((e) => a.add(String(e))) : t && typeof t == "object" && Object.keys(t).forEach((e) => a.add(e));
+		}
+		return a.size ? this._select(e, t, n, "tone", ["", ...[...a].sort()], (t) => t || K(e, "profiles.default_tone")) : i.length ? N`<label class="field">
+            <span class="lbl">${K(e, "field.tone")}</span>
+            <input disabled placeholder=${K(e, "profiles.no_tones")} />
+            <span class="hint">${K(e, "profiles.no_tones")}</span>
+          </label>` : F;
 	}
 	_select(e, t, n, r, i, a) {
 		return N`<label class="field">
@@ -3123,9 +3162,19 @@ var nt = class extends H {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         margin-top: 12px;
       }
-      .entities {
-        max-height: 220px;
+      .entities.wide {
+        grid-column: 1 / -1;
+      }
+      .entity-list {
+        max-height: 200px;
         overflow: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 2px 16px;
+        margin-top: 6px;
+      }
+      .filter {
+        width: min(100%, 320px);
       }
       .condition {
         display: flex;
