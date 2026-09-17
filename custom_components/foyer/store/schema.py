@@ -37,6 +37,8 @@ from ..core.models import (
     KeyAction,
     KeyCommand,
     KeyRelease,
+    LogCategory,
+    LogSettings,
     Moment,
     NumericOperator,
     NumericTrigger,
@@ -73,8 +75,13 @@ from ..core.models import (
 # the same: a 3.x build reading this file would find response profiles it does
 # not understand and would run no action at all. Refusing it is the only safe
 # downgrade.
+#
+# 4.2 is a *minor* step, and that is the whole point of the distinction: the
+# event log's settings, the defaults for new areas and the message language
+# are additive, and a 4.1 build reading this document ignores them and behaves
+# exactly as it did. Nothing it would have protected goes unprotected.
 STORAGE_VERSION = 4
-STORAGE_MINOR_VERSION = 1
+STORAGE_MINOR_VERSION = 2
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -137,6 +144,10 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         technical_profile_id=s.get("technical_profile_id") or None,
         silent_suppresses=tuple(s["silent_suppresses"]),
         camera_dir=s["camera_dir"],
+        log=log_from_dict(s["log"]),
+        default_entry_delay=int(s["default_entry_delay"]),
+        default_exit_delay=int(s["default_exit_delay"]),
+        language=s.get("language") or None,
     )
 
 
@@ -148,6 +159,43 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "technical_profile_id": s.technical_profile_id,
         "silent_suppresses": list(s.silent_suppresses),
         "camera_dir": s.camera_dir,
+        "log": log_to_dict(s.log),
+        "default_entry_delay": s.default_entry_delay,
+        "default_exit_delay": s.default_exit_delay,
+        "language": s.language,
+    }
+
+
+def log_from_dict(data: dict[str, Any]) -> LogSettings:
+    """Read back sparse: only categories the user moved away from the
+    documented default are kept.
+
+    Two reasons. A stale key from an older document would otherwise sit in the
+    settings for ever, invisible and inert; and a category left alone keeps
+    following §10.2 even if a later version revises what that default is.
+    """
+    known = {c.value for c in LogCategory}
+    default = LogSettings()
+    return LogSettings(
+        enabled={
+            k: bool(v)
+            for k, v in (data.get("enabled") or {}).items()
+            if k in known and bool(v) is not default.is_enabled(k)
+        },
+        retention_days={
+            k: int(v)
+            for k, v in (data.get("retention_days") or {}).items()
+            if k in known and int(v) != default.retention(k)
+        },
+    )
+
+
+def log_to_dict(log: LogSettings) -> dict[str, Any]:
+    """Written in full, every category explicit: the settings page reads this
+    document, and a sparse map would show a blank field where the default is."""
+    return {
+        "enabled": {c.value: log.is_enabled(c.value) for c in LogCategory},
+        "retention_days": {c.value: log.retention(c.value) for c in LogCategory},
     }
 
 

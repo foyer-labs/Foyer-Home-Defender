@@ -14,8 +14,12 @@ from typing import Any
 import uuid
 
 from ..core.models import (
+    MAX_RETENTION_DAYS,
+    MIN_RETENTION_DAYS,
     SILENCEABLE,
     FoyerConfig,
+    LogCategory,
+    LogSettings,
     RuntimeState,
     Settings,
     ZoneType,
@@ -26,7 +30,9 @@ from .schema import (
     ConfigError,
     area_from_dict,
     chime_from_dict,
+    config_to_dict,
     group_from_dict,
+    log_from_dict,
     profile_from_dict,
     scenario_from_dict,
     zone_from_dict,
@@ -34,12 +40,22 @@ from .schema import (
 
 KINDS = ("area", "zone", "scenario", "group", "profile")
 
+# What a new area is given when the panel does not say. The delays come from
+# the global settings, so a household that wants 45 s sets it once (§15.1).
 _AREA_DEFAULTS: dict[str, Any] = {
-    "default_entry_delay": 30,
-    "default_exit_delay": 30,
     "ha_state_when_armed": "armed_away",
     "response_profile_id": None,
 }
+
+
+def _area_defaults(config: FoyerConfig) -> dict[str, Any]:
+    return {
+        **_AREA_DEFAULTS,
+        "default_entry_delay": config.settings.default_entry_delay,
+        "default_exit_delay": config.settings.default_exit_delay,
+    }
+
+
 _ZONE_DEFAULTS: dict[str, Any] = {
     "entry_delay": None,
     "follows": [],
@@ -91,7 +107,7 @@ def upsert(
     data["id"] = data.get("id") or new_id()
     try:
         if kind == "area":
-            obj = area_from_dict({**_AREA_DEFAULTS, **data})
+            obj = area_from_dict({**_area_defaults(config), **data})
             items = _replace_in(config.areas, obj)
             new = replace(config, areas=items)
         elif kind == "scenario":
@@ -213,6 +229,14 @@ def update_settings(
                     kind for kind in silent if isinstance(kind, str)
                 ),
                 camera_dir=str(settings.get("camera_dir", current.camera_dir)),
+                log=_log_from(settings.get("log"), current.log),
+                default_entry_delay=int(
+                    settings.get("default_entry_delay", current.default_entry_delay)
+                ),
+                default_exit_delay=int(
+                    settings.get("default_exit_delay", current.default_exit_delay)
+                ),
+                language=settings.get("language", current.language) or None,
             ),
         )
     except (KeyError, TypeError, ValueError):
@@ -221,7 +245,65 @@ def update_settings(
         return _fail(
             Problem("unknown_action_kind", "settings", None, "silent_suppresses")
         )
+    log = new.settings.log
+    if any(
+        not MIN_RETENTION_DAYS <= log.retention(c.value) <= MAX_RETENTION_DAYS
+        for c in LogCategory
+    ):
+        return _fail(Problem("retention_out_of_range", "settings", None, "log"))
     return _check(config, new, state, None)
+
+
+def _log_from(data: Any, current: LogSettings) -> LogSettings:
+    """The log block, or the current one when the caller leaves it out.
+
+    Parsed by the same function that reads the stored document, so what the
+    panel sends and what is on disk can never mean two different things.
+    """
+    if not isinstance(data, dict):
+        return current
+    return log_from_dict(data)
+
+
+def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
+    """A summary of what an edit changed, for the log (§10.2, category config).
+
+    Deliberately shallow: which objects were added, removed or changed, and
+    which of their fields moved. The whole before-and-after would be the
+    configuration itself in every row, and a row nobody reads is not an audit.
+    """
+    before, after = config_to_dict(old), config_to_dict(new)
+    changes: dict[str, Any] = {}
+    for kind in ("areas", "zones", "scenarios", "groups", "profiles"):
+        was = {item["id"]: item for item in before.get(kind, [])}
+        now = {item["id"]: item for item in after.get(kind, [])}
+        added = [now[i].get("name", i) for i in now.keys() - was.keys()]
+        removed = [was[i].get("name", i) for i in was.keys() - now.keys()]
+        edited = {
+            now[i].get("name", i): sorted(
+                k
+                for k in was[i].keys() | now[i].keys()
+                if was[i].get(k) != now[i].get(k)
+            )
+            for i in was.keys() & now.keys()
+            if was[i] != now[i]
+        }
+        entry = {
+            k: v
+            for k, v in (("added", added), ("removed", removed), ("changed", edited))
+            if v
+        }
+        if entry:
+            changes[kind] = entry
+    for block in ("settings", "chime", "code_policy"):
+        if before.get(block) != after.get(block):
+            changes[block] = sorted(
+                k
+                for k in (before.get(block) or {}).keys()
+                | (after.get(block) or {}).keys()
+                if (before.get(block) or {}).get(k) != (after.get(block) or {}).get(k)
+            )
+    return changes
 
 
 def update_chime(

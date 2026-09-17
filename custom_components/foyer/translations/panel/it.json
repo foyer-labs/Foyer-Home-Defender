@@ -72,6 +72,7 @@
     "invalid_ha_state": "Scegli uno degli stati di inserimento di Home Assistant.",
     "delay_out_of_range": "{field}: tra 0 e 300 secondi.",
     "siren_out_of_range": "{field}: tra 1 e 900 secondi (il riferimento EN 50131 per le sirene esterne).",
+    "retention_out_of_range": "{field}: ogni categoria va conservata fra 1 e 3650 giorni. Per non conservare nulla, spegni la categoria.",
     "hold_out_of_range": "{field}: tra 60 e 1800 secondi.",
     "supervision_out_of_range": "{field}: tra 60 secondi e 7 giorni, oppure vuoto per disattivarla.",
     "scenario_without_areas": "Uno scenario deve inserire almeno un'area.",
@@ -217,7 +218,11 @@
     "default_profile_id": "Profilo predefinito",
     "technical_profile_id": "Profilo tecnico",
     "actions": "Azioni",
-    "camera_entity_id": "Allega una telecamera"
+    "camera_entity_id": "Allega una telecamera",
+    "log": "Registro eventi",
+    "default_entry_delay": "Ritardo d'ingresso predefinito",
+    "default_exit_delay": "Ritardo d'uscita predefinito",
+    "language": "Lingua dei messaggi"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",

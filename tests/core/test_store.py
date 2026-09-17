@@ -626,3 +626,43 @@ def test_a_state_file_from_part_2_restores_with_no_runs_and_no_bypass_timers(con
     assert state.bypass_until == {}
     assert state.pending_runs == () and state.running == ()
     assert state.run_seq == 0
+
+
+def test_an_alpha_6_document_migrates_to_part_4_with_the_documented_log_defaults():
+    """4.1 -> 4.2: additive, and every default is the one SPEC §10.2 states.
+
+    The 4.1 document is not a hand-written literal: it is what the released
+    3.1 -> 4.1 step produces, which is exactly what an alpha.5 or alpha.6
+    installation has on disk today.
+    """
+    from custom_components.foyer.core.models import LogCategory
+
+    released = migrate((3, 1), (4, 1), ALPHA_4_DOCUMENT)
+    before = json.dumps(released, sort_keys=True)
+    config = config_from_dict(migrate((4, 1), CURRENT, released))
+    assert json.dumps(released, sort_keys=True) == before  # input untouched
+
+    log = config.settings.log
+    for category in LogCategory:
+        assert log.retention(category.value) == 30
+        assert log.is_enabled(category.value) is (
+            category is not LogCategory.ZONE_DISARMED
+        )
+    # The defaults for new areas follow the areas that exist, and the messages
+    # keep going out in the language Home Assistant itself runs in.
+    assert config.settings.default_entry_delay == 30
+    assert config.settings.default_exit_delay == 30
+    assert config.settings.language is None
+    assert config_from_dict(config_to_dict(config)) == config
+
+
+def test_the_defaults_for_new_areas_follow_an_installation_that_agreed_on_one():
+    """A house whose areas all wait 45 s is not offered 30 s on the next one."""
+    released = migrate((3, 1), (4, 1), ALPHA_4_DOCUMENT)
+    for area in released["areas"]:
+        area["default_entry_delay"] = 45
+        area["default_exit_delay"] = 45
+
+    config = config_from_dict(migrate((4, 1), CURRENT, released))
+    assert config.settings.default_entry_delay == 45
+    assert config.settings.default_exit_delay == 45

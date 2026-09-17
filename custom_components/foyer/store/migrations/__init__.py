@@ -192,12 +192,58 @@ def _v3_1_to_v4_1(data: Document) -> Document:
     return out
 
 
+def _v4_1_to_v4_2(data: Document) -> Document:
+    """Phase 1 part 3 -> part 4: the event log, and the settings it needs.
+
+    A minor step, and for once that is not a technicality: a 4.1 build reading
+    this document ignores every key added here and keeps behaving exactly as
+    it did, because none of them changes what is protected.
+
+    The defaults are the documented ones (SPEC §10.2, §10.3): every category
+    on, thirty days each, except zone activity while disarmed, which is off —
+    a living-room PIR produces thousands of rows a day. The defaults for new
+    areas are seeded from the areas that exist, so an installation whose areas
+    all use 45 s does not get 30 s offered on the next one; a Phase 0 install
+    whose area has 0 s delays keeps the documented 30 s instead of proposing
+    "no delay at all" for every area created from now on.
+    """
+    out = copy.deepcopy(data)
+    settings = out["settings"]
+    settings["log"] = {
+        "enabled": {c: c != "zone_disarmed" for c in LOG_CATEGORIES},
+        "retention_days": {c: 30 for c in LOG_CATEGORIES},
+    }
+    entry = sorted({int(a["default_entry_delay"]) for a in out["areas"]})
+    exit_ = sorted({int(a["default_exit_delay"]) for a in out["areas"]})
+    settings["default_entry_delay"] = entry[0] if len(entry) == 1 and entry[0] else 30
+    settings["default_exit_delay"] = exit_[0] if len(exit_) == 1 and exit_[0] else 30
+    # None: the language Home Assistant itself runs in, which is what every
+    # message has used until now.
+    settings["language"] = None
+    return out
+
+
+# The categories of SPEC §10.2, spelled out rather than imported: a migration
+# is a pure function of the document and must not change when an enum does.
+LOG_CATEGORIES = (
+    "arming",
+    "alarm",
+    "action",
+    "config",
+    "security",
+    "system",
+    "zone_armed",
+    "zone_disarmed",
+)
+
+
 # (from_major, from_minor) -> (step, (to_major, to_minor))
 STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (1, 1): (_v1_1_to_v2_1, (2, 1)),
     (2, 1): (_v2_1_to_v2_2, (2, 2)),
     (2, 2): (_v2_2_to_v3_1, (3, 1)),
     (3, 1): (_v3_1_to_v4_1, (4, 1)),
+    (4, 1): (_v4_1_to_v4_2, (4, 2)),
 }
 
 

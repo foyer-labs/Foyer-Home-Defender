@@ -1,0 +1,379 @@
+"""What the event log records, decided here and nowhere else (SPEC §10).
+
+Pure, like everything in ``core``: it turns a Decision — the occurrences it
+produced, and the request it may have refused — into log rows. The store
+writes them; this module says what they are. Keeping it here means the
+categories, the severities and the outcome of a refusal are testable with no
+Home Assistant instance, and that the simulator (Phase 3) can show exactly the
+rows a run would have written without writing any.
+
+Two rules the rest of the code depends on:
+
+- every ``Moment`` has a category and a severity, and a test asserts it: a
+  moment added later without one would silently disappear from the log;
+- a row is data. Nothing here formats a sentence for a human — the panel
+  translates ``event_type`` like every other user-visible string.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
+
+from .models import (
+    AcknowledgeIncident,
+    AcknowledgeTechnical,
+    AreaState,
+    ArmAreaRequest,
+    ArmModeRequest,
+    ArmRequest,
+    BypassZone,
+    Decision,
+    DisarmRequest,
+    Event,
+    FoyerConfig,
+    LogCategory,
+    LogSeverity,
+    Moment,
+    Occurrence,
+    Outcome,
+    RuntimeState,
+    SetChime,
+    Startup,
+    Tick,
+    ZoneStateChanged,
+)
+
+
+def _frozen(mapping: Mapping[str, Any]) -> Mapping[str, Any]:
+    from types import MappingProxyType
+
+    return MappingProxyType(dict(mapping))
+
+
+@dataclass(frozen=True, slots=True)
+class LogRow:
+    """One row of ``events`` (SPEC §10.1).
+
+    ``user_name`` is denormalised on purpose: deleting a user must not erase
+    the history of what that user did. There are no users before Phase 2, so
+    both user columns are empty for now and the shape is already right.
+
+    ``incident_id`` is not in the §10.1 table and is added here: §5.6 requires
+    the incident id on every related row, and a JSON detail field cannot be
+    filtered on.
+    """
+
+    ts: datetime
+    category: LogCategory
+    event_type: str
+    severity: LogSeverity = LogSeverity.INFO
+    area_id: str | None = None
+    zone_id: str | None = None
+    scenario_id: str | None = None
+    incident_id: str | None = None
+    user_id: str | None = None
+    user_name: str | None = None
+    channel: str | None = None
+    device_id: str | None = None
+    outcome: str | None = None
+    detail: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "detail", _frozen(self.detail))
+
+
+# Which category each moment belongs to (SPEC §10.2). The split that matters
+# is not "how loud" but "what kind of question does this answer": arming
+# answers "who armed", security answers "what was excluded or forced", alarm
+# answers "what happened that night".
+CATEGORY: dict[Moment, LogCategory] = {
+    Moment.ARMED: LogCategory.ARMING,
+    Moment.DISARMED: LogCategory.ARMING,
+    Moment.ARM_FAILED: LogCategory.ARMING,
+    # A forced arm and a bypass leave part of the house unprotected on
+    # purpose: that is a security decision, not an arming detail.
+    Moment.FORCED_ARM: LogCategory.SECURITY,
+    Moment.ZONE_BYPASSED: LogCategory.SECURITY,
+    Moment.ZONE_REJOINED: LogCategory.SECURITY,
+    Moment.CODE_REJECTED: LogCategory.SECURITY,
+    Moment.LOCKOUT: LogCategory.SECURITY,
+    Moment.ENTRY_STARTED: LogCategory.ALARM,
+    Moment.TRIGGERED: LogCategory.ALARM,
+    Moment.SIREN_CUTOFF: LogCategory.ALARM,
+    Moment.INCIDENT_OPENED: LogCategory.ALARM,
+    Moment.INCIDENT_JOINED: LogCategory.ALARM,
+    Moment.INCIDENT_ACKNOWLEDGED: LogCategory.ALARM,
+    Moment.INCIDENT_CLOSED: LogCategory.ALARM,
+    Moment.TECHNICAL_RAISED: LogCategory.ALARM,
+    Moment.TECHNICAL_ACKNOWLEDGED: LogCategory.ALARM,
+    Moment.TECHNICAL_CLEARED: LogCategory.ALARM,
+    Moment.VERIFICATION_PENDING: LogCategory.ALARM,
+    Moment.VERIFICATION_SATISFIED: LogCategory.ALARM,
+    Moment.VERIFICATION_EXPIRED: LogCategory.ALARM,
+    Moment.ESCALATION_EXHAUSTED: LogCategory.ALARM,
+    Moment.ZONE_FAULT: LogCategory.SYSTEM,
+    Moment.LOW_BATTERY: LogCategory.SYSTEM,
+    Moment.HA_RESTARTED: LogCategory.SYSTEM,
+    Moment.WALK_TEST_STARTED: LogCategory.SYSTEM,
+    Moment.WALK_TEST_ENDED: LogCategory.SYSTEM,
+    Moment.CHIME_SWITCHED: LogCategory.SYSTEM,
+    # A chime sounds exactly when a zone opens unmonitored (§6.6), which is
+    # the volume class of zone activity while disarmed — and its category.
+    Moment.CHIME: LogCategory.ZONE_DISARMED,
+}
+
+SEVERITY: dict[Moment, LogSeverity] = {
+    Moment.ARMED: LogSeverity.INFO,
+    Moment.DISARMED: LogSeverity.INFO,
+    Moment.ARM_FAILED: LogSeverity.WARNING,
+    Moment.FORCED_ARM: LogSeverity.WARNING,
+    Moment.ZONE_BYPASSED: LogSeverity.WARNING,
+    Moment.ZONE_REJOINED: LogSeverity.INFO,
+    Moment.CODE_REJECTED: LogSeverity.WARNING,
+    Moment.LOCKOUT: LogSeverity.WARNING,
+    Moment.ENTRY_STARTED: LogSeverity.WARNING,
+    Moment.TRIGGERED: LogSeverity.ALARM,
+    Moment.SIREN_CUTOFF: LogSeverity.WARNING,
+    Moment.INCIDENT_OPENED: LogSeverity.ALARM,
+    Moment.INCIDENT_JOINED: LogSeverity.ALARM,
+    Moment.INCIDENT_ACKNOWLEDGED: LogSeverity.INFO,
+    Moment.INCIDENT_CLOSED: LogSeverity.INFO,
+    Moment.TECHNICAL_RAISED: LogSeverity.ALARM,
+    Moment.TECHNICAL_ACKNOWLEDGED: LogSeverity.INFO,
+    Moment.TECHNICAL_CLEARED: LogSeverity.INFO,
+    Moment.VERIFICATION_PENDING: LogSeverity.WARNING,
+    Moment.VERIFICATION_SATISFIED: LogSeverity.ALARM,
+    Moment.VERIFICATION_EXPIRED: LogSeverity.INFO,
+    Moment.ESCALATION_EXHAUSTED: LogSeverity.ALARM,
+    Moment.ZONE_FAULT: LogSeverity.WARNING,
+    Moment.LOW_BATTERY: LogSeverity.WARNING,
+    # The restart gap is a hole in the coverage, however short (INV-3).
+    Moment.HA_RESTARTED: LogSeverity.WARNING,
+    Moment.WALK_TEST_STARTED: LogSeverity.WARNING,
+    Moment.WALK_TEST_ENDED: LogSeverity.INFO,
+    Moment.CHIME_SWITCHED: LogSeverity.INFO,
+    Moment.CHIME: LogSeverity.INFO,
+}
+
+# Moments whose row is named something else, because the spec names them: the
+# restart gap is "system_unavailable from T1 to T2" (§10.1, INV-3).
+EVENT_TYPE: dict[Moment, str] = {Moment.HA_RESTARTED: "system_unavailable"}
+
+# A moment that is, in itself, a failed request.
+OUTCOME: dict[Moment, Outcome] = {Moment.ARM_FAILED: Outcome.BLOCKED}
+
+# What a refused request is called and where it is filed. A refusal is worth
+# a row of its own: "why did it not arm last night?" is a question users ask,
+# and silence is the worst possible answer.
+REJECTION: dict[type, tuple[str, LogCategory]] = {
+    ArmRequest: ("arm_rejected", LogCategory.ARMING),
+    ArmModeRequest: ("arm_rejected", LogCategory.ARMING),
+    ArmAreaRequest: ("arm_rejected", LogCategory.ARMING),
+    DisarmRequest: ("disarm_rejected", LogCategory.ARMING),
+    BypassZone: ("bypass_rejected", LogCategory.SECURITY),
+    AcknowledgeIncident: ("acknowledge_rejected", LogCategory.ALARM),
+    AcknowledgeTechnical: ("acknowledge_rejected", LogCategory.ALARM),
+    SetChime: ("chime_rejected", LogCategory.SYSTEM),
+}
+
+# States in which an area is watching its zones, for the zone_armed /
+# zone_disarmed split (§10.2). ``arming`` counts: the exit delay is part of
+# the arming, and a zone opening during it is worth the same row.
+_MONITORING = frozenset(
+    {AreaState.ARMING, AreaState.ARMED, AreaState.ENTRY, AreaState.TRIGGERED}
+)
+
+
+def category_of(moment: Moment) -> LogCategory:
+    return CATEGORY[moment]
+
+
+def severity_of(moment: Moment) -> LogSeverity:
+    return SEVERITY[moment]
+
+
+def event_type_of(moment: Moment) -> str:
+    return EVENT_TYPE.get(moment, moment.value)
+
+
+def row_for(occurrence: Occurrence, at: datetime) -> LogRow:
+    """One occurrence, as the row that records it."""
+    detail: dict[str, Any] = dict(occurrence.detail)
+    if occurrence.zone_ids:
+        detail["zone_ids"] = list(occurrence.zone_ids)
+    if occurrence.group_id:
+        detail["group_id"] = occurrence.group_id
+    outcome = OUTCOME.get(occurrence.moment)
+    return LogRow(
+        ts=at,
+        category=category_of(occurrence.moment),
+        event_type=event_type_of(occurrence.moment),
+        severity=severity_of(occurrence.moment),
+        area_id=occurrence.area_id,
+        zone_id=occurrence.zone_id,
+        scenario_id=occurrence.scenario_id,
+        incident_id=occurrence.incident_id,
+        channel=occurrence.channel,
+        outcome=(outcome or Outcome.OK).value,
+        detail=detail,
+    )
+
+
+def rejection_row(event: Event, decision: Decision) -> LogRow | None:
+    """The row a refused request leaves behind, if the event can be refused."""
+    named = REJECTION.get(type(event))
+    if named is None:
+        return None
+    event_type, category = named
+    detail: dict[str, Any] = {}
+    if decision.reason is not None:
+        detail["reason"] = decision.reason.value
+    if decision.blocking_zones:
+        detail["blocking_zones"] = list(decision.blocking_zones)
+    return LogRow(
+        ts=decision.at,
+        category=category,
+        event_type=event_type,
+        severity=LogSeverity.WARNING,
+        area_id=getattr(event, "area_id", None),
+        zone_id=getattr(event, "zone_id", None),
+        scenario_id=getattr(event, "scenario_id", None),
+        channel=getattr(event, "channel", None),
+        outcome=Outcome.BLOCKED.value,
+        detail=detail,
+    )
+
+
+def zone_rows(
+    event: ZoneStateChanged,
+    state: RuntimeState,
+    config: FoyerConfig,
+    at: datetime,
+    old: str | None = None,
+) -> tuple[LogRow, ...]:
+    """The raw movement of an entity, filed by whether its area was watching.
+
+    One entity may back more than one zone, and each zone's own area decides
+    its category: with "Windows only" armed, the same PIR is watched in one
+    area and not in another.
+    """
+    rows = []
+    for zone in config.zones:
+        if zone.entity_id != event.entity_id:
+            continue
+        area_state = state.area(zone.area_id).state
+        rows.append(
+            LogRow(
+                ts=at,
+                category=(
+                    LogCategory.ZONE_ARMED
+                    if area_state in _MONITORING
+                    else LogCategory.ZONE_DISARMED
+                ),
+                event_type="zone_state",
+                severity=LogSeverity.INFO,
+                area_id=zone.area_id,
+                zone_id=zone.id,
+                outcome=Outcome.OK.value,
+                detail={
+                    "from": old,
+                    "to": event.new.state,
+                    "area_state": area_state.value,
+                },
+            )
+        )
+    return tuple(rows)
+
+
+def rows_for(
+    event: Event,
+    decision: Decision,
+    config: FoyerConfig,
+    *,
+    old_state: str | None = None,
+) -> tuple[LogRow, ...]:
+    """Everything one decision puts in the log, in the order it happened.
+
+    The occurrences first, because they are what happened; then the refusal,
+    if the request was refused; then the raw zone movement, which is the noisy
+    part and belongs at the end of the group.
+    """
+    rows = [row_for(occurrence, decision.at) for occurrence in decision.occurrences]
+    if not decision.accepted and not isinstance(event, Tick | Startup):
+        rejected = rejection_row(event, decision)
+        if rejected is not None:
+            rows.append(rejected)
+    if isinstance(event, ZoneStateChanged):
+        rows.extend(zone_rows(event, decision.state, config, decision.at, old_state))
+    return tuple(rows)
+
+
+def action_row(
+    at: datetime,
+    *,
+    action_id: str,
+    kind: str,
+    moment: Moment,
+    ok: bool,
+    error: str | None = None,
+    profile_id: str | None = None,
+    area_id: str | None = None,
+    zone_id: str | None = None,
+    incident_id: str | None = None,
+) -> LogRow:
+    """What one action did (§10.2, category ``action``).
+
+    A failure here is the one this project exists to prevent being discovered
+    during the emergency, so it is a warning even when everything else went
+    well: the siren that did not sound is not an "info".
+    """
+    detail: dict[str, Any] = {"kind": kind, "action_id": action_id}
+    if profile_id:
+        detail["profile_id"] = profile_id
+    if error:
+        detail["error"] = error
+    return LogRow(
+        ts=at,
+        category=LogCategory.ACTION,
+        event_type=f"action_{kind}",
+        severity=LogSeverity.INFO if ok else LogSeverity.WARNING,
+        area_id=area_id,
+        zone_id=zone_id,
+        incident_id=incident_id,
+        outcome=(Outcome.OK if ok else Outcome.FAILED).value,
+        detail={**detail, "moment": moment.value},
+    )
+
+
+def config_row(
+    at: datetime,
+    *,
+    operation: str,
+    kind: str,
+    item_id: str | None = None,
+    user_id: str | None = None,
+    user_name: str | None = None,
+    channel: str | None = None,
+    ok: bool = True,
+    changes: Mapping[str, Any] | None = None,
+) -> LogRow:
+    """Who changed what (§10.2, category ``config``), with a diff summary."""
+    detail: dict[str, Any] = {"kind": kind}
+    if item_id:
+        detail["item_id"] = item_id
+    if changes:
+        detail["changes"] = dict(changes)
+    return LogRow(
+        ts=at,
+        category=LogCategory.CONFIG,
+        event_type=f"config_{operation}",
+        severity=LogSeverity.INFO if ok else LogSeverity.WARNING,
+        user_id=user_id,
+        user_name=user_name,
+        channel=channel,
+        outcome=(Outcome.OK if ok else Outcome.FAILED).value,
+        detail=detail,
+    )

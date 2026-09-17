@@ -177,6 +177,42 @@ class Operation(StrEnum):
     BYPASS_ZONE = "bypass_zone"
 
 
+class LogCategory(StrEnum):
+    """How the log groups what it records (SPEC §10.2).
+
+    The last two are zone activity, split by whether the zone's area was
+    watching it: ``zone_disarmed`` is the one category that is off by default,
+    because a living-room PIR produces thousands of rows a day and thirty days
+    of them bury every event that matters.
+    """
+
+    ARMING = "arming"
+    ALARM = "alarm"
+    ACTION = "action"
+    CONFIG = "config"
+    SECURITY = "security"
+    SYSTEM = "system"
+    ZONE_ARMED = "zone_armed"
+    ZONE_DISARMED = "zone_disarmed"
+
+
+class LogSeverity(StrEnum):
+    """How loud a row is (SPEC §10.1). Only ``alarm`` means the house fired."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ALARM = "alarm"
+
+
+class Outcome(StrEnum):
+    """What became of the request a row records (SPEC §10.1)."""
+
+    OK = "ok"
+    BLOCKED = "blocked"
+    BAD_CODE = "bad_code"
+    FAILED = "failed"
+
+
 class Moment(StrEnum):
     """What happened. Every Occurrence carries one (SPEC §6.1).
 
@@ -271,6 +307,14 @@ DEFAULT_VERIFICATION_WINDOW = 60
 MIN_VERIFICATION_WINDOW = 1
 MAX_VERIFICATION_WINDOW = 3600
 MAX_TRIGGER_COUNT = 10
+
+# Log retention (SPEC §10.3): per category, thirty days by default. Zero is
+# not a value: "keep nothing" is what disabling the category is for.
+DEFAULT_RETENTION_DAYS = 30
+MIN_RETENTION_DAYS = 1
+MAX_RETENTION_DAYS = 3650
+# The one category off by default (§10.2): thousands of rows a day.
+DEFAULT_LOG_DISABLED: frozenset[str] = frozenset({"zone_disarmed"})
 
 
 # --- configuration -----------------------------------------------------------
@@ -539,6 +583,29 @@ class CodePolicy:
 
 
 @dataclass(frozen=True, slots=True)
+class LogSettings:
+    """Which categories the log writes, and for how long (SPEC §10.2, §10.3).
+
+    Both are sparse maps over ``LogCategory``: a category the user has never
+    touched follows the documented default, so a new category added by a later
+    version needs no migration to behave as the spec says it should.
+    """
+
+    enabled: Mapping[str, bool] = field(default_factory=dict)
+    retention_days: Mapping[str, int] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "enabled", _frozen(self.enabled))
+        object.__setattr__(self, "retention_days", _frozen(self.retention_days))
+
+    def is_enabled(self, category: str) -> bool:
+        return bool(self.enabled.get(category, category not in DEFAULT_LOG_DISABLED))
+
+    def retention(self, category: str) -> int:
+        return int(self.retention_days.get(category, DEFAULT_RETENTION_DAYS))
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     """Global settings the engine reads.
 
@@ -546,7 +613,8 @@ class Settings:
     ``technical_profile_id`` is the technical channel's own default, separate
     because a smoke alarm must not respond differently depending on how the
     house is armed (part 3 decision 2). ``silent_suppresses`` names the action
-    kinds a ``silent`` zone does not run (decision 6).
+    kinds a ``silent`` zone does not run (decision 6); ``log`` is what the
+    event log writes and keeps (§10.2).
     """
 
     siren_duration: int = DEFAULT_SIREN_DURATION
@@ -555,6 +623,14 @@ class Settings:
     technical_profile_id: str | None = None
     silent_suppresses: tuple[str, ...] = DEFAULT_SILENT_SUPPRESSES
     camera_dir: str = DEFAULT_CAMERA_DIR
+    log: LogSettings = field(default_factory=LogSettings)
+    # What new areas start with, so a household that wants 45 s sets it once.
+    default_entry_delay: int = DEFAULT_ENTRY_DELAY
+    default_exit_delay: int = DEFAULT_EXIT_DELAY
+    # The language of what Foyer *sends out* — notifications, the spoken zone
+    # name, the rendered log — not the panel's, which follows each Home
+    # Assistant user. None means the language Home Assistant itself runs in.
+    language: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
