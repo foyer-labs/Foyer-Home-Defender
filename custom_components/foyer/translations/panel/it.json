@@ -5,7 +5,7 @@
     "not_loaded": "Foyer Home Defender non è caricato. Controlla l'integrazione nelle Impostazioni.",
     "connection_error": "Home Assistant non raggiungibile: {error}",
     "live": "In tempo reale",
-    "seconds": "{n} s",
+    "seconds": "Secondi",
     "save": "Salva",
     "cancel": "Annulla",
     "delete": "Elimina",
@@ -18,7 +18,8 @@
     "scenarios": "Scenari",
     "groups": "Gruppi di verifica",
     "settings": "Impostazioni",
-    "profiles": "Profili di risposta"
+    "profiles": "Profili di risposta",
+    "log": "Registro"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -167,8 +168,8 @@
     "on_activate": "Quando si attiva",
     "on_deactivate": "Quando si rilascia",
     "scenario_id": "Scenario",
-    "default_entry_delay": "Ritardo di ingresso predefinito",
-    "default_exit_delay": "Ritardo di uscita predefinito",
+    "default_entry_delay": "Ritardo d'ingresso predefinito",
+    "default_exit_delay": "Ritardo d'uscita predefinito",
     "ha_state_when_armed": "Stato riportato a Home Assistant",
     "ha_master_state": "Stato riportato dal generale",
     "areas": "Aree inserite",
@@ -222,8 +223,6 @@
     "actions": "Azioni",
     "camera_entity_id": "Allega una telecamera",
     "log": "Registro eventi",
-    "default_entry_delay": "Ritardo d'ingresso predefinito",
-    "default_exit_delay": "Ritardo d'uscita predefinito",
     "language": "Lingua dei messaggi"
   },
   "ha_state": {
@@ -588,6 +587,18 @@
         "response": {
           "term": "Risposta predefinita",
           "text": "Il profilo che tutto eredita, quello del canale tecnico, e cosa tace in una zona silenziosa."
+        },
+        "retention": {
+          "term": "Conservazione del registro",
+          "text": "Per categoria, in giorni. Una categoria spenta non scrive più nulla da adesso; le righe già scritte restano finché non scadono i loro giorni."
+        },
+        "backup": {
+          "term": "Backup",
+          "text": "Un file JSON dell'intera configurazione. Il ripristino passa dalla stessa validazione di ogni modifica, e viene rifiutato se toccherebbe un'area inserita."
+        },
+        "language": {
+          "term": "Lingua dei messaggi",
+          "text": "La lingua di ciò che Foyer manda fuori: notifiche, nome della zona pronunciato. Questo pannello segue già la lingua di ogni utente di Home Assistant."
         }
       }
     },
@@ -614,6 +625,32 @@
         "silent": {
           "term": "Zone silenziose",
           "text": "Una zona marcata silenziosa esegue la sua risposta senza i tipi di azione indicati nelle impostazioni."
+        }
+      }
+    },
+    "log": {
+      "title": "Cosa viene registrato, e per quanto",
+      "intro": "Conservato in un archivio di Foyer e non nel recorder di Home Assistant, la cui cancellazione dopo dieci giorni distruggerebbe in silenzio un requisito di trenta. Ogni riga dice cosa è successo, dove, e attraverso quale canale.",
+      "items": {
+        "category": {
+          "term": "Categoria",
+          "text": "Raggruppa le righe per tipo. Ogni categoria si accende o si spegne, e si conserva per un numero di giorni suo, nelle Impostazioni."
+        },
+        "zone_disarmed": {
+          "term": "Attività delle zone a impianto disinserito",
+          "text": "Spenta di default: un solo sensore di movimento produce migliaia di righe al giorno e seppellisce tutto ciò che conta. Accendila mentre diagnostichi, e rispegnila dopo."
+        },
+        "incident": {
+          "term": "Incidente",
+          "text": "Un'effrazione vera fa scattare più zone. Condividono un solo identificativo di incidente, così una notte si legge come un racconto e non come righe sparse."
+        },
+        "user": {
+          "term": "Chi",
+          "text": "La persona viene scritta nella riga, non referenziata: cancellare un utente non cancella la storia di ciò che ha fatto. Gli utenti arrivano nella fase successiva; fino ad allora le righe portano il canale."
+        },
+        "export": {
+          "term": "Esportazione",
+          "text": "CSV o JSON esattamente delle righe che i filtri qui sopra stanno mostrando, non dell'intero archivio."
         }
       }
     }
@@ -780,14 +817,33 @@
     "during_exit_hint": "Spento: la porta da cui esci non suona mentre l'area conta alla rovescia.",
     "switch_hint": "switch.foyer_chime lo silenzia senza cambiare queste impostazioni.",
     "saved": "Salvato.",
-    "later": "Le altre impostazioni arriveranno in un aggiornamento successivo.",
     "response_title": "Risposta",
     "response_intro": "Dove finisce ogni catena di ereditarietà, e cosa tace in una zona silenziosa.",
     "default_profile_hint": "Ciò che ogni area, zona e scenario eredita se non lo sovrascrive.",
     "technical_profile_hint": "Fumo, gas e allagamento rispondono con questo, qualunque cosa stia facendo la casa. Vuoto: il profilo predefinito.",
     "silent_hint": "Una zona marcata silenziosa esegue la sua risposta senza queste.",
     "camera_dir_hint": "Dentro la cartella di configurazione. Mai www, che è servita senza autenticazione.",
-    "none": "Nessuno"
+    "none": "Nessuno",
+    "defaults_title": "Valori predefiniti",
+    "defaults_intro": "Con cosa partono le aree nuove, e i limiti che valgono per tutte.",
+    "siren_duration_hint": "Per quanto suonano le sirene prima di fermarsi. Massimo 900 secondi, il riferimento EN 50131 per le sirene esterne; un disinserimento le ferma prima.",
+    "arm_hold_hint": "Per quanto una zona impostata su «inserisci dopo la chiusura» può restare aperta una volta finito il ritardo d'uscita. Dopo, l'inserimento fallisce come se la zona l'avesse bloccato.",
+    "area_defaults_hint": "Solo per le aree create da adesso. Le aree esistenti mantengono i loro ritardi.",
+    "log_title": "Registro eventi",
+    "log_intro": "Quali categorie vengono registrate, e per quanto ciascuna viene conservata.",
+    "log_off": "Non registrata",
+    "log_days": "giorni",
+    "log_rows_hint": "Le righe già scritte restano finché non scadono i loro giorni, anche per una categoria che spegni.",
+    "backup_title": "Backup della configurazione",
+    "backup_intro": "Nessuno che abbia configurato quaranta zone lo rifarà una seconda volta.",
+    "backup_export": "Esporta JSON",
+    "backup_import": "Ripristina da un file…",
+    "backup_hint": "Il file porta con sé la versione di schema con cui è stato scritto. Un backup di una versione più vecchia viene aggiornato al ripristino; uno di una versione più recente viene rifiutato anziché letto a metà.",
+    "backup_version": "Configurazione salvata: schema {version}",
+    "backup_restored": "Configurazione ripristinata.",
+    "language_title": "Lingua dei messaggi",
+    "language_system": "Come Home Assistant",
+    "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le notifiche, e il nome della zona pronunciato dal campanello."
   },
   "action_kind": {
     "notify": "Notifica",
@@ -900,5 +956,138 @@
   "on_off": {
     "on": "Acceso",
     "off": "Spento"
+  },
+  "category": {
+    "arming": "Inserimento",
+    "alarm": "Allarme",
+    "action": "Azione",
+    "config": "Configurazione",
+    "security": "Sicurezza",
+    "system": "Sistema",
+    "zone_armed": "Attività zone (inserito)",
+    "zone_disarmed": "Attività zone (disinserito)"
+  },
+  "severity": {
+    "info": "Informazione",
+    "warning": "Avviso",
+    "alarm": "Allarme"
+  },
+  "outcome": {
+    "ok": "Eseguito",
+    "blocked": "Rifiutato",
+    "bad_code": "Codice errato",
+    "failed": "Non riuscito"
+  },
+  "log_channel": {
+    "ha_ui": "Home Assistant",
+    "automation": "Automazione",
+    "api": "API",
+    "key_zone": "Zona chiave",
+    "keypad": "Tastierino",
+    "nfc": "Tag NFC",
+    "mqtt": "MQTT",
+    "auto_rule": "Regola automatica"
+  },
+  "event_type": {
+    "system_unavailable": "Foyer non era in funzione",
+    "zone_state": "Stato zona",
+    "arm_rejected": "Inserimento rifiutato",
+    "disarm_rejected": "Disinserimento rifiutato",
+    "bypass_rejected": "Esclusione rifiutata",
+    "acknowledge_rejected": "Presa in carico rifiutata",
+    "chime_rejected": "Modifica del campanello rifiutata",
+    "config_save": "Configurazione salvata",
+    "config_delete": "Elemento di configurazione eliminato",
+    "config_restore": "Configurazione ripristinata",
+    "config_log_cleared": "Registro svuotato",
+    "action_notify": "Notifica inviata",
+    "action_persistent_notification": "Notifica di Home Assistant",
+    "action_siren": "Sirena",
+    "action_light": "Luce",
+    "action_camera": "Telecamera",
+    "action_scene": "Scena",
+    "action_switch": "Interruttore",
+    "action_tts": "Messaggio vocale",
+    "action_call_service": "Chiamata di servizio",
+    "action_delay": "Attesa",
+    "action_chime": "Campanello",
+    "action_revert": "Riportato allo stato precedente"
+  },
+  "log": {
+    "filters": "Filtri",
+    "from": "Dal",
+    "to": "Al",
+    "all": "Tutte",
+    "area": "Area",
+    "zone": "Zona",
+    "severity": "Gravità",
+    "outcome": "Esito",
+    "categories": "Categorie",
+    "categories_hint": "Nessuna selezione significa tutte le categorie. L'attività delle zone a impianto disinserito viene registrata solo se accendi quella categoria nelle Impostazioni.",
+    "incident_filter": "Mostra un solo incidente: {id}",
+    "clear_filter": "Mostra tutto",
+    "events": "Eventi",
+    "count": "{shown} di {total}",
+    "export_csv": "Esporta CSV",
+    "export_json": "Esporta JSON",
+    "clear": "Svuota il registro",
+    "clear_confirm": "Cancella ogni riga, definitivamente. La cancellazione stessa viene registrata, così il registro non finge che non sia successo nulla.",
+    "clear_yes": "Cancella tutto",
+    "empty": "Ancora nulla di registrato con questi filtri.",
+    "truncated": "Esportate {rows} righe su {total}. Restringi i filtri per esportare le altre.",
+    "time": "Quando",
+    "event": "Evento",
+    "category": "Categoria",
+    "where": "Dove",
+    "who": "Chi",
+    "detail": "Dettaglio",
+    "channel": "Tramite",
+    "incident": "Incidente",
+    "show_incident": "Mostra questo incidente",
+    "newer": "Più recenti",
+    "older": "Più vecchi",
+    "gap": "Dal {from} al {to}"
+  },
+  "language": {
+    "en": "English",
+    "it": "Italiano"
+  },
+  "wizard": {
+    "title": "Completa la configurazione di Foyer",
+    "intro": "Foyer sta già proteggendo una zona: l'integrazione ha creato un'area, una zona e uno scenario quando l'hai aggiunta. Quattro passi brevi trasformano tutto questo in qualcosa che sorveglia davvero la casa. Puoi fermarti quando vuoi e proseguire dalle pagine qui sopra.",
+    "dismiss": "Non ora",
+    "next": "Continua",
+    "back": "Indietro",
+    "done": "Fine",
+    "step": {
+      "area": "Area",
+      "zones": "Zone",
+      "scenario": "Scenario",
+      "user": "Utente e codice",
+      "test": "Notifica di prova"
+    },
+    "no_area": "Nessuna area trovata. Aggiungine una dalla pagina Aree.",
+    "no_scenario": "Nessuno scenario trovato. Aggiungine uno dalla pagina Scenari.",
+    "area_text": "Un'area basta per iniziare. Più aree significano più inserimenti parziali più avanti: solo il perimetro, o il piano terra con il cane in casa.",
+    "exit_hint": "Quanto tempo hai per uscire dopo l'inserimento.",
+    "entry_hint": "Quanto tempo hai per disinserire dopo aver aperto una zona ritardata. Le zone lo ereditano se non dicono altro.",
+    "zones_text": "Hai {have} zone su {want}. Tre bastano per iniziare; le altre possono aspettare.",
+    "add_zone": "Aggiungi una zona",
+    "pick_entity": "Scegli un'entità…",
+    "proposed": "{entity} adesso legge {state}. Foyer propone una zona {type}, in allarme su: {states}.",
+    "confirm_trigger": "È corretto: questa zona è in allarme in quegli stati.",
+    "confirm_hint": "È l'unica cosa che Foyer non può indovinare da solo. I contatti normalmente chiusi e normalmente aperti si comportano al contrario, e un errore qui produce un allarme che non suona mai — cosa che scopriresti nel momento peggiore possibile.",
+    "add": "Aggiungi la zona",
+    "scenario_text": "Uno scenario è un preset con un nome che inserisce un insieme di aree scelto. Uno che inserisce tutto basta per iniziare; quelli parziali vengono dopo.",
+    "scenario_areas": "Inserisce: {areas}",
+    "user_text": "Un codice tuo, così il registro ha qualcuno a cui attribuire le azioni fin dal primo giorno.",
+    "user_skipped": "Saltato, e lo diciamo chiaramente: utenti e codici non ci sono ancora in questa versione. Finché non arrivano, chiunque abbia accesso a Home Assistant può inserire e disinserire Foyer, e il registro annota il canale invece della persona.",
+    "test_text": "Dimostra che un messaggio ti arriva davvero, prima di farci affidamento. Questo lo manda direttamente tramite Home Assistant, al destinatario che scegli.",
+    "test_target": "Manda a",
+    "pick_target": "Scegli un servizio di notifica…",
+    "send_test": "Manda la prova",
+    "test_sent": "Mandata. Se non è arrivato nulla, quel canale non ti avrebbe raggiunto nemmeno durante un allarme.",
+    "test_hint": "Quali notifiche manda Foyer, e quando, si imposta nella pagina Profili di risposta.",
+    "test_message": "Foyer Home Defender: questa è una notifica di prova."
   }
 }

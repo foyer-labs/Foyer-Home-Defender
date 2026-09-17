@@ -220,6 +220,10 @@ def _v4_1_to_v4_2(data: Document) -> Document:
     # None: the language Home Assistant itself runs in, which is what every
     # message has used until now.
     settings["language"] = None
+    # An installation that already has areas and zones is not a first run:
+    # offering it the first-run wizard would be telling somebody who has
+    # finished to start.
+    settings["wizard_done"] = True
     return out
 
 

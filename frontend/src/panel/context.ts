@@ -5,11 +5,15 @@ import { t, type Strings } from "../shared/i18n";
 import type {
   ChimeConfig,
   CommandResult,
+  ConfigBackup,
   ConfigMeta,
   EditResult,
   FoyerConfig,
   FoyerStatus,
   HomeAssistant,
+  LogExport,
+  LogPage,
+  LogQuery,
   PageId,
   Problem,
   SettingsConfig,
@@ -35,6 +39,25 @@ export interface PanelContext {
   saveSettings(settings: Partial<SettingsConfig>): Promise<EditResult>;
   /** Exclude a zone by hand, with an optional duration (SPEC §16). */
   bypass(zoneId: string, bypass: boolean, seconds?: number): Promise<CommandResult>;
+  /** The event log (§10): read, export exactly what the filters show, empty. */
+  queryLog(query: LogQuery): Promise<LogPage>;
+  exportLog(query: LogQuery, format: "csv" | "json"): Promise<LogExport>;
+  clearLog(): Promise<{ success: boolean; removed: number }>;
+  /** Configuration backup and restore (§15.1). */
+  exportConfig(): Promise<{ filename: string; document: ConfigBackup }>;
+  importConfig(document: unknown): Promise<EditResult>;
+}
+
+/** Offer a file to the browser. Used by both exports: the content crosses the
+ * WebSocket and never becomes a file on the Home Assistant server. */
+export function download(filename: string, content: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  // Revoked on the next turn: revoking at once can beat the download.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** Seconds left on a timer, never negative. */

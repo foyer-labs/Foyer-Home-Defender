@@ -5,7 +5,7 @@
     "not_loaded": "Foyer Home Defender is not loaded. Check the integration in Settings.",
     "connection_error": "Cannot reach Home Assistant: {error}",
     "live": "Live",
-    "seconds": "{n} s",
+    "seconds": "Seconds",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -18,7 +18,8 @@
     "scenarios": "Scenarios",
     "groups": "Verification groups",
     "settings": "Settings",
-    "profiles": "Response profiles"
+    "profiles": "Response profiles",
+    "log": "Log"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -222,8 +223,6 @@
     "actions": "Actions",
     "camera_entity_id": "Attach a camera",
     "log": "Event log",
-    "default_entry_delay": "Default entry delay",
-    "default_exit_delay": "Default exit delay",
     "language": "Language of messages"
   },
   "ha_state": {
@@ -588,6 +587,18 @@
         "response": {
           "term": "Response defaults",
           "text": "The profile everything inherits, the one the technical channel uses, and what a silent zone keeps quiet."
+        },
+        "retention": {
+          "term": "Log retention",
+          "text": "Per category, in days. A category switched off writes nothing from now on; rows already written stay until their days are up."
+        },
+        "backup": {
+          "term": "Backup",
+          "text": "A JSON file of the whole configuration. Restoring it goes through the same validation as any edit, and is refused while an area it would change is armed."
+        },
+        "language": {
+          "term": "Language of messages",
+          "text": "The language of what Foyer sends out — notifications, the spoken zone name. This panel already follows each Home Assistant user's own language."
         }
       }
     },
@@ -614,6 +625,32 @@
         "silent": {
           "term": "Silent zones",
           "text": "A zone marked silent runs its response without the action kinds the settings name."
+        }
+      }
+    },
+    "log": {
+      "title": "What is recorded, and for how long",
+      "intro": "Stored in Foyer's own database rather than Home Assistant's recorder, whose ten-day purge would quietly destroy a thirty-day requirement. Every row records what happened, where, and through which channel.",
+      "items": {
+        "category": {
+          "term": "Category",
+          "text": "Groups rows by kind. Each category is switched on or off, and kept for its own number of days, in Settings."
+        },
+        "zone_disarmed": {
+          "term": "Zone activity while disarmed",
+          "text": "Off by default: one motion sensor produces thousands of rows a day and buries everything that matters. Switch it on while diagnosing, and off again afterwards."
+        },
+        "incident": {
+          "term": "Incident",
+          "text": "A real break-in trips several zones. They share one incident id, so a night reads as one story rather than as scattered rows."
+        },
+        "user": {
+          "term": "Who",
+          "text": "The person is written into the row rather than referenced, so deleting a user later does not erase the history of what they did. Users arrive in the next phase; until then rows carry the channel."
+        },
+        "export": {
+          "term": "Export",
+          "text": "CSV or JSON of exactly the rows the filters above are showing — not of the whole database."
         }
       }
     }
@@ -780,14 +817,33 @@
     "during_exit_hint": "Off: the door you leave by does not chime while the area counts down.",
     "switch_hint": "switch.foyer_chime silences it without changing these settings.",
     "saved": "Saved.",
-    "later": "The other settings arrive in a later update.",
     "response_title": "Response",
     "response_intro": "Where every inheritance chain ends, and what a silent zone keeps quiet.",
     "default_profile_hint": "What every area, zone and scenario inherits unless it overrides it.",
     "technical_profile_hint": "Smoke, gas and flood answer with this one, whatever the house is doing. Empty: the default profile.",
     "silent_hint": "A zone marked silent runs its response without these.",
     "camera_dir_hint": "Inside the configuration folder. Never www, which is served without authentication.",
-    "none": "None"
+    "none": "None",
+    "defaults_title": "Defaults",
+    "defaults_intro": "What new areas start with, and the limits that apply to every area.",
+    "siren_duration_hint": "How long sounders run before stopping. Capped at 900 seconds, the EN 50131 reference for external sounders; a disarm stops them sooner.",
+    "arm_hold_hint": "How long a zone set to arm after closing may stay open once the exit delay is over. After that, arming fails as if the zone had blocked it.",
+    "area_defaults_hint": "Only for areas created from now on. Existing areas keep their own delays.",
+    "log_title": "Event log",
+    "log_intro": "Which categories are recorded, and for how long each is kept.",
+    "log_off": "Not recorded",
+    "log_days": "days",
+    "log_rows_hint": "Rows already written stay until their days are up, even for a category you switch off.",
+    "backup_title": "Configuration backup",
+    "backup_intro": "Nobody who has configured forty zones will do it twice.",
+    "backup_export": "Export JSON",
+    "backup_import": "Restore from a file…",
+    "backup_hint": "The file carries the schema version it was written with. A backup from an older version is brought up to date on restore; one from a newer version is refused rather than half-read.",
+    "backup_version": "Stored configuration: schema {version}",
+    "backup_restored": "Configuration restored.",
+    "language_title": "Language of messages",
+    "language_system": "As Home Assistant",
+    "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: notifications, and the zone name the chime speaks."
   },
   "action_kind": {
     "notify": "Notification",
@@ -900,5 +956,138 @@
   "on_off": {
     "on": "On",
     "off": "Off"
+  },
+  "category": {
+    "arming": "Arming",
+    "alarm": "Alarm",
+    "action": "Action",
+    "config": "Configuration",
+    "security": "Security",
+    "system": "System",
+    "zone_armed": "Zone activity (armed)",
+    "zone_disarmed": "Zone activity (disarmed)"
+  },
+  "severity": {
+    "info": "Info",
+    "warning": "Warning",
+    "alarm": "Alarm"
+  },
+  "outcome": {
+    "ok": "Done",
+    "blocked": "Refused",
+    "bad_code": "Wrong code",
+    "failed": "Failed"
+  },
+  "log_channel": {
+    "ha_ui": "Home Assistant",
+    "automation": "Automation",
+    "api": "API",
+    "key_zone": "Key zone",
+    "keypad": "Keypad",
+    "nfc": "NFC tag",
+    "mqtt": "MQTT",
+    "auto_rule": "Automatic rule"
+  },
+  "event_type": {
+    "system_unavailable": "Foyer was not running",
+    "zone_state": "Zone state",
+    "arm_rejected": "Arming refused",
+    "disarm_rejected": "Disarming refused",
+    "bypass_rejected": "Exclusion refused",
+    "acknowledge_rejected": "Acknowledgement refused",
+    "chime_rejected": "Chime change refused",
+    "config_save": "Configuration saved",
+    "config_delete": "Configuration item deleted",
+    "config_restore": "Configuration restored",
+    "config_log_cleared": "Log emptied",
+    "action_notify": "Notification sent",
+    "action_persistent_notification": "Home Assistant notification",
+    "action_siren": "Siren",
+    "action_light": "Light",
+    "action_camera": "Camera",
+    "action_scene": "Scene",
+    "action_switch": "Switch",
+    "action_tts": "Spoken message",
+    "action_call_service": "Service call",
+    "action_delay": "Delay",
+    "action_chime": "Chime",
+    "action_revert": "Switched back off"
+  },
+  "log": {
+    "filters": "Filters",
+    "from": "From",
+    "to": "To",
+    "all": "All",
+    "area": "Area",
+    "zone": "Zone",
+    "severity": "Severity",
+    "outcome": "Outcome",
+    "categories": "Categories",
+    "categories_hint": "Nothing selected means every category. Zone activity while disarmed is only recorded if you switch that category on in Settings.",
+    "incident_filter": "Showing one incident only: {id}",
+    "clear_filter": "Show everything",
+    "events": "Events",
+    "count": "{shown} of {total}",
+    "export_csv": "Export CSV",
+    "export_json": "Export JSON",
+    "clear": "Empty the log",
+    "clear_confirm": "This deletes every row, for good. The deletion itself is recorded, so the log will not pretend nothing happened.",
+    "clear_yes": "Delete everything",
+    "empty": "Nothing recorded yet for these filters.",
+    "truncated": "Exported {rows} rows of {total}. Narrow the filters to export the rest.",
+    "time": "Time",
+    "event": "Event",
+    "category": "Category",
+    "where": "Where",
+    "who": "Who",
+    "detail": "Detail",
+    "channel": "Through",
+    "incident": "Incident",
+    "show_incident": "Show this incident",
+    "newer": "Newer",
+    "older": "Older",
+    "gap": "From {from} to {to}"
+  },
+  "language": {
+    "en": "English",
+    "it": "Italiano"
+  },
+  "wizard": {
+    "title": "Finish setting up Foyer",
+    "intro": "Foyer is already protecting one zone: the integration created an area, a zone and a scenario when you added it. Four short steps turn that into something that actually guards the house. You can stop at any point and carry on from the pages above.",
+    "dismiss": "Not now",
+    "next": "Continue",
+    "back": "Back",
+    "done": "Finish",
+    "step": {
+      "area": "Area",
+      "zones": "Zones",
+      "scenario": "Scenario",
+      "user": "User and code",
+      "test": "Test notification"
+    },
+    "no_area": "No area found. Add one from the Areas page.",
+    "no_scenario": "No scenario found. Add one from the Scenarios page.",
+    "area_text": "One area is enough to start. More areas mean more partial arming later — the perimeter alone, or the ground floor with the dog at home.",
+    "exit_hint": "How long you have to leave after arming.",
+    "entry_hint": "How long you have to disarm after opening a delayed zone. Zones inherit this unless they say otherwise.",
+    "zones_text": "You have {have} of {want} zones. Three is plenty to start with; the rest can wait.",
+    "add_zone": "Add a zone",
+    "pick_entity": "Choose an entity…",
+    "proposed": "{entity} reads {state} right now. Foyer proposes a {type} zone, triggered on: {states}.",
+    "confirm_trigger": "That is right: this zone is in alarm in those states.",
+    "confirm_hint": "This is the one thing Foyer cannot get right on its own. Normally-closed and normally-open contacts behave in opposite ways, and a wrong guess here produces an alarm that never fires — which you would find out at the worst possible moment.",
+    "add": "Add the zone",
+    "scenario_text": "A scenario is a named preset that arms a chosen set of areas. One that arms everything is enough to start; partial ones come later.",
+    "scenario_areas": "It arms: {areas}",
+    "user_text": "Your own code, so the log has somebody to credit from the first day.",
+    "user_skipped": "Skipped, honestly: users and codes are not in this version yet. Until they arrive, anyone with access to Home Assistant can arm and disarm Foyer, and the log records the channel rather than the person.",
+    "test_text": "Prove that a message actually reaches you before you rely on it. This sends one straight through Home Assistant, to the target you pick.",
+    "test_target": "Send to",
+    "pick_target": "Choose a notification service…",
+    "send_test": "Send the test",
+    "test_sent": "Sent. If nothing arrived, that channel would not have reached you during an alarm either.",
+    "test_hint": "Which notifications Foyer sends, and when, is set on the Response profiles page.",
+    "test_message": "Foyer Home Defender: this is a test notification."
   }
 }

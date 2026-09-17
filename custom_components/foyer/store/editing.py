@@ -237,6 +237,7 @@ def update_settings(
                     settings.get("default_exit_delay", current.default_exit_delay)
                 ),
                 language=settings.get("language", current.language) or None,
+                wizard_done=bool(settings.get("wizard_done", current.wizard_done)),
             ),
         )
     except (KeyError, TypeError, ValueError):

@@ -148,6 +148,7 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         default_entry_delay=int(s["default_entry_delay"]),
         default_exit_delay=int(s["default_exit_delay"]),
         language=s.get("language") or None,
+        wizard_done=bool(s["wizard_done"]),
     )
 
 
@@ -163,6 +164,7 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "default_entry_delay": s.default_entry_delay,
         "default_exit_delay": s.default_exit_delay,
         "language": s.language,
+        "wizard_done": s.wizard_done,
     }
 
 

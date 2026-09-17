@@ -631,6 +631,10 @@ class Settings:
     # name, the rendered log — not the panel's, which follows each Home
     # Assistant user. None means the language Home Assistant itself runs in.
     language: str | None = None
+    # Whether the first-run wizard has been completed or dismissed (§15.1).
+    # Installation state, not a preference: it belongs to the house, not to
+    # whoever happens to open the panel.
+    wizard_done: bool = False
 
 
 @dataclass(frozen=True, slots=True)

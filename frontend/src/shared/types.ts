@@ -265,6 +265,12 @@ export interface ScenarioConfig {
   response_profile_id: string | null;
 }
 
+/** Which categories the log writes, and for how long (SPEC §10.2, §10.3). */
+export interface LogSettingsConfig {
+  enabled: Record<string, boolean>;
+  retention_days: Record<string, number>;
+}
+
 export interface SettingsConfig {
   siren_duration: number;
   arm_hold_timeout: number;
@@ -272,6 +278,14 @@ export interface SettingsConfig {
   technical_profile_id: string | null;
   silent_suppresses: string[];
   camera_dir: string;
+  log: LogSettingsConfig;
+  default_entry_delay: number;
+  default_exit_delay: number;
+  /** The language of the messages Foyer sends out, not of this panel: the
+   * panel follows each Home Assistant user. null means the system language. */
+  language: string | null;
+  /** Whether the first-run wizard has been completed or dismissed (§15.1). */
+  wizard_done: boolean;
 }
 
 export interface FoyerConfig {
@@ -299,6 +313,66 @@ export interface ConfigMeta {
   future_moments: string[];
   template_variables: string[];
   max_conditions: number;
+  log_categories: string[];
+  log_severities: string[];
+  outcomes: string[];
+  retention_bounds: [number, number];
+  /** The stored configuration's schema version, shown beside a backup. */
+  schema_version: [number, number];
+}
+
+// --- the event log: foyer/log/* (store/log_store.py) ------------------------------
+
+export interface LogRow {
+  id: number;
+  ts: string;
+  category: string;
+  event_type: string;
+  severity: "info" | "warning" | "alarm";
+  area_id: string | null;
+  zone_id: string | null;
+  scenario_id: string | null;
+  incident_id: string | null;
+  user_id: string | null;
+  user_name: string | null;
+  channel: string | null;
+  device_id: string | null;
+  outcome: string | null;
+  detail: Record<string, unknown>;
+}
+
+export interface LogQuery {
+  start?: string | null;
+  end?: string | null;
+  categories?: string[];
+  severity?: string | null;
+  area_id?: string | null;
+  zone_id?: string | null;
+  incident_id?: string | null;
+  outcome?: string | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface LogPage {
+  rows: LogRow[];
+  total: number;
+}
+
+export interface LogExport {
+  filename: string;
+  content: string;
+  rows: number;
+  total: number;
+  truncated: boolean;
+}
+
+/** A configuration backup: the stored document with its schema version. */
+export interface ConfigBackup {
+  foyer: string;
+  version: [number, number];
+  created: string;
+  config: FoyerConfig;
 }
 
 export interface Problem {
@@ -333,4 +407,5 @@ export type PageId =
   | "scenarios"
   | "profiles"
   | "groups"
+  | "log"
   | "settings";

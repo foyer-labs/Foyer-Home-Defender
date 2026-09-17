@@ -1,13 +1,23 @@
-// Page 11 — Settings (SPEC §15.1). Phase 1 part 3 ships the chime block
-// (§6.6) and the response defaults: where every inheritance chain ends and
-// what a silent zone keeps quiet. Log retention and backup arrive with part 4.
+// Page 11 — Settings (SPEC §15.1): the global defaults, the response block,
+// the chime (§6.6), what the event log records and keeps (§10.2, §10.3), the
+// configuration backup, and the language of the messages Foyer sends out.
 import { LitElement, css, html, nothing } from "lit";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles } from "../../shared/styles";
-import type { ChimeConfig, ChimeTarget, Problem, SettingsConfig } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import type {
+  ChimeConfig,
+  ChimeTarget,
+  LogSettingsConfig,
+  Problem,
+  SettingsConfig,
+} from "../../shared/types";
+import { download, optionalNumber, problemText, type PanelContext } from "../context";
 import { chimeTargets, entityTargets } from "../ha-targets";
+
+// The languages the panel itself ships (translations/panel/). Foyer's own
+// messages can only be sent in one it actually has.
+const LANGUAGES = ["en", "it"];
 
 const NO_CHIME: ChimeConfig = {
   targets: [],
@@ -28,6 +38,7 @@ class FoyerPageSettings extends LitElement {
     _problems: { state: true },
     _busy: { state: true },
     _saved: { state: true },
+    _restored: { state: true },
   };
 
   ctx?: PanelContext;
@@ -36,6 +47,7 @@ class FoyerPageSettings extends LitElement {
   private _problems: Problem[] = [];
   private _busy = false;
   private _saved = false;
+  private _restored = false;
 
   private get _chime(): ChimeConfig {
     return this._draft ?? structuredClone(this.ctx?.config?.chime ?? NO_CHIME);
@@ -99,12 +111,224 @@ class FoyerPageSettings extends LitElement {
   override render() {
     const ctx = this.ctx;
     if (!ctx?.config) return nothing;
-    return html`${this._renderResponse(ctx.strings)} ${this._renderChime(ctx.strings, this._chime)}
-      <p class="hint later">${t(ctx.strings, "settings.later")}</p>`;
+    return html`${this._renderDefaults(ctx.strings)} ${this._renderResponse(ctx.strings)}
+    ${this._renderChime(ctx.strings, this._chime)} ${this._renderLog(ctx.strings)}
+    ${this._renderBackup(ctx.strings)} ${this._renderLanguage(ctx.strings)}`;
   }
 
   private _entities(domains: string[]): { id: string; name: string }[] {
     return entityTargets(this.ctx!.hass, domains);
+  }
+
+
+  // --- global defaults (§15.1) -----------------------------------------------------
+
+  private _renderDefaults(s: Strings) {
+    const ctx = this.ctx!;
+    const settings = this._settings ?? ctx.config!.settings;
+    const bounds = ctx.meta?.bounds ?? {};
+    const number = (
+      key: "siren_duration" | "arm_hold_timeout" | "default_entry_delay" | "default_exit_delay",
+      range: [number, number] | undefined,
+      hint?: string,
+    ) => html`<label class="field">
+      <span class="lbl">${t(s, `field.${key}`)}</span>
+      <input
+        type="number"
+        min=${range ? range[0] : 0}
+        max=${range ? range[1] : 3600}
+        .value=${String(settings[key])}
+        @change=${(e: Event) => {
+          const value = Number((e.target as HTMLInputElement).value);
+          if (Number.isFinite(value)) void this._saveSettings({ [key]: value });
+        }}
+      />
+      <span class="hint">${hint ?? t(s, "common.seconds")}</span>
+    </label>`;
+    return html`
+      <div class="card">
+        <div class="card-hd"><h2>${t(s, "settings.defaults_title")}</h2></div>
+        <div class="card-bd">
+          <p class="intro">${t(s, "settings.defaults_intro")}</p>
+          <div class="grid-form">
+            ${number("siren_duration", bounds.siren_duration, t(s, "settings.siren_duration_hint"))}
+            ${number("arm_hold_timeout", bounds.arm_hold_timeout, t(s, "settings.arm_hold_hint"))}
+            ${number("default_entry_delay", bounds.entry_delay, t(s, "settings.area_defaults_hint"))}
+            ${number("default_exit_delay", bounds.exit_delay, t(s, "settings.area_defaults_hint"))}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- the event log (§10.2, §10.3) ------------------------------------------------
+
+  private _renderLog(s: Strings) {
+    const ctx = this.ctx!;
+    const settings = this._settings ?? ctx.config!.settings;
+    const log = settings.log;
+    const categories = ctx.meta?.log_categories ?? [];
+    const [min, max] = ctx.meta?.retention_bounds ?? [1, 3650];
+    const change = (changes: Partial<LogSettingsConfig>) => {
+      const next: LogSettingsConfig = {
+        enabled: { ...log.enabled, ...(changes.enabled ?? {}) },
+        retention_days: { ...log.retention_days, ...(changes.retention_days ?? {}) },
+      };
+      void this._saveSettings({ log: next });
+    };
+    return html`
+      <div class="card">
+        <div class="card-hd"><h2>${t(s, "settings.log_title")}</h2></div>
+        <div class="card-bd">
+          <p class="intro">${t(s, "settings.log_intro")}</p>
+          <div class="rows">
+            ${categories.map((category) => {
+              const on = log.enabled[category] !== false;
+              return html`<div class="row">
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    .checked=${on}
+                    @change=${(e: Event) =>
+                      change({
+                        enabled: { [category]: (e.target as HTMLInputElement).checked },
+                      })}
+                  />
+                  <span>${t(s, `category.${category}`)}</span>
+                </label>
+                <span class="spacer"></span>
+                ${on
+                  ? html`<label class="field inline">
+                      <input
+                        type="number"
+                        min=${min}
+                        max=${max}
+                        .value=${String(log.retention_days[category] ?? 30)}
+                        @change=${(e: Event) => {
+                          const days = Number((e.target as HTMLInputElement).value);
+                          if (Number.isFinite(days)) {
+                            change({ retention_days: { [category]: days } });
+                          }
+                        }}
+                      />
+                      <span class="hint">${t(s, "settings.log_days")}</span>
+                    </label>`
+                  : html`<span class="hint">${t(s, "settings.log_off")}</span>`}
+              </div>`;
+            })}
+          </div>
+          <p class="hint">${t(s, "settings.log_rows_hint")}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- backup and restore (§15.1) --------------------------------------------------
+
+  private _renderBackup(s: Strings) {
+    const ctx = this.ctx!;
+    const version = (ctx.meta?.schema_version ?? []).join(".");
+    return html`
+      <div class="card">
+        <div class="card-hd"><h2>${t(s, "settings.backup_title")}</h2></div>
+        <div class="card-bd">
+          <p class="intro">${t(s, "settings.backup_intro")}</p>
+          <div class="actions">
+            <button class="btn" ?disabled=${this._busy} @click=${this._exportConfig}>
+              ${t(s, "settings.backup_export")}
+            </button>
+            <label class="btn file">
+              ${t(s, "settings.backup_import")}
+              <input type="file" accept="application/json,.json" @change=${this._importConfig} />
+            </label>
+          </div>
+          <p class="hint">${t(s, "settings.backup_hint")}</p>
+          <p class="hint">${t(s, "settings.backup_version", { version })}</p>
+          ${this._restored
+            ? html`<div class="notice">${t(s, "settings.backup_restored")}</div>`
+            : nothing}
+        </div>
+      </div>
+    `;
+  }
+
+  private async _exportConfig(): Promise<void> {
+    if (!this.ctx) return;
+    this._busy = true;
+    try {
+      const result = await this.ctx.exportConfig();
+      download(
+        result.filename,
+        JSON.stringify(result.document, null, 2),
+        "application/json",
+      );
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private async _importConfig(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file || !this.ctx) return;
+    this._busy = true;
+    this._restored = false;
+    try {
+      const text = await file.text();
+      const result = await this.ctx.importConfig(JSON.parse(text));
+      this._problems = result.problems;
+      this._restored = result.success;
+    } catch {
+      // A file that is not JSON at all never reaches the backend, and gets
+      // the same answer the backend would give it.
+      this._problems = [
+        { code: "not_a_foyer_backup", kind: "config", ref: null, field: null },
+      ];
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  // --- language of the messages Foyer sends out ------------------------------------
+
+  private _renderLanguage(s: Strings) {
+    const ctx = this.ctx!;
+    const settings = this._settings ?? ctx.config!.settings;
+    return html`
+      <div class="card">
+        <div class="card-hd"><h2>${t(s, "settings.language_title")}</h2></div>
+        <div class="card-bd">
+          <label class="field">
+            <span class="lbl">${t(s, "field.language")}</span>
+            <select
+              @change=${(e: Event) =>
+                this._saveSettings({
+                  language: (e.target as HTMLSelectElement).value || null,
+                })}
+            >
+              <option value="" ?selected=${!settings.language}>
+                ${t(s, "settings.language_system")}
+              </option>
+              ${LANGUAGES.map(
+                (code) =>
+                  html`<option .value=${code} ?selected=${code === settings.language}>
+                    ${t(s, `language.${code}`)}
+                  </option>`,
+              )}
+            </select>
+            <span class="hint">${t(s, "settings.language_hint")}</span>
+          </label>
+          ${this._problems.length
+            ? html`<div class="problems" role="alert">
+                <ul>
+                  ${this._problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+                </ul>
+              </div>`
+            : nothing}
+        </div>
+      </div>
+    `;
   }
 
   // --- response defaults (SPEC §6, part 3 decisions 2, 6 and 7) -------------------
@@ -388,6 +612,32 @@ class FoyerPageSettings extends LitElement {
       }
       .field.inline {
         max-width: 140px;
+      }
+      .rows {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .btn.file {
+        position: relative;
+        overflow: hidden;
+        display: inline-flex;
+        align-items: center;
+      }
+      .btn.file input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
       }
     `,
   ];

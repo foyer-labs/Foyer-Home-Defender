@@ -24,9 +24,11 @@ import "./pages/zones";
 import "./pages/scenarios";
 import "./pages/profiles";
 import "./pages/groups";
+import "./pages/log";
 import "./pages/settings";
+import "./wizard";
 
-// In the order of SPEC §15.1: 1–5, then 11 and 13 as they arrive.
+// In the order of SPEC §15.1: 1–5, then 13, 10 and 11.
 const PAGES: PageId[] = [
   "overview",
   "areas",
@@ -34,6 +36,7 @@ const PAGES: PageId[] = [
   "scenarios",
   "profiles",
   "groups",
+  "log",
   "settings",
 ];
 const CONFIG_PAGES: PageId[] = ["areas", "zones", "scenarios", "profiles", "groups", "settings"];
@@ -55,8 +58,20 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   scenarios: ["areas", "reports_master", "switching", "exit_override", "siren"],
   profiles: ["inheritance", "moments", "conditions", "severity", "silent"],
   groups: ["threshold", "members", "suppress", "derived"],
-  settings: ["targets", "mode", "quiet", "during_exit", "response"],
+  log: ["category", "zone_disarmed", "incident", "user", "export"],
+  settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
 };
+
+/** Drop empty filters: "everything" is an absent key, not an empty string. */
+function prune(query: object): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(query).filter(
+      ([, value]) =>
+        value !== null && value !== undefined && value !== "" &&
+        !(Array.isArray(value) && value.length === 0),
+    ),
+  );
+}
 
 interface Prefs {
   help?: Record<string, boolean>;
@@ -189,6 +204,19 @@ class FoyerPanel extends LitElement {
           type: "foyer/config/settings",
           settings: { ...this._config?.settings, ...settings },
         }),
+      queryLog: (query) =>
+        hass.callWS({ type: "foyer/log/query", ...prune(query) }),
+      exportLog: (query, format) =>
+        hass.callWS({ type: "foyer/log/export", format, ...prune(query) }),
+      clearLog: async () => {
+        const result = await hass.callWS<{ success: boolean; removed: number }>({
+          type: "foyer/log/clear",
+        });
+        return result;
+      },
+      exportConfig: () => hass.callWS({ type: "foyer/config/export" }),
+      importConfig: (document) =>
+        this._edit("config", { type: "foyer/config/import", document }),
       bypass: (zoneId, bypass, seconds) =>
         hass.callWS<CommandResult>({
           type: "foyer/bypass",
@@ -311,8 +339,17 @@ class FoyerPanel extends LitElement {
     const ctx = this._context();
     if (!ctx) return html`<p class="muted">${t(s, "common.loading")}</p>`;
     const page = this._page;
+    // The first-run wizard sits above whatever page is open until it is
+    // finished or dismissed: it is about the installation, not about a page.
+    const wizard =
+      this._isAdmin && this._config && !this._config.settings.wizard_done
+        ? html`<foyer-wizard
+            .ctx=${ctx}
+            @wizard-done=${() => void this._loadConfig()}
+          ></foyer-wizard>`
+        : nothing;
     return html`
-      ${this._prefs.help_hidden ? nothing : this._renderHelp(s, page)}
+      ${wizard} ${this._prefs.help_hidden ? nothing : this._renderHelp(s, page)}
       ${this._renderPage(page, ctx)}
     `;
   }
@@ -331,6 +368,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-profiles .ctx=${ctx}></foyer-page-profiles>`;
       case "groups":
         return html`<foyer-page-groups .ctx=${ctx}></foyer-page-groups>`;
+      case "log":
+        return html`<foyer-page-log .ctx=${ctx}></foyer-page-log>`;
       case "settings":
         return html`<foyer-page-settings .ctx=${ctx}></foyer-page-settings>`;
       default:
