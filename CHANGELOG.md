@@ -5,6 +5,38 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.6] — what the first real use of page 5 found
+
+**Pre-release, for testing only**, like the alphas before it. No schema change:
+this is `alpha.5` with the configuration screens made usable.
+
+### Fixed
+- **A notification target could not be picked from the list.** The panel built
+  every picker from Home Assistant's *entities*, but the Companion app and
+  Telegram are *services*, which are not entities: there was nothing to suggest
+  and the field had to be typed by hand. Both are now read and offered
+  together. The same blind spot left the chime's target list without any
+  notify target at all, so **the chime on the phone could not be configured**
+  from the panel that was built for it.
+- **Calling a service** now suggests the domains your installation has, and
+  then that domain's services.
+- **The action editor's layout**: the entity list took a single cell beside two
+  small fields, which with a house's worth of switches left the row tall and
+  the other fields floating at the top. It now takes a row of its own, scrolls
+  inside itself, and above eight entities offers a search that matches every
+  word in any order. What is already chosen stays visible whatever you type.
+- **A siren's duration says seconds**, and says that it is capped at the siren
+  cutoff. It was a bare number, and the natural guess was minutes.
+- **A siren's tone is a list of that siren's own tones**, read from the device,
+  instead of a free text field; a siren that declares none says so.
+- An action answering many moments no longer prints all of them into its
+  collapsed row.
+- **The README's logo and links were broken inside HACS**, where a relative
+  path resolves against Home Assistant instead of GitHub.
+
+### Added
+- An Italian README, since the interface has been in Italian from the first day.
+
 ## [0.1.0-alpha.5] — Phase 1, part 3: response profiles, actions, bypass
 
 **Pre-release, for testing only.** Still not for protecting a house: no event
