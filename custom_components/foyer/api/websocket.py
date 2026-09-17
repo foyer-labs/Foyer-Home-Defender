@@ -14,21 +14,25 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.storage import Store
+from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
 from .. import i18n
 from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
+from ..core.journal import config_row
 from ..core.models import (
     ARMED_HA_STATES,
     MAX_ARM_HOLD_TIMEOUT,
     MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
     MAX_EXIT_DELAY,
+    MAX_RETENTION_DAYS,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_VERIFICATION_WINDOW,
     MIN_ARM_HOLD_TIMEOUT,
+    MIN_RETENTION_DAYS,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
     SILENCEABLE,
@@ -41,7 +45,10 @@ from ..core.models import (
     BypassZone,
     Decision,
     DisarmRequest,
+    LogCategory,
+    LogSeverity,
     Moment,
+    Outcome,
     ZoneType,
 )
 from ..core.presets import UNAVAILABLE_TYPES, preset
@@ -53,18 +60,30 @@ from ..core.validation import (
     MAX_ACTION_DELAY,
     MAX_SEVERITY,
     ZONE_DOMAINS,
+    Problem,
+    edit_conflicts,
+    validate,
 )
 from ..runtime.system import FoyerSystem
 from ..store.config_store import ConfigStore
 from ..store.editing import (
     KINDS,
     EditResult,
+    config_diff,
     delete,
     update_chime,
     update_settings,
     upsert,
 )
-from ..store.schema import config_to_dict
+from ..store.log_store import export_csv, export_json
+from ..store.migrations import MigrationError, migrate
+from ..store.schema import (
+    STORAGE_MINOR_VERSION,
+    STORAGE_VERSION,
+    ConfigError,
+    config_from_dict,
+    config_to_dict,
+)
 
 PREFS_KEY = "foyer.prefs"
 
@@ -98,6 +117,11 @@ def async_register(hass: HomeAssistant) -> None:
         ws_bypass,
         ws_prefs_get,
         ws_prefs_set,
+        ws_log_query,
+        ws_log_export,
+        ws_log_clear,
+        ws_config_export,
+        ws_config_import,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -348,6 +372,13 @@ def _meta() -> dict[str, Any]:
         "future_moments": [m.value for m in FUTURE_MOMENTS],
         "template_variables": list(TEMPLATE_VARIABLES),
         "max_conditions": MAX_CONDITIONS,
+        # What pages 10 and 11 need to build the filters and the retention
+        # block without knowing the engine.
+        "log_categories": [c.value for c in LogCategory],
+        "log_severities": [s.value for s in LogSeverity],
+        "outcomes": [o.value for o in Outcome],
+        "retention_bounds": [MIN_RETENTION_DAYS, MAX_RETENTION_DAYS],
+        "schema_version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
     }
 
 
@@ -371,6 +402,9 @@ async def _apply(
     msg_id: int,
     system: FoyerSystem,
     result: EditResult,
+    *,
+    operation: str = "save",
+    kind: str = "config",
 ) -> None:
     """Store a validated edit and reload, or return its problems untouched."""
     if result.config is None:
@@ -379,6 +413,22 @@ async def _apply(
             {"success": False, "problems": [asdict(p) for p in result.problems]},
         )
         return
+    # Who changed what, with a summary of what moved (§10.2, category
+    # ``config``). Recorded before the reload, which replaces this system.
+    system.async_record(
+        (
+            config_row(
+                dt_util.utcnow(),
+                operation=operation,
+                kind=kind,
+                item_id=result.id,
+                user_id=connection.user.id,
+                user_name=connection.user.name,
+                channel=CHANNEL_HA_UI,
+                changes=config_diff(system.config, result.config),
+            ),
+        )
+    )
     await ConfigStore(hass).async_save(result.config)
     # The entities follow the configuration: reload to rebuild them. The alarm
     # state is saved on unload and restored on setup (INV-3).
@@ -412,7 +462,9 @@ async def ws_config_save(
         msg["item"],
         trigger_confirmed=msg["trigger_confirmed"],
     )
-    await _apply(hass, connection, msg["id"], system, result)
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="save", kind=msg["kind"]
+    )
 
 
 @websocket_api.websocket_command(
@@ -434,7 +486,15 @@ async def ws_config_delete(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     result = delete(system.config, system.state, msg["kind"], msg["item_id"])
-    await _apply(hass, connection, msg["id"], system, result)
+    await _apply(
+        hass,
+        connection,
+        msg["id"],
+        system,
+        result,
+        operation="delete",
+        kind=msg["kind"],
+    )
 
 
 @websocket_api.websocket_command(
@@ -453,7 +513,9 @@ async def ws_settings_save(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     result = update_settings(system.config, system.state, msg["settings"])
-    await _apply(hass, connection, msg["id"], system, result)
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="save", kind="settings"
+    )
 
 
 @websocket_api.websocket_command(
@@ -473,7 +535,9 @@ async def ws_chime_save(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     result = update_chime(system.config, system.state, msg["chime"])
-    await _apply(hass, connection, msg["id"], system, result)
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="save", kind="chime"
+    )
 
 
 @websocket_api.websocket_command(
@@ -557,3 +621,251 @@ async def ws_prefs_set(
     data[connection.user.id] = mine
     await store.async_save(data)
     connection.send_result(msg["id"], mine)
+
+
+# --- the event log (SPEC §10) ------------------------------------------------------
+
+# One export carries what a person can reasonably read, not the whole
+# database: an export is a filtered view (§10.3), and a year of zone activity
+# belongs in the file on disk rather than in one WebSocket message.
+MAX_EXPORT_ROWS = 10000
+
+_LOG_FILTERS = {
+    vol.Optional("start"): vol.Any(str, None),
+    vol.Optional("end"): vol.Any(str, None),
+    vol.Optional("categories"): [str],
+    vol.Optional("severity"): vol.Any(str, None),
+    vol.Optional("area_id"): vol.Any(str, None),
+    vol.Optional("zone_id"): vol.Any(str, None),
+    vol.Optional("user_id"): vol.Any(str, None),
+    vol.Optional("incident_id"): vol.Any(str, None),
+    vol.Optional("outcome"): vol.Any(str, None),
+}
+
+
+def _filters(msg: dict[str, Any]) -> dict[str, Any]:
+    """The filters the panel sent, parsed. A date that cannot be read is
+    dropped rather than guessed at: a wrong window hides rows silently."""
+    out: dict[str, Any] = {}
+    for key in ("start", "end"):
+        if value := msg.get(key):
+            parsed = dt_util.parse_datetime(value)
+            if parsed is not None:
+                out[key] = dt_util.as_utc(parsed)
+    for key in (
+        "categories",
+        "severity",
+        "area_id",
+        "zone_id",
+        "user_id",
+        "incident_id",
+        "outcome",
+    ):
+        if msg.get(key):
+            out[key] = msg[key]
+    return out
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/log/query",
+        vol.Optional("limit", default=200): vol.All(int, vol.Range(min=1, max=1000)),
+        vol.Optional("offset", default=0): vol.All(int, vol.Range(min=0)),
+        **_LOG_FILTERS,
+    }
+)
+@websocket_api.async_response
+async def ws_log_query(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Page 10, and the recent events on page 1."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if system.log is None:
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
+    await system.log.async_flush()
+    result = await system.log.async_query(
+        limit=msg["limit"], offset=msg["offset"], **_filters(msg)
+    )
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/log/export",
+        vol.Required("format"): vol.In(["csv", "json"]),
+        **_LOG_FILTERS,
+    }
+)
+@websocket_api.async_response
+async def ws_log_export(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Exactly the rows the current filters show, as CSV or JSON (§10.3)."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if system.log is None:
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
+    await system.log.async_flush()
+    result = await system.log.async_query(limit=MAX_EXPORT_ROWS, **_filters(msg))
+    rows = result["rows"]
+    content = export_csv(rows) if msg["format"] == "csv" else export_json(rows)
+    stamp = dt_util.now().strftime("%Y%m%d-%H%M")
+    fmt = msg["format"]
+    connection.send_result(
+        msg["id"],
+        {
+            "filename": f"foyer-log-{stamp}.{fmt}",
+            "content": content,
+            "rows": len(rows),
+            # What the filters match in total, so the panel can say plainly
+            # that an export was cut short rather than look complete.
+            "total": result["total"],
+            "truncated": result["total"] > len(rows),
+        },
+    )
+
+
+@websocket_api.websocket_command({vol.Required("type"): "foyer/log/clear"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_log_clear(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Empty the log. An edit_config operation, and itself logged (§10.3).
+
+    docs/security-model.md says plainly that an administrator with filesystem
+    access can delete the database outright, so this row makes the log
+    audit-useful, not tamper-proof.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if system.log is None:
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
+    await system.log.async_flush()
+    removed = await system.log.async_clear()
+    system.async_record(
+        (
+            config_row(
+                dt_util.utcnow(),
+                operation="log_cleared",
+                kind="log",
+                user_id=connection.user.id,
+                user_name=connection.user.name,
+                channel=CHANNEL_HA_UI,
+                changes={"removed": removed},
+            ),
+        )
+    )
+    connection.send_result(msg["id"], {"success": True, "removed": removed})
+
+
+# --- configuration backup and restore (SPEC §15.1) ---------------------------------
+
+# What an export is, so an import can tell a Foyer backup from any other JSON
+# file dropped on it.
+BACKUP_MAGIC = "foyer.config"
+
+
+@websocket_api.websocket_command({vol.Required("type"): "foyer/config/export"})
+@websocket_api.require_admin
+@callback
+def ws_config_export(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """The stored document with its schema version (§15.1).
+
+    Nobody who has configured forty zones will do it twice. The version
+    travels with the document because an import must migrate it, not guess at
+    it — and must refuse one written by a newer major version.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    stamp = dt_util.now().strftime("%Y%m%d-%H%M")
+    document = {
+        "foyer": BACKUP_MAGIC,
+        "version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
+        "created": dt_util.now().isoformat(),
+        "config": config_to_dict(system.config),
+    }
+    connection.send_result(
+        msg["id"],
+        {"filename": f"foyer-config-{stamp}.json", "document": document},
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/config/import",
+        vol.Required("document"): dict,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_config_import(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Restore a backup: migrate, validate, then check what is armed.
+
+    Never around those three. A document written by an older version is
+    brought up to date by the same steps a real upgrade uses; one written by a
+    newer major version is refused, because silently dropping fields it does
+    not understand could drop an alarm setting; and a restore that would
+    change an armed area is refused like any other edit.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    document = msg["document"]
+    if document.get("foyer") != BACKUP_MAGIC or "config" not in document:
+        connection.send_result(
+            msg["id"],
+            {
+                "success": False,
+                "problems": [asdict(Problem("not_a_foyer_backup", "config"))],
+            },
+        )
+        return
+    version = document.get("version") or [STORAGE_VERSION, STORAGE_MINOR_VERSION]
+    try:
+        data = migrate(
+            (int(version[0]), int(version[1])),
+            (STORAGE_VERSION, STORAGE_MINOR_VERSION),
+            document["config"],
+        )
+        config = config_from_dict(data)
+    except MigrationError:
+        connection.send_result(
+            msg["id"],
+            {
+                "success": False,
+                "problems": [asdict(Problem("backup_version_unsupported", "config"))],
+            },
+        )
+        return
+    except (ConfigError, KeyError, TypeError, ValueError, IndexError):
+        connection.send_result(
+            msg["id"],
+            {"success": False, "problems": [asdict(Problem("invalid", "config"))]},
+        )
+        return
+
+    problems = validate(config) + edit_conflicts(system.config, config, system.state)
+    result = EditResult(
+        config=None if problems else config, problems=tuple(problems), id=None
+    )
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="restore", kind="config"
+    )

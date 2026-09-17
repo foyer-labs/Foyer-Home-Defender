@@ -30,12 +30,15 @@ from homeassistant.util import dt as dt_util
 from ..const import SIGNAL_UPDATE
 from ..core.conditions import condition_entities
 from ..core.engine import arm_blockers, decide, master_state, next_wakeup
+from ..core.journal import LogRow, action_row, rows_for
 from ..core.models import (
     AreaState,
     Decision,
     EntityState,
     Event,
     FoyerConfig,
+    LogCategory,
+    Outcome,
     RuntimeState,
     Startup,
     SystemSnapshot,
@@ -43,14 +46,68 @@ from ..core.models import (
     ZoneStateChanged,
 )
 from ..core.triggers import fault_cause
+from ..store.log_store import LogStore
 from ..store.state_store import StateStore, StoredState
-from .executor import Executor
+from .executor import ActionResult, Executor
 
 _LOGGER = logging.getLogger(__name__)
 
 # How often "still alive" is written, bounding how much a crash can overstate
 # the restart gap. Never understate: see store/state_store.py.
 ALIVE_INTERVAL = timedelta(minutes=5)
+
+# How often the log drops what is older than its retention (SPEC §10.3).
+PURGE_INTERVAL = timedelta(days=1)
+
+# Categories that do not become sensor.foyer_last_event. Zone activity is the
+# noisy part of the log and would keep overwriting the event that matters; an
+# action is the consequence of an event rather than an event, and "Foyer sent
+# a notification" is a worse thing for a dashboard to show than what the
+# notification was about. A *failed* action is the exception: that one is
+# news, and it is the failure this project exists to surface early.
+_QUIET_CATEGORIES = frozenset(
+    {LogCategory.ZONE_ARMED, LogCategory.ZONE_DISARMED, LogCategory.ACTION}
+)
+
+
+def _ok(row: LogRow) -> bool:
+    return row.outcome == Outcome.OK.value
+
+
+def _action_rows(decision: Decision, results: list[ActionResult]) -> tuple[LogRow, ...]:
+    """How each action went, filed against what asked for it.
+
+    An action is planned from an occurrence, so the first occurrence of the
+    same moment is where it happened: that is what gives the row its area,
+    its zone and, when there is one, its incident.
+    """
+    context = {}
+    for occurrence in decision.occurrences:
+        context.setdefault(
+            occurrence.moment,
+            (occurrence.area_id, occurrence.zone_id, occurrence.incident_id),
+        )
+    by_id = {intent.action_id: intent for intent in decision.actions}
+    rows = []
+    for result in results:
+        intent = by_id.get(result.action_id)
+        moment = intent.moment if intent is not None else None
+        area_id, zone_id, incident_id = context.get(moment, (None, None, None))
+        rows.append(
+            action_row(
+                decision.at,
+                action_id=result.action_id,
+                kind=result.kind,
+                moment=moment,
+                ok=result.ok,
+                error=result.error,
+                profile_id=intent.profile_id if intent is not None else None,
+                area_id=area_id,
+                zone_id=zone_id,
+                incident_id=incident_id,
+            )
+        )
+    return tuple(rows)
 
 
 def entity_state(state: State | None) -> EntityState:
@@ -72,12 +129,15 @@ class FoyerSystem:
         config: FoyerConfig,
         state_store: StateStore,
         stored: StoredState | None,
+        log: LogStore | None = None,
     ) -> None:
         self.hass = hass
         self.config = config
         self.state = stored.state if stored else RuntimeState()
         self._down_since = stored.alive_at if stored else None
         self._state_store = state_store
+        self.log = log
+        self.last_row: LogRow | None = None
         # Until Home Assistant has started, entities are still appearing:
         # faults are not announced yet (see SystemSnapshot.settling).
         self.settling = not hass.is_running
@@ -109,6 +169,10 @@ class FoyerSystem:
         self._unsubs.append(
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_ha_stop)
         )
+        if self.log is not None:
+            self._unsubs.append(
+                async_track_time_interval(self.hass, self._on_purge, PURGE_INTERVAL)
+            )
         self._reschedule()
 
     async def async_stop(self) -> None:
@@ -133,6 +197,23 @@ class FoyerSystem:
         await self.async_handle(Startup(down_since=self._down_since, cause=cause))
 
     @callback
+    def _on_purge(self, _now: datetime) -> None:
+        self.hass.async_create_task(self._async_purge(), eager_start=True)
+
+    async def _async_purge(self) -> None:
+        if self.log is None:
+            return
+        try:
+            removed = await self.log.async_purge(
+                self.config.settings.log, dt_util.utcnow()
+            )
+        except Exception:
+            _LOGGER.exception("Foyer could not purge its event log")
+            return
+        if removed:
+            _LOGGER.debug("Foyer purged %s expired log rows", removed)
+
+    @callback
     def _on_alive(self, _now: datetime) -> None:
         self.hass.async_create_task(self._async_save(), eager_start=True)
 
@@ -143,9 +224,12 @@ class FoyerSystem:
     # --- events --------------------------------------------------------------
 
     async def async_handle(
-        self, event: Event, overrides: Mapping[str, EntityState] | None = None
+        self,
+        event: Event,
+        overrides: Mapping[str, EntityState] | None = None,
+        old_state: str | None = None,
     ) -> Decision:
-        """Decide, store, persist, execute. Returns the Decision for reporting."""
+        """Decide, store, persist, execute, record. Returns the Decision."""
         # No await between snapshot and store: on the event loop this block is
         # atomic, so two events can never interleave their decisions.
         decision = decide(
@@ -156,7 +240,12 @@ class FoyerSystem:
         self._reschedule()
         self._notify()
         await self._async_save()
-        await self._executor.async_run(decision)
+        # The log is written before the actions run and again after them: what
+        # happened is on record even if an action hangs, and how each action
+        # went is recorded when it is known (§10.2, category ``action``).
+        self.async_record(rows_for(event, decision, self.config, old_state=old_state))
+        results = await self._executor.async_run(decision)
+        self.async_record(_action_rows(decision, results))
         return decision
 
     async def async_zone_changed(
@@ -167,7 +256,23 @@ class FoyerSystem:
         return await self.async_handle(
             ZoneStateChanged(entity_id=entity_id, new=entity_state(new)),
             overrides={entity_id: entity_state(old)},
+            old_state=old.state if old else None,
         )
+
+    @callback
+    def async_record(self, rows: tuple[LogRow, ...]) -> None:
+        """Hand rows to the log. Never waits for it: a slow or broken log must
+        not delay the alarm path by one millisecond."""
+        if not rows:
+            return
+        if self.log is not None:
+            self.log.async_write(rows, self.config.settings.log)
+        # sensor.foyer_last_event shows the last row that is worth showing,
+        # which is not the thousandth motion of the day.
+        for row in rows:
+            quiet = row.category in _QUIET_CATEGORIES
+            if not quiet or (row.category is LogCategory.ACTION and not _ok(row)):
+                self.last_row = row
 
     @callback
     def async_heartbeat(self, entity_id: str) -> None:

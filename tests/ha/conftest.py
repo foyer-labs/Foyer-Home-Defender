@@ -8,9 +8,13 @@ Run with the plugin enabled explicitly, so the pure suite never loads it:
 from __future__ import annotations
 
 from collections.abc import Generator
+import pathlib
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    get_test_config_dir,
+)
 
 from custom_components.foyer.const import (
     CONF_AREA_NAME,
@@ -24,6 +28,24 @@ ZONE = "binary_sensor.front_door"
 PANEL_ENTITY = "alarm_control_panel.foyer_casa"
 MASTER = "alarm_control_panel.foyer_master"
 SELECT = "select.foyer_scenario"
+
+
+@pytest.fixture(autouse=True)
+def isolated_log(monkeypatch, request) -> Generator[None]:
+    """One event log database per test.
+
+    The test configuration directory is shared between tests, and the log is
+    deliberately a file in it (that is where a real installation keeps it), so
+    without this a test would read the rows of the one before it.
+    """
+    from custom_components.foyer.store import log_store
+
+    name = f"foyer-log-{abs(hash(request.node.nodeid))}.db"
+    monkeypatch.setattr(log_store, "DB_FILENAME", name)
+    yield
+    for suffix in ("", "-wal", "-shm"):
+        path = pathlib.Path(get_test_config_dir(name + suffix))
+        path.unlink(missing_ok=True)
 
 
 @pytest.fixture(autouse=True)

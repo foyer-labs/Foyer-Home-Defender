@@ -142,6 +142,8 @@
     "duration_out_of_range": "Durata fuori intervallo.",
     "switch_state_invalid": "Scegli acceso o spento.",
     "brightness_out_of_range": "La luminosità è un numero da 0 a 255.",
+    "not_a_foyer_backup": "Quel file non è un backup della configurazione di Foyer.",
+    "backup_version_unsupported": "Quel backup è stato scritto da una versione di Foyer più recente di questa. Aggiorna prima Foyer.",
     "profile_in_use": "Qualcosa usa ancora questo profilo. Spostalo altrove prima."
   },
   "field": {

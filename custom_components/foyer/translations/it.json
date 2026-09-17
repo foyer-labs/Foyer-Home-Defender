@@ -129,6 +129,9 @@
       },
       "incident": {
         "name": "Incidente"
+      },
+      "last_event": {
+        "name": "Ultimo evento"
       }
     },
     "switch": {

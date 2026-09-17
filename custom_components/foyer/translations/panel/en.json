@@ -142,6 +142,8 @@
     "duration_out_of_range": "Duration is out of range.",
     "switch_state_invalid": "Choose on or off.",
     "brightness_out_of_range": "Brightness is a number from 0 to 255.",
+    "not_a_foyer_backup": "That file is not a Foyer configuration backup.",
+    "backup_version_unsupported": "That backup was written by a newer version of Foyer than this one. Update Foyer first.",
     "profile_in_use": "Something still uses this profile. Point it elsewhere first."
   },
   "field": {

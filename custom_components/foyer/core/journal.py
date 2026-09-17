@@ -316,7 +316,7 @@ def action_row(
     *,
     action_id: str,
     kind: str,
-    moment: Moment,
+    moment: Moment | None,
     ok: bool,
     error: str | None = None,
     profile_id: str | None = None,
@@ -344,7 +344,7 @@ def action_row(
         zone_id=zone_id,
         incident_id=incident_id,
         outcome=(Outcome.OK if ok else Outcome.FAILED).value,
-        detail={**detail, "moment": moment.value},
+        detail={**detail, "moment": moment.value if moment else None},
     )
 
 

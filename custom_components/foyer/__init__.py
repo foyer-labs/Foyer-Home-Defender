@@ -37,6 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .runtime.system import FoyerSystem
     from .runtime.watcher import async_watch_zones
     from .store.config_store import ConfigStore
+    from .store.log_store import LogStore
     from .store.schema import ConfigError
     from .store.seed import seed_config
     from .store.state_store import StateStore
@@ -68,7 +69,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Foyer cannot read its saved alarm state: {err}"
         ) from err
 
-    system = FoyerSystem(hass, config, state_store, stored)
+    log = LogStore(hass)
+    try:
+        await log.async_setup()
+    except Exception:
+        # The alarm runs without its log. It must never be the other way
+        # round: an unreadable database file is a diagnostic problem, not a
+        # reason to leave a house unprotected (SPEC §10, "a log failure must
+        # never block the alarm path").
+        _LOGGER.exception("Foyer could not open its event log; running without it")
+        log = None
+
+    system = FoyerSystem(hass, config, state_store, stored, log)
     entry.runtime_data = system
     hass.data[DOMAIN] = system
 
@@ -91,13 +103,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         await system.async_stop()
+        if system.log is not None:
+            await system.log.async_close()
         async_unregister_panel(hass)
         hass.data.pop(DOMAIN, None)
     return unloaded
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Deleting the integration deletes its stored configuration and state."""
+    """Deleting the integration deletes its stored configuration and state.
+
+    The event log database is deliberately left where it is. Whether to keep
+    or delete it is a question the user must be asked, and asking it belongs
+    to the clean uninstall of Phase 5 (SPEC §16); deleting thirty days of
+    history without a word would be the wrong default to guess.
+    """
     from .store.config_store import ConfigStore
     from .store.state_store import StateStore
 

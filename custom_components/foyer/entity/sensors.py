@@ -60,6 +60,7 @@ async def async_setup_sensors(
             *(FoyerCountdown(system, entry.entry_id, a) for a in system.config.areas),
             FoyerTechnicalCause(system, entry.entry_id),
             FoyerIncident(system, entry.entry_id),
+            FoyerLastEvent(system, entry.entry_id),
         ]
     )
 
@@ -249,6 +250,46 @@ class FoyerIncident(FoyerEntity, SensorEntity):
             # The highest contributing profile severity: filled once response
             # profiles exist (Phase 1 part 3); None until then.
             "severity": max(severities, default=None),
+        }
+
+
+class FoyerLastEvent(FoyerEntity, SensorEntity):
+    """The last significant thing in the log, for dashboards (§13).
+
+    Significant, not last: zone activity is thousands of rows a day and would
+    keep overwriting the event somebody actually wants to see. The row itself
+    is in the panel's log page; this is the one line a dashboard shows.
+    """
+
+    _attr_translation_key = "last_event"
+
+    def __init__(self, system: FoyerSystem, entry_id: str) -> None:
+        super().__init__(system)
+        self._attr_unique_id = f"{entry_id}_last_event"
+        self.entity_id = f"sensor.{DOMAIN}_last_event"
+        self._attr_device_info = hub_device(entry_id)
+
+    @property
+    def native_value(self) -> str:
+        row = self._system.last_row
+        return row.event_type if row else NONE
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        row = self._system.last_row
+        if row is None:
+            return {"category": None, "severity": None, "when": None}
+        zones = {z.id: z.name for z in self._system.config.zones}
+        areas = {a.id: a.name for a in self._system.config.areas}
+        return {
+            "category": str(row.category),
+            "severity": str(row.severity),
+            "when": row.ts.isoformat(),
+            "area": areas.get(row.area_id) if row.area_id else None,
+            "zone": zones.get(row.zone_id) if row.zone_id else None,
+            "channel": row.channel,
+            "outcome": row.outcome,
+            "incident_id": row.incident_id,
         }
 
 
