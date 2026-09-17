@@ -394,7 +394,9 @@
     "bypass_indefinite": "until you put it back",
     "bypass_hint": "An excluded zone does not alarm. Without a duration it comes back when the area is disarmed; with one it comes back on its own, and says so.",
     "silent_hint": "The response runs without the sounders the settings list.",
-    "profile_hint": "Read only when this zone alarms. Empty: the area's profile."
+    "profile_hint": "Read only when this zone alarms. Empty: the area's profile.",
+    "bypass_minutes": "Minutes",
+    "bypass_minutes_placeholder": "e.g. 20"
   },
   "scenarios": {
     "title": "Scenarios",
@@ -417,7 +419,17 @@
     "entity_missing": "Entity not found: {entity}",
     "area_countdown": "{area} — {countdown}",
     "technical": "Technical alarm: {zones}",
-    "incident": "Incident: {zones}"
+    "incident": "Incident: {zones}",
+    "scenario": "Scenario",
+    "pick_scenario": "Arm a scenario…",
+    "not_ready": "Not ready to arm",
+    "zone_in": "{zone} — {areas}",
+    "editor_entity": "Panel to show",
+    "editor_master": "Whole house (master)",
+    "editor_layout": "Layout",
+    "layout_full": "Full — areas, scenarios, countdown and what blocks arming",
+    "layout_compact": "Compact — state and one action",
+    "editor_hint": "The keypad layouts arrive with codes and users, in the next phase."
   },
   "help": {
     "toggle": "About this section",

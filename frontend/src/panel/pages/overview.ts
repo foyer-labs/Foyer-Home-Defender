@@ -375,7 +375,42 @@ class FoyerPageOverview extends LitElement {
           ${t(s, "zones.bypass_hours", { hours })}
         </button>`,
       )}
+      <label class="minutes">
+        <input
+          type="number"
+          min="1"
+          max="10080"
+          placeholder=${t(s, "zones.bypass_minutes_placeholder")}
+          aria-label=${t(s, "zones.bypass_minutes")}
+          @keydown=${(e: KeyboardEvent) => {
+            if (e.key === "Enter") this._bypassMinutes(zone.id, e.target as HTMLInputElement);
+          }}
+        />
+        <button
+          class="btn sm ghost"
+          ?disabled=${this._busy}
+          @click=${(e: Event) => {
+            const input = (e.target as HTMLElement)
+              .closest("label")!
+              .querySelector("input") as HTMLInputElement;
+            this._bypassMinutes(zone.id, input);
+          }}
+        >
+          ${t(s, "zones.bypass_minutes")}
+        </button>
+      </label>
     </div>`;
+  }
+
+  /** Any duration, in minutes: an hour and eight hours cover the common cases
+   * but not "twenty minutes while the window airs the room" — and a timed
+   * exclusion whose length you cannot choose is one you round up. */
+  private _bypassMinutes(zoneId: string, input: HTMLInputElement): void {
+    const ctx = this.ctx!;
+    const minutes = Number(input.value);
+    if (!Number.isFinite(minutes) || minutes < 1) return;
+    input.value = "";
+    void this._run(() => ctx.bypass(zoneId, true, Math.round(minutes) * 60));
   }
 
   private _zoneStatus(s: Strings, zone: StatusZone) {
@@ -401,6 +436,21 @@ class FoyerPageOverview extends LitElement {
     stateStyles,
     formStyles,
     css`
+      .minutes {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .minutes input {
+        width: 5.5em;
+        font: inherit;
+        font-size: 13px;
+        padding: 4px 6px;
+        border: 1px solid var(--divider-color);
+        border-radius: 6px;
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+      }
       .bypass {
         display: flex;
         gap: 4px;

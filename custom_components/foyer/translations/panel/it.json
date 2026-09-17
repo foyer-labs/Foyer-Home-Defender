@@ -394,7 +394,9 @@
     "bypass_indefinite": "finché non la reinserisci",
     "bypass_hint": "Una zona esclusa non allarma. Senza durata rientra al disinserimento dell'area; con una durata rientra da sola, e lo dice.",
     "silent_hint": "La risposta gira senza i sonori elencati nelle impostazioni.",
-    "profile_hint": "Letto solo quando questa zona allarma. Vuoto: il profilo dell'area."
+    "profile_hint": "Letto solo quando questa zona allarma. Vuoto: il profilo dell'area.",
+    "bypass_minutes": "Minuti",
+    "bypass_minutes_placeholder": "es. 20"
   },
   "scenarios": {
     "title": "Scenari",
@@ -417,7 +419,17 @@
     "entity_missing": "Entità non trovata: {entity}",
     "area_countdown": "{area} — {countdown}",
     "technical": "Allarme tecnico: {zones}",
-    "incident": "Incidente: {zones}"
+    "incident": "Incidente: {zones}",
+    "scenario": "Scenario",
+    "pick_scenario": "Inserisci uno scenario…",
+    "not_ready": "Non pronto all'inserimento",
+    "zone_in": "{zone} — {areas}",
+    "editor_entity": "Pannello da mostrare",
+    "editor_master": "Tutta la casa (master)",
+    "editor_layout": "Disposizione",
+    "layout_full": "Completa: aree, scenari, conto alla rovescia e cosa blocca l'inserimento",
+    "layout_compact": "Compatta: stato e un'azione",
+    "editor_hint": "Le disposizioni con tastierino arrivano con codici e utenti, nella fase successiva."
   },
   "help": {
     "toggle": "Informazioni su questa sezione",

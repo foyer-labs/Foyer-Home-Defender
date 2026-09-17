@@ -1,7 +1,12 @@
 // foyer-card: an area's (or the master's) state, its countdown, and arm/disarm
 // (SPEC §15.3). The card decides nothing (INV-2): it sends a command, the
-// engine accepts or refuses, and the card renders the answer. The full and
-// compact layouts arrive with the rest of the card work (Phase 1, part 4).
+// engine accepts or refuses, and the card renders the answer.
+//
+// Two layouts in this phase. `full` is the alarm dashboard: every area with
+// its state and countdown, the scenario selector, and the zones that would
+// stop it arming, each with a way out. `compact` is one row for the top of an
+// existing dashboard: the state and one action. The keypad of §15.3 belongs
+// to Phase 2, because a keypad without codes to check is decoration.
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 
 import { loadStrings, t, type Strings } from "../shared/i18n";
@@ -14,9 +19,12 @@ import type {
   StatusArea,
 } from "../shared/types";
 
+type Layout = "full" | "compact";
+
 interface FoyerCardConfig {
   type: string;
   entity?: string;
+  layout?: Layout;
 }
 
 const ENTITY_PREFIX = "alarm_control_panel.foyer_";
@@ -46,8 +54,18 @@ class FoyerCard extends LitElement {
   private _timer?: number;
 
   static getStubConfig(hass: HomeAssistant): FoyerCardConfig {
-    const entity = Object.keys(hass.states).find((id) => id.startsWith(ENTITY_PREFIX));
-    return { type: "custom:foyer-card", entity };
+    // The master if it exists: a card that shows the whole house is the one
+    // most people want first.
+    const entities = Object.keys(hass.states).filter((id) => id.startsWith(ENTITY_PREFIX));
+    return {
+      type: "custom:foyer-card",
+      entity: entities.includes(MASTER) ? MASTER : entities[0],
+      layout: "full",
+    };
+  }
+
+  static getConfigElement(): HTMLElement {
+    return document.createElement("foyer-card-editor");
   }
 
   setConfig(config: FoyerCardConfig): void {
@@ -55,7 +73,11 @@ class FoyerCard extends LitElement {
   }
 
   getCardSize(): number {
-    return 3;
+    return this._layout === "compact" ? 1 : 3;
+  }
+
+  private get _layout(): Layout {
+    return this._config?.layout === "compact" ? "compact" : "full";
   }
 
   override connectedCallback(): void {
@@ -125,7 +147,82 @@ class FoyerCard extends LitElement {
     if (!this.hass.states[entityId]) {
       return this._message(t(s, "card.entity_missing", { entity: entityId }));
     }
+    if (this._layout === "compact") return this._renderCompact(s);
     return this._isMaster ? this._renderMaster(s) : this._renderArea(s);
+  }
+
+  // --- compact: state, one action, and the scenario (§15.3) ------------------------
+
+  private _renderCompact(s: Strings) {
+    const status = this._status;
+    if (!status) return this._message(t(s, "common.loading"));
+    const area = this._area;
+    const master = this._isMaster || !area;
+    const state = master ? status.master.state : area!.state;
+    const memory = master ? status.areas.some((a) => a.memory) : area!.memory;
+    const active = status.scenarios.find((sc) => sc.id === status.active_scenario_id);
+    const name = master ? (active?.name ?? t(s, "overview.master")) : area!.name;
+    const armed = master
+      ? status.areas.some((a) => a.state !== "disarmed" || a.memory)
+      : area!.state !== "disarmed" || area!.memory;
+    const countdown = master
+      ? status.areas.find((a) => a.timer && a.timer.kind !== "siren")
+      : area;
+    return html`
+      <ha-card>
+        <div class="content compact">
+          <div class="head">
+            <div class="name">${name}</div>
+            <span class="state ${state}">${t(s, `state.${state}`)}</span>
+            ${memory
+              ? html`<span class="state memory">${t(s, "overview.memory")}</span>`
+              : nothing}
+          </div>
+          ${countdown ? this._countdown(s, countdown) : nothing}
+          <div class="buttons">
+            ${master
+              ? html`<select
+                  ?disabled=${this._busy}
+                  aria-label=${t(s, "card.scenario")}
+                  @change=${(e: Event) => {
+                    const id = (e.target as HTMLSelectElement).value;
+                    if (id) void this._run({ type: "foyer/arm", scenario_id: id });
+                  }}
+                >
+                  <option value="" ?selected=${!active}>${t(s, "card.pick_scenario")}</option>
+                  ${status.scenarios.map(
+                    (sc) => html`<option .value=${sc.id} ?selected=${sc.id === active?.id}>
+                      ${sc.name}
+                    </option>`,
+                  )}
+                </select>`
+              : area!.state === "disarmed"
+                ? html`<button
+                    class="primary"
+                    ?disabled=${this._busy}
+                    @click=${() => this._run({ type: "foyer/arm", area_id: area!.id })}
+                  >
+                    ${t(s, "card.arm")}
+                  </button>`
+                : nothing}
+            ${armed
+              ? html`<button
+                  ?disabled=${this._busy}
+                  @click=${() =>
+                    this._run(
+                      master
+                        ? { type: "foyer/disarm" }
+                        : { type: "foyer/disarm", area_ids: [area!.id] },
+                    )}
+                >
+                  ${t(s, "card.disarm")}
+                </button>`
+              : nothing}
+          </div>
+          ${this._renderFeedback()}
+        </div>
+      </ha-card>
+    `;
   }
 
   private _renderArea(s: Strings) {
@@ -206,7 +303,19 @@ class FoyerCard extends LitElement {
         <div class="content">
           ${this._renderAlerts(s)}
           ${this._head(active?.name ?? t(s, "overview.master"), status.master.state, memory)}
-          ${status.areas.map((area) => this._countdown(s, area, true))}
+          <div class="areas">
+            ${status.areas.map(
+              (area) => html`<div class="row">
+                <span class="area-name">${area.name}</span>
+                <span class="state ${area.state}">${t(s, `state.${area.state}`)}</span>
+                ${area.memory
+                  ? html`<span class="state memory">${t(s, "overview.memory")}</span>`
+                  : nothing}
+                ${this._countdown(s, area)}
+              </div>`,
+            )}
+          </div>
+          ${this._renderNotReady(s)}
           <div class="buttons">
             ${status.scenarios.map(
               (sc) => html`<button
@@ -229,6 +338,47 @@ class FoyerCard extends LitElement {
           ${this._renderFeedback()}
         </div>
       </ha-card>
+    `;
+  }
+
+  /** Every zone that would stop some area arming, with a way out (§15.3).
+   *
+   * On the master's card, because that is the card somebody looks at before
+   * leaving the house — and "it would not arm and did not say why" is the
+   * complaint this list exists to prevent.
+   */
+  private _renderNotReady(s: Strings) {
+    const status = this._status;
+    if (!status) return nothing;
+    const blocking = new Map<string, string[]>();
+    for (const area of status.areas) {
+      if (area.state !== "disarmed" || area.ready) continue;
+      for (const id of [...area.blocking.fault, ...area.blocking.open]) {
+        blocking.set(id, [...(blocking.get(id) ?? []), area.name]);
+      }
+    }
+    if (!blocking.size) return nothing;
+    return html`
+      <div class="blocking">
+        <div class="blocking-hd">${t(s, "card.not_ready")}</div>
+        ${[...blocking.entries()].map(([id, areas]) => {
+          const zone = status.zones.find((z) => z.id === id);
+          if (!zone) return nothing;
+          return html`<div class="row">
+            <span>${t(s, "card.zone_in", { zone: zone.name, areas: areas.join(", ") })}</span>
+            ${zone.bypassable && !zone.bypassed
+              ? html`<button
+                  class="link"
+                  ?disabled=${this._busy}
+                  @click=${() =>
+                    this._run({ type: "foyer/bypass", zone_id: zone.id, bypass: true })}
+                >
+                  ${t(s, "zones.bypass")}
+                </button>`
+              : nothing}
+          </div>`;
+        })}
+      </div>
     `;
   }
 
@@ -343,6 +493,42 @@ class FoyerCard extends LitElement {
         gap: 8px;
         padding: 2px 0;
       }
+      .areas {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .areas .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .area-name {
+        flex: 1;
+        font-size: 14px;
+      }
+      .blocking-hd {
+        font-weight: 500;
+        color: var(--primary-text-color);
+        margin-bottom: 4px;
+      }
+      .content.compact {
+        padding: 12px 16px;
+        gap: 8px;
+      }
+      .content.compact .head .name {
+        font-size: 16px;
+      }
+      select {
+        font: inherit;
+        font-size: 14px;
+        padding: 9px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--divider-color);
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+      }
       .blocking .link {
         background: none;
         border: 0;
@@ -404,6 +590,128 @@ class FoyerCard extends LitElement {
 }
 
 if (!customElements.get("foyer-card")) customElements.define("foyer-card", FoyerCard);
+
+
+// --- the visual editor (§15.3) ------------------------------------------------------
+//
+// Two things to choose: which panel the card shows, and how much of it. The
+// editor writes the same YAML a person would write by hand, so switching
+// between the two never loses anything.
+
+class FoyerCardEditor extends LitElement {
+  static override properties = {
+    hass: { attribute: false },
+    _config: { state: true },
+    _strings: { state: true },
+  };
+
+  hass?: HomeAssistant;
+  private _config: FoyerCardConfig = { type: "custom:foyer-card" };
+  private _strings?: Strings;
+  private _language?: string;
+
+  setConfig(config: FoyerCardConfig): void {
+    this._config = config;
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    if (!changed.has("hass") || !this.hass) return;
+    if (this.hass.language !== this._language) {
+      this._language = this.hass.language;
+      loadStrings(this.hass).then((strings) => (this._strings = strings));
+    }
+  }
+
+  private _emit(changes: Partial<FoyerCardConfig>): void {
+    this._config = { ...this._config, ...changes };
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  override render() {
+    const s = this._strings;
+    if (!s || !this.hass) return nothing;
+    const panels = Object.keys(this.hass.states)
+      .filter((id) => id.startsWith(ENTITY_PREFIX))
+      .sort();
+    return html`
+      <div class="editor">
+        <label>
+          <span>${t(s, "card.editor_entity")}</span>
+          <select
+            @change=${(e: Event) => this._emit({ entity: (e.target as HTMLSelectElement).value })}
+          >
+            ${panels.map(
+              (id) => html`<option .value=${id} ?selected=${id === this._config.entity}>
+                ${id === MASTER
+                  ? t(s, "card.editor_master")
+                  : String(this.hass!.states[id]?.attributes.friendly_name ?? id)}
+              </option>`,
+            )}
+          </select>
+        </label>
+        <label>
+          <span>${t(s, "card.editor_layout")}</span>
+          <select
+            @change=${(e: Event) =>
+              this._emit({ layout: (e.target as HTMLSelectElement).value as Layout })}
+          >
+            ${(["full", "compact"] as Layout[]).map(
+              (layout) => html`<option
+                .value=${layout}
+                ?selected=${layout === (this._config.layout ?? "full")}
+              >
+                ${t(s, `card.layout_${layout}`)}
+              </option>`,
+            )}
+          </select>
+        </label>
+        <p class="hint">${t(s, "card.editor_hint")}</p>
+      </div>
+    `;
+  }
+
+  static override styles = css`
+    .editor {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    select {
+      font: inherit;
+      font-size: 14px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--divider-color);
+      background: var(--card-background-color);
+      color: var(--primary-text-color);
+    }
+    .hint {
+      margin: 0;
+      font-size: 12.5px;
+      font-weight: 400;
+      color: var(--secondary-text-color);
+    }
+  `;
+}
+
+if (!customElements.get("foyer-card-editor")) {
+  customElements.define("foyer-card-editor", FoyerCardEditor);
+}
+
 
 // Listed in the dashboard's "add card" picker.
 declare global {

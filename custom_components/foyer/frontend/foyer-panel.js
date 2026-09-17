@@ -1107,7 +1107,33 @@ var Le = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Re = class extend
         >
           ${U(e, "zones.bypass_hours", { hours: r })}
         </button>`)}
+      <label class="minutes">
+        <input
+          type="number"
+          min="1"
+          max="10080"
+          placeholder=${U(e, "zones.bypass_minutes_placeholder")}
+          aria-label=${U(e, "zones.bypass_minutes")}
+          @keydown=${(e) => {
+			e.key === "Enter" && this._bypassMinutes(t.id, e.target);
+		}}
+        />
+        <button
+          class="btn sm ghost"
+          ?disabled=${this._busy}
+          @click=${(e) => {
+			let n = e.target.closest("label").querySelector("input");
+			this._bypassMinutes(t.id, n);
+		}}
+        >
+          ${U(e, "zones.bypass_minutes")}
+        </button>
+      </label>
     </div>` : M;
+	}
+	_bypassMinutes(e, t) {
+		let n = this.ctx, r = Number(t.value);
+		!Number.isFinite(r) || r < 1 || (t.value = "", this._run(() => n.bypass(e, !0, Math.round(r) * 60)));
 	}
 	_zoneStatus(e, t) {
 		if (t.fault) return A`<span class="state fault">${U(e, `fault.${t.fault}`)}</span>`;
@@ -1126,6 +1152,21 @@ var Le = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Re = class extend
 			W,
 			G,
 			o`
+      .minutes {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .minutes input {
+        width: 5.5em;
+        font: inherit;
+        font-size: 13px;
+        padding: 4px 6px;
+        border: 1px solid var(--divider-color);
+        border-radius: 6px;
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+      }
       .bypass {
         display: flex;
         gap: 4px;
