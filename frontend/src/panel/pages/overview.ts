@@ -1,12 +1,21 @@
 // Page 1 — Overview (SPEC §15.1): every area's state, the scenarios, the zones
 // that would stop arming, and quick arm/disarm. The page decides nothing: every
 // button sends a command and renders the engine's answer (INV-2).
-import { LitElement, css, html, nothing } from "lit";
+import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
-import type { CommandResult, StatusArea, StatusZone } from "../../shared/types";
+import type { CommandResult, LogRow, StatusArea, StatusZone } from "../../shared/types";
 import { reasonText, remaining, type PanelContext } from "../context";
+
+/** The name of an event, the same way the log page finds it: the log's own
+ * word for it, else the moment's. */
+function eventLabel(s: Strings, eventType: string): string {
+  const own = t(s, `event_type.${eventType}`);
+  if (!own.startsWith("event_type.")) return own;
+  const moment = t(s, `moment.${eventType}`);
+  return moment.startsWith("moment.") ? eventType : moment;
+}
 
 // A refusal that a forced arm could override (§5.4): open or faulted zones.
 const FORCEABLE = new Set(["zone_open", "zone_fault"]);
@@ -22,11 +31,13 @@ class FoyerPageOverview extends LitElement {
     ctx: { attribute: false },
     _busy: { state: true },
     _feedback: { state: true },
+    _recent: { state: true },
   };
 
   ctx?: PanelContext;
   private _busy = false;
   private _feedback?: Feedback;
+  private _recent: LogRow[] = [];
 
   private async _run(
     command: () => Promise<CommandResult>,
@@ -77,6 +88,10 @@ class FoyerPageOverview extends LitElement {
     if (ctx) this._run(() => ctx.acknowledge(target));
   }
 
+  override updated(changed: PropertyValues): void {
+    if (changed.has("ctx") && this.ctx) void this._loadRecent();
+  }
+
   override render() {
     const ctx = this.ctx;
     if (!ctx) return nothing;
@@ -96,8 +111,75 @@ class FoyerPageOverview extends LitElement {
       )}
       ${this._renderMaster(s)} ${this._renderFeedback(s)}
       <div class="tiles">${status.areas.map((area) => this._renderArea(s, area))}</div>
-      ${this._renderNotReady(s)}
+      ${this._renderNotReady(s)} ${this._renderRecent(s)}
     `;
+  }
+
+  /** The last few things that happened (§15.1, page 1).
+   *
+   * Only what matters: zone activity is excluded here even when it is being
+   * recorded, because six rows of "hall motion" would say nothing about the
+   * night. The log page shows everything.
+   */
+  private _renderRecent(s: Strings) {
+    const ctx = this.ctx!;
+    const rows = this._recent;
+    if (!rows.length) return nothing;
+    const areas = new Map(ctx.status.areas.map((a) => [a.id, a.name]));
+    const zones = new Map(ctx.status.zones.map((z) => [z.id, z.name]));
+    return html`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t(s, "overview.recent")}</h2>
+          <span class="spacer"></span>
+          <button class="btn sm" @click=${() => ctx.navigate("log")}>
+            ${t(s, "overview.full_log")}
+          </button>
+        </div>
+        <div class="card-bd">
+          <div class="recent">
+            ${rows.map(
+              (row) => html`<div class="row">
+                <span class="when mono"
+                  >${new Date(row.ts).toLocaleTimeString(ctx.hass.language, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}</span
+                >
+                <span class="state ${row.severity === "alarm"
+                  ? "triggered"
+                  : row.severity === "warning"
+                    ? "arming"
+                    : "disarmed"}"
+                  >${eventLabel(s, row.event_type)}</span
+                >
+                <span class="where">
+                  ${[areas.get(row.area_id ?? ""), zones.get(row.zone_id ?? "")]
+                    .filter(Boolean)
+                    .join(" \u00b7 ")}
+                </span>
+              </div>`,
+            )}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /** Reloaded whenever the live status changes, which is exactly when
+   * something worth showing has just been written. */
+  private async _loadRecent(): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    try {
+      const page = await ctx.queryLog({
+        limit: 6,
+        categories: ["arming", "alarm", "security", "system"],
+      });
+      this._recent = page.rows;
+    } catch {
+      this._recent = [];
+    }
   }
 
   private _zoneNames(ids: string[]): string {
@@ -436,6 +518,27 @@ class FoyerPageOverview extends LitElement {
     stateStyles,
     formStyles,
     css`
+      .recent {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13.5px;
+      }
+      .recent .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .recent .when {
+        color: var(--secondary-text-color);
+      }
+      .recent .where {
+        color: var(--secondary-text-color);
+      }
+      .spacer {
+        flex: 1;
+      }
       .minutes {
         display: inline-flex;
         align-items: center;

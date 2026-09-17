@@ -171,6 +171,10 @@ class LogStore:
         self.hass = hass
         self.path = path or hass.config.path(DB_FILENAME)
         self._queue: asyncio.Queue[LogRow] = asyncio.Queue()
+        # Rows the worker has taken off the queue but not yet written. They
+        # live here rather than in a local, so a reader that flushes while the
+        # worker is between the queue and the lock still sees them.
+        self._holding: list[LogRow] = []
         self._worker: asyncio.Task[None] | None = None
         self._connection: sqlite3.Connection | None = None
         # sqlite3 connections are shared across Home Assistant's executor
@@ -196,9 +200,7 @@ class LogStore:
             self._worker.cancel()
             self._worker = None
         async with self._writing:
-            pending = self._drain()
-            if pending:
-                await self._async_insert(pending)
+            await self._flush_locked()
         await self.hass.async_add_executor_job(self._close)
 
     def _open(self) -> None:
@@ -238,9 +240,16 @@ class LogStore:
 
     async def _run(self) -> None:
         while True:
-            first = await self._queue.get()
+            self._holding.append(await self._queue.get())
             async with self._writing:
-                await self._async_insert([first, *self._drain()])
+                await self._flush_locked()
+
+    async def _flush_locked(self) -> None:
+        """Write everything outstanding. The caller holds ``_writing``."""
+        rows = [*self._holding, *self._drain()]
+        self._holding.clear()
+        if rows:
+            await self._async_insert(rows)
 
     def _drain(self) -> list[LogRow]:
         rows: list[LogRow] = []
@@ -278,9 +287,7 @@ class LogStore:
         produced a row and be shown yesterday's answer.
         """
         async with self._writing:
-            pending = self._drain()
-            if pending:
-                await self._async_insert(pending)
+            await self._flush_locked()
 
     async def async_query(self, **filters: Any) -> dict[str, Any]:
         return await self.hass.async_add_executor_job(lambda: self._query(**filters))

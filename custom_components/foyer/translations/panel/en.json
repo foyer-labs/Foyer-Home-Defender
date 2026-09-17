@@ -316,7 +316,9 @@
     "incident_zones": "Zones: {zones}",
     "incident_open": "Not acknowledged",
     "incident_acknowledged": "Acknowledged — it closes once every area is disarmed or armed again",
-    "incident_hint": "One incident gathers every zone of one alarm. Disarming also acknowledges it."
+    "incident_hint": "One incident gathers every zone of one alarm. Disarming also acknowledges it.",
+    "recent": "Recent events",
+    "full_log": "Full log"
   },
   "areas": {
     "title": "Areas",

@@ -17,7 +17,15 @@ CONF_TRIGGER_STATES: Final = "trigger_states"
 PANEL_URL_PATH: Final = "foyer"
 PANEL_ELEMENT: Final = "foyer-panel"
 PANEL_TITLE: Final = "Foyer"  # brand name, identical in every language
-PANEL_ICON: Final = "foyer:shield"  # registered by foyer-icons.js
+# An mdi icon, not the Foyer shield, and the reason is worth recording.
+# A custom icon set is registered by a module; when the sidebar draws its
+# icons before that module has run — which is what the companion app does
+# when it starts from a cached page — Home Assistant falls back to a legacy
+# element and never retries, so the panel shows an empty square for ever.
+# The shield stays where our own modules are certainly loaded: the panel
+# header and the card. `foyer:shield` is still registered for anyone who
+# wants it on a dashboard of their own.
+PANEL_ICON: Final = "mdi:shield-home"
 STATIC_URL: Final = "/foyer_static"
 FRONTEND_MODULES: Final = ("foyer-panel.js", "foyer-card.js", "foyer-icons.js")
 

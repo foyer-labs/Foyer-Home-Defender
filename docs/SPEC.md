@@ -199,7 +199,7 @@ foyer-home-defender/
 |---|---|---|
 | Backend | Python 3.12+, Home Assistant 2025.1+ | Matches HA's own floor |
 | Config storage | HA `Store` helper (`.storage/foyer.config`) | Backed up with HA, versioned, migration-friendly |
-| Log storage | dedicated SQLite via `aiosqlite` | Independent retention; unaffected by recorder purge |
+| Log storage | dedicated SQLite, stdlib `sqlite3` in an executor thread | Independent retention; unaffected by recorder purge. No new dependency: this is what Home Assistant's own recorder does, and an alarm that fails to load because a wheel could not be fetched at first setup is a failure mode worth not having (decision 72) |
 | Password hashing | `bcrypt` | Already a Home Assistant dependency |
 | Frontend | TypeScript + Lit + Vite | Matches HA frontend conventions; small bundles |
 | Panel registration | `panel_custom` / `async_register_built_in_panel` | Standard sidebar SPA pattern |
@@ -1038,6 +1038,7 @@ CREATE TABLE events (
   event_type   TEXT NOT NULL,
   severity     TEXT NOT NULL,           -- info | warning | alarm
   area_id      TEXT, zone_id TEXT, scenario_id TEXT,
+  incident_id  TEXT,                    -- §5.6: every row of one night's alarm
   user_id      TEXT, user_name TEXT,    -- name denormalised: survives user deletion
   channel      TEXT, device_id TEXT,
   outcome      TEXT,                    -- ok | blocked | bad_code | failed
@@ -1047,6 +1048,7 @@ CREATE INDEX idx_ts ON events(ts);
 CREATE INDEX idx_cat_ts ON events(category, ts);
 CREATE INDEX idx_area_ts ON events(area_id, ts);
 CREATE INDEX idx_user_ts ON events(user_id, ts);
+CREATE INDEX idx_incident ON events(incident_id);
 ```
 
 `user_name` is denormalised on purpose: deleting a user must not erase the
@@ -1067,12 +1069,21 @@ history of what that user did.
 
 The last row is the trap: a living-room PIR produces thousands of transitions a
 day. Logging them for 30 days buries every event that matters. It stays
-disableable and is meant to be switched on only while diagnosing.
+disableable and is meant to be switched on only while diagnosing. A chime is
+filed there too: it sounds exactly when a zone opens unmonitored, which is the
+same volume class.
+
+A **refused** request is a row of its own, in the category of the request —
+`arm_rejected` under `arming`, `bypass_rejected` under `security` — carrying
+the reason and the blocking zones. "Why did it not arm last night?" is a
+question users ask, and silence is the worst possible answer.
 
 ### 10.3 Retention and export
 
-Retention is configurable per category, default 30 days, with a purge task on a
-daily schedule. Export produces CSV or JSON honouring the currently applied
+Retention is configurable per category, 30 days for every category by
+default, with a purge task on a daily schedule. A category that is switched
+off writes nothing from then on; the rows it has already written stay until
+their days are up. Export produces CSV or JSON honouring the currently applied
 filters. Deleting the log is an `edit_config` operation and is itself logged —
 though `docs/security-model.md` must state honestly that an HA admin with
 filesystem access can delete the database outright, so the log is
@@ -1379,7 +1390,7 @@ mirror the trigger moments in §6.1.
 | 8 | Arming devices | Keypads, NFC tags, remotes; MQTT mapping; feedback configuration |
 | 9 | Test & diagnostics | Four tabs: diagnostics · simulator · walk test · action test |
 | 10 | Log | Filter by date, area, zone, user, category, outcome; CSV/JSON export |
-| 11 | Settings | Global defaults, siren duration and cutoff, log retention per category, language, config backup/restore |
+| 11 | Settings | Global defaults, siren duration and cutoff, log retention per category, the language of the messages Foyer sends out, config backup/restore |
 | 12 | Automation rules | Presence and time rules (§9.4), guards, grace period, suspensions and expected-visitor windows, next scheduled action |
 | 13 | Verification groups | N-of-M groups (§4.8): members, threshold, window, group profile |
 | 14 | System health | Mains power, notification channel health, watchdog status, faults, diagnostics download (§12) |
@@ -1390,7 +1401,17 @@ send a test notification. An empty panel on first open is how projects lose user
 in the first five minutes.
 
 **Config backup/restore** (JSON export/import) is not optional: nobody who has
-configured forty zones will do it twice.
+configured forty zones will do it twice. The exported document carries its
+schema version: a restore migrates an older one through the same steps a real
+upgrade uses, refuses one written by a newer major version rather than reading
+it half-way, and then goes through validation and the armed-area guard like
+any other edit.
+
+**The language setting is not the panel's.** The panel follows each Home
+Assistant user's own language, so a second selector for it would be a bug
+generator. What it sets is the language of what Foyer *sends out* —
+notifications, the zone name the chime speaks — which the house has one of
+even when the phone reading it does not (decision 73).
 
 ### 15.2 Contextual help
 
@@ -1557,16 +1578,26 @@ rendition.
 
 | File | Where it appears | Constraint |
 |---|---|---|
-| `foyer-hd-icon.svg` | Home Assistant sidebar panel icon | **24 px, single colour, `currentColor`.** No gradient, no fill colours, no opacity ladder — a *separate drawing*, carrying the shield outline, one arch and a solid doorway. The faded arches vanish at this size, so they are not in this file |
+| `foyer-hd-icon.svg` | The `foyer:shield` icon, for dashboards | **24 px, single colour, `currentColor`.** No gradient, no fill colours, no opacity ladder — a *separate drawing*, carrying the shield outline, one arch and a solid doorway. The faded arches vanish at this size, so they are not in this file. **Not the sidebar icon:** see below |
 | `foyer-hd-symbol-dark-bg.svg`<br>`foyer-hd-symbol-light-bg.svg` | Panel header, card header, loading state | Full colour, transparent ground, 32 px and up |
 | `foyer-hd-app.svg` → `foyer-hd-app-512.png`, `-192.png` | HACS listing, repository social preview, favicon | Dark rounded tile, symbol scaled to 0.84 for a proper safe margin |
 | `foyer-hd-lockup-dark-bg.svg` / `-light-bg.svg` (+ PNG) | README header, documentation | Two files, not one recoloured |
 
 ### 17.2 Rules that keep it coherent
 
-- **The sidebar icon is redrawn, never scaled.** It renders at 24 px and inherits
-  the theme colour, so it cannot use amber or the opacity ladder that make the
-  256 px version work. Shrinking the colour version produces grey mush.
+- **The sidebar panel icon is an mdi icon**, `mdi:shield-home`, and this is a
+  concession, not a preference (decision 74). A custom icon set is registered
+  by a JavaScript module; Home Assistant resolves a custom icon exactly once,
+  and when the sidebar draws before that module has run — which is what the
+  companion app does when it starts from a cached page — it falls back to a
+  legacy element and never retries, leaving an empty square for ever. The
+  Foyer shield is drawn as an inline SVG in the panel header and the card,
+  where the modules are certainly loaded, and `foyer:shield` stays registered
+  for anyone who wants it on a dashboard of their own.
+- **The `foyer:shield` drawing is redrawn, never scaled.** It renders at 24 px
+  and inherits the theme colour, so it cannot use amber or the opacity ladder
+  that make the 256 px version work. Shrinking the colour version produces
+  grey mush.
 - **The subtitle carries no font dependency.** "HOME DEFENDER" is stored as
   outlines (Poppins Medium, converted), letter-spaced so that it spans exactly the
   width of the FOYER wordmark above it. Nothing in the repository depends on a
@@ -1753,3 +1784,8 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 69 | Manual bypass needs no code until Phase 2, but runs through the check | The same reasoning as decision 6, and Phase 2 then changes policy rather than plumbing |
 | 70 | A manual bypass without a duration ends at the disarm; a timed one survives until it expires | What real panels do, and it keeps the timed form meaningful: a two-hour exclusion must not vanish at the next disarm |
 | 71 | `persistent_notification` is a tenth action kind | It is what Phase 0 did; the 3.1 → 4.1 migration moves it into the default profile so no installation loses a notification it already had |
+| 72 | The log uses the stdlib `sqlite3` in an executor thread, not `aiosqlite` | It is what the recorder itself does, and it adds no dependency: an alarm integration that fails to load because a wheel could not be fetched at first setup is a failure mode worth not having |
+| 73 | The "language" setting is the language of what Foyer *sends*, not of the panel | The panel already follows each Home Assistant user; a second selector for the same thing would be a bug generator, while the house's own language has nowhere else to live |
+| 74 | The sidebar panel icon is `mdi:shield-home` | Home Assistant resolves a custom icon once and never retries, so a sidebar drawn before the icon module has run keeps an empty square for ever — which is what the companion app does |
+| 75 | The first-run wizard continues from the config flow instead of replacing it | The config flow already makes an area, a zone and a scenario, so a new installation is never empty; a wizard that started again would duplicate all three |
+| 76 | The log's own row for a refusal, and the incident id as a column | "Why did it not arm last night?" needs an answer, and an incident id inside a JSON detail field cannot be filtered on |
