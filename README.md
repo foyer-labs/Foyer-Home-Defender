@@ -152,6 +152,17 @@ The card is loaded automatically; no dashboard resource needs adding. It decides
 nothing by itself: it sends a command and renders the answer, including the name
 of the zone that refused it.
 
+> **If the card is missing from the picker**, or a dashboard says *Custom
+> element doesn't exist: foyer-card*, **reload the page once** with
+> Ctrl+Shift+R (Cmd+Shift+R on a Mac). Home Assistant writes the card's script
+> tag into the page it renders, so a page that was loaded before Foyer was
+> installed — or before it was updated — does not have it, and reconnecting
+> after a restart does not fetch a new one. In the companion app, reset the
+> frontend cache from its own settings, or close and reopen the app.
+> To check that the file itself is there, open
+> `https://<your-home-assistant>/foyer_static/foyer-card.js`: it should show
+> JavaScript.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts" width="900">
 </p>

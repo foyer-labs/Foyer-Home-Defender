@@ -163,6 +163,18 @@ La card viene caricata da sola: non serve aggiungere alcuna risorsa alla
 dashboard. Non decide nulla da sé: manda un comando e mostra la risposta,
 compreso il nome della zona che l'ha rifiutato.
 
+> **Se la card non compare nel selettore**, o una dashboard dice *Custom
+> element doesn't exist: foyer-card*, **ricarica la pagina una volta** con
+> Ctrl+Maiusc+R (Cmd+Maiusc+R su Mac). Home Assistant scrive il tag script
+> della card dentro la pagina che genera: una pagina caricata prima che Foyer
+> fosse installato — o prima che fosse aggiornato — non ce l'ha, e la
+> riconnessione dopo un riavvio non ne scarica una nuova. Nell'app per
+> smartphone azzera la cache dell'interfaccia dalle sue impostazioni, oppure
+> chiudi e riapri l'app.
+> Per verificare che il file ci sia, apri
+> `https://<il-tuo-home-assistant>/foyer_static/foyer-card.js`: deve mostrare
+> del JavaScript.
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-it.png" alt="La card nelle disposizioni completa e compatta" width="900">
 </p>

@@ -447,3 +447,36 @@ async def test_with_no_language_set_foyer_speaks_what_home_assistant_speaks(
 
     notes = _notifications(hass)
     assert notes and notes[-1]["title"] == "Foyer: inserito"
+
+
+# --- the card's module actually reaches the browser --------------------------------
+
+
+async def test_the_card_module_is_served_and_registered(hass, hass_client, loaded):
+    """A missing card element has two possible causes, and this rules out ours:
+    the file is served, and its URL is on the list Home Assistant puts into the
+    page it renders. What is left is a page rendered before Foyer existed."""
+    from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
+
+    urls = list(hass.data[DATA_EXTRA_MODULE_URL].urls)
+    card = next((u for u in urls if "foyer-card.js" in u), None)
+    assert card, urls
+    assert card.startswith("/foyer_static/foyer-card.js?v=")
+
+    client = await hass_client()
+    response = await client.get(card)
+    assert response.status == 200
+    body = await response.text()
+    # The element the dashboard looks for, and the entry in the card picker.
+    assert "foyer-card" in body
+    assert "customCards" in body
+
+
+async def test_the_icons_module_is_served_too(hass, hass_client, loaded):
+    from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
+
+    urls = list(hass.data[DATA_EXTRA_MODULE_URL].urls)
+    icons = next((u for u in urls if "foyer-icons.js" in u), None)
+    assert icons, urls
+    client = await hass_client()
+    assert (await client.get(icons)).status == 200
