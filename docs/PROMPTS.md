@@ -97,6 +97,12 @@ MQTT, the log, or any panel page beyond a single screen showing state.
 
 ## Phase 1 — Alarm core
 
+**Complete and accepted**, in four parts, released as `v0.1.0-alpha.11`
+(configuration schema 4.2). The acceptance is `tests/ha/test_acceptance.py`,
+and the user ran the whole of it on their own installation: every point passed
+except the technical channel, which they could not exercise physically and
+which is covered by tests.
+
 The largest phase, and the one that makes the project real: at the end of it a
 house can actually be protected. Everything here touches the state machine, which
 is why several items that look like features (technical channel, incidents,
@@ -336,6 +342,15 @@ order, each part still leaving something that runs:
 3. Response profiles (page 5), conditions, action catalogue, timed bypass.
 4. The SQLite log (page 10), settings (page 11), the first-run wizard, config
    backup/restore, card layouts full and compact.
+
+Phase 2 overflows a session too, and splits in two:
+
+1. Identity and codes: users, the per-operation code policy, permissions,
+   lockout, panel page 7, and the card's keypad — after which a person with a
+   code can arm and disarm, and the log says who.
+2. The physical channels: the service and MQTT contracts, panel page 8, the
+   shipped keypad adapters and the card's badge layout — after which the
+   keypad by the door works.
 
 Each panel page ships in the part that builds its feature. Do not split by
 layer — backend first, then frontend — because that produces two halves
@@ -890,6 +905,159 @@ Context from part 3 (schema 4.1):
 6. Tests: log categories and default verbosity, retention purge, export
    filters, restart gap row, incident ids on rows, foyer_event fired,
    restore refusing an invalid or newer-major document.
+```
+
+### Phase 2, part 1
+
+```
+Scope for THIS session: Phase 2, part 1 — identity and codes. Users, their
+codes, the per-operation code policy, permissions, lockout, panel page 7,
+and the card's keypad. Part 2 (the service and MQTT contracts, arming
+devices and the shipped adapters) is a separate session. Paste "Phase 2
+decisions" after this appendix.
+
+Context from Phase 1, which is complete and accepted (v0.1.0-alpha.11,
+configuration schema 4.2):
+- Every state-changing path already runs through check_code(Operation).
+  There are no users, so CodePolicy has every operation False and the engine
+  fails closed: a request that needs a code is refused because no code can be
+  verified. This part fills that in; it does not build new plumbing.
+- The log has a user_id and a user_name column, both empty, and user_name is
+  denormalised on purpose: deleting a user must not erase the history of what
+  that user did (§10.1). Filling them is part of this session.
+- The panel's config commands are admin-only (websocket_api.require_admin);
+  the log query and export are open to any signed-in user. Both become
+  permission checks here (§8.3): edit_config and view_log.
+- core/ is pure and must stay so: bcrypt hashing belongs in security/, and
+  the engine is told whether a code verified, never given the code.
+
+1. Users and codes (SPEC §8.1):
+   - bcrypt hashes, written through the API and never returned by it — not
+     in foyer/config, not in the log, not in a diagnostic.
+   - One code per user, UNIQUE across users and against every duress code.
+     Rejected at save time, and the message must not reveal whose code it
+     collided with.
+   - Global code length (4-12, default 6), because a keypad has to know how
+     many digits to collect before validating. The UI states what a 4-digit
+     code is worth.
+   - Per-user duress code: disarms normally and raises a silent `duress`
+     event. Same uniqueness rule.
+   - valid_from / valid_until for guest codes, allowed_area_ids,
+     allowed_scenario_ids, enabled.
+
+2. Code policy resolution (§8.2), with the defaults of that table. The
+   per-user override applies ONLY on channels that identify the user; on a
+   shared keypad the code IS the identity, so the exemption cannot apply.
+   The configuration UI must say that where the setting is, not in the
+   documentation, or it reads as a bug.
+
+3. Permissions (§8.3) enforced on every service and every WebSocket command,
+   not only in the UI. A permission the UI hides must still be refused when
+   the command is sent by hand.
+
+4. Lockout (§8.4): N failures in W seconds locks that channel for L, growing
+   exponentially on repetition; raises an event a response profile can act
+   on; recorded with the channel and device; and never locks out the Home
+   Assistant admin path, so nobody can lock themselves out of their own house.
+
+5. Panel page 7 (users and codes) with its help panel, and the settings
+   block for the global policy and the code length.
+
+6. The card: layout `keypad`, and the keypad inside layout `full` (§15.3).
+   INV-2 is the whole point: the card collects digits and transmits them, the
+   backend decides, and the card renders the answer — wrong code, blocked by
+   zone X, locked out.
+
+7. The fields Phase 1 deliberately left out, with a storage migration:
+   require_code_to_arm / require_code_to_disarm on areas and scenarios,
+   allowed_user_ids on scenarios (§4.5, §4.6), and user_id on a key zone's
+   identity (§4.7), so the log can attribute what a key turn did.
+
+8. Security tests are part of this deliverable, not a follow-up (§19): wrong
+   code, missing code, expired user, insufficient permission and locked-out
+   channel each rejected; a code or hash never present in any API response,
+   log row or diagnostic; and the audit test that says who disarmed.
+
+Ask the user before writing code, one at a time, with the alternatives and
+your recommendation:
+- What the code policy for ACKNOWLEDGE should be. §8.2 does not list it, and
+  whether button.foyer_acknowledge may exist at all depends on the answer
+  (decision 59: a button cannot carry a code).
+- Decision 6 ends here: forced arm and changing scenario while armed move to
+  the §8.2 defaults, which require a code. It changes behaviour for anyone
+  already running an alpha, so it belongs in the changelog — confirm it.
+- Whether an administrator using the panel, whose Home Assistant user is
+  linked to a Foyer user, should be exempt from typing a code (§8.2 allows
+  the per-user exemption on identifying channels, and the panel is one).
+
+Done when: a person with a code arms and disarms from the panel, the card and
+a wall tablet; a wrong code is refused and, repeated, locks that channel out;
+and the log says who did what, through which channel.
+
+Do not build: MQTT, the keypad adapters, the simulator, walk test, contacts,
+escalation or automatic rules.
+```
+
+### Phase 2, part 2
+
+```
+Scope for THIS session: Phase 2, part 2 — the physical channels. The service
+contract, MQTT in both directions, panel page 8, the shipped adapters and the
+card's badge layout. After it, run the Phase 2 acceptance ("arming and
+disarming from a physical keypad with correct feedback, with the log
+attributing every action to a person and a channel"). Paste "Phase 2
+decisions" after this appendix.
+
+Context from part 1: users, codes, the code policy, permissions and lockout
+exist and are tested. Build on them; a channel added here authenticates
+through the same check, never around it.
+
+1. The service contract (§9.1): foyer.arm, foyer.disarm, foyer.bypass_zone,
+   foyer.unbypass_zone, foyer.acknowledge, foyer.walk_test (Phase 3 fills it),
+   foyer.test_action (Phase 3), foyer.export_log, foyer.export_config,
+   foyer.import_config. Every state-changing service takes code, user_id,
+   channel and device_id and returns the structured result of §9.1, the same
+   shape foyer/arm and foyer/disarm already return over the WebSocket, so a
+   keypad adapter can give a meaningful answer instead of a silent failure.
+
+2. The MQTT contract (§9.2) in both directions, with CONFIGURABLE topics:
+   people run more than one site against one broker. Outbound is published
+   retained on change and on request, and carries enough for a keypad to
+   distinguish a wrong code from arming blocked by an open zone — that
+   distinction is the point of the whole contract.
+
+3. Panel page 8 (arming devices) with its help panel: keypads, NFC tags and
+   remotes, the MQTT mapping and the feedback configuration.
+
+4. The shipped adapters as blueprints (§9.3): Ring Alarm Keypad v2 over
+   Z-Wave JS including the LED ring, the beeps and the countdown; a generic
+   Zigbee keypad over Zigbee2MQTT with the note that Tuya-family clones vary
+   by firmware and must be verified one by one; NFC tags and remotes through
+   tag and event entities, including the security note that a stolen tag
+   arms and disarms without knowing any code. Plus docs/keypads.md (§9.5).
+
+5. Card layout `badge` (§15.3): colour-coded state only, for embedding.
+
+6. Tests: the structured result is identical from a service and from the
+   WebSocket; a bad code over MQTT is refused and answered as a bad code;
+   topics are honoured as configured; an unauthenticated MQTT message can do
+   nothing a code would not allow.
+```
+
+### Phase 2 decisions (paste after the appendix, in every session from part 2 on)
+
+```
+Binding decisions taken by the user in Phase 2. Fill this block as they are
+taken, exactly as "Phase 1 decisions" was filled: the next session must not
+re-litigate them.
+
+Inherited from Phase 1, and binding here:
+- decision 6 ended: forced arm and changing scenario follow §8.2.
+- decision 59: button.foyer_acknowledge exists only if acknowledging needs no
+  code; otherwise §13 is amended, with the user's agreement.
+- Releases stop being GitHub pre-releases from the first beta, which is where
+  the end of Phase 2 is expected to land: HACS only offers releases that are
+  not pre-releases, and shows a commit hash for a repository that has none.
 ```
 
 ### Carry-overs from Phase 1 into later phases
