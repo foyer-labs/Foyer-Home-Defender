@@ -153,12 +153,19 @@ def decide(
     elif isinstance(event, SetChime):
         run.set_chime(event.enabled, event.channel)
     elif isinstance(event, Startup):
+        # How long the gap was, measured rather than described: the log grades
+        # a configuration reload and an hour with the integration disabled
+        # differently, and only the number can tell them apart.
+        gap = (
+            int((now - event.down_since).total_seconds()) if event.down_since else None
+        )
         run.occur(
             Moment.HA_RESTARTED,
             detail={
                 "down_since": event.down_since.isoformat() if event.down_since else "",
                 "up_at": now.isoformat(),
                 "cause": event.cause,
+                "gap_seconds": str(max(0, gap)) if gap is not None else "",
             },
         )
     elif not isinstance(event, ZoneStateChanged | Tick):

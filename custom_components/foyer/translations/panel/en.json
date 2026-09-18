@@ -9,7 +9,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "acknowledge": "Acknowledge"
+    "acknowledge": "Acknowledge",
+    "yes": "Yes",
+    "no": "No"
   },
   "nav": {
     "overview": "Overview",
@@ -1026,7 +1028,8 @@
     "action_call_service": "Service call",
     "action_delay": "Delay",
     "action_chime": "Chime",
-    "action_revert": "Switched off again"
+    "action_revert": "Switched off again",
+    "reloaded": "Foyer reloaded"
   },
   "log": {
     "filters": "Filters",
@@ -1062,7 +1065,13 @@
     "newer": "Newer",
     "older": "Older",
     "gap": "From {from} to {to}",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "changes": "Changed",
+    "added": "added",
+    "removed": "removed",
+    "changed": "changed",
+    "and_more": "and {count} more",
+    "gap_short": "{seconds} s"
   },
   "language": {
     "en": "English",
@@ -1105,5 +1114,44 @@
     "test_sent": "Sent. If nothing arrived, that channel would not have reached you during an alarm either.",
     "test_hint": "Which notifications Foyer sends, and when, is set on the Response profiles page.",
     "test_message": "Foyer Home Defender: this is a test notification."
+  },
+  "config_kind": {
+    "areas": "Area",
+    "zones": "Zone",
+    "scenarios": "Scenario",
+    "groups": "Group",
+    "profiles": "Profile",
+    "settings": "Settings",
+    "chime": "Chime",
+    "code_policy": "Code policy",
+    "log": "Event log"
+  },
+  "detail": {
+    "reason": "Reason",
+    "cause": "Cause",
+    "down_since": "Not running since",
+    "up_at": "Running again at",
+    "gap_seconds": "Gap (seconds)",
+    "from": "From",
+    "to": "To",
+    "area_state": "Area was",
+    "active": "Counts as triggered",
+    "kind": "Kind",
+    "action_id": "Action",
+    "profile_id": "Profile",
+    "error": "Error",
+    "moment": "Moment",
+    "item_id": "Item",
+    "group_id": "Group",
+    "incident_zones": "Incident zones",
+    "via": "Acknowledged by",
+    "removed": "Rows removed",
+    "n": "Threshold",
+    "count": "Count",
+    "window": "Window",
+    "seconds": "Seconds",
+    "zone": "Zone",
+    "scenario": "Scenario",
+    "state": "State"
   }
 }

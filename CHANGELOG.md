@@ -5,6 +5,27 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.9] — what the first real read of the log found
+
+**Pre-release, for testing only.** No schema change.
+
+### Changed
+- **Saving a setting is no longer recorded as an outage.** Every configuration
+  change reloads the integration, and the gap that leaves is a fraction of a
+  second — but it was logged as *"Foyer was not running"*, in warning, next to
+  the change that caused it. A gap is now measured rather than described: under
+  a minute, after a reload, it is *"Foyer reloaded"* and an ordinary info row;
+  above that, or after a real restart, it stays the warning that INV-3 requires.
+  The integration being disabled and re-enabled by hand is still an outage,
+  because the gap says so.
+- **A configuration change now says what changed**, not only which field:
+  *Area "Windows and doors" · Default exit delay: 30 → 45*, in the row's summary
+  and in full when it is opened. Values too long to print — a profile's action
+  list, a trigger's states — still say only that they changed, because a row
+  that contains the configuration is a row nobody reads.
+- The rest of a row's detail is shown as a labelled list rather than as raw
+  JSON.
+
 ## [0.1.0-alpha.8] — what the end-of-phase review found
 
 **Pre-release, for testing only.** No schema change: this is `alpha.7` with

@@ -3903,8 +3903,10 @@ var Q = 50, ct = class extends z {
                       <dd>${U(e, `outcome.${t.outcome}`)}</dd>` : M}
                 ${t.channel ? A`<dt>${U(e, "log.channel")}</dt>
                       <dd>${ut(e, t.channel)}</dd>` : M}
-                <dt>${U(e, "log.detail")}</dt>
-                <dd class="mono">${JSON.stringify(t.detail)}</dd>
+                ${this._changeLines(e, t).map((t, n) => A`<dt>${n ? "" : U(e, "log.changes")}</dt>
+                    <dd>${t}</dd>`)}
+                ${this._plainDetail(t).map(([t, n]) => A`<dt>${U(e, `detail.${t}`)}</dt>
+                    <dd class="mono">${n}</dd>`)}
               </dl>
             </td>
           </tr>` : M}
@@ -3916,10 +3918,55 @@ var Q = 50, ct = class extends z {
 			let t = Array.isArray(r.blocking_zones) ? r.blocking_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? String(e)).join(", ") : "";
 			return U(e, `reason.${r.reason}`, { zones: t });
 		}
-		return typeof r.error == "string" ? r.error : t.event_type === "zone_state" ? `${r.from ?? "?"} → ${r.to ?? "?"}` : t.event_type === "system_unavailable" && typeof r.down_since == "string" ? U(e, "log.gap", {
+		if (typeof r.error == "string") return r.error;
+		if (t.event_type === "zone_state") return `${r.from ?? "?"} → ${r.to ?? "?"}`;
+		if (t.event_type === "reloaded") return U(e, "log.gap_short", { seconds: String(r.gap_seconds ?? "") });
+		if (t.event_type === "system_unavailable" && typeof r.down_since == "string") return U(e, "log.gap", {
 			from: new Date(r.down_since).toLocaleString(n.hass.language),
 			to: new Date(String(r.up_at)).toLocaleString(n.hass.language)
-		}) : typeof r.kind == "string" && t.category === "action" ? U(e, `action_kind.${r.kind}`) : "";
+		});
+		if (typeof r.kind == "string" && t.category === "action") return U(e, `action_kind.${r.kind}`);
+		let i = this._changeLines(e, t);
+		return i.length ? i.length > 2 ? `${i.slice(0, 2).join(" · ")} ${U(e, "log.and_more", { count: i.length - 2 })}` : i.join(" · ") : "";
+	}
+	_changeLines(e, t) {
+		let n = t.detail?.changes;
+		if (!n || typeof n != "object" || Array.isArray(n)) return [];
+		let r = [];
+		for (let [t, i] of Object.entries(n)) {
+			let n = U(e, `config_kind.${t}`);
+			if (typeof i != "object" || !i) {
+				r.push(`${n}: ${this._value(e, i)}`);
+				continue;
+			}
+			let a = i;
+			if (!("added" in a || "removed" in a || "changed" in a)) {
+				r.push(...this._fieldLines(e, n, a));
+				continue;
+			}
+			for (let t of a.added ?? []) r.push(`${n} · ${U(e, "log.added")}: ${t}`);
+			for (let t of a.removed ?? []) r.push(`${n} · ${U(e, "log.removed")}: ${t}`);
+			let o = a.changed ?? {};
+			for (let [t, i] of Object.entries(o)) r.push(...this._fieldLines(e, `${n} «${t}»`, i));
+		}
+		return r;
+	}
+	_fieldLines(e, t, n) {
+		return Array.isArray(n) ? n.map((n) => `${t} · ${U(e, `field.${n}`)}`) : Object.entries(n).map(([n, r]) => {
+			let i = U(e, `field.${n}`), a = i.startsWith("field.") ? n : i;
+			return Array.isArray(r) && r.length === 2 ? `${t} · ${a}: ${this._value(e, r[0])} → ${this._value(e, r[1])}` : `${t} · ${a}: ${U(e, "log.changed")}`;
+		});
+	}
+	_value(e, t) {
+		return t == null || t === "" ? "—" : typeof t == "boolean" ? U(e, t ? "common.yes" : "common.no") : Array.isArray(t) ? t.length ? t.map((t) => this._value(e, t)).join(", ") : "—" : String(t);
+	}
+	_plainDetail(e) {
+		let t = /* @__PURE__ */ new Set([
+			"changes",
+			"zone_ids",
+			"blocking_zones"
+		]);
+		return Object.entries(e.detail ?? {}).filter(([e, n]) => !t.has(e) && n !== null && n !== "").map(([e, t]) => [e, typeof t == "object" ? JSON.stringify(t) : String(t)]);
 	}
 	static {
 		this.styles = [

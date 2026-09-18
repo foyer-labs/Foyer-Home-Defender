@@ -7,7 +7,7 @@ related row, the restart gap, and the refusal that must not be silent.
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from custom_components.foyer.core.journal import (
     CATEGORY,
@@ -266,3 +266,31 @@ def test_a_numeric_trigger_crossing_its_band_is_recorded_though_the_state_is_the
     ]
     assert len(zone_rows) == 1
     assert zone_rows[0].detail["active"] is True
+
+
+def test_a_configuration_reload_is_not_an_outage():
+    """Saving a setting reloads the integration. Recording that as "Foyer was
+    not running", in warning, next to the change that caused it, teaches
+    people to ignore the row that matters."""
+    world = Logged()
+    decision = world.send(
+        Startup(down_since=world.now - timedelta(seconds=1), cause="reload")
+    )
+
+    [row] = [r for r in rows(world, decision) if r.category is LogCategory.SYSTEM]
+    assert row.event_type == "reloaded"
+    assert row.severity is LogSeverity.INFO
+
+
+def test_a_long_gap_is_an_outage_whatever_caused_it():
+    """The integration can also be disabled and re-enabled by hand, and that
+    is an hour in which the house was not protected."""
+    world = Logged()
+    decision = world.send(
+        Startup(down_since=world.now - timedelta(hours=1), cause="reload")
+    )
+
+    [row] = [r for r in rows(world, decision) if r.category is LogCategory.SYSTEM]
+    assert row.event_type == "system_unavailable"
+    assert row.severity is LogSeverity.WARNING
+    assert row.detail["gap_seconds"] == "3600"

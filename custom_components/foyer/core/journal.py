@@ -162,6 +162,26 @@ SEVERITY: dict[Moment, LogSeverity] = {
 # restart gap is "system_unavailable from T1 to T2" (§10.1, INV-3).
 EVENT_TYPE: dict[Moment, str] = {Moment.HA_RESTARTED: "system_unavailable"}
 
+# A reload is not a restart. Saving a setting reloads the integration, and the
+# gap that leaves is a fraction of a second in which nothing could have
+# happened: recording it as "Foyer was not running" — in warning, next to the
+# configuration change that caused it — teaches people to ignore the row that
+# matters. Above this many seconds it is an outage again, whatever caused it,
+# because the integration can also be disabled and re-enabled by hand.
+RELOAD = "reloaded"
+RELOAD_GAP_SECONDS = 60
+
+
+def _restart_row(occurrence: Occurrence, at: datetime) -> tuple[str, LogSeverity]:
+    """What to call a gap in coverage, and how loudly (INV-3)."""
+    detail = occurrence.detail
+    gap = detail.get("gap_seconds") or ""
+    brief = gap.isdigit() and int(gap) <= RELOAD_GAP_SECONDS
+    if detail.get("cause") == "reload" and brief:
+        return RELOAD, LogSeverity.INFO
+    return EVENT_TYPE[Moment.HA_RESTARTED], LogSeverity.WARNING
+
+
 # A moment that is, in itself, a failed request.
 OUTCOME: dict[Moment, Outcome] = {Moment.ARM_FAILED: Outcome.BLOCKED}
 
@@ -207,11 +227,17 @@ def row_for(occurrence: Occurrence, at: datetime) -> LogRow:
     if occurrence.group_id:
         detail["group_id"] = occurrence.group_id
     outcome = OUTCOME.get(occurrence.moment)
+    event_type, severity = (
+        event_type_of(occurrence.moment),
+        severity_of(occurrence.moment),
+    )
+    if occurrence.moment is Moment.HA_RESTARTED:
+        event_type, severity = _restart_row(occurrence, at)
     return LogRow(
         ts=at,
         category=category_of(occurrence.moment),
-        event_type=event_type_of(occurrence.moment),
-        severity=severity_of(occurrence.moment),
+        event_type=event_type,
+        severity=severity,
         area_id=occurrence.area_id,
         zone_id=occurrence.zone_id,
         scenario_id=occurrence.scenario_id,

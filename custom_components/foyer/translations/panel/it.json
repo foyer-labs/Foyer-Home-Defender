@@ -9,7 +9,9 @@
     "save": "Salva",
     "cancel": "Annulla",
     "delete": "Elimina",
-    "acknowledge": "Riconosci"
+    "acknowledge": "Riconosci",
+    "yes": "Sì",
+    "no": "No"
   },
   "nav": {
     "overview": "Panoramica",
@@ -1026,7 +1028,8 @@
     "action_call_service": "Chiamata di servizio",
     "action_delay": "Attesa",
     "action_chime": "Campanello",
-    "action_revert": "Riportato a riposo"
+    "action_revert": "Riportato a riposo",
+    "reloaded": "Foyer ricaricato"
   },
   "log": {
     "filters": "Filtri",
@@ -1062,7 +1065,13 @@
     "newer": "Più recenti",
     "older": "Più vecchi",
     "gap": "Dal {from} al {to}",
-    "refresh": "Aggiorna"
+    "refresh": "Aggiorna",
+    "changes": "Modifiche",
+    "added": "aggiunta",
+    "removed": "rimossa",
+    "changed": "modificato",
+    "and_more": "e altre {count}",
+    "gap_short": "{seconds} s"
   },
   "language": {
     "en": "English",
@@ -1105,5 +1114,44 @@
     "test_sent": "Mandata. Se non è arrivato nulla, quel canale non ti avrebbe raggiunto nemmeno durante un allarme.",
     "test_hint": "Quali notifiche manda Foyer, e quando, si imposta nella pagina Profili di risposta.",
     "test_message": "Foyer Home Defender: questa è una notifica di prova."
+  },
+  "config_kind": {
+    "areas": "Area",
+    "zones": "Zona",
+    "scenarios": "Scenario",
+    "groups": "Gruppo",
+    "profiles": "Profilo",
+    "settings": "Impostazioni",
+    "chime": "Campanello",
+    "code_policy": "Politica dei codici",
+    "log": "Registro eventi"
+  },
+  "detail": {
+    "reason": "Motivo",
+    "cause": "Causa",
+    "down_since": "Non in funzione dalle",
+    "up_at": "Di nuovo in funzione alle",
+    "gap_seconds": "Interruzione (secondi)",
+    "from": "Da",
+    "to": "A",
+    "area_state": "L'area era",
+    "active": "Conta come in allarme",
+    "kind": "Tipo",
+    "action_id": "Azione",
+    "profile_id": "Profilo",
+    "error": "Errore",
+    "moment": "Momento",
+    "item_id": "Elemento",
+    "group_id": "Gruppo",
+    "incident_zones": "Zone dell'incidente",
+    "via": "Presa in carico tramite",
+    "removed": "Righe cancellate",
+    "n": "Soglia",
+    "count": "Conteggio",
+    "window": "Finestra",
+    "seconds": "Secondi",
+    "zone": "Zona",
+    "scenario": "Scenario",
+    "state": "Stato"
   }
 }

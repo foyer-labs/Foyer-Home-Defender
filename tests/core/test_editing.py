@@ -205,3 +205,39 @@ def test_settings_are_validated(config):
         config, RuntimeState(), {"siren_duration": 120, "arm_hold_timeout": 600}
     )
     assert good.config.settings.arm_hold_timeout == 600
+
+
+def test_a_configuration_change_records_the_value_before_and_after(config):
+    """A field name on its own does not answer "who changed what" (§10.2)."""
+    from dataclasses import replace
+
+    from custom_components.foyer.store.editing import config_diff
+
+    area = config.areas[0]
+    renamed = replace(area, name="Windows and doors", default_exit_delay=45)
+    new = replace(config, areas=(renamed, *config.areas[1:]))
+
+    changes = config_diff(config, new)
+    fields = changes["areas"]["changed"]["Windows and doors"]
+    assert fields["default_exit_delay"] == [area.default_exit_delay, 45]
+    assert fields["name"] == [area.name, "Windows and doors"]
+
+
+def test_a_long_value_says_it_changed_without_dragging_itself_in(config):
+    """A row that contains the configuration is a row nobody reads."""
+    from dataclasses import replace
+
+    from custom_components.foyer.core.models import ActionKind, Moment, ProfileAction
+    from custom_components.foyer.store.editing import config_diff
+
+    profile = config.profiles[0]
+    action = ProfileAction(
+        id="new", kind=ActionKind.SIREN, moments=frozenset({Moment.TRIGGERED})
+    )
+    new = replace(
+        config,
+        profiles=(replace(profile, actions=(*profile.actions, action)),),
+    )
+
+    fields = config_diff(config, new)["profiles"]["changed"][profile.name]
+    assert fields["actions"] == []

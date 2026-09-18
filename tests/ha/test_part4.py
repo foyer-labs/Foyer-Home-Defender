@@ -197,8 +197,10 @@ async def test_a_configuration_change_records_who_and_what_moved(
     rows = await _rows(client, categories=["config"])
     assert rows and rows[0]["event_type"] == "config_save"
     assert rows[0]["user_name"]
+    # The value before and the value after: a field name alone does not
+    # answer "who changed what".
     assert rows[0]["detail"]["changes"]["areas"]["changed"] == {
-        area["name"]: ["default_exit_delay"]
+        area["name"]: {"default_exit_delay": [30, 45]}
     }
 
 
@@ -255,6 +257,23 @@ async def test_the_restart_gap_is_logged_as_system_unavailable(
     assert gap[0]["severity"] == "warning"
     assert gap[0]["detail"]["cause"] in {"ha_start", "reload"}
     assert gap[0]["detail"]["up_at"]
+
+
+async def test_saving_a_setting_is_a_reload_not_an_outage(
+    hass, hass_ws_client, entry, loaded
+):
+    """Every configuration change reloads the integration. A row saying "Foyer
+    was not running", in warning, beside each of them is how a real gap gets
+    ignored."""
+    client = await hass_ws_client(hass)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    rows = await _rows(client, categories=["system"])
+    reloads = [r for r in rows if r["event_type"] == "reloaded"]
+    assert reloads, [r["event_type"] for r in rows]
+    assert reloads[0]["severity"] == "info"
+    assert int(reloads[0]["detail"]["gap_seconds"]) <= 60
 
 
 # --- retention and export --------------------------------------------------------

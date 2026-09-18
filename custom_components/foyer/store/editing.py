@@ -266,12 +266,45 @@ def _log_from(data: Any, current: LogSettings) -> LogSettings:
     return log_from_dict(data)
 
 
-def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
-    """A summary of what an edit changed, for the log (§10.2, category config).
+# What one field's before-and-after may be worth printing in a log row. A
+# number, a name, a flag and a short list are; a profile's whole action list is
+# not, and the row would become the configuration itself.
+_SIMPLE = (str, int, float, bool, type(None))
+_MAX_LIST = 6
 
-    Deliberately shallow: which objects were added, removed or changed, and
-    which of their fields moved. The whole before-and-after would be the
-    configuration itself in every row, and a row nobody reads is not an audit.
+
+def _simple(value: Any) -> bool:
+    if isinstance(value, _SIMPLE):
+        return True
+    if isinstance(value, (list, tuple)):
+        return len(value) <= _MAX_LIST and all(isinstance(v, _SIMPLE) for v in value)
+    return False
+
+
+def _pair(before: Any, after: Any) -> list[Any]:
+    """``[before, after]`` when both are worth reading, ``[]`` when they are
+    not: the field still says it changed, without dragging its contents in."""
+    if _simple(before) and _simple(after):
+        return [before, after]
+    return []
+
+
+def _fields(was: dict[str, Any], now: dict[str, Any]) -> dict[str, list[Any]]:
+    return {
+        key: _pair(was.get(key), now.get(key))
+        for key in sorted(was.keys() | now.keys())
+        if was.get(key) != now.get(key)
+    }
+
+
+def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
+    """What an edit changed, for the log (§10.2, category ``config``).
+
+    "Who changed what" is the question this category exists to answer, and a
+    field name alone does not answer it: the row carries the value before and
+    the value after. What it does not carry is anything long — a profile's
+    action list, a trigger's states — because a row that contains the
+    configuration is a row nobody reads.
     """
     before, after = config_to_dict(old), config_to_dict(new)
     changes: dict[str, Any] = {}
@@ -281,11 +314,10 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
         added = [now[i].get("name", i) for i in now.keys() - was.keys()]
         removed = [was[i].get("name", i) for i in was.keys() - now.keys()]
         edited = {
-            now[i].get("name", i): sorted(
-                k
-                for k in was[i].keys() | now[i].keys()
-                if was[i].get(k) != now[i].get(k)
-            )
+            # The name it has now: a rename shows as a change of "name", and
+            # filing it under the old one would hide it from the object it
+            # belongs to.
+            now[i].get("name", i): _fields(was[i], now[i])
             for i in was.keys() & now.keys()
             if was[i] != now[i]
         }
@@ -297,13 +329,9 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
         if entry:
             changes[kind] = entry
     for block in ("settings", "chime", "code_policy"):
-        if before.get(block) != after.get(block):
-            changes[block] = sorted(
-                k
-                for k in (before.get(block) or {}).keys()
-                | (after.get(block) or {}).keys()
-                if (before.get(block) or {}).get(k) != (after.get(block) or {}).get(k)
-            )
+        was_block, now_block = before.get(block) or {}, after.get(block) or {}
+        if was_block != now_block:
+            changes[block] = _fields(was_block, now_block)
     return changes
 
 

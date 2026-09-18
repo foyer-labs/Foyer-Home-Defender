@@ -395,8 +395,14 @@ class FoyerPageLog extends LitElement {
                   ? html`<dt>${t(s, "log.channel")}</dt>
                       <dd>${channelLabel(s, row.channel)}</dd>`
                   : nothing}
-                <dt>${t(s, "log.detail")}</dt>
-                <dd class="mono">${JSON.stringify(row.detail)}</dd>
+                ${this._changeLines(s, row).map(
+                  (line, index) => html`<dt>${index ? "" : t(s, "log.changes")}</dt>
+                    <dd>${line}</dd>`,
+                )}
+                ${this._plainDetail(row).map(
+                  ([key, value]) => html`<dt>${t(s, `detail.${key}`)}</dt>
+                    <dd class="mono">${value}</dd>`,
+                )}
               </dl>
             </td>
           </tr>`
@@ -420,6 +426,9 @@ class FoyerPageLog extends LitElement {
     if (row.event_type === "zone_state") {
       return `${detail.from ?? "?"} → ${detail.to ?? "?"}`;
     }
+    if (row.event_type === "reloaded") {
+      return t(s, "log.gap_short", { seconds: String(detail.gap_seconds ?? "") });
+    }
     if (row.event_type === "system_unavailable" && typeof detail.down_since === "string") {
       return t(s, "log.gap", {
         from: new Date(detail.down_since).toLocaleString(ctx.hass.language),
@@ -429,7 +438,101 @@ class FoyerPageLog extends LitElement {
     if (typeof detail.kind === "string" && row.category === "action") {
       return t(s, `action_kind.${detail.kind}`);
     }
+    const lines = this._changeLines(s, row);
+    if (lines.length) {
+      return lines.length > 2
+        ? `${lines.slice(0, 2).join(" · ")} ${t(s, "log.and_more", {
+            count: lines.length - 2,
+          })}`
+        : lines.join(" · ");
+    }
     return "";
+  }
+
+  /** What a configuration change actually changed, in words.
+   *
+   * "Who changed what" is what this category is for, and a field name on its
+   * own does not answer it: the row carries the value before and the value
+   * after, and this turns them into a line a person can read six months later.
+   */
+  private _changeLines(s: Strings, row: LogRow): string[] {
+    const changes = row.detail?.changes;
+    if (!changes || typeof changes !== "object" || Array.isArray(changes)) return [];
+    const lines: string[] = [];
+    for (const [kind, entry] of Object.entries(changes as Record<string, unknown>)) {
+      const label = t(s, `config_kind.${kind}`);
+      if (typeof entry !== "object" || entry === null) {
+        lines.push(`${label}: ${this._value(s, entry)}`);
+        continue;
+      }
+      const group = entry as Record<string, unknown>;
+      const grouped = "added" in group || "removed" in group || "changed" in group;
+      if (!grouped) {
+        // A settings block: the fields are the entry itself.
+        lines.push(...this._fieldLines(s, label, group));
+        continue;
+      }
+      for (const name of (group.added as string[]) ?? []) {
+        lines.push(`${label} · ${t(s, "log.added")}: ${name}`);
+      }
+      for (const name of (group.removed as string[]) ?? []) {
+        lines.push(`${label} · ${t(s, "log.removed")}: ${name}`);
+      }
+      const changed = (group.changed as Record<string, unknown>) ?? {};
+      for (const [name, fields] of Object.entries(changed)) {
+        lines.push(
+          ...this._fieldLines(
+            s,
+            `${label} «${name}»`,
+            fields as Record<string, unknown>,
+          ),
+        );
+      }
+    }
+    return lines;
+  }
+
+  private _fieldLines(
+    s: Strings,
+    prefix: string,
+    fields: Record<string, unknown> | string[],
+  ): string[] {
+    // Rows written before values were recorded carry a list of field names.
+    if (Array.isArray(fields)) {
+      return fields.map((field) => `${prefix} · ${t(s, `field.${field}`)}`);
+    }
+    return Object.entries(fields).map(([field, pair]) => {
+      const name = t(s, `field.${field}`);
+      const label = name.startsWith("field.") ? field : name;
+      if (Array.isArray(pair) && pair.length === 2) {
+        return `${prefix} · ${label}: ${this._value(s, pair[0])} → ${this._value(
+          s,
+          pair[1],
+        )}`;
+      }
+      return `${prefix} · ${label}: ${t(s, "log.changed")}`;
+    });
+  }
+
+  private _value(s: Strings, value: unknown): string {
+    if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "boolean") return t(s, value ? "common.yes" : "common.no");
+    if (Array.isArray(value)) {
+      return value.length ? value.map((v) => this._value(s, v)).join(", ") : "—";
+    }
+    return String(value);
+  }
+
+  /** Everything else in the detail, as it is: one line per key, so a row is
+   * readable without a JSON parser in the reader's head. */
+  private _plainDetail(row: LogRow): [string, string][] {
+    const skip = new Set(["changes", "zone_ids", "blocking_zones"]);
+    return Object.entries(row.detail ?? {})
+      .filter(([key, value]) => !skip.has(key) && value !== null && value !== "")
+      .map(([key, value]) => [
+        key,
+        typeof value === "object" ? JSON.stringify(value) : String(value),
+      ]);
   }
 
   static override styles = [
