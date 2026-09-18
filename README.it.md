@@ -188,6 +188,10 @@ hardware e come scrivere il proprio adattatore — è in
 [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md)
 (in inglese, come tutta la documentazione tecnica).
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-devices-it.png" alt="Dispositivi di inserimento: due tastierini e un tag, ognuno dichiarato prima di poter comandare qualcosa, e il contratto MQTT con il messaggio che pubblicherà davvero" width="900">
+</p>
+
 ## Cosa manca ancora, e conta
 
 - **Nessun simulatore e nessuna prova di percorso.** Non puoi ancora chiedere

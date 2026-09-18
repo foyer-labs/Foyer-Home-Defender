@@ -162,6 +162,10 @@ The contract, the hardware comparison and how to write your own adapter are in
 A keypad should never be your only way in: batteries die, radios jam, brokers
 stop. Keep the panel and the card.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-devices-en.png" alt="Arming devices: two keypads and a tag, each declared before it may command anything, and the MQTT contract with the message it will actually publish" width="900">
+</p>
+
 ## "I could do this with automations"
 
 You could, and the first version works. What costs the next six months is the
