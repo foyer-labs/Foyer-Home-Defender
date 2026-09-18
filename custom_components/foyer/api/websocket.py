@@ -149,17 +149,21 @@ def _may_configure(
 ) -> Reason | None:
     """The gate in front of every configuration and log command (§8.3).
 
-    Foyer knows this person, or it does not. If a Foyer user is linked to
-    their Home Assistant account, Foyer's own rules apply in full: the
-    permission, and the code the policy asks for. If none is, the rule is the
-    one this integration has used since Phase 0 — a Home Assistant
-    administrator, and nobody else.
+    Foyer knows this person, or it does not. A Foyer user linked to their
+    Home Assistant account is subject to Foyer's rules; with none linked, the
+    rule is the one this integration has used since Phase 0 — a Home
+    Assistant administrator, and nobody else.
 
-    That second half is deliberate and belongs in the open: an administrator
-    who is not a Foyer user configures without a code. INV-6 says as much
-    already — an administrator can read .storage, call any service and
-    disable the integration — and the alternative is an installation whose
-    owner has locked themselves out of their own configuration.
+    With one exception, deliberate and stated where it is implemented: a Home
+    Assistant **administrator** is never refused the configuration for want of
+    a permission. INV-6 already says they can read .storage, call any service
+    and disable the integration, so refusing them here buys no security — and
+    it would buy a real failure: the owner who links their own account, leaves
+    manage_users unticked and can never tick it again.
+
+    The code is a different matter and still applies to them: it is what
+    protects the configuration from somebody using their unlocked tablet,
+    which is exactly the threat INV-6 says codes are for.
     """
     user = system.config.user(actor.user_id)
     if actor.code is CodeResult.INVALID:
@@ -168,7 +172,7 @@ def _may_configure(
         return None if connection.user.is_admin else Reason.NOT_PERMITTED
     if not user.enabled or not user.in_window(dt_util.utcnow()):
         return Reason.USER_NOT_VALID
-    if not user.may(permission):
+    if not user.may(permission) and not connection.user.is_admin:
         return Reason.NOT_PERMITTED
     if (
         need_code
@@ -657,6 +661,7 @@ async def _apply(
         vol.Required("kind"): vol.In(list(KINDS)),
         vol.Required("item"): dict,
         vol.Optional("trigger_confirmed", default=False): bool,
+        vol.Optional("code"): vol.Any(str, None),
     }
 )
 @websocket_api.async_response
@@ -697,6 +702,7 @@ async def ws_config_save(
         # Not "id": that is the WebSocket message id, and a clash makes Home
         # Assistant drop the command as invalid.
         vol.Required("item_id"): str,
+        vol.Optional("code"): vol.Any(str, None),
     }
 )
 @websocket_api.async_response
@@ -731,6 +737,7 @@ async def ws_config_delete(
     {
         vol.Required("type"): "foyer/config/settings",
         vol.Required("settings"): dict,
+        vol.Optional("code"): vol.Any(str, None),
     }
 )
 @websocket_api.async_response
@@ -757,6 +764,7 @@ async def ws_settings_save(
     {
         vol.Required("type"): "foyer/config/chime",
         vol.Required("chime"): dict,
+        vol.Optional("code"): vol.Any(str, None),
     }
 )
 @websocket_api.async_response
