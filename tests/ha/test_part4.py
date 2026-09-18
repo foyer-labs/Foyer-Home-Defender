@@ -480,3 +480,25 @@ async def test_the_icons_module_is_served_too(hass, hass_client, loaded):
     assert icons, urls
     client = await hass_client()
     assert (await client.get(icons)).status == 200
+
+
+async def test_a_forced_arm_is_recorded_as_forced(hass, hass_ws_client, loaded):
+    """§5.4: forced arming is never implicit, and never silent. The card offers
+    it on a refusal, so the row it leaves is what says it was taken."""
+    client = await hass_ws_client(hass)
+    await _set(hass, ZONE, "on")
+    scenario_id = hass.data[DOMAIN].config.scenarios[0].id
+
+    refused = await _ws(client, {"type": "foyer/arm", "scenario_id": scenario_id})
+    assert not refused["success"]
+    assert refused["reason"] == "zone_open"
+
+    forced = await _ws(
+        client, {"type": "foyer/arm", "scenario_id": scenario_id, "force": True}
+    )
+    assert forced["success"], forced
+    assert forced["state"]["zones"][0]["bypassed"] == "forced"
+    await hass.async_block_till_done()
+
+    rows = await _rows(client, categories=["security"])
+    assert "forced_arm" in [r["event_type"] for r in rows]

@@ -751,7 +751,7 @@ o`
 `;
 //#endregion
 //#region src/card/foyer-card.ts
-var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve = class extends J {
+var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), ye = class extends J {
 	constructor(...e) {
 		super(...e), this._busy = !1, this._tick = 0, this._offset = 0;
 	}
@@ -810,9 +810,15 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 			this._busy = !0, this._feedback = void 0;
 			try {
 				let t = await this.hass.callWS(e);
-				t.success || (this._feedback = Z(this._strings, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => e.name).join(", ") }));
+				t.success || (this._feedback = {
+					text: Z(this._strings, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => e.name).join(", ") }),
+					retry: e.type === "foyer/arm" && !e.force && ve.has(t.reason ?? "") ? {
+						...e,
+						force: !0
+					} : void 0
+				});
 			} catch (e) {
-				this._feedback = String(e?.message ?? e);
+				this._feedback = { text: String(e?.message ?? e) };
 			} finally {
 				this._busy = !1;
 			}
@@ -1062,7 +1068,20 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
     </div>`;
 	}
 	_renderFeedback() {
-		return this._feedback ? L`<div class="feedback" role="alert">${this._feedback}</div>` : z;
+		let e = this._feedback;
+		if (!e) return z;
+		let t = this._strings;
+		return L`<div class="feedback" role="alert">
+      <div>${e.text}</div>
+      ${e.retry ? L`<button
+              class="force"
+              ?disabled=${this._busy}
+              @click=${() => this._run(e.retry)}
+            >
+              ${Z(t, "overview.force_arm")}
+            </button>
+            <span class="force-hint">${Z(t, "overview.force_arm_hint")}</span>` : z}
+    </div>`;
 	}
 	_message(e) {
 		return L`<ha-card><div class="content">${e}</div></ha-card>`;
@@ -1176,6 +1195,17 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
       .feedback {
         color: var(--error-color);
         font-size: 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .feedback .force {
+        color: var(--error-color);
+      }
+      .force-hint {
+        color: var(--secondary-text-color);
+        font-size: 12.5px;
       }
       .alert {
         display: flex;
@@ -1200,8 +1230,8 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
     `];
 	}
 };
-customElements.get("foyer-card") || customElements.define("foyer-card", ve);
-var ye = class extends J {
+customElements.get("foyer-card") || customElements.define("foyer-card", ye);
+var be = class extends J {
 	constructor(...e) {
 		super(...e), this._config = { type: "custom:foyer-card" };
 	}
@@ -1294,7 +1324,7 @@ var ye = class extends J {
   `;
 	}
 };
-customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", ye), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
+customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", be), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
 	type: "foyer-card",
 	name: "Foyer Home Defender",
 	preview: !0

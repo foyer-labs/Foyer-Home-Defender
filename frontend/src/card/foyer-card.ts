@@ -30,6 +30,17 @@ interface FoyerCardConfig {
 const ENTITY_PREFIX = "alarm_control_panel.foyer_";
 const MASTER = "alarm_control_panel.foyer_master";
 
+// A refusal a forced arm could override (§5.4): zones open, or in fault. The
+// card offers it for the same reason the panel does — the alternative is
+// excluding the zones one by one, from the thing on the wall, while leaving.
+const FORCEABLE = new Set(["zone_open", "zone_fault"]);
+
+interface Feedback {
+  text: string;
+  /** The command to repeat with force, when forcing could get past it. */
+  retry?: Record<string, unknown>;
+}
+
 class FoyerCard extends LitElement {
   static override properties = {
     hass: { attribute: false },
@@ -46,7 +57,7 @@ class FoyerCard extends LitElement {
   private _strings?: Strings;
   private _status?: FoyerStatus;
   private _busy = false;
-  private _feedback?: string;
+  private _feedback?: Feedback;
   private _tick = 0;
   private _offset = 0;
   private _language?: string;
@@ -127,12 +138,22 @@ class FoyerCard extends LitElement {
     try {
       const result = await this.hass.callWS<CommandResult>(command);
       if (!result.success) {
-        this._feedback = t(this._strings, `reason.${result.reason ?? "unknown"}`, {
-          zones: result.blocking_zones.map((z) => z.name).join(", "),
-        });
+        this._feedback = {
+          text: t(this._strings, `reason.${result.reason ?? "unknown"}`, {
+            zones: result.blocking_zones.map((z) => z.name).join(", "),
+          }),
+          // Never for a command that is already forced, and never for one
+          // forcing cannot help: forced arming is explicit, twice over.
+          retry:
+            command.type === "foyer/arm" &&
+            !command.force &&
+            FORCEABLE.has(result.reason ?? "")
+              ? { ...command, force: true }
+              : undefined,
+        };
       }
     } catch (err) {
-      this._feedback = String((err as Error)?.message ?? err);
+      this._feedback = { text: String((err as Error)?.message ?? err) };
     } finally {
       this._busy = false;
     }
@@ -448,9 +469,22 @@ class FoyerCard extends LitElement {
   }
 
   private _renderFeedback() {
-    return this._feedback
-      ? html`<div class="feedback" role="alert">${this._feedback}</div>`
-      : nothing;
+    const feedback = this._feedback;
+    if (!feedback) return nothing;
+    const s = this._strings;
+    return html`<div class="feedback" role="alert">
+      <div>${feedback.text}</div>
+      ${feedback.retry
+        ? html`<button
+              class="force"
+              ?disabled=${this._busy}
+              @click=${() => this._run(feedback.retry!)}
+            >
+              ${t(s, "overview.force_arm")}
+            </button>
+            <span class="force-hint">${t(s, "overview.force_arm_hint")}</span>`
+        : nothing}
+    </div>`;
   }
 
   private _message(text: string) {
@@ -567,6 +601,17 @@ class FoyerCard extends LitElement {
       .feedback {
         color: var(--error-color);
         font-size: 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .feedback .force {
+        color: var(--error-color);
+      }
+      .force-hint {
+        color: var(--secondary-text-color);
+        font-size: 12.5px;
       }
       .alert {
         display: flex;

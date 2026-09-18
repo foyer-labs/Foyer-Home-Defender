@@ -5,6 +5,26 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.11] — arming anyway, from the card
+
+**Pre-release, for testing only.** No schema change.
+
+### Added
+- **The card offers a forced arm when a zone refuses.** It named the zone and
+  stopped there, leaving the only way forward as excluding each zone by hand —
+  from the thing on the wall, while leaving the house. It now offers *Arm
+  anyway*, the same command the panel offers, on the same two refusals a force
+  can get past: zones open and zones in fault. Forced arming stays explicit and
+  is recorded under `security` as `forced_arm`, with the zones it excluded.
+
+### Fixed
+- The README now says what to do when the card is missing from the picker or a
+  dashboard reports *Custom element doesn't exist*. Home Assistant writes a
+  card's script tag into the page it renders, so a page loaded before Foyer was
+  installed does not have it and reconnecting does not fetch a new one: one
+  hard reload is the answer. Two tests rule Foyer's side out — the module is
+  registered, and the file is really served.
+
 ## [0.1.0-alpha.10] — the delays the Areas table stopped showing
 
 **Pre-release, for testing only.** No schema change.
