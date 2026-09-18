@@ -345,12 +345,23 @@ class FoyerSystem:
     # --- snapshot ------------------------------------------------------------
 
     def zone_entity_ids(self) -> list[str]:
-        return sorted({z.entity_id for z in self.config.zones})
+        """What the watcher subscribes to: zones, and the tags that command.
+
+        An arming device's entity belongs here for the same reason a zone's
+        does — a scan is a state change, and an entity nobody is listening to
+        is a tag that works once, at the next restart (§9.3).
+        """
+        return sorted(
+            {z.entity_id for z in self.config.zones}
+            | {d.entity_id for d in self.config.devices if d.entity_id}
+        )
 
     def watched_entity_ids(self) -> list[str]:
-        """Zones, plus every entity an action's condition reads (§6.3): the
-        engine is given the world, it never looks anything up (INV-1)."""
+        """Zones and arming devices, plus every entity an action's condition
+        reads (§6.3): the engine is given the world, it never looks anything
+        up (INV-1)."""
         entities = {z.entity_id for z in self.config.zones}
+        entities.update(d.entity_id for d in self.config.devices if d.entity_id)
         for profile in self.config.profiles:
             for action in profile.actions:
                 entities.update(condition_entities(action))

@@ -1013,9 +1013,9 @@ exist and are tested. Build on them; a channel added here authenticates
 through the same check, never around it.
 
 1. The service contract (§9.1): foyer.arm, foyer.disarm, foyer.bypass_zone,
-   foyer.unbypass_zone, foyer.acknowledge, foyer.walk_test (Phase 3 fills it),
-   foyer.test_action (Phase 3), foyer.export_log, foyer.export_config,
-   foyer.import_config. Every state-changing service takes code, user_id,
+   foyer.unbypass_zone, foyer.acknowledge, foyer.export_log,
+   foyer.export_config, foyer.import_config. (walk_test and test_action are
+   registered by Phase 3, which builds them: part 2 decision 10.) Every state-changing service takes code, user_id,
    channel and device_id and returns the structured result of §9.1, the same
    shape foyer/arm and foyer/disarm already return over the WebSocket, so a
    keypad adapter can give a meaningful answer instead of a silent failure.
@@ -1091,6 +1091,40 @@ Taken in part 1, before any code:
     deliberately protected, opened because a permissive scenario included it.
     The UI names the area that is asking.
 
+Taken in part 2, before any code:
+ 5. An UNKNOWN DEVICE IS REFUSED. Page 8 is a white list, not an address
+    book: a device_id this installation does not carry is refused whatever
+    code it brings, with reason `device_not_registered`, a row under
+    `security`, and a Home Assistant persistent notification — one per
+    device, keyed by channel and name, so a keypad retrying every thirty
+    seconds does not bury the notification that matters. The reason is the
+    lockout: §8.4 counts per channel AND per device, so a caller free to
+    invent a device id is a caller who is never locked out.
+ 6. A TAG IS REGISTERED FIRST AND ALWAYS NAMES A PERSON. A tag (NFC, RFID,
+    a remote) is declared on page 8 with its `tag.*`/`event.*` entity, its
+    owner and what it does; unregistered, a scan does nothing at all. It
+    never carries a `ref`, because a name anybody could type would be an
+    identity with no code in front of it. §9.3's sentence — a stolen tag
+    arms and disarms without knowing any code — is printed in the editor,
+    above the owner field, and in page 8's help panel.
+ 7. THE RETAINED MQTT MESSAGE HAS THREE LEVELS, defaulting to `minimal`:
+    minimal (master, countdown, ready_to_arm, fault, last_result, and the
+    COUNT of blocking zones) · standard (adds scenario and areas by name) ·
+    full (§9.2 as written, open zones by name). It is retained on a broker
+    that is often shared; decision 29's reasoning, applied again.
+ 8. THE CHANNEL IS THE REGISTERED DEVICE'S. A keypad registers `keypad`, a
+    tag `nfc` with token=True; a service call with no device is `api`, an
+    automation `automation`. A caller may CLAIM only `api` or `automation`;
+    claiming anything else without a registered device is refused as
+    `device_not_registered`. `user_id` is attribution and grants nothing.
+ 9. `skip_exit_delay` NEEDS NO PERMISSION AND NO CODE OF ITS OWN: whoever
+    may arm may arm at once. It is recorded on the `armed` row, because it
+    turns every delayed zone into an instant one.
+10. `foyer.walk_test` AND `foyer.test_action` ARE NOT REGISTERED until
+    Phase 3 builds them. A service that exists and does nothing answers its
+    caller with silence, which is the answer mistaken for success. The
+    appendix for part 2 is amended accordingly.
+
 Engine and runtime shape after part 1 (do not work around it):
 - Every request event carries an Actor (user_id, channel, device_id, a
   CodeResult, identified, duress, is_admin, token) instead of a code and a
@@ -1121,6 +1155,18 @@ Engine and runtime shape after part 1 (do not work around it):
 - Schema 5.1 (major): `users`, `code_policy` with nine entries,
   `settings.security`, require_code_to_arm/disarm on areas and scenarios,
   allowed_user_ids on scenarios, `user_id` on a key zone.
+
+Shape after part 2 (also binding):
+- `security/devices.async_requester` is the ONE place a service call or an
+  MQTT message becomes an Actor, and the one place an unknown device is
+  refused. A new physical channel goes through it.
+- `FoyerSystem.result(decision)` / `.refusal(reason)` build the §9.1 answer,
+  for every path. api/backup owns what a backup contains and the one code
+  path that writes a configuration.
+- Schema 5.2 (minor): `devices`, `settings.mqtt`. Additive, and a 5.1 build
+  ignoring both is a build with no physical channels — which is what it had.
+- `RuntimeState.seen_devices` and `AreaRuntime.device_id` / `skipped_exit`
+  are additive state, read with defaults.
 ```
 
 ### Carry-overs from Phase 1 into later phases

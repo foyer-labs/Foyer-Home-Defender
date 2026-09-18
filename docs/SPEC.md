@@ -915,7 +915,29 @@ foyer.simulate:      (see §11)
 
 All commands return a structured result: `{ success, reason, blocking_zones[],
 bypassed_zones[], state }` so a keypad adapter can give meaningful feedback
-rather than a silent failure.
+rather than a silent failure. One function builds it, shared by the services,
+the WebSocket commands and the MQTT bridge: two paths that answered different
+shapes would eventually be two paths, one of which had no check.
+
+Three rules the contract needs that the shape above does not carry:
+
+- **`device_id` names a registered device, and an unregistered one is refused**
+  (decision 81). It is not a Home Assistant device id; it is what the device
+  is declared as on page 8.
+- **`channel` may only be claimed as `api` or `automation`.** A physical or
+  identifying channel is a property of a registered device, never a claim a
+  message makes, or an automation would buy the exemption of §8.2 by typing a
+  word. `user_id` is attribution and grants nothing: claiming to be somebody
+  brings their restrictions, never their exemptions.
+- **`skip_exit_delay` needs no permission of its own** (decision 85): whoever
+  may arm may arm at once, and it uncovers nothing — it closes sooner. It does
+  turn every delayed zone into an instant one, so the `armed` row records that
+  it happened, and "why did it sound while I was still in the hall?" has an
+  answer.
+
+`foyer.walk_test` and `foyer.test_action` are **not registered until Phase 3**
+builds them (decision 86). A service that exists and does nothing answers its
+caller with silence, and silence is the answer that gets mistaken for success.
 
 ### 9.2 MQTT contract
 
@@ -935,18 +957,73 @@ foyer/<install_id>/state
   "areas": { "ground": "armed", "upstairs": "disarmed" },
   "countdown": { "kind": "exit"|"entry", "remaining": 22 },
   "ready_to_arm": false, "open_zones": ["Kitchen window"],
-  "fault": false, "last_result": "ok"|"blocked"|"bad_code"|"locked_out" }
+  "fault": false, "last_result": "ok"|"blocked"|"bad_code"|"locked_out"
+                                |"unknown_device" }
 ```
 
 Published retained on change and on request. Keypad adapters map `last_result`
-to their own beep and LED vocabulary.
+to their own beep and LED vocabulary. `unknown_device` is the fifth value and
+belongs with the other four: "that code is wrong" and "I am not known here"
+are different problems, and a household that hears one sound for both retypes
+a code that was never at fault.
+
+**How much of that message is published is a setting, in three steps, and it
+starts at the least** (decision 83). The message is retained, on a broker that
+is often shared, so whatever is in it is told to whoever connects next —
+including "the house is armed and nobody is in", and, at the top level, which
+window is open. That is the reasoning of decision 29 applied where it applies
+again.
+
+| Level | Carries |
+|---|---|
+| `minimal` (default) | master state, countdown, `ready_to_arm`, `fault`, `last_result`, and **how many** zones block arming |
+| `standard` | adds the active scenario and the per-area states, by name |
+| `full` | adds the open zones by name: the message above, as written |
+
+Inbound, **`device_id` is not optional** (decision 81): anybody who can publish
+to a topic can publish a command, so the name a message gives is the only thing
+separating a keypad from a stranger — and the only thing that keeps the lockout
+of §8.4 countable per device.
 
 **Topics are configurable**, not fixed. The `foyer/<install_id>/` prefix is a
 default, overridable per installation: people run more than one site against one
 broker, and people have an existing topic hierarchy they are not going to
 restructure for a new integration. Cheap to allow now, tedious to retrofit.
 
-### 9.3 Shipped adapters (blueprints)
+### 9.3 Arming devices, and the adapters
+
+Every device that commands the alarm is **declared before it may** (decision
+81): a `device_id` this installation does not carry is refused, whatever code
+it brings, the refusal is recorded under `security`, and it is raised as a Home
+Assistant notification — once per device, so a keypad configured with the wrong
+name does not bury the notification that matters. The reason is narrow: the
+lockout of §8.4 counts per channel *and* per device, so a caller free to invent
+a device id is a caller who is never locked out.
+
+A device is one of two kinds, and the kind decides everything that follows
+(decision 84):
+
+| Kind | Carries a code | Channel | Identity |
+|---|---|---|---|
+| `keypad` | yes, and the code *is* the identity (§8.2) | `keypad` | whoever typed |
+| `tag` | **no** — an NFC tag, an RFID badge, a remote | `nfc` | the user it names |
+
+A `tag` is backed by a `tag.*` or `event.*` entity and is read exactly as an
+event zone is (§4.4): a new timestamp is a scan, a change out of `unavailable`
+is Home Assistant restoring the last one at startup, and a device never read
+before records a baseline rather than arming the house. It carries `token=True`
+— possession is the credential — so the code policy cannot reach it, while the
+permissions, the validity window and the scope of the person it names apply in
+full.
+
+**A tag always names a person** (decision 82). §8.2 calls it a *per-user* NFC
+tag, and that is the only reason it counts as a channel that identifies; a
+token nobody owns is a shared credential, which is a keypad by another name and
+must be configured as one, with a code. The editor states, where somebody is
+deciding whether to carry one, the sentence this section has always made: a
+stolen tag arms and disarms without knowing any code.
+
+#### Shipped adapters (blueprints)
 
 - **Ring Alarm Keypad v2** over Z-Wave JS — full mapping including LED ring,
   beeps, exit/entry countdown and the dedicated arm-mode keys.
@@ -1809,3 +1886,9 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 78 | The code policy is inert until an enabled user holds a code | Failing closed with zero codes protects nothing and makes the alarm unusable; the alpha installations upgrading into this phase would find a house they could not disarm |
 | 79 | The per-user exemption is the user's switch, off by default, and no administrator is exempt automatically | What makes the exemption safe is the identification, not the role — and the unlocked wall tablet INV-6 names is almost always signed in as an administrator |
 | 80 | Where an area and a scenario disagree, the strictest explicit setting wins | §8.2 puts them on one step; the failure of this rule is one code too many, the failure of the other is a deliberately protected area opened by a permissive scenario |
+| 81 | A device is declared before it may command, and an unknown one is refused, logged and notified | The lockout counts per channel and device, so a caller free to invent a device id is a caller who is never locked out — and a refusal nobody sees is how a keypad set up with the wrong name stays broken for a month |
+| 82 | A tag always names a person, and never answers to a typed name | §8.2 calls it a *per-user* tag, which is the whole of why it identifies; and a token that answered to a name anybody could type would be an identity with no code in front of it |
+| 83 | The retained MQTT state message has three levels and starts at the least | It is retained on a broker that is often shared, so everything in it is told to whoever connects next — the same reasoning as the watchdog's empty payload (decision 29) |
+| 84 | The channel is the registered device's, never the message's claim | Otherwise an automation buys the per-user exemption of §8.2, or chooses which lockout counter to spend, by typing a word |
+| 85 | `skip_exit_delay` needs no permission of its own, and is recorded | It uncovers nothing; it closes sooner. But it turns every delayed zone into an instant one, and "why did it sound while I was still in the hall?" must have an answer |
+| 86 | `foyer.walk_test` and `foyer.test_action` are registered when Phase 3 builds them | A service that exists and does nothing answers its caller with silence, which is the answer that gets mistaken for success |

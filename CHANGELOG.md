@@ -5,6 +5,75 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.1] — the keypad by the door
+
+**The first beta, and the first release that is not a pre-release.** Phase 2 is
+complete: the house can be armed and disarmed from physical hardware, and the
+log says who did it, from where, and on which device.
+
+**Configuration schema 5.1 → 5.2, a minor step.** Arming devices and the MQTT
+settings are additive, and a 5.1 build reading this document simply has no
+physical channels — which is what it had. Nothing it protected goes
+unprotected, so a downgrade is safe.
+
+### Added
+- **The `foyer.*` service contract** (SPEC §9.1): `arm`, `disarm`,
+  `bypass_zone`, `unbypass_zone`, `acknowledge`, `export_log`, `export_config`,
+  `import_config`. Every state-changing service takes a code, a user, a channel
+  and a device and returns the structured result — success, reason, the zones
+  that blocked it by name, and the whole live state — so an adapter can tell a
+  wrong code from arming blocked by an open window. One function builds that
+  answer for the services, the WebSocket commands and MQTT alike.
+- **The MQTT contract, in both directions** (§9.2), with configurable topics,
+  off until you switch it on. A keypad publishes a command and reads the
+  retained state back for its LEDs, beeps and countdown.
+- **Arming devices, panel page 8**: keypads, NFC tags and remotes, declared
+  before they may command anything, with the MQTT settings and a preview of the
+  message Foyer will actually publish.
+- **Tags and remotes, natively.** A `tag.*` or `event.*` entity, the person it
+  belongs to and what a scan does. No automation needed, and the log names the
+  person — which is the whole reason a tag counts as a channel that identifies.
+- **Three blueprints**: Ring Alarm Keypad v2 over Z-Wave JS with the LED ring
+  and the exit and entry countdowns, a generic Zigbee keypad over Zigbee2MQTT,
+  and tags and remotes for the cases the native path deliberately will not
+  cover. Plus `docs/keypads.md`: what each piece of hardware is honestly worth,
+  the full contract, and how to write your own adapter.
+- **Card layout `badge`**: colour-coded state only, for embedding in a
+  dashboard of your own. Nothing to press, so a stray tap cannot disarm a
+  house; it still shows a running countdown and an alarm in memory.
+- **`skip_exit_delay`**, for the last person out who is already outside. No
+  permission of its own — whoever may arm may arm at once — and recorded on the
+  `armed` row, because it turns every delayed zone into an instant one.
+
+### Changed
+- **A device must be declared before it may command.** This is the one
+  behavioural change to read twice: an unknown `device_id` is refused whatever
+  code it brings, recorded under `security`, and raised as a notification. The
+  reason is the lockout — it counts per channel *and* per device, so a caller
+  free to invent a device id is a caller who is never locked out. Nothing
+  existing breaks: before this release there was no channel that sent one.
+- **The retained MQTT message says the least by default.** It sits on a broker
+  that is often shared, and whatever is in it is told to whoever connects next.
+  Three levels: `minimal` (no names at all), `standard` (scenario and areas),
+  `full` (the contract as specified, open zones by name).
+- **The channel is the device's, not the message's.** A caller may declare
+  itself `api` or `automation`; `keypad` and `nfc` come from the device
+  register, or the request is refused. Otherwise an automation could buy the
+  per-user code exemption by typing a word.
+- **Releases stop being pre-releases from here.** HACS only offers releases
+  that are not pre-releases, and shows a commit hash for a repository that has
+  none. The per-repository "show beta versions" switch is no longer needed.
+
+### Fixed
+- A tag's entity was not being watched, so a scan arrived only after a restart.
+  Found by writing the acceptance test rather than by reasoning about it.
+
+### Not built
+- `foyer.walk_test` and `foyer.test_action` are listed in §14.1 and are
+  registered by Phase 3, which builds them. A service that exists and does
+  nothing answers its caller with silence, and silence is the answer that gets
+  mistaken for success.
+
 ## [0.1.0-alpha.13] — codes, and somebody to attribute them to
 
 **Pre-release, for testing only.** **Configuration schema 4.2 → 5.1, a major
