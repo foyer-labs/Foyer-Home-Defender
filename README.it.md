@@ -6,33 +6,37 @@
 
 <h1 align="center">Foyer Home Defender</h1>
 
-<p align="center"><em>Una vera centrale d'allarme per Home Assistant: aree che si inseriscono da sole, scenari definiti da te, zone che dichiarano cosa le fa scattare, e un registro che dice la verità.</em></p>
+<p align="center"><em>Una vera centrale d'allarme per Home Assistant: aree che si inseriscono da sole, scenari definiti da te, zone che dichiarano cosa le fa scattare, un tastierino alla porta, e un registro che dice la verità.</em></p>
 
 <p align="center">
-  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?include_prereleases&sort=semver&label=versione" alt="Ultima versione"></a>
-  <img src="https://img.shields.io/badge/stato-alpha-orange" alt="Alpha">
+  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&label=versione" alt="Ultima versione"></a>
+  <img src="https://img.shields.io/badge/stato-beta-yellow" alt="Beta">
   <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5" alt="Home Assistant 2025.1 o successivo">
   <img src="https://img.shields.io/badge/HACS-repository%20personalizzato-41BDF5" alt="Repository personalizzato HACS">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
 </p>
 
-> ### Stato: alpha. Il nucleo dell'allarme funziona, e ora chiede un codice.
+> ### Stato: beta. Si inserisce dal muro, e il registro dice chi è stato.
 >
-> Può proteggere una casa, e lo sta facendo. **Utenti, codici, permessi e
-> blocco dopo tentativi ripetuti ci sono**: crei un utente con un codice e il
-> disinserimento lo chiede, dal pannello, dalla card e da un tablet a muro, e
-> il registro dice finalmente chi è stato. I tastierini fisici e il contratto
-> MQTT sono la prossima versione, ed è quello che trasforma questa alpha in
-> una beta.
+> Può proteggere una casa, e lo sta facendo. Questa è **la prima beta**: agli
+> utenti, ai codici per persona e ai permessi si aggiungono i dispositivi di
+> inserimento fisici — tastierini Ring e Zigbee, tag NFC, badge e telecomandi —
+> con il contratto dei servizi `foyer.*` e MQTT nelle due direzioni. Un
+> tastierino riceve una risposta vera: distingue «codice sbagliato» da
+> «bloccato dalla finestra della cucina», invece di fallire in silenzio. Fuori
+> restano il simulatore, la prova di percorso e la scalata delle notifiche.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
-cartella di automazioni, e sei disposto a far girare una alpha su una casa che
-ha anche altre serrature.
+cartella di automazioni, e vuoi inserire e disinserire da un tastierino, un tag
+o un badge con un registro che dice chi è stato.
 
-**Non ancora, se** inserisci da un tastierino fisico, se ti serve MQTT, o se
-vuoi qualcosa di finito: [Alarmo](https://github.com/nielsfaber/alarmo) queste
-cose le fa oggi, e le fa bene.
+**Non ancora, se** vuoi verificare una configurazione di quaranta zone senza
+farla scattare davvero, se ti serve che una notifica senza risposta salga da
+push a SMS a telefonata, o se non vuoi far girare su casa tua una beta con
+pochi mesi di vita: [Alarmo](https://github.com/nielsfaber/alarmo) ha anni di
+installazioni alle spalle, e per un impianto che deve semplicemente funzionare
+oggi è la scelta prudente.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-it.png" alt="Il pannello di Foyer: due aree inserite da un solo scenario, una in conto alla rovescia sul ritardo d'ingresso, le zone non pronte e gli ultimi eventi" width="900">
@@ -51,6 +55,13 @@ cose le fa oggi, e le fa bene.
   possono chiederne di più, e ogni riga del registro dice chi è stato. In più
   un codice di coercizione che disinserisce normalmente facendo scattare un
   allarme silenzioso, e il blocco dopo codici sbagliati ripetuti.
+- **Inserimento da un tastierino alla porta.** Tastierini Ring e Zigbee, tag
+  NFC, badge RFID e telecomandi. Foyer non parla con i singoli modelli: espone
+  un contratto — i servizi `foyer.*` e MQTT nelle due direzioni, con topic
+  configurabili — e risponde in modo strutturato, così un tastierino può dare
+  due suoni diversi a «codice sbagliato» e a «non adesso, la finestra della
+  cucina è aperta». Ogni riga del registro nomina la persona, il canale e il
+  dispositivo.
 - **Zone che dichiarano da sole cosa le fa scattare.** I contatti normalmente
   chiusi e normalmente aperti si comportano al contrario, quindi Foyer propone
   la condizione a partire dalla classe del dispositivo e poi ti chiede di
@@ -75,8 +86,10 @@ cose le fa oggi, e le fa bene.
   ritardata, percorso (allarma solo se prima si è aperta una zona ritardata),
   24h, antimanomissione, tecnica, antirapina, e zone chiave che inseriscono o
   disinseriscono invece di allarmare.
-- **Ritardi di uscita e di ingresso**, e quattro cose che una zona può fare se
-  è aperta mentre inserisci: bloccare, escludersi, aspettare che la chiudi, o
+- **Ritardi di uscita e di ingresso** — con la possibilità di saltare quello di
+  uscita quando sei già fuori, scritta sulla riga di inserimento perché rende
+  istantanea ogni zona ritardata — e quattro cose che una zona può fare se è
+  aperta mentre inserisci: bloccare, escludersi, aspettare che la chiudi, o
   farsi ignorare.
 - **Inserimento forzato** come comando distinto e registrato, ed esclusione
   manuale di una zona — con una durata, dopo la quale rientra e te lo dice,
@@ -99,7 +112,9 @@ cose le fa oggi, e le fa bene.
   WebSocket e non solo nell'interfaccia, con una finestra di validità per i
   codici ospite e un ambito limitato ad aree o scenari scelti.
 - **Pannello in italiano e in inglese**, con aiuto contestuale in ogni pagina, e
-  una card nelle disposizioni `full`, `compact` e `keypad`.
+  una card nelle disposizioni `full`, `compact`, `keypad` e `badge` — l'ultima
+  è di solo stato colorato, senza niente da premere, perché un tocco
+  involontario su una dashboard non disinserisca una casa.
 
 </details>
 
@@ -120,15 +135,70 @@ alle 02:14?* e il recorder l'ha cancellato dieci giorni fa.
 Foyer è quelle parti. Le tue automazioni restano benvenute: emette un evento
 per tutto ciò che registra, e può chiamare qualunque servizio tu voglia.
 
+## Tastierini, tag e telecomandi
+
+Foyer non parla con i tastierini: espone un contratto. I modelli cambiano ogni
+sei mesi, il contratto no. Tutto ciò che sa chiamare un servizio di Home
+Assistant o pubblicare su un broker MQTT può inserire e disinserire questa
+casa. E qualunque strada prenda, il registro non scrive «disinserito»: scrive
+chi, da quale canale, con quale dispositivo.
+
+- **Un dispositivo va dichiarato prima di poter comandare qualcosa.** Lo
+  aggiungi nella pagina *Dispositivi di inserimento*; un dispositivo che
+  l'installazione non conosce viene rifiutato qualunque codice porti, e il
+  rifiuto finisce nel registro e in una notifica. Non è pignoleria: il blocco
+  dopo codici sbagliati conta per canale *e* per dispositivo, quindi chi è
+  libero di inventarsi il nome di un dispositivo è qualcuno che non viene
+  bloccato mai.
+- **Il riscontro è strutturato, non un silenzio.** Ogni servizio che cambia
+  stato risponde con l'esito, un motivo stabile — `bad_code`, `zone_open`,
+  `locked_out`, `not_permitted`, e gli altri — e il nome delle zone che hanno
+  bloccato l'inserimento. È quello che permette a un tastierino di distinguere
+  *il codice è sbagliato* da *non adesso*: sono due problemi diversi, e una
+  famiglia che sente lo stesso suono per entrambi ridigita un codice che non
+  era il problema.
+- **MQTT nelle due direzioni**, con topic configurabili, spento finché non lo
+  accendi. Il dispositivo pubblica un comando e rilegge lo stato ritenuto
+  (*retained*) per LED, segnali acustici e conto alla rovescia. Per
+  impostazione predefinita quel messaggio dice il meno possibile: sta su un
+  broker spesso condiviso, e quello che contiene viene raccontato a chiunque si
+  colleghi dopo — compreso «casa inserita, non c'è nessuno». Tre livelli, e
+  alzarlo è una scelta che fai sapendo cosa costa.
+- **Tag NFC, badge e telecomandi in modo nativo.** Un'entità `tag.*` o
+  `event.*`, la persona a cui appartiene, e cosa fa una scansione: nessuna
+  automazione da scrivere, e il registro nomina quella persona — che è tutto il
+  motivo per cui un tag vale come canale che identifica. Un tastierino
+  condiviso è l'opposto: lì il codice *è* l'identità, e l'esenzione dal codice
+  per persona non può valere. Un tag però non ha nessun codice da digitare:
+  chi lo trova inserisce e disinserisce come chi lo possiede, quindi va
+  trattato come una chiave.
+- **Tre blueprint pronti**: Ring Alarm Keypad v2 su Z-Wave JS con l'anello LED
+  e i conti alla rovescia di uscita e di ingresso, un tastierino Zigbee
+  generico via Zigbee2MQTT, e tag e telecomandi per i casi che la
+  configurazione nativa non copre apposta. Due avvertenze, perché servono: i
+  valori degli indicatori LED del Ring sono mappature della comunità, non
+  documentazione del produttore, e i cloni della famiglia Tuya cambiano nomi
+  delle azioni e campi da una revisione di firmware all'altra, quindi il tuo
+  tastierino va guardato una volta sul suo topic prima di fidartene. Quello che
+  i blueprint fanno con Foyer funziona comunque: a sbagliare è solo ciò che il
+  tastierino ti mostra.
+
+Il contratto completo — servizi, MQTT, cosa vale onestamente ogni tipo di
+hardware e come scrivere il proprio adattatore — è in
+[docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md)
+(in inglese, come tutta la documentazione tecnica).
+
 ## Cosa manca ancora, e conta
 
-- **Nessun tastierino fisico e nessun MQTT.** I codici funzionano dal
-  pannello, dalla card e da un tablet a muro; un tastierino Ring o Zigbee
-  appeso al muro non parla ancora con Foyer. *Prossima versione.*
 - **Nessun simulatore e nessuna prova di percorso.** Non puoi ancora chiedere
   «cosa succederebbe se la finestra della cucina si aprisse adesso, con questo
-  scenario, a quest'ora?» senza aprirla. *Dopo.*
-- **Nessuna scalata delle notifiche.** Vanno direttamente a un servizio
+  scenario, a quest'ora?» senza aprirla. *Prossima versione.*
+- **Nessun inserimento automatico.** Foyer non si inserisce da solo quando la
+  casa si svuota. Arriva insieme alla scalata delle notifiche, non prima: il
+  conto alla rovescia annullabile che serve a entrambe è lo stesso meccanismo,
+  e scriverlo due volte sarebbe spreco. *Dopo.*
+- **Nessuna rubrica dei contatti e nessuna scalata delle notifiche.** Vanno
+  direttamente a un servizio
   `notify`; non salgono da push a SMS a telefonata finché qualcuno non
   risponde. *Dopo.*
 L'ordine è fissato e scritto, con quello che ogni passo deve dimostrare prima
@@ -148,12 +218,15 @@ copia il codice. Dove differiscono oggi:
 | **Fumo, gas, acqua** | Un canale separato, attivo a impianto disinserito, mai `triggered` su un'entità d'allarme | Sensori ordinari |
 | **Un incidente per effrazione** | Sì, con una sola presa in carico | Un allarme per sensore |
 | **Utenti, codici, permessi** | Sì: un codice a testa, politica per operazione, codice di coercizione, blocco | Sì, codici per utente |
-| **Tastierini, MQTT** | **Non ancora** | Sì |
-| **Maturità** | Alpha. Un solo autore, pochi mesi di vita | Anni di utilizzo, moltissime installazioni |
+| **Tastierini, MQTT** | Sì: contratto dei servizi e MQTT nelle due direzioni, dispositivi dichiarati, tre blueprint | Sì |
+| **Tag NFC e telecomandi** | Nativi, legati a una persona, senza automazioni da scrivere | Tramite automazioni |
+| **Maturità** | Beta. Un solo autore, pochi mesi di vita | Anni di utilizzo, moltissime installazioni |
 | **Simulatore, prova di percorso** | Previsti, non scritti | — |
 | **Interfaccia in italiano** | Completa: pannello, card e testi di aiuto | Solo in inglese |
 
-Se ti serve un allarme oggi e un tastierino al muro ti interessa, usa Alarmo.
+Il tastierino non è più la riga che decide. Quella che resta è l'ultima: se
+vuoi un impianto che sia già stato collaudato da molti altri prima che da te,
+usa Alarmo.
 
 ## Come puoi verificarlo invece di fidarti
 
@@ -208,9 +281,14 @@ Assistant non sostituisce rivelatori certificati e interconnessi.
   implementa.
 - Una sirena, un interruttore o una presa smart, se vuoi far rumore.
   Facoltativo.
+- Un tastierino, un tag NFC, un badge o un telecomando, se vuoi inserire dal
+  muro invece che dal telefono. Facoltativo, e
+  [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md)
+  dice cosa vale ogni tipo di hardware prima che tu lo compri.
 
-Nient'altro: nessun account cloud, nessun broker MQTT, nessuna connessione
-verso l'esterno che parta da Foyer.
+Nient'altro: nessun account cloud e nessuna connessione verso l'esterno che
+parta da Foyer. Un broker MQTT serve solo se colleghi un tastierino per quella
+strada, e resta spento finché non lo accendi tu.
 
 ## I primi quindici minuti
 
@@ -239,15 +317,15 @@ verso l'esterno che parta da Foyer.
    guidata completa la configurazione.
 
 <details>
-<summary>HACS mostra il codice di un commit invece del numero di versione</summary>
+<summary>HACS mostrava il codice di un commit invece del numero di versione</summary>
 
-Finché Foyer è in alpha, ogni versione è pubblicata come *pre-release* su
-GitHub, e HACS offre solo le release che non sono pre-release: per un
-repository che non ne ha nessuna ripiega sul ramo predefinito e mostra il
-commit. Per vedere e scegliere i nomi delle versioni, abilita l'entità *switch*
-che HACS crea per questo repository (*Impostazioni → Dispositivi e servizi →
-Entità*, cerca «pre release»; è disabilitata di default). Dalla prima beta le
-versioni saranno pubblicate normalmente e questa nota sparirà.
+Fino alla alpha.13 ogni versione era pubblicata come *pre-release* su GitHub, e
+HACS offre solo le release che non sono pre-release: per un repository che non
+ne ha nessuna ripiega sul ramo predefinito e mostra il commit. Dalla
+0.1.0-beta.1 le versioni sono pubblicate normalmente, quindi HACS le vede, le
+mostra per nome e propone da solo gli aggiornamenti. Se a suo tempo avevi
+abilitato l'entità *switch* «pre release» che HACS crea per questo repository,
+ora puoi disattivarla.
 
 </details>
 
@@ -273,7 +351,7 @@ scrivila a mano:
 ```yaml
 type: custom:foyer-card
 entity: alarm_control_panel.foyer_master   # oppure alarm_control_panel.foyer_<area>
-layout: full                               # full, compact o keypad
+layout: full                               # full, compact, keypad o badge
 ```
 
 Non serve aggiungere alcuna risorsa alla dashboard. La card non decide nulla da
@@ -363,7 +441,7 @@ quale versione di Foyer e di Home Assistant, cosa ti aspettavi, e cosa mostra
 la pagina del registro: la riga di solito contiene già la risposta, quindi una
 schermata vale più di una descrizione. In italiano o in inglese, come preferisci.
 
-Per sapere quando arrivano i tastierini, metti il repository fra quelli che
+Per sapere quando esce una versione, metti il repository fra quelli che
 segui: le versioni vengono annunciate lì, e il
 [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)
 dice ogni volta cosa è cambiato nel comportamento.

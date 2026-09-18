@@ -6,32 +6,34 @@
 
 <h1 align="center">Foyer Home Defender</h1>
 
-<p align="center"><em>A real intruder alarm panel for Home Assistant: areas that arm on their own, scenarios you define yourself, zones that say what "triggered" means for them, and a log that tells you the truth.</em></p>
+<p align="center"><em>A real intruder alarm panel for Home Assistant: areas that arm on their own, scenarios you define yourself, zones that say what "triggered" means for them, a keypad by the door, and a log that tells you the truth.</em></p>
 
 <p align="center">
-  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?include_prereleases&sort=semver&label=version" alt="Latest version"></a>
-  <img src="https://img.shields.io/badge/status-alpha-orange" alt="Alpha">
+  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&label=version" alt="Latest version"></a>
+  <img src="https://img.shields.io/badge/status-beta-yellow" alt="Beta">
   <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5" alt="Home Assistant 2025.1 or later">
   <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5" alt="HACS custom repository">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Apache-2.0"></a>
 </p>
 
-> ### Status: alpha. The alarm core works, and it now asks for a code.
+> ### Status: beta. The alarm core works, it asks for a code, and there can be a keypad by the door.
 >
-> It can protect a house, and it is doing so. **Users, codes, permissions and
-> lockout have landed**: create a user with a code and disarming asks for one,
-> from the panel, the card and a wall tablet, with the log finally saying who
-> did it. Physical keypads and the MQTT contract are the next release, and
-> they are what turns this from alpha into beta.
+> It can protect a house, and it is doing so. **Physical arming has landed**:
+> keypads, NFC tags, RFID badges and remotes, a full `foyer.*` service contract
+> and MQTT in both directions — so a keypad can tell *that code is wrong* from
+> *the kitchen window is open* instead of beeping the same way at both. Codes,
+> users, permissions and lockout arrived in the release before. What is still
+> missing is the simulator, the walk test and escalation.
 
 **Try it if** you already have door, window or motion sensors in Home
 Assistant, you want one panel with real arming scenarios instead of a folder of
-automations, and you are willing to run an alpha on a house that has other
-locks on it.
+automations, you want to arm from the wall rather than from a phone, and you are
+willing to run a beta on a house that has other locks on it.
 
-**Not yet, if** you arm from a physical keypad, if you need MQTT, or if you
-want something finished — [Alarmo](https://github.com/nielsfaber/alarmo) does
-those today, and does them well.
+**Not yet, if** you want something finished, or you need escalation across
+channels, a simulator or a walk test — [Alarmo](https://github.com/nielsfaber/alarmo)
+has years of use behind it, and a large installed base is a kind of testing this
+project has not had yet.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-en.png" alt="The Foyer panel: two areas armed by one scenario, one counting down its entry delay, the zones that are not ready, and the last few events" width="900">
@@ -44,6 +46,13 @@ those today, and does them well.
   armed while you are upstairs.
 - **Arming scenarios you define.** *Night, ground floor only*. *Garage only*.
   *Dog at home*. Any number of them, not four fixed modes.
+- **A keypad by the door, a tag in your pocket.** Ring and Zigbee keypads, NFC
+  tags, RFID badges and remotes arm and disarm the house through a documented
+  service contract and an optional MQTT contract in both directions. A device is
+  declared before it may command anything, and the refusal it gets back is
+  structured — *wrong code*, *locked out*, *blocked by the kitchen window* — so
+  the hardware can say which, and the log names the person, the channel and the
+  device.
 - **A code for each person.** Stored as a hash and checked in the backend
   only — a card is a keypad that transmits a code, never something that
   decides. Which operations ask for one is yours to set, an area or a scenario
@@ -92,14 +101,66 @@ those today, and does them well.
 - **Permissions per person**, enforced on every service and every WebSocket
   command rather than only in the interface, with a validity window for guest
   codes and a scope limited to chosen areas or scenarios.
+- **`skip_exit_delay`**, for the last person out who is already outside. It
+  needs no permission of its own, and it is recorded on the arming row, because
+  it turns every delayed zone into an instant one.
 - **A panel in English and Italian**, with contextual help on every page, and a
-  card with `full`, `compact` and `keypad` layouts.
+  card with `full`, `compact`, `keypad` and `badge` layouts — `badge` being
+  colour and state only, with nothing to press, for dropping into a dashboard of
+  your own.
 
 </details>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-zone-en.png" alt="The zone editor asking which states count as triggered, and requiring confirmation against the real sensor" width="900">
 </p>
+
+## Arming from the wall
+
+Foyer does not talk to keypads. It offers a contract, because keypad models
+churn every six months and a contract does not. Anything that can call a Home
+Assistant service or publish to an MQTT broker can arm this house.
+
+- **Natively:** NFC tags, RFID badges and remotes. Point Foyer at a `tag.*` or
+  `event.*` entity, say whose it is and what a scan does. No automation in
+  between, and the log names the person — which is the whole point of a channel
+  that identifies rather than one that asks for a code.
+- **Through the service contract:** `foyer.arm`, `foyer.disarm`,
+  `bypass_zone`, `unbypass_zone`, `acknowledge`, and the export and import of
+  configuration and log. Every state-changing call takes a code, a user and a
+  device, and returns a structured answer: `success`, a stable `reason`
+  (`bad_code`, `locked_out`, `zone_open`, `not_permitted`, …), the zones that
+  blocked it *by name*, and the whole live state. That is what lets a keypad
+  give two different refusals instead of one, and a household that hears one
+  sound for both will retype a code that was never the problem.
+- **Over MQTT, in both directions**, with configurable topics and off until you
+  switch it on. The device publishes a command; Foyer publishes the state back,
+  retained, so a keypad that has just rebooted knows what the house is doing.
+  The retained message says the *least* by default — a broker is often somebody
+  else's machine, and "armed, nobody home" is told to whoever connects next.
+  Three levels, and you raise it knowingly.
+
+**A device is declared before it may command anything.** An unknown device is
+refused whatever code it brings, and the refusal is logged and raised. This is
+not tidiness: the lockout counts failed codes per channel *and* per device, so a
+caller free to invent a device name is a caller who is never locked out. For the
+same reason `keypad` and `nfc` are properties of a registered device, never a
+word a message can claim about itself.
+
+Three blueprints ship with the repository — Ring Alarm Keypad v2 over Z-Wave JS
+with its LED ring and countdowns, a generic Zigbee keypad over Zigbee2MQTT, and
+one for tags and remotes doing what the native path deliberately will not. Two
+warnings, plainly: Ring has published no LED mapping, so the indicator numbers
+in that blueprint are community work you should verify against your own firmware
+with `zwave_js.set_value`; and Tuya-family Zigbee clones vary by firmware
+revision, so two keypads sold under the same photograph can send different
+action names. In both cases the arming still works — what a wrong value breaks
+is only what the keypad shows you.
+
+The contract, the hardware comparison and how to write your own adapter are in
+[docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md).
+A keypad should never be your only way in: batteries die, radios jam, brokers
+stop. Keep the panel and the card.
 
 ## "I could do this with automations"
 
@@ -116,15 +177,18 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No physical keypads and no MQTT.** Codes work from the panel, the card
-  and a wall tablet; a Ring or Zigbee keypad on the wall does not talk to
-  Foyer yet. *Next release.*
 - **No simulator and no walk test.** You cannot yet ask "what would happen if
   the kitchen window opened right now, in this scenario, at this hour?" without
-  opening it. *After that.*
-- **No escalation.** Notifications go to a `notify` service directly; they do
-  not climb from push to SMS to a phone call until somebody acknowledges.
+  opening it, and `foyer.walk_test` is deliberately not registered rather than
+  registered and silent. *Next release.*
+- **No escalation, and no contact list.** Notifications go to a `notify`
+  service directly; they do not climb from push to SMS to a phone call until
+  somebody acknowledges. *After that.*
+- **No automatic rules.** Arming on a schedule, on presence or on a condition
+  of your own is still an automation you write, calling `foyer.arm`.
   *After that.*
+- **No ESPHome keypad of our own.** DIY builds fit the contract like anything
+  else, but this project does not maintain one in v1.
 The order is fixed and written down, with what each step has to prove before it
 counts as done: [the roadmap](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md#16-roadmap).
 
@@ -141,12 +205,14 @@ its code. Where they differ today:
 | **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Ordinary sensors |
 | **One incident per break-in** | Yes, with one acknowledgement | An alarm per sensor |
 | **Users, codes, permissions** | Yes: one code each, per-operation policy, duress code, lockout | Yes, per-user codes |
-| **Keypads, MQTT** | **Not yet** | Yes |
-| **Maturity** | Alpha. One author, months old | Years of use, a large installed base |
+| **Keypads, tags, MQTT** | Yes: a service contract and MQTT both ways, devices declared before they may command, three blueprints | Yes |
+| **What a refused command tells the device** | A stable reason and the blocking zones by name | Success or failure |
+| **Maturity** | Beta. One author, months old | Years of use, a large installed base |
 | **Simulator, walk test** | Planned, not written | — |
 
-If you need an alarm today and a keypad on the wall matters to you, use
-Alarmo.
+If you need an alarm that thousands of houses have already shaken the bugs out
+of, use Alarmo. Foyer is a beta, and the honest difference between the two
+columns above is time.
 
 ## How you can check it rather than trust it
 
@@ -195,9 +261,11 @@ Assistant does not replace certified, interconnected smoke alarms.
 - A `notify.*` service that works. Foyer orchestrates notifications; it does
   not implement them.
 - A siren, a switch or a smart plug, if you want noise. Optional.
+- A keypad, an NFC tag or a remote, if you want to arm from the wall.
+  Optional — and an MQTT broker only if the device you choose speaks MQTT.
 
-Nothing else: no cloud account, no MQTT broker, no outbound connection of
-Foyer's own.
+Nothing else: no cloud account, no broker unless you ask for one, no outbound
+connection of Foyer's own.
 
 ## The first fifteen minutes
 
@@ -224,18 +292,10 @@ Foyer's own.
 4. A **Foyer** entry appears in the sidebar, and a short wizard finishes the
    setup.
 
-<details>
-<summary>HACS shows a commit hash instead of a version number</summary>
-
-While Foyer is in alpha, every release is published as a GitHub *pre-release*,
-and HACS only offers releases that are not pre-releases — for a repository that
-has none, it falls back to the default branch and shows the commit. To see and
-pick version names, enable the *pre-release* switch entity HACS creates for
-this repository (*Settings → Devices & services → Entities*, search for "pre
-release"; it is disabled by default). From the first beta, releases will be
-published normally and this note will go.
-
-</details>
+Since `0.1.0-beta.1`, releases are published normally rather than as GitHub
+pre-releases, so HACS offers them with their version names. If you enabled the
+*pre-release* switch entity for this repository during the alpha, you no longer
+need it.
 
 <details>
 <summary>The card is missing from the picker, or "Custom element doesn't exist"</summary>
@@ -258,7 +318,7 @@ Pick *Foyer Home Defender* in the dashboard's card picker, or write it by hand:
 ```yaml
 type: custom:foyer-card
 entity: alarm_control_panel.foyer_master   # or alarm_control_panel.foyer_<area>
-layout: full                               # full, compact or keypad
+layout: full                               # full, compact, keypad or badge
 ```
 
 No dashboard resource needs adding. The card decides nothing by itself: it
@@ -346,7 +406,7 @@ which version of Foyer and of Home Assistant, what you expected, and what the
 log page shows — the row usually contains the answer, so a screenshot of it is
 worth more than a description. English or Italian, whichever you prefer.
 
-To be told when keypads land, watch the repository: releases are
+To be told when the simulator lands, watch the repository: releases are
 announced there, and the [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)
 says what changed in behaviour every time.
 

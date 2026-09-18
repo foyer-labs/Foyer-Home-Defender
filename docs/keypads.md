@@ -235,6 +235,7 @@ a button that forces the arming past an open window.
 - **It cannot be trusted about who is pressing it.** On a shared keypad the
   code is the identity. The per-user "skip the code" exemption can never apply
   there, and the configuration says so where the setting is.
-- **It cannot be your only way in.** Batteries die, radios jam, brokers stop.
-  Keep the panel, the card and a second channel, and read
-  `docs/resilience.md` before deciding the keypad by the door is the plan.
+- **It cannot be your only way in.** Batteries die, radios jam, brokers stop,
+  and every one of those fails silently until the moment you are standing in
+  the rain. Keep the panel and the card reachable as well, and do not let the
+  keypad by the door be the whole plan.
