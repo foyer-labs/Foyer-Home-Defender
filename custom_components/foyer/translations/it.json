@@ -111,6 +111,9 @@
     },
     "rejected_scenario_not_allowed": {
       "message": "Non puoi usare quello scenario."
+    },
+    "rejected_device_not_registered": {
+      "message": "Quel dispositivo non è fra i dispositivi di inserimento di questo impianto. Aggiungilo in Dispositivi di inserimento perché possa comandare l'allarme."
     }
   },
   "entity": {

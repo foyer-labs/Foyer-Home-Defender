@@ -75,7 +75,8 @@
     "not_permitted": "Non hai il permesso di farlo.",
     "user_not_valid": "Questo codice non è valido in questo momento.",
     "area_not_allowed": "Non puoi agire su quell’area.",
-    "scenario_not_allowed": "Non puoi usare quello scenario."
+    "scenario_not_allowed": "Non puoi usare quello scenario.",
+    "device_not_registered": "Quel dispositivo non è fra i dispositivi di inserimento dell'impianto. Aggiungilo prima in Dispositivi di inserimento."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -176,7 +177,18 @@
     "locked_out": "Troppi codici errati. Questo canale è bloccato per ora.",
     "area_not_allowed": "Non puoi agire su quell’area.",
     "scenario_not_allowed": "Non puoi usare quello scenario.",
-    "unknown_scenario": "{field}: quello scenario non esiste."
+    "unknown_scenario": "{field}: quello scenario non esiste.",
+    "ref_required": "Un tastierino ha bisogno dell'identificativo che mette nei propri messaggi.",
+    "duplicate_ref": "Un altro dispositivo risponde già a quell'identificativo. Due tastierini con lo stesso nome condividerebbero il contatore dei blocchi e una riga di registro che non nomina nessuno dei due.",
+    "keypad_has_no_entity": "Un tastierino è condiviso e porta un codice: non ha un'entità né un proprietario. Il tag o il telecomando sono l'altro tipo.",
+    "tag_has_no_ref": "Un tag non porta nessun codice, quindi non deve rispondere a un nome che chiunque può scrivere: lascia vuoto l'identificativo.",
+    "tag_entity_required": "Scegli l'entità tag o event su cui arriva la lettura.",
+    "tag_needs_a_user": "Un tag è di qualcuno: scegli di chi. Il possesso è la credenziale, quindi questa è l'unica identità che ha — e un tag di nessuno è un codice condiviso senza codice.",
+    "scenario_required": "Scegli lo scenario che questo dispositivo inserisce.",
+    "topic_invalid": "Un topic non ha caratteri jolly (+ o #) né livelli vuoti. Lascialo vuoto per il predefinito.",
+    "topics_identical": "Il topic dei comandi e quello dello stato devono essere diversi, altrimenti Foyer risponderebbe ai propri messaggi.",
+    "qos_out_of_range": "{field}: 0, 1 o 2.",
+    "device_not_registered": "Quel dispositivo non è registrato qui."
   },
   "field": {
     "name": "Nome",
@@ -271,7 +283,18 @@
     "new_code": "Codice",
     "new_duress_code": "Codice di coercizione",
     "code": "Codice",
-    "code_exempt_when_identified": "Salta il codice dove sono identificato"
+    "code_exempt_when_identified": "Salta il codice dove sono identificato",
+    "ref": "Identificativo del dispositivo",
+    "user_id": "Di chi è",
+    "event_type": "Quale pulsante",
+    "command": "Cosa fa",
+    "scenario_id": "Scenario",
+    "kind": "Tipo",
+    "command_topic": "Topic dei comandi",
+    "state_topic": "Topic dello stato",
+    "detail": "Cosa dice il messaggio di stato",
+    "retain": "Ritenuto",
+    "qos": "Qualità del servizio"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",

@@ -75,7 +75,8 @@
     "not_permitted": "You are not allowed to do that.",
     "user_not_valid": "That code is not valid at the moment.",
     "area_not_allowed": "You are not allowed to act on that area.",
-    "scenario_not_allowed": "You are not allowed to use that scenario."
+    "scenario_not_allowed": "You are not allowed to use that scenario.",
+    "device_not_registered": "That device is not one of this installation's arming devices. Add it under Arming devices first."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -176,7 +177,18 @@
     "locked_out": "Too many wrong codes. This channel is locked for now.",
     "area_not_allowed": "You are not allowed to act on that area.",
     "scenario_not_allowed": "You are not allowed to use that scenario.",
-    "unknown_scenario": "{field}: that scenario does not exist."
+    "unknown_scenario": "{field}: that scenario does not exist.",
+    "ref_required": "A keypad needs the identifier it puts in its own messages.",
+    "duplicate_ref": "Another device already answers to that identifier. Two keypads sharing one would share a lockout counter and a log row that names neither.",
+    "keypad_has_no_entity": "A keypad is shared and carries a code: it has no entity and no owner. A tag or a remote is the other kind.",
+    "tag_has_no_ref": "A tag carries no code, so it must not answer to a name anybody could type: leave the identifier empty.",
+    "tag_entity_required": "Choose the tag or event entity a scan arrives on.",
+    "tag_needs_a_user": "A tag is somebody's: choose whose. Possession is the credential, so this is the only identity it has — and a tag nobody owns is a shared code with no code.",
+    "scenario_required": "Choose the scenario this device arms.",
+    "topic_invalid": "A topic has no wildcard (+ or #) and no empty level. Leave it empty for the default.",
+    "topics_identical": "The command and state topics must differ, or Foyer would answer its own messages.",
+    "qos_out_of_range": "{field}: 0, 1 or 2.",
+    "device_not_registered": "That device is not registered here."
   },
   "field": {
     "name": "Name",
@@ -271,7 +283,18 @@
     "new_code": "Code",
     "new_duress_code": "Duress code",
     "code": "Code",
-    "code_exempt_when_identified": "Skip the code where identified"
+    "code_exempt_when_identified": "Skip the code where identified",
+    "ref": "Device identifier",
+    "user_id": "Belongs to",
+    "event_type": "Which button",
+    "command": "What it does",
+    "scenario_id": "Scenario",
+    "kind": "Kind",
+    "command_topic": "Command topic",
+    "state_topic": "State topic",
+    "detail": "What the state message says",
+    "retain": "Retained",
+    "qos": "Quality of service"
   },
   "ha_state": {
     "armed_home": "Armed home",

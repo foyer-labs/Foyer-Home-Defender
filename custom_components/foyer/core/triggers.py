@@ -10,6 +10,7 @@ import math
 
 from .models import (
     FAULT_STATES,
+    ArmingDevice,
     EntityState,
     EventTrigger,
     NumericOperator,
@@ -113,3 +114,19 @@ def fires_momentarily(zone: Zone, old: EntityState, new: EntityState) -> bool:
     if trigger.event_type is None:
         return True
     return new.attributes.get("event_type") == trigger.event_type
+
+
+def scanned(device: ArmingDevice, old: EntityState, new: EntityState) -> bool:
+    """Whether this change is a tag being presented (SPEC §9.3).
+
+    The same reading as an event zone's, and deliberately the same three
+    rules: a `tag.*` or `event.*` entity holds the timestamp of its last
+    event, so a new one is a change of state; a change out of unavailable is
+    Home Assistant restoring that timestamp at startup, not somebody at the
+    door; and a device that names an ``event_type`` fires only on that button.
+    """
+    if is_unavailable(old) or is_unavailable(new) or old.state == new.state:
+        return False
+    if device.event_type is None:
+        return True
+    return new.attributes.get("event_type") == device.event_type

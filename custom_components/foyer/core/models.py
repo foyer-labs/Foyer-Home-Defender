@@ -328,6 +328,10 @@ class Reason(StrEnum):
     USER_NOT_VALID = "user_not_valid"
     AREA_NOT_ALLOWED = "area_not_allowed"
     SCENARIO_NOT_ALLOWED = "scenario_not_allowed"
+    # Part 2: a device that is not on page 8. Refused before the code is even
+    # considered, so a caller cannot learn which codes exist by trying them
+    # from an invented device (part 2 decision 1).
+    DEVICE_NOT_REGISTERED = "device_not_registered"
 
 
 # Entity states that mean "we do not know" — a fault, never calm (INV-4).
@@ -408,6 +412,61 @@ CHANNELS: tuple[str, ...] = (
 )
 IDENTIFYING_CHANNELS: frozenset[str] = frozenset({"ha_ui", "nfc"})
 
+# Which channel a registered device speaks on (§9.3, part 2 decision 4). The
+# channel is a property of the device, not a claim the message makes: it
+# decides the lockout counter and whether the exemption of §8.2 may apply, so
+# an automation writing `channel: nfc` must not be able to buy either.
+DEVICE_CHANNELS: dict[str, str] = {"keypad": "keypad", "tag": "nfc"}
+
+# MQTT (SPEC §9.2). Off until somebody turns it on: an alarm that starts
+# listening on a broker nobody asked it to listen on is not a feature.
+DEFAULT_MQTT_QOS = 1
+MAX_MQTT_QOS = 2
+# A topic is free text, but it is not free of rules: MQTT forbids wildcards in
+# a topic you publish to or subscribe as a single destination, and an empty
+# level is a topic nobody can debug.
+MQTT_TOPIC_FORBIDDEN: frozenset[str] = frozenset({"+", "#"})
+MAX_MQTT_TOPIC = 200
+
+
+class MqttDetail(StrEnum):
+    """How much the retained state message says (§9.2, part 2 decision 3).
+
+    The message is retained on a broker that is often shared, so everything in
+    it is told to whoever connects next, including "the house is armed and
+    nobody is in". The same reasoning as the watchdog's empty payload
+    (decision 29), and the same answer: the least that still lets a keypad
+    give feedback, with more available on request.
+
+    ``MINIMAL``  master state, countdown, ready_to_arm, fault, last_result and
+                 how many zones block arming — no names at all.
+    ``STANDARD`` adds the active scenario and the per-area states, by name.
+    ``FULL``     adds the open zones by name: §9.2 in full.
+    """
+
+    MINIMAL = "minimal"
+    STANDARD = "standard"
+    FULL = "full"
+
+
+class DeviceKind(StrEnum):
+    """What a registered arming device is (SPEC §9.3).
+
+    Two kinds, because two things decide everything that follows: whether a
+    code can travel at all, and therefore which channel the request arrives on.
+
+    ``KEYPAD`` is shared and carries a code, so the code is the identity
+    (§8.2) and the channel is ``keypad``.
+    ``TAG`` is a per-person token — an NFC tag, an RFID badge, a remote —
+    where **possession is the credential** and no code exists to type. The
+    channel is ``nfc``, it carries ``token=True``, and §9.3's plain statement
+    holds: a stolen tag arms and disarms without knowing any code. The
+    permissions and the validity window of the person it names still apply.
+    """
+
+    KEYPAD = "keypad"
+    TAG = "tag"
+
 
 # --- configuration -----------------------------------------------------------
 
@@ -466,6 +525,74 @@ class KeyAction:
     # code, so this is the only identity it can have — and a key nobody owns
     # is exactly the row that makes the log unreadable six months later.
     user_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ArmingDevice:
+    """A thing that may command the alarm, declared before it may (SPEC §9.3).
+
+    Page 8 is a white list, not an address book (part 2 decision 1): a
+    ``device_id`` this configuration does not carry is refused, whatever code
+    it brings, and the refusal is recorded and shown. The reason is narrow and
+    worth stating — the lockout of §8.4 counts per channel and device, so a
+    caller free to invent a device id is a caller free never to be locked out.
+
+    A **keypad** is shared: it sends a ``device_id`` in its messages, carries a
+    code, and the code is the identity. A **tag** is a person's: it is backed
+    by a ``tag.*`` or ``event.*`` entity, it carries no code at all, and the
+    identity is the ``user_id`` written here, exactly as a key zone's is
+    (§4.7). ``ref`` is what a keypad puts in its messages; for a tag it is
+    unused, because a scan arrives as a state change and not as a message.
+    """
+
+    id: str
+    name: str
+    kind: DeviceKind
+    # What the device calls itself over MQTT or in a service call. Unique
+    # across devices: two keypads answering to one name would share a lockout
+    # counter and a line in the log that names neither.
+    ref: str | None = None
+    # A tag only: the entity a scan arrives on, and which event counts when
+    # the entity is an `event.*` with more than one button.
+    entity_id: str | None = None
+    event_type: str | None = None
+    # A tag only: whose it is, and what a scan does. Possession is the
+    # credential, so this is the whole of the identity (§9.3).
+    user_id: str | None = None
+    command: KeyCommand = KeyCommand.TOGGLE
+    scenario_id: str | None = None
+    enabled: bool = True
+
+    @property
+    def channel(self) -> str:
+        return DEVICE_CHANNELS[self.kind.value]
+
+    @property
+    def token(self) -> bool:
+        """Is possession the credential? Then no code can travel (§9.3)."""
+        return self.kind is DeviceKind.TAG
+
+
+@dataclass(frozen=True, slots=True)
+class MqttSettings:
+    """The MQTT contract's own settings (SPEC §9.2).
+
+    Topics are configurable and not fixed, because people run more than one
+    site against one broker and people have a topic hierarchy they are not
+    going to restructure for a new integration. Empty means the default,
+    ``foyer/<install_id>/…``, which the runtime resolves: storing the resolved
+    value would freeze an installation id into a document that gets exported
+    and imported elsewhere.
+    """
+
+    enabled: bool = False
+    command_topic: str = ""
+    state_topic: str = ""
+    detail: MqttDetail = MqttDetail.MINIMAL
+    # Retained, as §9.2 asks: a keypad that reboots needs the state without
+    # having to ask for it. It is also why `detail` defaults to the least.
+    retain: bool = True
+    qos: int = DEFAULT_MQTT_QOS
 
 
 @dataclass(frozen=True, slots=True)
@@ -796,6 +923,7 @@ class Settings:
     camera_dir: str = DEFAULT_CAMERA_DIR
     log: LogSettings = field(default_factory=LogSettings)
     security: SecuritySettings = field(default_factory=SecuritySettings)
+    mqtt: MqttSettings = field(default_factory=MqttSettings)
     # What new areas start with, so a household that wants 45 s sets it once.
     default_entry_delay: int = DEFAULT_ENTRY_DELAY
     default_exit_delay: int = DEFAULT_EXIT_DELAY
@@ -820,6 +948,20 @@ class FoyerConfig:
     groups: tuple[Group, ...] = ()
     chime: ChimeSettings = field(default_factory=ChimeSettings)
     users: tuple[User, ...] = ()
+    devices: tuple[ArmingDevice, ...] = ()
+
+    def device(self, device_id: str | None) -> ArmingDevice | None:
+        return next((d for d in self.devices if d.id == device_id), None)
+
+    def device_by_ref(self, ref: str | None) -> ArmingDevice | None:
+        """The device answering to the name a message put in ``device_id``.
+
+        A disabled device is not found: switching one off must stop it
+        commanding, not merely hide it from a list (part 2 decision 1).
+        """
+        if not ref:
+            return None
+        return next((d for d in self.devices if d.enabled and d.ref == ref), None)
 
     def user(self, user_id: str | None) -> User | None:
         return next((u for u in self.users if u.id == user_id), None)
@@ -907,8 +1049,10 @@ class AreaRuntime:
     channel: str | None = None  # how it was armed, for the ``armed`` record
     # Who armed it. The ``armed`` record is written when the exit delay ends,
     # long after the request, so the person has to be remembered here or the
-    # log says an area armed itself.
+    # log says an area armed itself. The device is remembered for the same
+    # reason and answers a different question: which keypad, of the three.
     user_id: str | None = None
+    device_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1077,6 +1221,9 @@ class RuntimeState:
     bypassed: Mapping[str, BypassReason] = field(default_factory=dict)
     active_zones: frozenset[str] = frozenset()
     seen_zones: frozenset[str] = frozenset()
+    # The same rule for arming devices (§9.3): a tag entity already carrying
+    # the timestamp of a scan from last week is not somebody at the door.
+    seen_devices: frozenset[str] = frozenset()
     faults: frozenset[str] = frozenset()
     technical: Mapping[str, TechnicalAlarm] = field(default_factory=dict)
     incident: Incident | None = None

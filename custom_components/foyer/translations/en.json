@@ -111,6 +111,9 @@
     },
     "rejected_scenario_not_allowed": {
       "message": "You are not allowed to use that scenario."
+    },
+    "rejected_device_not_registered": {
+      "message": "That device is not one of the arming devices of this installation. Add it under Arming devices before it can command the alarm."
     }
   },
   "entity": {

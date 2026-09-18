@@ -281,6 +281,37 @@ def _v4_2_to_v5_1(data: Document) -> Document:
     return out
 
 
+def _v5_1_to_v5_2(data: Document) -> Document:
+    """Phase 2 part 1 -> part 2: the physical channels.
+
+    A minor step, and honestly so: an installation upgrading gains an empty
+    list of arming devices and an MQTT contract that is switched **off**. A
+    5.1 build reading this document ignores both and is exactly the build it
+    was — one with no physical channels at all, which is what it had.
+
+    MQTT is off rather than on because a broker is somebody else's machine:
+    an alarm that starts publishing its state on a shared broker the moment
+    it is updated has made that choice for the household. The topics are left
+    empty, which means "the default", resolved at runtime from the
+    installation id — storing the resolved value here would freeze one
+    installation's id into a document that gets exported and restored
+    somewhere else.
+    """
+    out = copy.deepcopy(data)
+    out["devices"] = []
+    out["settings"]["mqtt"] = {
+        "enabled": False,
+        "command_topic": "",
+        "state_topic": "",
+        # The least that still lets a keypad give feedback (part 2 decision 3):
+        # the retained message is told to whoever connects to the broker next.
+        "detail": "minimal",
+        "retain": True,
+        "qos": 1,
+    }
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -303,6 +334,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (3, 1): (_v3_1_to_v4_1, (4, 1)),
     (4, 1): (_v4_1_to_v4_2, (4, 2)),
     (4, 2): (_v4_2_to_v5_1, (5, 1)),
+    (5, 1): (_v5_1_to_v5_2, (5, 2)),
 }
 
 

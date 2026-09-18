@@ -20,6 +20,7 @@ from ..core.models import (
     Area,
     AreaRuntime,
     AreaState,
+    ArmingDevice,
     ArmPolicy,
     BypassReason,
     Channel,
@@ -30,6 +31,7 @@ from ..core.models import (
     Condition,
     ConditionMode,
     Contributor,
+    DeviceKind,
     EntryMode,
     EventTrigger,
     FoyerConfig,
@@ -42,6 +44,8 @@ from ..core.models import (
     LogCategory,
     LogSettings,
     Moment,
+    MqttDetail,
+    MqttSettings,
     NumericOperator,
     NumericTrigger,
     PendingRun,
@@ -88,8 +92,13 @@ from ..core.models import (
 # reading this document would find users it does not understand, ignore every
 # code in it and run the house with no codes at all — which is the exact state
 # this phase exists to end. Refusing the file is the only safe downgrade.
+#
+# 5.2 is a *minor* step: arming devices and the MQTT settings are additive and
+# a 5.1 build ignoring them is a build that neither listens on a broker nor
+# reads a tag — it simply has no physical channels, exactly as it had none
+# yesterday. Nothing it would have protected goes unprotected.
 STORAGE_VERSION = 5
-STORAGE_MINOR_VERSION = 1
+STORAGE_MINOR_VERSION = 2
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -120,6 +129,7 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
             groups=tuple(group_from_dict(g) for g in data["groups"]),
             chime=chime_from_dict(data["chime"]),
             users=tuple(user_from_dict(u) for u in data["users"]),
+            devices=tuple(device_from_dict(d) for d in data["devices"]),
         )
     except (KeyError, TypeError, ValueError) as err:
         raise ConfigError(f"invalid Foyer configuration: {err!r}") from err
@@ -133,6 +143,7 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
         "groups": [group_to_dict(g) for g in config.groups],
         "profiles": [profile_to_dict(p) for p in config.profiles],
         "users": [user_to_dict(u) for u in config.users],
+        "devices": [device_to_dict(d) for d in config.devices],
         "code_policy": {
             field.name: getattr(config.code_policy, field.name)
             for field in fields(CodePolicy)
@@ -156,6 +167,7 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         language=s.get("language") or None,
         wizard_done=bool(s["wizard_done"]),
         security=security_from_dict(s["security"]),
+        mqtt=mqtt_from_dict(s["mqtt"]),
     )
 
 
@@ -173,6 +185,59 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "language": s.language,
         "wizard_done": s.wizard_done,
         "security": security_to_dict(s.security),
+        "mqtt": mqtt_to_dict(s.mqtt),
+    }
+
+
+def mqtt_from_dict(data: dict[str, Any]) -> MqttSettings:
+    return MqttSettings(
+        enabled=bool(data["enabled"]),
+        command_topic=str(data.get("command_topic") or ""),
+        state_topic=str(data.get("state_topic") or ""),
+        detail=MqttDetail(data["detail"]),
+        retain=bool(data["retain"]),
+        qos=int(data["qos"]),
+    )
+
+
+def mqtt_to_dict(s: MqttSettings) -> dict[str, Any]:
+    return {
+        "enabled": s.enabled,
+        "command_topic": s.command_topic,
+        "state_topic": s.state_topic,
+        "detail": s.detail.value,
+        "retain": s.retain,
+        "qos": s.qos,
+    }
+
+
+def device_from_dict(d: dict[str, Any]) -> ArmingDevice:
+    return ArmingDevice(
+        id=d["id"],
+        name=d["name"],
+        kind=DeviceKind(d["kind"]),
+        ref=d.get("ref") or None,
+        entity_id=d.get("entity_id") or None,
+        event_type=d.get("event_type") or None,
+        user_id=d.get("user_id") or None,
+        command=KeyCommand(d["command"]),
+        scenario_id=d.get("scenario_id") or None,
+        enabled=bool(d.get("enabled", True)),
+    )
+
+
+def device_to_dict(d: ArmingDevice) -> dict[str, Any]:
+    return {
+        "id": d.id,
+        "name": d.name,
+        "kind": d.kind.value,
+        "ref": d.ref,
+        "entity_id": d.entity_id,
+        "event_type": d.event_type,
+        "user_id": d.user_id,
+        "command": d.command.value,
+        "scenario_id": d.scenario_id,
+        "enabled": d.enabled,
     }
 
 
@@ -635,6 +700,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "causes": list(rt.causes),
                 "channel": rt.channel,
                 "user_id": rt.user_id,
+                "device_id": rt.device_id,
             }
             for area_id, rt in state.areas.items()
         },
@@ -642,6 +708,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
         "bypassed": {z: r.value for z, r in state.bypassed.items()},
         "active_zones": sorted(state.active_zones),
         "seen_zones": sorted(state.seen_zones),
+        "seen_devices": sorted(state.seen_devices),
         "faults": sorted(state.faults),
         "technical": {
             zone_id: {
@@ -780,6 +847,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
     try:
         area_ids = {a.id for a in config.areas}
         zone_ids = {z.id for z in config.zones}
+        device_ids = {d.id for d in config.devices}
         areas: dict[str, AreaRuntime] = {}
         for area_id, rt in data.get("areas", {}).items():
             if area_id not in area_ids:
@@ -796,6 +864,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 causes=tuple(z for z in rt.get("causes", ()) if z in zone_ids),
                 channel=rt.get("channel"),
                 user_id=rt.get("user_id"),
+                device_id=rt.get("device_id"),
             )
         for area_id in area_ids - areas.keys():
             areas[area_id] = AreaRuntime()
@@ -813,6 +882,9 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
             ),
             seen_zones=frozenset(
                 z for z in data.get("seen_zones", ()) if z in zone_ids
+            ),
+            seen_devices=frozenset(
+                d for d in data.get("seen_devices", ()) if d in device_ids
             ),
             faults=frozenset(z for z in data.get("faults", ()) if z in zone_ids),
             technical={

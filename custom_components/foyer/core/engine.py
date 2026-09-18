@@ -39,6 +39,7 @@ from .models import (
     AreaRuntime,
     AreaState,
     ArmAreaRequest,
+    ArmingDevice,
     ArmModeRequest,
     ArmPolicy,
     ArmRequest,
@@ -88,6 +89,7 @@ from .triggers import (
     fires_momentarily,
     is_active,
     is_unavailable,
+    scanned,
     supervision_due,
 )
 from .verification import Verification, all_windows, counter_of, groups
@@ -134,6 +136,7 @@ def decide(
         changed = event.entity_id
         run.entities[event.entity_id] = event.new
     run.process_zone_changes(snapshot, changed)
+    run.process_device_scans(snapshot, changed)
 
     outcome = _ACCEPTED
     if isinstance(event, ArmRequest):
@@ -291,6 +294,7 @@ class _Run:
         self.bypassed = {z: r for z, r in state.bypassed.items() if z in zone_ids}
         self.active = set(state.active_zones & zone_ids)
         self.seen = set(state.seen_zones & zone_ids)
+        self.seen_devices = set(state.seen_devices & {d.id for d in config.devices})
         self.faults = frozenset(state.faults & zone_ids)
         self.entities: dict[str, EntityState] = dict(snapshot.entities)
         self.timezone = snapshot.timezone
@@ -336,7 +340,10 @@ class _Run:
     # --- world ----------------------------------------------------------------
 
     def entity(self, zone: Zone) -> EntityState:
-        return self.entities.get(zone.entity_id) or EntityState(state=None)
+        return self.entity_state(zone.entity_id)
+
+    def entity_state(self, entity_id: str) -> EntityState:
+        return self.entities.get(entity_id) or EntityState(state=None)
 
     def fault(self, zone: Zone) -> str | None:
         return fault_cause(zone, self.entity(zone), self.now)
@@ -743,6 +750,86 @@ class _Run:
         ):
             # The patio door has been pulled shut: arming completes now.
             self.complete_exit(zone.area_id)
+
+    # --- arming devices (§9.3) -------------------------------------------------
+
+    def process_device_scans(
+        self, before: SystemSnapshot, changed_entity: str | None
+    ) -> None:
+        """A tag was presented, or a remote's button was pressed.
+
+        A scan is momentary, exactly as an event zone's trigger is (§4.4), and
+        it is read with the same three rules: only the entity that changed can
+        have been scanned, a change out of ``unavailable`` is Home Assistant
+        restoring the last scan at startup rather than a new one, and the
+        first readable value of a device never seen before is its baseline —
+        otherwise adding a tag whose entity already carries last week's
+        timestamp would arm the house the moment it is saved.
+        """
+        for device in self.config.devices:
+            if not device.enabled or not device.entity_id:
+                continue
+            entity = self.entity_state(device.entity_id)
+            if device.id not in self.seen_devices:
+                if not is_unavailable(entity):
+                    self.seen_devices.add(device.id)
+                continue
+            if device.entity_id != changed_entity:
+                continue
+            if not scanned(device, before.entity(device.entity_id), entity):
+                continue
+            self.device_command(device)
+
+    def device_command(self, device: ArmingDevice) -> None:
+        """A token acts as its owner would (§9.3, part 2 decision 2).
+
+        Possession is the credential: no code can travel on a tag, so the code
+        policy of §8.2 cannot reach it — which is the plain fact §9.3 states
+        and the panel repeats where the tag is configured. What does reach it
+        is everything else about the person it names: their permissions, their
+        validity window, the areas and scenarios they are allowed.
+        """
+        previous, self.actor = (
+            self.actor,
+            Actor(
+                user_id=device.user_id,
+                channel=device.channel,
+                device_id=device.id,
+                identified=True,
+                token=True,
+            ),
+        )
+        try:
+            self.device_act(device)
+        finally:
+            self.actor = previous
+
+    def device_act(self, device: ArmingDevice) -> None:
+        command = device.command
+        if command is KeyCommand.TOGGLE:
+            armed = any(
+                rt.state is not AreaState.DISARMED for rt in self.areas.values()
+            )
+            command = KeyCommand.DISARM if armed else KeyCommand.ARM
+        if command is KeyCommand.DISARM:
+            outcome = self.disarm(None)
+            if outcome.reason is Reason.INVALID_STATE:
+                return  # nothing was armed: a tag presented twice is not a failure
+        else:
+            outcome = self.arm_scenario(
+                self.config.scenario(device.scenario_id), force=False
+            )
+        if not outcome.accepted:
+            # Never silent: a tag that did nothing must say why, or the person
+            # walks away believing the house is armed (§4.7 says the same of a
+            # key, and for the same reason).
+            self.occur(
+                Moment.ARM_FAILED,
+                scenario_id=device.scenario_id,
+                zone_ids=outcome.blocking,
+                channel=device.channel,
+                detail={"reason": outcome.reason.value if outcome.reason else ""},
+            )
 
     def key_command(self, zone: Zone, command: KeyCommand) -> None:
         """A key zone acts as a user would, on every area (decision 13)."""
@@ -1317,6 +1404,7 @@ class _Run:
                 forced=force,
                 channel=channel,
                 user_id=self.actor.user_id,
+                device_id=self.actor.device_id,
                 causes=(),
             )
             if delay <= 0:
@@ -1375,6 +1463,7 @@ class _Run:
             scenario_id=rt.scenario_id,
             channel=rt.channel,
             user_id=rt.user_id,
+            device_id=rt.device_id,
         )
 
     def arming_failed(self, area_id: str, zones: list[Zone], reason: Reason) -> None:
@@ -1386,6 +1475,7 @@ class _Run:
             zone_ids=tuple(z.id for z in zones),
             channel=rt.channel,
             user_id=rt.user_id,
+            device_id=rt.device_id,
             detail={"reason": reason.value},
         )
         self.clear_area(area_id)
@@ -1601,6 +1691,7 @@ class _Run:
             bypassed=self.bypassed,
             active_zones=frozenset(self.active),
             seen_zones=frozenset(self.seen),
+            seen_devices=frozenset(self.seen_devices),
             faults=self.faults,
             technical=self.technical,
             incident=self.incident,

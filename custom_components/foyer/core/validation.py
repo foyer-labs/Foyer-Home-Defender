@@ -22,6 +22,8 @@ from .models import (
     MAX_EXIT_DELAY,
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
+    MAX_MQTT_QOS,
+    MAX_MQTT_TOPIC,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
@@ -32,6 +34,7 @@ from .models import (
     MIN_LOCKOUT_SECONDS,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
+    MQTT_TOPIC_FORBIDDEN,
     SILENCEABLE,
     ActionKind,
     AreaState,
@@ -39,6 +42,7 @@ from .models import (
     Channel,
     ChimeMode,
     ChimeSettings,
+    DeviceKind,
     EntryMode,
     EventTrigger,
     FoyerConfig,
@@ -97,7 +101,9 @@ EVENT_DOMAINS: frozenset[str] = frozenset({"event", "tag"})
 @dataclass(frozen=True, slots=True)
 class Problem:
     code: str
-    kind: str  # "area" | "zone" | "scenario" | "group" | "profile" | "settings"
+    # "area" | "zone" | "scenario" | "group" | "profile" | "user" | "device"
+    # | "settings" | "chime"
+    kind: str
     ref: str | None = None  # the id of the offending object
     field: str | None = None
 
@@ -239,6 +245,10 @@ def validate(config: FoyerConfig) -> list[Problem]:
     problems.extend(_group_problems(config, zones, area_ids))
     problems.extend(_chime_problems(config.chime))
     problems.extend(_user_problems(config, area_ids, scenario_ids))
+    problems.extend(
+        _device_problems(config, scenario_ids, {u.id for u in config.users})
+    )
+    problems.extend(_mqtt_problems(config))
     problems.extend(_security_problems(config))
     for profile in config.profiles:
         problems.extend(_profile_problems(profile))
@@ -339,6 +349,96 @@ def _user_problems(
         if zone.key is not None and zone.key.user_id not in (None, *user_ids):
             problems.append(Problem("unknown_user", "zone", zone.id, "key"))
     return problems
+
+
+def _device_problems(
+    config: FoyerConfig, scenario_ids: set[str], user_ids: set[str]
+) -> list[Problem]:
+    """Arming devices, and what each kind cannot do without (SPEC §9.3).
+
+    Two rules carry weight beyond tidiness.
+
+    A **tag never has a ``ref``**. A ref is what a message puts in its
+    ``device_id`` field, and a tag's whole nature is that it carries no code:
+    a tag with a ref would be an identity anybody on the broker could claim by
+    typing its name, with no code to stop them.
+
+    A **tag always names a person**. §8.2 calls it a *per-user* NFC tag, and
+    that is the only reason it counts as a channel that identifies: a token
+    nobody owns is a shared credential, which is a keypad by another name and
+    must be configured as one, with a code.
+    """
+    problems: list[Problem] = []
+    ids = [d.id for d in config.devices]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        problems.append(Problem("duplicate_id", "device", dup))
+    refs: set[str] = set()
+    for device in config.devices:
+
+        def add(code: str, field: str | None = None, ref: str = device.id) -> None:
+            problems.append(Problem(code, "device", ref, field))
+
+        if not device.name.strip():
+            add("name_required", "name")
+        if device.kind is DeviceKind.KEYPAD:
+            if not (device.ref or "").strip():
+                add("ref_required", "ref")
+            elif device.ref in refs:
+                # Two keypads answering to one name would share a lockout
+                # counter and produce a log row that names neither of them.
+                add("duplicate_ref", "ref")
+            if device.entity_id or device.user_id:
+                add("keypad_has_no_entity", "entity_id")
+        else:
+            if device.ref:
+                add("tag_has_no_ref", "ref")
+            if not device.entity_id or _domain(device.entity_id) not in EVENT_DOMAINS:
+                add("tag_entity_required", "entity_id")
+            if not device.user_id:
+                add("tag_needs_a_user", "user_id")
+            elif device.user_id not in user_ids:
+                add("unknown_user", "user_id")
+            if device.command is not KeyCommand.DISARM:
+                if not device.scenario_id:
+                    add("scenario_required", "scenario_id")
+                elif device.scenario_id not in scenario_ids:
+                    add("unknown_scenario", "scenario_id")
+        if device.ref:
+            refs.add(device.ref)
+    return problems
+
+
+def _domain(entity_id: str) -> str:
+    return entity_id.split(".", 1)[0]
+
+
+def _mqtt_problems(config: FoyerConfig) -> list[Problem]:
+    """The MQTT contract's settings (SPEC §9.2).
+
+    An empty topic is not a mistake: it means the default, which the runtime
+    resolves from the installation id. A topic that is written down, though,
+    is published to and subscribed to as one destination, so it may carry no
+    wildcard and no empty level — and the two topics may not be the same one,
+    or Foyer would answer its own commands.
+    """
+    problems: list[Problem] = []
+    mqtt = config.settings.mqtt
+    for field in ("command_topic", "state_topic"):
+        topic = getattr(mqtt, field)
+        if topic and not _valid_topic(topic):
+            problems.append(Problem("topic_invalid", "settings", None, field))
+    if mqtt.command_topic and mqtt.command_topic == mqtt.state_topic:
+        problems.append(Problem("topics_identical", "settings", None, "state_topic"))
+    if not _in_range(mqtt.qos, 0, MAX_MQTT_QOS):
+        problems.append(Problem("qos_out_of_range", "settings", None, "qos"))
+    return problems
+
+
+def _valid_topic(topic: str) -> bool:
+    if len(topic) > MAX_MQTT_TOPIC or topic.strip() != topic:
+        return False
+    levels = topic.split("/")
+    return all(level and not (set(level) & MQTT_TOPIC_FORBIDDEN) for level in levels)
 
 
 def _security_problems(config: FoyerConfig) -> list[Problem]:
