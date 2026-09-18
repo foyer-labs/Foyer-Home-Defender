@@ -1,0 +1,282 @@
+"""The MQTT contract, in both directions (SPEC §9.2).
+
+A keypad on a broker is the cheapest physical channel there is, and it is the
+one that needs feedback most: somebody standing at a door in the dark has only
+the beeps and the LED to tell them what happened. So the outbound message
+carries enough to tell *arming was blocked by an open zone* from *that code is
+wrong* — the distinction the whole contract exists for.
+
+Three things here are decisions rather than plumbing.
+
+**Topics are configurable** (§9.2). People run more than one site against one
+broker, and people have a topic hierarchy they are not going to restructure
+for a new integration. Empty means the default, ``foyer/<install_id>/…``,
+resolved here rather than stored: the stored value would travel inside an
+exported configuration and arrive somewhere else still naming this house.
+
+**The outbound message says as little as it can** (part 2 decision 3). It is
+retained, on a broker that is often shared, so everything in it is told to
+whoever connects next — including "the house is armed and nobody is in". The
+detail level opens that up on request, in two steps, and starts at the least.
+
+**A device commands only if it is declared** (part 2 decision 1). Over MQTT
+the ``device_id`` is not optional: anybody who can publish to a topic can
+publish a command, so the name it gives is the only thing that distinguishes a
+keypad from a stranger, and a name this installation does not carry is refused
+before the code is even looked at — which is also what keeps the lockout of
+§8.4 countable.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+import json
+import logging
+from typing import Any
+
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.util import dt as dt_util
+
+from ..api.services import async_report_unknown_device
+from ..const import CHANNEL_MQTT
+from ..core.models import (
+    AcknowledgeIncident,
+    ArmModeRequest,
+    ArmRequest,
+    Decision,
+    DisarmRequest,
+    MqttDetail,
+    Reason,
+)
+from ..security.devices import async_requester
+from .system import FoyerSystem
+
+_LOGGER = logging.getLogger(__name__)
+
+# What §9.2 calls the result, plus the one this contract had to add: a device
+# nobody declared. A keypad has to be able to beep differently for "wrong
+# code" and "I am not known here", or its owner spends an evening retyping a
+# code that was never the problem.
+RESULT_OK = "ok"
+RESULT_BLOCKED = "blocked"
+RESULT_BAD_CODE = "bad_code"
+RESULT_LOCKED_OUT = "locked_out"
+RESULT_UNKNOWN_DEVICE = "unknown_device"
+
+_RESULTS: dict[Reason, str] = {
+    Reason.BAD_CODE: RESULT_BAD_CODE,
+    Reason.CODE_REQUIRED: RESULT_BAD_CODE,
+    Reason.LOCKED_OUT: RESULT_LOCKED_OUT,
+    Reason.DEVICE_NOT_REGISTERED: RESULT_UNKNOWN_DEVICE,
+}
+
+
+def default_prefix(install_id: str) -> str:
+    return f"foyer/{install_id}"
+
+
+def topics(system: FoyerSystem, install_id: str) -> tuple[str, str]:
+    """(command, state), each configured or each defaulted (§9.2)."""
+    settings = system.config.settings.mqtt
+    prefix = default_prefix(install_id)
+    return (
+        settings.command_topic or f"{prefix}/command",
+        settings.state_topic or f"{prefix}/state",
+    )
+
+
+def result_of(decision: Decision) -> str:
+    """One word a keypad can map to a beep and an LED (§9.2)."""
+    if decision.accepted:
+        return RESULT_OK
+    if decision.reason is None:
+        return RESULT_BLOCKED
+    return _RESULTS.get(decision.reason, RESULT_BLOCKED)
+
+
+def state_payload(
+    system: FoyerSystem, detail: MqttDetail, last_result: str | None, now: datetime
+) -> dict[str, Any]:
+    """What goes on the state topic, at the level this installation chose.
+
+    ``minimal`` is what a keypad needs and nothing else: no scenario name, no
+    area names, no list of open windows. ``standard`` adds the scenario and
+    the areas; ``full`` is §9.2 as written, open zones by name included. The
+    ladder exists because the message is retained on somebody else's broker.
+    """
+    status = system.status()
+    areas = status["areas"]
+    blocking = [
+        zone
+        for area in areas
+        for zone in (*area["blocking"]["fault"], *area["blocking"]["open"])
+    ]
+    names = {z["id"]: z["name"] for z in status["zones"]}
+    payload: dict[str, Any] = {
+        "master": status["master"]["mode"] or status["master"]["state"],
+        "countdown": _countdown(areas, now),
+        "ready_to_arm": not blocking,
+        # A count, not a list: "two zones are open" is enough to send somebody
+        # to look, and it names nothing to whoever else reads this topic.
+        "blocking_zones": len(set(blocking)),
+        "fault": any(z["fault"] for z in status["zones"]),
+        "last_result": last_result,
+    }
+    if detail is MqttDetail.MINIMAL:
+        return payload
+    scenario = next(
+        (s for s in status["scenarios"] if s["id"] == status["active_scenario_id"]),
+        None,
+    )
+    payload["scenario"] = scenario["name"] if scenario else None
+    payload["areas"] = {area["name"]: area["state"] for area in areas}
+    if detail is MqttDetail.FULL:
+        payload["open_zones"] = [
+            names.get(zone, zone) for zone in dict.fromkeys(blocking)
+        ]
+    return payload
+
+
+def _countdown(areas: list[dict[str, Any]], now: datetime) -> dict[str, Any] | None:
+    """The soonest exit or entry delay still running, in seconds.
+
+    One countdown, not one per area: a keypad has one display, and the number
+    that matters to whoever is standing at it is the one about to run out.
+    """
+    running = [area["timer"] for area in areas if area["timer"]]
+    if not running:
+        return None
+    soonest = min(running, key=lambda timer: timer["due"])
+    due = dt_util.parse_datetime(soonest["due"])
+    if due is None:
+        return None
+    return {
+        "kind": soonest["kind"],
+        "remaining": max(0, int((due - now).total_seconds())),
+    }
+
+
+async def async_setup(
+    hass: HomeAssistant, system: FoyerSystem, install_id: str
+) -> CALLBACK_TYPE | None:
+    """Subscribe to the command topic and publish state, if MQTT is wanted.
+
+    Off unless the installation switched it on: an alarm that starts
+    publishing its state on somebody else's broker the moment it is updated
+    has made that choice for the household.
+    """
+    settings = system.config.settings.mqtt
+    if not settings.enabled:
+        return None
+    try:
+        from homeassistant.components import mqtt
+    except ImportError:  # pragma: no cover - MQTT is an optional dependency
+        _LOGGER.warning("Foyer: MQTT is configured but the integration is missing")
+        return None
+    if not await mqtt.async_wait_for_mqtt_client(hass):
+        _LOGGER.warning("Foyer: MQTT is configured but no broker is connected")
+        return None
+
+    command_topic, state_topic = topics(system, install_id)
+    last_result: str | None = None
+
+    async def publish(result: str | None = None) -> None:
+        payload = state_payload(system, settings.detail, result, dt_util.utcnow())
+        await mqtt.async_publish(
+            hass,
+            state_topic,
+            json.dumps(payload),
+            qos=settings.qos,
+            retain=settings.retain,
+        )
+
+    async def on_message(message: Any) -> None:
+        nonlocal last_result
+        try:
+            data = json.loads(message.payload)
+            assert isinstance(data, dict)
+        except (ValueError, AssertionError):
+            _LOGGER.warning("Foyer: unreadable MQTT command on %s", command_topic)
+            return
+        last_result = await _async_command(hass, system, data)
+        await publish(last_result)
+
+    @callback
+    def on_change() -> None:
+        hass.async_create_task(publish(last_result), eager_start=True)
+
+    unsubscribe = await mqtt.async_subscribe(
+        hass, command_topic, on_message, qos=settings.qos
+    )
+    remove_listener = system.async_add_listener(on_change)
+    await publish()
+
+    @callback
+    def stop() -> None:
+        unsubscribe()
+        if remove_listener is not None:
+            remove_listener()
+
+    return stop
+
+
+async def _async_command(
+    hass: HomeAssistant, system: FoyerSystem, data: dict[str, Any]
+) -> str:
+    """One inbound message (§9.2). Returns what the keypad should be told."""
+    action = str(data.get("action") or "")
+    if action == "status":
+        # Not a command: "tell me again", for a keypad that has just booted.
+        return RESULT_OK
+    ref = data.get("device_id")
+    if not ref:
+        # Over a broker the device is not optional. Anybody who can publish to
+        # the topic can publish a command, so the name a message gives is the
+        # only thing separating the hall keypad from a stranger — and the only
+        # thing that makes the lockout of §8.4 countable.
+        await async_report_unknown_device(hass, system, channel=CHANNEL_MQTT, ref=None)
+        return RESULT_UNKNOWN_DEVICE
+    requester = await async_requester(
+        hass,
+        system.config,
+        transport=CHANNEL_MQTT,
+        ref=str(ref),
+        code=_as_code(data.get("code")),
+    )
+    if requester.actor is None:
+        await async_report_unknown_device(
+            hass, system, channel=CHANNEL_MQTT, ref=str(ref)
+        )
+        return RESULT_UNKNOWN_DEVICE
+    actor = requester.actor
+    scenario = data.get("scenario")
+    force = bool(data.get("force", False))
+    skip = bool(data.get("skip_exit_delay", False))
+    if action == "arm":
+        found = next((s for s in system.config.scenarios if s.name == scenario), None)
+        if found is None and scenario in {
+            s.ha_master_state for s in system.config.scenarios
+        }:
+            event: Any = ArmModeRequest(str(scenario), actor, force, skip)
+        else:
+            event = ArmRequest(
+                found.id if found else str(scenario or ""), actor, force, skip
+            )
+    elif action == "disarm":
+        areas = data.get("area_ids")
+        event = DisarmRequest(tuple(str(a) for a in areas) if areas else None, actor)
+    elif action == "acknowledge":
+        event = AcknowledgeIncident(actor)
+    else:
+        _LOGGER.warning("Foyer: unknown MQTT action %r", action)
+        return RESULT_BLOCKED
+    decision = await system.async_handle(event)
+    return result_of(decision)
+
+
+def _as_code(value: Any) -> str | None:
+    """A code arrives as a string. A keypad that sends 1234 as a number is
+    not wrong about the code, only about JSON."""
+    if value is None:
+        return None
+    return str(value)
