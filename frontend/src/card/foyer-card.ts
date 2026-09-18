@@ -25,7 +25,7 @@ import type {
   StatusArea,
 } from "../shared/types";
 
-type Layout = "full" | "compact" | "keypad";
+type Layout = "full" | "compact" | "badge" | "keypad";
 
 interface FoyerCardConfig {
   type: string;
@@ -100,12 +100,14 @@ class FoyerCard extends LitElement {
   }
 
   getCardSize(): number {
-    return this._layout === "compact" ? 1 : 3;
+    return this._layout === "compact" || this._layout === "badge" ? 1 : 3;
   }
 
   private get _layout(): Layout {
     const layout = this._config?.layout;
-    return layout === "compact" || layout === "keypad" ? layout : "full";
+    return layout === "compact" || layout === "keypad" || layout === "badge"
+      ? layout
+      : "full";
   }
 
   private get _codeLength(): number {
@@ -209,9 +211,79 @@ class FoyerCard extends LitElement {
     if (!this.hass.states[entityId]) {
       return this._message(t(s, "card.entity_missing", { entity: entityId }));
     }
+    if (this._layout === "badge") return this._renderBadge(s);
     if (this._layout === "compact") return this._renderCompact(s);
     if (this._layout === "keypad") return this._renderKeypadLayout(s);
     return this._isMaster ? this._renderMaster(s) : this._renderArea(s);
+  }
+
+  // --- badge: the state, and nothing that can be pressed (§15.3) -------------------
+
+  /** Colour-coded state only, for embedding in an existing dashboard.
+   *
+   * It decides nothing and offers nothing to press, which is the point: a
+   * badge sits among the lights and the thermostat, where a stray tap must
+   * never disarm a house. Tapping it opens the entity's own dialog, as every
+   * other badge on that dashboard does.
+   *
+   * What it does still show is the two things that are dangerous to miss at a
+   * glance: a countdown that is running, and an alarm in memory. A badge
+   * reading "disarmed" while the siren had sounded an hour ago would be worse
+   * than no badge at all.
+   */
+  private _renderBadge(s: Strings) {
+    const status = this._status;
+    if (!status) return this._message(t(s, "common.loading"));
+    const area = this._area;
+    const master = this._isMaster || !area;
+    const state = master ? status.master.state : area!.state;
+    const memory = master ? status.areas.some((a) => a.memory) : area!.memory;
+    const active = status.scenarios.find((sc) => sc.id === status.active_scenario_id);
+    const name = master ? (active?.name ?? t(s, "overview.master")) : area!.name;
+    const counting = master
+      ? status.areas.find((a) => a.timer && a.timer.kind !== "siren")
+      : area;
+    const timer = counting?.timer;
+    const label =
+      timer && timer.kind !== "siren"
+        ? t(s, `timer.${timer.kind}`, {
+            seconds: Math.max(
+              0,
+              Math.round((Date.parse(timer.due) - (Date.now() + this._offset)) / 1000),
+            ),
+          })
+        : t(s, `state.${state}`);
+    return html`
+      <div
+        class="badge"
+        role="button"
+        tabindex="0"
+        title=${`${name} — ${t(s, `state.${state}`)}`}
+        @click=${this._openMore}
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") this._openMore();
+        }}
+      >
+        <span class="badge-name">${name}</span>
+        <span class="state ${state}">${label}</span>
+        ${memory
+          ? html`<span class="state memory">${t(s, "overview.memory")}</span>`
+          : nothing}
+      </div>
+    `;
+  }
+
+  /** The entity's own dialog, the way every badge on a dashboard behaves. */
+  private _openMore(): void {
+    const entityId = this._config?.entity;
+    if (!entityId) return;
+    this.dispatchEvent(
+      new CustomEvent("hass-more-info", {
+        detail: { entityId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   // --- compact: state, one action, and the scenario (§15.3) ------------------------
@@ -763,6 +835,36 @@ class FoyerCard extends LitElement {
         padding: 12px 16px;
         gap: 8px;
       }
+      /* The badge draws no ha-card of its own: it is meant to sit inside a row
+         of other badges, and a card around it would be a box in a row of
+         chips. */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--divider-color);
+        background: var(--ha-card-background, var(--card-background-color));
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+      .badge:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+      }
+      .badge-name {
+        font-size: 13px;
+        color: var(--secondary-text-color);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .badge .state {
+        background: none;
+        padding: 0;
+      }
       .content.compact .head .name {
         font-size: 16px;
       }
@@ -918,7 +1020,7 @@ class FoyerCardEditor extends LitElement {
             @change=${(e: Event) =>
               this._emit({ layout: (e.target as HTMLSelectElement).value as Layout })}
           >
-            ${(["full", "compact", "keypad"] as Layout[]).map(
+            ${(["full", "compact", "badge", "keypad"] as Layout[]).map(
               (layout) => html`<option
                 .value=${layout}
                 ?selected=${layout === (this._config.layout ?? "full")}

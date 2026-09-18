@@ -783,11 +783,11 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		this._config = e;
 	}
 	getCardSize() {
-		return this._layout === "compact" ? 1 : 3;
+		return this._layout === "compact" || this._layout === "badge" ? 1 : 3;
 	}
 	get _layout() {
 		let e = this._config?.layout;
-		return e === "compact" || e === "keypad" ? e : "full";
+		return e === "compact" || e === "keypad" || e === "badge" ? e : "full";
 	}
 	get _codeLength() {
 		return this._status?.security.code_length ?? 6;
@@ -845,7 +845,36 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		if (!e || !this.hass) return z;
 		this._tick;
 		let t = this._config?.entity;
-		return t ? this.hass.states[t] ? this._layout === "compact" ? this._renderCompact(e) : this._layout === "keypad" ? this._renderKeypadLayout(e) : this._isMaster ? this._renderMaster(e) : this._renderArea(e) : this._message(Z(e, "card.entity_missing", { entity: t })) : this._message(Z(e, "card.no_entity"));
+		return t ? this.hass.states[t] ? this._layout === "badge" ? this._renderBadge(e) : this._layout === "compact" ? this._renderCompact(e) : this._layout === "keypad" ? this._renderKeypadLayout(e) : this._isMaster ? this._renderMaster(e) : this._renderArea(e) : this._message(Z(e, "card.entity_missing", { entity: t })) : this._message(Z(e, "card.no_entity"));
+	}
+	_renderBadge(e) {
+		let t = this._status;
+		if (!t) return this._message(Z(e, "common.loading"));
+		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = (r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n)?.timer, l = c && c.kind !== "siren" ? Z(e, `timer.${c.kind}`, { seconds: Math.max(0, Math.round((Date.parse(c.due) - (Date.now() + this._offset)) / 1e3)) }) : Z(e, `state.${i}`);
+		return L`
+      <div
+        class="badge"
+        role="button"
+        tabindex="0"
+        title=${`${s} — ${Z(e, `state.${i}`)}`}
+        @click=${this._openMore}
+        @keydown=${(e) => {
+			(e.key === "Enter" || e.key === " ") && this._openMore();
+		}}
+      >
+        <span class="badge-name">${s}</span>
+        <span class="state ${i}">${l}</span>
+        ${a ? L`<span class="state memory">${Z(e, "overview.memory")}</span>` : z}
+      </div>
+    `;
+	}
+	_openMore() {
+		let e = this._config?.entity;
+		e && this.dispatchEvent(new CustomEvent("hass-more-info", {
+			detail: { entityId: e },
+			bubbles: !0,
+			composed: !0
+		}));
 	}
 	_renderCompact(e) {
 		let t = this._status;
@@ -1309,6 +1338,36 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
         padding: 12px 16px;
         gap: 8px;
       }
+      /* The badge draws no ha-card of its own: it is meant to sit inside a row
+         of other badges, and a card around it would be a box in a row of
+         chips. */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--divider-color);
+        background: var(--ha-card-background, var(--card-background-color));
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+      .badge:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+      }
+      .badge-name {
+        font-size: 13px;
+        color: var(--secondary-text-color);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .badge .state {
+        background: none;
+        padding: 0;
+      }
       .content.compact .head .name {
         font-size: 16px;
       }
@@ -1443,6 +1502,7 @@ var xe = class extends J {
             ${[
 			"full",
 			"compact",
+			"badge",
 			"keypad"
 		].map((t) => L`<option
                 .value=${t}

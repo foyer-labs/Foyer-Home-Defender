@@ -25,6 +25,7 @@ import "./pages/scenarios";
 import "./pages/profiles";
 import "./pages/groups";
 import "./pages/users";
+import "./pages/devices";
 import "./pages/log";
 import "./pages/settings";
 import "./wizard";
@@ -38,6 +39,7 @@ const PAGES: PageId[] = [
   "profiles",
   "groups",
   "users",
+  "devices",
   "log",
   "settings",
 ];
@@ -48,6 +50,7 @@ const CONFIG_PAGES: PageId[] = [
   "profiles",
   "groups",
   "users",
+  "devices",
   "settings",
 ];
 
@@ -69,6 +72,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   profiles: ["inheritance", "moments", "conditions", "severity", "silent"],
   groups: ["threshold", "members", "suppress", "derived"],
   users: ["own_code", "policy", "identified", "duress", "lockout", "scope"],
+  devices: ["declared", "device_id", "identifies", "topics", "detail", "last_result"],
   log: ["category", "zone_disarmed", "incident", "user", "export"],
   settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
 };
@@ -512,6 +516,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-groups .ctx=${ctx}></foyer-page-groups>`;
       case "users":
         return html`<foyer-page-users .ctx=${ctx}></foyer-page-users>`;
+      case "devices":
+        return html`<foyer-page-devices .ctx=${ctx}></foyer-page-devices>`;
       case "log":
         return html`<foyer-page-log .ctx=${ctx}></foyer-page-log>`;
       case "settings":

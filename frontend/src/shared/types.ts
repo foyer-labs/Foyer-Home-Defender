@@ -330,6 +330,35 @@ export interface LogSettingsConfig {
   retention_days: Record<string, number>;
 }
 
+/** How much the retained MQTT state message says (§9.2, part 2 decision 3). */
+export type MqttDetail = "minimal" | "standard" | "full";
+
+export interface MqttConfig {
+  enabled: boolean;
+  /** Empty means the default, foyer/<install_id>/…, resolved by the backend. */
+  command_topic: string;
+  state_topic: string;
+  detail: MqttDetail;
+  retain: boolean;
+  qos: number;
+}
+
+/** An arming device (SPEC §9.3). A keypad is shared and carries a code; a tag
+ * is one person's, carries none, and its identity is the user it names. */
+export interface DeviceConfig {
+  id?: string;
+  name: string;
+  kind: "keypad" | "tag";
+  /** What a keypad puts in its own messages. A tag never has one. */
+  ref: string | null;
+  entity_id: string | null;
+  event_type: string | null;
+  user_id: string | null;
+  command: "arm" | "disarm" | "toggle";
+  scenario_id: string | null;
+  enabled: boolean;
+}
+
 export interface SettingsConfig {
   siren_duration: number;
   arm_hold_timeout: number;
@@ -346,6 +375,7 @@ export interface SettingsConfig {
   /** Whether the first-run wizard has been completed or dismissed (§15.1). */
   wizard_done: boolean;
   security: SecurityConfig;
+  mqtt: MqttConfig;
 }
 
 export interface FoyerConfig {
@@ -357,6 +387,7 @@ export interface FoyerConfig {
   settings: SettingsConfig;
   chime: ChimeConfig;
   users: UserConfig[];
+  devices: DeviceConfig[];
   code_policy: CodePolicyConfig;
 }
 
@@ -478,5 +509,6 @@ export type PageId =
   | "profiles"
   | "groups"
   | "users"
+  | "devices"
   | "log"
   | "settings";

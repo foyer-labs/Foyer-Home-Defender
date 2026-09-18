@@ -24,7 +24,8 @@
     "settings": "Settings",
     "profiles": "Response profiles",
     "log": "Log",
-    "users": "Users"
+    "users": "Users",
+    "devices": "Arming devices"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -504,6 +505,7 @@
     "layout_full": "Full — areas, scenarios, countdown and what blocks arming",
     "layout_compact": "Compact — state and one action",
     "editor_hint": "The keypad layouts arrive with codes and users, in the next phase.",
+    "layout_badge": "Badge — state only, for a dashboard of your own",
     "layout_keypad": "Keypad",
     "code_hint": "{n} digits",
     "code_clear": "Clear",
@@ -773,6 +775,36 @@
         "scope": {
           "term": "Scope and validity",
           "text": "A code can be limited to some areas or scenarios, and can stop working on a date — which is what makes a guest code a guest code."
+        }
+      }
+    },
+    "devices": {
+      "title": "What this page decides",
+      "intro": "Any device that can call a service or publish to MQTT can arm this system and receives structured feedback for its LEDs, beeps and display. Keypad models change every few months; this contract does not. A device must be declared here before it may command anything.",
+      "items": {
+        "declared": {
+          "term": "Declared first",
+          "text": "A device that is not on this page is refused, whatever code it brings, and the refusal is recorded and shown."
+        },
+        "device_id": {
+          "term": "Device ID",
+          "text": "Recorded on every event, and what the lockout counts attempts against. Give each keypad its own."
+        },
+        "identifies": {
+          "term": "Identifies the user",
+          "text": "A personal tag or badge identifies who acted, and needs no code. A shared keypad cannot, so the code is the only identity it has."
+        },
+        "topics": {
+          "term": "Topics",
+          "text": "Configurable, because people run more than one site against one broker and have a hierarchy they will not restructure."
+        },
+        "detail": {
+          "term": "What the state message says",
+          "text": "It is retained on a broker that is often shared, so it starts at the least a keypad needs and opens up only if you ask."
+        },
+        "last_result": {
+          "term": "last_result",
+          "text": "Lets a keypad distinguish a wrong code from arming blocked by an open window, instead of failing silently."
         }
       }
     }
@@ -1142,7 +1174,8 @@
     "action_delay": "Delay",
     "action_chime": "Chime",
     "action_revert": "Switched off again",
-    "reloaded": "Foyer reloaded"
+    "reloaded": "Foyer reloaded",
+    "device_rejected": "Device refused"
   },
   "log": {
     "filters": "Filters",
@@ -1347,5 +1380,47 @@
     "lockout_window": "Within (seconds)",
     "lockout_duration": "Lock for (seconds)",
     "lockout_hint": "Each further lockout on the same channel lasts twice as long. The Home Assistant admin path is never locked, so nobody can shut themselves out."
+  },
+  "device_kind": {
+    "keypad": "Keypad",
+    "tag": "Tag or remote"
+  },
+  "mqtt_detail": {
+    "minimal": "Minimal",
+    "standard": "Standard",
+    "full": "Full"
+  },
+  "devices": {
+    "title": "Devices",
+    "add": "Add a device",
+    "new": "New device",
+    "none": "No arming device yet. A keypad, a tag or a remote is declared here before it may command anything.",
+    "reaches": "Reached through",
+    "identifies": "Identifies",
+    "code_is_identity": "The code is the identity",
+    "white_list": "This list is a white list, not an address book: a device that is not here is refused whatever code it brings. That is what makes the lockout countable, because a caller free to invent a device name is a caller who is never locked out.",
+    "kind_hint_keypad": "Shared, and carries a code. On a shared keypad the code is the identity, so the per-user exemption can never apply here.",
+    "kind_hint_tag": "One person's, and carries no code at all: an NFC tag, an RFID badge, a remote.",
+    "ref_hint": "The name this keypad puts in its own messages, in device_id. It is recorded on every event and is what the lockout counts attempts against, so give each keypad its own.",
+    "stolen_tag": "A stolen tag arms and disarms without knowing any code.",
+    "stolen_tag_hint": "Possession is the credential: there is nowhere to type a code on a tag. Keep it as you would keep a key, and give it to somebody you would give a key to. Everything else about that person still applies: what they may do, which areas, and until when.",
+    "entity_hint": "The tag or event entity a scan arrives on. Scan the tag once with Home Assistant to make it appear.",
+    "event_type_hint": "For a remote with more than one button: which event counts. Leave it empty for a tag, which has only the scan.",
+    "owner_hint": "Whose tag this is. This is the whole of its identity, and what the log will say.",
+    "enabled_hint": "Switched off, it stops commanding, not merely disappearing from this list.",
+    "mqtt": "MQTT",
+    "mqtt_note": "Keypad models churn every six months; this contract does not. Anything that can publish to a broker can arm this house, and gets structured feedback back for its LEDs and beeps. Everything here is also available as the foyer.* services, for a device that cannot publish MQTT.",
+    "mqtt_enabled": "Listen and publish on the broker",
+    "mqtt_enabled_hint": "Off until you switch it on: a broker is often somebody else's machine.",
+    "topic_hint": "Leave empty for the default, foyer/<install id>/command. People run more than one site against one broker.",
+    "detail_hint_minimal": "What a keypad needs and nothing else: no scenario name, no area names, no list of open windows.",
+    "detail_hint_standard": "Adds the active scenario and the state of each area, by name.",
+    "detail_hint_full": "The contract as written, open zones by name included. Remember what retained means on a shared broker.",
+    "retain_hint": "Retained, so a keypad that reboots knows the state without asking, and so does anyone else who connects to the broker afterwards.",
+    "inbound": "Inbound: device to Foyer",
+    "outbound": "Outbound: Foyer to device",
+    "last_result_hint": "last_result is what lets a keypad tell a wrong code from arming blocked by an open window, instead of failing silently.",
+    "topic_command_example": "foyer/<install id>/command",
+    "topic_state_example": "foyer/<install id>/state"
   }
 }

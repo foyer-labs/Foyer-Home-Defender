@@ -24,7 +24,8 @@
     "settings": "Impostazioni",
     "profiles": "Profili di risposta",
     "log": "Registro",
-    "users": "Utenti"
+    "users": "Utenti",
+    "devices": "Dispositivi di inserimento"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -504,6 +505,7 @@
     "layout_full": "Completa: aree, scenari, conto alla rovescia e cosa blocca l'inserimento",
     "layout_compact": "Compatta: stato e un'azione",
     "editor_hint": "Le disposizioni con tastierino arrivano con codici e utenti, nella fase successiva.",
+    "layout_badge": "Pastiglia — solo lo stato, per una dashboard tua",
     "layout_keypad": "Tastierino",
     "code_hint": "{n} cifre",
     "code_clear": "Cancella",
@@ -773,6 +775,36 @@
         "scope": {
           "term": "Ambito e validità",
           "text": "Un codice può essere limitato ad alcune aree o scenari e può smettere di funzionare a una certa data — che è ciò che rende un codice ospite un codice ospite."
+        }
+      }
+    },
+    "devices": {
+      "title": "Cosa decide questa pagina",
+      "intro": "Qualunque dispositivo sappia chiamare un servizio o pubblicare in MQTT può inserire questo impianto e riceve un riscontro strutturato per i suoi LED, i segnali acustici e il display. I modelli di tastierino cambiano ogni pochi mesi; questo contratto no. Un dispositivo va dichiarato qui prima di poter comandare qualcosa.",
+      "items": {
+        "declared": {
+          "term": "Prima si dichiara",
+          "text": "Un dispositivo che non è in questa pagina viene rifiutato con qualunque codice arrivi, e il rifiuto è registrato e mostrato."
+        },
+        "device_id": {
+          "term": "ID del dispositivo",
+          "text": "Registrato su ogni evento, ed è ciò su cui il blocco conta i tentativi. Dai a ogni tastierino il suo."
+        },
+        "identifies": {
+          "term": "Identifica la persona",
+          "text": "Un tag o un badge personale dice chi ha agito e non ha bisogno di codice. Un tastierino condiviso non può, quindi il codice è l'unica identità che ha."
+        },
+        "topics": {
+          "term": "Topic",
+          "text": "Configurabili, perchè c'è chi fa girare più impianti su un solo broker e chi ha una gerarchia che non ristrutturerà."
+        },
+        "detail": {
+          "term": "Cosa dice il messaggio di stato",
+          "text": "È ritenuto su un broker spesso condiviso, quindi parte dal minimo che serve a un tastierino e si apre solo se lo chiedi."
+        },
+        "last_result": {
+          "term": "last_result",
+          "text": "Permette a un tastierino di distinguere un codice sbagliato da un inserimento bloccato da una finestra aperta, invece di fallire in silenzio."
         }
       }
     }
@@ -1142,7 +1174,8 @@
     "action_delay": "Attesa",
     "action_chime": "Campanello",
     "action_revert": "Riportato a riposo",
-    "reloaded": "Foyer ricaricato"
+    "reloaded": "Foyer ricaricato",
+    "device_rejected": "Dispositivo rifiutato"
   },
   "log": {
     "filters": "Filtri",
@@ -1347,5 +1380,47 @@
     "lockout_window": "Entro (secondi)",
     "lockout_duration": "Blocca per (secondi)",
     "lockout_hint": "Ogni blocco successivo sullo stesso canale dura il doppio. Il percorso dell’amministratore Home Assistant non viene mai bloccato, così nessuno può chiudersi fuori."
+  },
+  "device_kind": {
+    "keypad": "Tastierino",
+    "tag": "Tag o telecomando"
+  },
+  "mqtt_detail": {
+    "minimal": "Minimo",
+    "standard": "Standard",
+    "full": "Completo"
+  },
+  "devices": {
+    "title": "Dispositivi",
+    "add": "Aggiungi un dispositivo",
+    "new": "Nuovo dispositivo",
+    "none": "Nessun dispositivo di inserimento. Un tastierino, un tag o un telecomando si dichiara qui prima di poter comandare qualcosa.",
+    "reaches": "Raggiunto tramite",
+    "identifies": "Identifica",
+    "code_is_identity": "Il codice è l'identità",
+    "white_list": "Questo elenco è una lista bianca, non una rubrica: un dispositivo che non è qui viene rifiutato con qualunque codice arrivi. È ciò che rende contabile il blocco, perchè chi può inventarsi il nome di un dispositivo non viene bloccato mai.",
+    "kind_hint_keypad": "Condiviso, e porta un codice. Su un tastierino condiviso il codice è l'identità, quindi l'esenzione per utente non può valere qui.",
+    "kind_hint_tag": "Di una sola persona, e non porta nessun codice: un tag NFC, un badge RFID, un telecomando.",
+    "ref_hint": "Il nome che questo tastierino mette nei propri messaggi, in device_id. È registrato su ogni evento ed è ciò su cui il blocco conta i tentativi: dai a ogni tastierino il suo.",
+    "stolen_tag": "Un tag rubato inserisce e disinserisce senza sapere nessun codice.",
+    "stolen_tag_hint": "Il possesso è la credenziale: su un tag non c'è dove digitare un codice. Trattalo come una chiave, e dallo a qualcuno a cui daresti una chiave. Tutto il resto di quella persona continua a valere: cosa può fare, in quali aree, e fino a quando.",
+    "entity_hint": "L'entità tag o event su cui arriva la lettura. Passa il tag una volta su Home Assistant perchè compaia.",
+    "event_type_hint": "Per un telecomando con più pulsanti: quale evento conta. Lascialo vuoto per un tag, che ha solo la lettura.",
+    "owner_hint": "Di chi è questo tag. È tutta la sua identità, ed è ciò che dirà il registro.",
+    "enabled_hint": "Spento, smette di comandare, non sparisce soltanto da questo elenco.",
+    "mqtt": "MQTT",
+    "mqtt_note": "I modelli di tastierino cambiano ogni sei mesi; questo contratto no. Qualunque cosa sappia pubblicare su un broker può inserire questa casa, e riceve indietro un riscontro strutturato per i suoi LED e i suoi segnali acustici. Tutto questo è disponibile anche come servizi foyer.*, per un dispositivo che non sa pubblicare in MQTT.",
+    "mqtt_enabled": "Ascolta e pubblica sul broker",
+    "mqtt_enabled_hint": "Spento finchè non lo accendi: un broker è spesso la macchina di qualcun altro.",
+    "topic_hint": "Lascia vuoto per il predefinito, foyer/<id impianto>/command. C'è chi fa girare più impianti su un solo broker.",
+    "detail_hint_minimal": "Cio' che serve a un tastierino e nient'altro: nessun nome di scenario, nessun nome di area, nessun elenco di finestre aperte.",
+    "detail_hint_standard": "Aggiunge lo scenario attivo e lo stato di ogni area, per nome.",
+    "detail_hint_full": "Il contratto alla lettera, zone aperte per nome comprese. Ricorda cosa vuol dire «ritenuto» su un broker condiviso.",
+    "retain_hint": "Ritenuto, così un tastierino che si riavvia conosce lo stato senza chiederlo, e lo conosce anche chiunque altro si colleghi al broker dopo.",
+    "inbound": "In ingresso: dal dispositivo a Foyer",
+    "outbound": "In uscita: da Foyer al dispositivo",
+    "last_result_hint": "last_result è ciò che permette a un tastierino di distinguere un codice sbagliato da un inserimento bloccato da una finestra aperta, invece di fallire in silenzio.",
+    "topic_command_example": "foyer/<id impianto>/command",
+    "topic_state_example": "foyer/<id impianto>/state"
   }
 }

@@ -1,6 +1,9 @@
 {
   "domain": "foyer",
   "name": "Foyer Home Defender",
+  "after_dependencies": [
+    "mqtt"
+  ],
   "codeowners": [],
   "config_flow": true,
   "dependencies": [
@@ -8,9 +11,6 @@
     "http",
     "panel_custom",
     "websocket_api"
-  ],
-  "after_dependencies": [
-    "mqtt"
   ],
   "documentation": "https://github.com/foyer-labs/Foyer-Home-Defender",
   "integration_type": "hub",
