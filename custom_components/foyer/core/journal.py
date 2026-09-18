@@ -253,16 +253,27 @@ def zone_rows(
     config: FoyerConfig,
     at: datetime,
     old: str | None = None,
+    was_active: frozenset[str] = frozenset(),
 ) -> tuple[LogRow, ...]:
-    """The raw movement of an entity, filed by whether its area was watching.
+    """The movement of an entity, filed by whether its area was watching.
 
     One entity may back more than one zone, and each zone's own area decides
     its category: with "Windows only" armed, the same PIR is watched in one
     area and not in another.
+
+    Home Assistant also reports a change when only the attributes moved — a
+    battery level, a signal strength — and the watcher passes those on because
+    a numeric attribute trigger depends on them. They are not zone activity,
+    so a row is written only when the state itself moved, or when what Foyer
+    makes of it did: a numeric trigger crossing its band changes nothing
+    visible in the state and is exactly what the log should show.
     """
     rows = []
     for zone in config.zones:
         if zone.entity_id != event.entity_id:
+            continue
+        active = zone.id in state.active_zones
+        if old == event.new.state and active == (zone.id in was_active):
             continue
         area_state = state.area(zone.area_id).state
         rows.append(
@@ -282,6 +293,9 @@ def zone_rows(
                     "from": old,
                     "to": event.new.state,
                     "area_state": area_state.value,
+                    # What Foyer made of it: whether the zone now counts as
+                    # triggered, which a state string alone does not say.
+                    "active": active,
                 },
             )
         )
@@ -294,6 +308,7 @@ def rows_for(
     config: FoyerConfig,
     *,
     old_state: str | None = None,
+    was_active: frozenset[str] = frozenset(),
 ) -> tuple[LogRow, ...]:
     """Everything one decision puts in the log, in the order it happened.
 
@@ -307,7 +322,11 @@ def rows_for(
         if rejected is not None:
             rows.append(rejected)
     if isinstance(event, ZoneStateChanged):
-        rows.extend(zone_rows(event, decision.state, config, decision.at, old_state))
+        rows.extend(
+            zone_rows(
+                event, decision.state, config, decision.at, old_state, was_active
+            )
+        )
     return tuple(rows)
 
 

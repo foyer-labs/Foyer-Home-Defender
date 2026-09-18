@@ -1061,7 +1061,8 @@
     "show_incident": "Show this incident",
     "newer": "Newer",
     "older": "Older",
-    "gap": "From {from} to {to}"
+    "gap": "From {from} to {to}",
+    "refresh": "Refresh"
   },
   "language": {
     "en": "English",

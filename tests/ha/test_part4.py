@@ -277,6 +277,26 @@ async def test_retention_removes_what_is_older_than_its_category_keeps(
     assert await _rows(client, categories=["arming"]) == []
 
 
+async def test_retention_is_applied_at_every_start_not_only_once_a_day(
+    hass, hass_ws_client, entry, loaded, freezer
+):
+    """A daily timer never fires on a house that restarts more often than
+    that — and every configuration change reloads the entry."""
+    from homeassistant.util import dt as dt_util
+
+    client = await hass_ws_client(hass)
+    await _arm(hass, freezer)
+    assert await _rows(client, categories=["arming"])
+
+    # A month later, with no purge having run in between: the next start has
+    # to clear what is past its retention.
+    freezer.move_to(dt_util.utcnow() + timedelta(days=40))
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert await _rows(client, categories=["arming"]) == []
+
+
 async def test_export_honours_the_filters_it_was_given(
     hass, hass_ws_client, loaded, freezer
 ):
@@ -375,3 +395,36 @@ async def test_a_restore_that_would_touch_an_armed_area_is_refused(
     assert not result["success"]
     assert result["problems"]
     assert hass.data[DOMAIN].config.areas[0].default_entry_delay != 90
+
+
+async def test_the_language_setting_changes_what_foyer_sends_not_the_panel(
+    hass, hass_ws_client, loaded, freezer
+):
+    """§15.1: the panel follows each Home Assistant user; this is the language
+    of the messages Foyer sends out."""
+    from .test_integration import _notifications
+
+    hass.config.language = "en"
+    client = await hass_ws_client(hass)
+    config = await _ws(client, {"type": "foyer/config"})
+    settings = dict(config["config"]["settings"], language="it")
+    assert (await _ws(client, {"type": "foyer/config/settings", "settings": settings}))[
+        "success"
+    ]
+    await hass.async_block_till_done()
+
+    await _arm(hass, freezer)
+    notes = _notifications(hass)
+    assert notes and notes[-1]["title"] == "Foyer: inserito"
+
+
+async def test_with_no_language_set_foyer_speaks_what_home_assistant_speaks(
+    hass, loaded, freezer
+):
+    hass.config.language = "it"
+    await _arm(hass, freezer)
+
+    from .test_integration import _notifications
+
+    notes = _notifications(hass)
+    assert notes and notes[-1]["title"] == "Foyer: inserito"

@@ -118,11 +118,21 @@ class FoyerPageLog extends LitElement {
 
   // --- filters ---------------------------------------------------------------------
 
+  /** The vocabulary of the log. It comes from the backend for an
+   * administrator, who has read the configuration; everyone else sees this
+   * page too, and for them it is taken from the translations, which carry the
+   * same words and the same order. A filter list is not a secret. */
+  private _vocabulary(s: Strings, key: string, fromMeta?: string[]): string[] {
+    if (fromMeta?.length) return fromMeta;
+    const block = (s as Record<string, unknown>)[key];
+    return block && typeof block === "object" ? Object.keys(block) : [];
+  }
+
   private _renderFilters(s: Strings) {
     const ctx = this.ctx!;
-    const categories = ctx.meta?.log_categories ?? [];
-    const severities = ctx.meta?.log_severities ?? [];
-    const outcomes = ctx.meta?.outcomes ?? [];
+    const categories = this._vocabulary(s, "category", ctx.meta?.log_categories);
+    const severities = this._vocabulary(s, "severity", ctx.meta?.log_severities);
+    const outcomes = this._vocabulary(s, "outcome", ctx.meta?.outcomes);
     const selected = this._filters.categories ?? [];
     return html`
       <div class="card">
@@ -258,6 +268,9 @@ class FoyerPageLog extends LitElement {
               total: this._total,
             })}</span
           >
+          <button class="btn" ?disabled=${this._busy} @click=${() => void this._load()}>
+            ${t(s, "log.refresh")}
+          </button>
           <button class="btn" ?disabled=${this._busy} @click=${() => this._export("csv")}>
             ${t(s, "log.export_csv")}
           </button>

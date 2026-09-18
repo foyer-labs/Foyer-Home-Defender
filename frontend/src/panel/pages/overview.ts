@@ -38,6 +38,7 @@ class FoyerPageOverview extends LitElement {
   private _busy = false;
   private _feedback?: Feedback;
   private _recent: LogRow[] = [];
+  private _signature_?: string;
 
   private async _run(
     command: () => Promise<CommandResult>,
@@ -89,7 +90,28 @@ class FoyerPageOverview extends LitElement {
   }
 
   override updated(changed: PropertyValues): void {
-    if (changed.has("ctx") && this.ctx) void this._loadRecent();
+    // The shell hands us a fresh context object on every render, and a running
+    // countdown re-renders every second: reloading on "ctx changed" would ask
+    // the log a question a second. Ask only when something actually happened.
+    if (!changed.has("ctx") || !this.ctx) return;
+    const signature = this._signature();
+    if (signature === this._signature_) return;
+    this._signature_ = signature;
+    void this._loadRecent();
+  }
+
+  /** What has to change before the recent-events list is worth reloading. */
+  private _signature(): string {
+    const status = this.ctx!.status;
+    return JSON.stringify([
+      status.active_scenario_id,
+      status.areas.map((a) => [a.id, a.state, a.memory, a.ready]),
+      status.incident?.id,
+      status.incident?.acknowledged,
+      status.technical.map((t2) => [t2.zone_id, t2.acknowledged]),
+      status.zones.map((z) => [z.id, z.state, z.bypassed, z.fault]),
+      status.chime_enabled,
+    ]);
   }
 
   override render() {

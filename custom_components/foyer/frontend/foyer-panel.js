@@ -896,7 +896,31 @@ var Re = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), ze = class extend
 		t && this._run(() => t.acknowledge(e));
 	}
 	updated(e) {
-		e.has("ctx") && this.ctx && this._loadRecent();
+		if (!e.has("ctx") || !this.ctx) return;
+		let t = this._signature();
+		t !== this._signature_ && (this._signature_ = t, this._loadRecent());
+	}
+	_signature() {
+		let e = this.ctx.status;
+		return JSON.stringify([
+			e.active_scenario_id,
+			e.areas.map((e) => [
+				e.id,
+				e.state,
+				e.memory,
+				e.ready
+			]),
+			e.incident?.id,
+			e.incident?.acknowledged,
+			e.technical.map((e) => [e.zone_id, e.acknowledged]),
+			e.zones.map((e) => [
+				e.id,
+				e.state,
+				e.bypassed,
+				e.fault
+			]),
+			e.chime_enabled
+		]);
 	}
 	render() {
 		let e = this.ctx;
@@ -3667,8 +3691,13 @@ var Q = 50, ct = class extends z {
 		let t = e.strings;
 		return A`${this._renderFilters(t)} ${this._renderRows(t)}`;
 	}
+	_vocabulary(e, t, n) {
+		if (n?.length) return n;
+		let r = e[t];
+		return r && typeof r == "object" ? Object.keys(r) : [];
+	}
 	_renderFilters(e) {
-		let t = this.ctx, n = t.meta?.log_categories ?? [], r = t.meta?.log_severities ?? [], i = t.meta?.outcomes ?? [], a = this._filters.categories ?? [];
+		let t = this.ctx, n = this._vocabulary(e, "category", t.meta?.log_categories), r = this._vocabulary(e, "severity", t.meta?.log_severities), i = this._vocabulary(e, "outcome", t.meta?.outcomes), a = this._filters.categories ?? [];
 		return A`
       <div class="card">
         <div class="card-hd"><h2>${U(e, "log.filters")}</h2></div>
@@ -3772,6 +3801,9 @@ var Q = 50, ct = class extends z {
 			total: this._total
 		})}</span
           >
+          <button class="btn" ?disabled=${this._busy} @click=${() => void this._load()}>
+            ${U(e, "log.refresh")}
+          </button>
           <button class="btn" ?disabled=${this._busy} @click=${() => this._export("csv")}>
             ${U(e, "log.export_csv")}
           </button>
@@ -4615,7 +4647,7 @@ var $ = [
 		let t = this.ctx, n = t.config.zones, r = this._proposal, i = t.meta?.zone_domains ?? [], a = Object.values(t.hass.states).filter((e) => i.includes(e.entity_id.split(".")[0])).filter((e) => !n.some((t) => t.entity_id === e.entity_id)).map((e) => ({
 			id: e.entity_id,
 			name: String(e.attributes.friendly_name ?? e.entity_id)
-		})).sort((e, t) => e.name.localeCompare(t.name)).slice(0, 200);
+		})).sort((e, t) => e.name.localeCompare(t.name));
 		return A`
       <p>${U(e, "wizard.zones_text", {
 			have: n.length,

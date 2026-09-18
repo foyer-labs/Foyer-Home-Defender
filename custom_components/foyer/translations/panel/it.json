@@ -1061,7 +1061,8 @@
     "show_incident": "Mostra questo incidente",
     "newer": "Più recenti",
     "older": "Più vecchi",
-    "gap": "Dal {from} al {to}"
+    "gap": "Dal {from} al {to}",
+    "refresh": "Aggiorna"
   },
   "language": {
     "en": "English",

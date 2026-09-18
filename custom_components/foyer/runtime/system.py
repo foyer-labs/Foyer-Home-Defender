@@ -142,7 +142,9 @@ class FoyerSystem:
         # faults are not announced yet (see SystemSnapshot.settling).
         self.settling = not hass.is_running
         self.area_entity_ids: dict[str, str] = {}
-        self._executor = Executor(hass)
+        # The configuration reloads the entry on every change, so the language
+        # Foyer speaks is read once, here, and never looked up mid-alarm.
+        self._executor = Executor(hass, config.settings.language)
         self._listeners: list[Callable[[], None]] = []
         self._unsub_wakeup: CALLBACK_TYPE | None = None
         self._unsubs: list[CALLBACK_TYPE] = []
@@ -195,6 +197,11 @@ class FoyerSystem:
         self._started = True
         self.settling = False
         await self.async_handle(Startup(down_since=self._down_since, cause=cause))
+        # Once at every start, as well as daily. A timer that only fires after
+        # twenty-four hours never fires at all on a house that restarts more
+        # often than that — and every configuration change reloads the entry,
+        # which is a restart. Retention would be a setting that does nothing.
+        await self._async_purge()
 
     @callback
     def _on_purge(self, _now: datetime) -> None:
@@ -232,6 +239,7 @@ class FoyerSystem:
         """Decide, store, persist, execute, record. Returns the Decision."""
         # No await between snapshot and store: on the event loop this block is
         # atomic, so two events can never interleave their decisions.
+        was_active = self.state.active_zones
         decision = decide(
             self._snapshot(overrides), event, self.config, dt_util.utcnow()
         )
@@ -243,7 +251,15 @@ class FoyerSystem:
         # The log is written before the actions run and again after them: what
         # happened is on record even if an action hangs, and how each action
         # went is recorded when it is known (§10.2, category ``action``).
-        self.async_record(rows_for(event, decision, self.config, old_state=old_state))
+        self.async_record(
+            rows_for(
+                event,
+                decision,
+                self.config,
+                old_state=old_state,
+                was_active=was_active,
+            )
+        )
         results = await self._executor.async_run(decision)
         self.async_record(_action_rows(decision, results))
         return decision

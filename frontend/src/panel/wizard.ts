@@ -211,8 +211,7 @@ class FoyerWizard extends LitElement {
         id: e.entity_id,
         name: String(e.attributes.friendly_name ?? e.entity_id),
       }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, 200);
+      .sort((a, b) => a.name.localeCompare(b.name));
     return html`
       <p>${t(s, "wizard.zones_text", { have: zones.length, want: WANTED_ZONES })}</p>
       <ul class="zones">

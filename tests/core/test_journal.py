@@ -31,16 +31,24 @@ from .helpers import DOOR, WINDOW, World
 
 
 def rows(world: World, decision, *, old: str | None = None):
-    return rows_for(world.last_event, decision, world.config, old_state=old)
+    return rows_for(
+        world.last_event,
+        decision,
+        world.config,
+        old_state=old,
+        was_active=world.was_active,
+    )
 
 
 class Logged(World):
-    """A World that remembers the event it last sent, as a runtime does."""
+    """A World that remembers what a runtime would, to build its rows."""
 
     last_event = None
+    was_active: frozenset[str] = frozenset()
 
     def send(self, event):  # type: ignore[override]
         self.last_event = event
+        self.was_active = self.state.active_zones
         return super().send(event)
 
 
@@ -216,3 +224,41 @@ def test_a_config_edit_records_who_and_a_summary():
     assert row.detail["changes"]["zones"]["changed"] == {
         "Kitchen window": ["arm_policy"]
     }
+
+
+def test_an_attribute_only_report_is_not_zone_activity():
+    """Home Assistant reports a battery level as a state change; the log must
+    not pretend a door opened and closed every time a radio says hello."""
+    world = Logged()
+    world.set(DOOR, "on")
+    decision = world.set(DOOR, "on", battery_level=61)
+
+    assert [r for r in rows(world, decision, old="on") if r.event_type == "zone_state"] == []
+
+
+def test_a_numeric_trigger_crossing_its_band_is_recorded_though_the_state_is_the_same():
+    """The opposite case, and the reason the check is not simply "did the
+    state string change": a numeric attribute trigger moves nothing visible."""
+    from custom_components.foyer.core.models import NumericOperator, NumericTrigger
+
+    world = Logged()
+    world.config = replace(
+        world.config,
+        zones=tuple(
+            replace(
+                z,
+                trigger=NumericTrigger(
+                    operator=NumericOperator.GT, value=30.0, attribute="level"
+                ),
+            )
+            if z.id == "window"
+            else z
+            for z in world.config.zones
+        ),
+    )
+    world.set(WINDOW, "on", level=10)
+    decision = world.set(WINDOW, "on", level=40)
+
+    zone_rows = [r for r in rows(world, decision, old="on") if r.event_type == "zone_state"]
+    assert len(zone_rows) == 1
+    assert zone_rows[0].detail["active"] is True

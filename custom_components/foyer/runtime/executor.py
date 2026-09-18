@@ -44,8 +44,21 @@ class ActionResult:
 
 
 class Executor:
-    def __init__(self, hass: HomeAssistant) -> None:
+    """``language`` is the language Foyer speaks in what it sends out (§15.1):
+    the notification text and anything else it writes for a person. None means
+    the language Home Assistant itself runs in. It is given here rather than
+    looked up because the configuration is not this layer's to read."""
+
+    def __init__(self, hass: HomeAssistant, language: str | None = None) -> None:
         self.hass = hass
+        self._language = language
+
+    @property
+    def language(self) -> str:
+        # Read now, not at setup: left empty, the setting means "whatever
+        # Home Assistant is speaking", and Home Assistant may have changed
+        # language since Foyer was loaded.
+        return self._language or self.hass.config.language
 
     async def async_run(self, decision: Decision) -> list[ActionResult]:
         results: list[ActionResult] = []
@@ -88,7 +101,7 @@ class Executor:
         message = str(intent.params.get("message") or "")
         if not message:
             strings = await self.hass.async_add_executor_job(
-                i18n.load_strings, self.hass.config.language
+                i18n.load_strings, self.language
             )
             base = f"notification.{intent.moment.value}"
             if intent.variant:
