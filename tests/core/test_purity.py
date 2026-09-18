@@ -35,6 +35,10 @@ PURE_MODULES = [
     "custom_components.foyer.store.seed",
     "custom_components.foyer.store.migrations",
     "custom_components.foyer.store.editing",
+    # security/ is not core/ — it holds a code in the clear for as long as a
+    # comparison takes — but it must stay free of Home Assistant too, so that
+    # the rules protecting codes are testable without one.
+    "custom_components.foyer.security.codes",
 ]
 
 

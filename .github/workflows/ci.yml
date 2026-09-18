@@ -56,7 +56,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: pip install pytest
+      # bcrypt, because security/ hashes codes with it and is deliberately
+      # free of Home Assistant: it must be testable here, not only there.
+      - run: pip install pytest bcrypt
       - name: Home Assistant must not be importable here
         run: "! python -c 'import homeassistant'"
       - run: pytest
