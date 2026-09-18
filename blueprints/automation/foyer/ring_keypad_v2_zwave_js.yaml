@@ -1,0 +1,269 @@
+blueprint:
+  name: Foyer — Ring Alarm Keypad v2 (Z-Wave JS)
+  description: >-
+    Arms and disarms Foyer from a Ring Alarm Keypad v2, and answers the keypad
+    on its own terms: the LED ring, the beeps and the exit and entry
+    countdowns.
+
+
+    The keypad sends an Entry Control notification carrying which key was
+    pressed and the digits typed before it. This blueprint hands both to
+    `foyer.arm` and `foyer.disarm` and reads the structured result back, so
+    the keypad can tell a wrong code from arming blocked by an open window
+    instead of chirping the same way at both.
+
+
+    **Declare the keypad in Foyer first.** Foyer refuses a device it does not
+    carry: open Arming devices, add a keypad, and use the identifier you gave
+    it as `Device identifier` below. The same string appears on every log row
+    and is what the lockout counts attempts against.
+
+
+    **The indicator numbers below are community mappings, not vendor
+    documentation.** Ring has published none, and firmware revisions have
+    changed behaviour before. They are gathered in one `variables` block so
+    you can correct them in one place; check them with Developer Tools →
+    Actions → `zwave_js.set_value` before trusting the feedback, and see
+    docs/keypads.md.
+  domain: automation
+  source_url: https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/blueprints/automation/foyer/ring_keypad_v2_zwave_js.yaml
+  input:
+    keypad:
+      name: Keypad
+      description: The Ring Alarm Keypad v2, as Z-Wave JS knows it.
+      selector:
+        device:
+          integration: zwave_js
+    device_ref:
+      name: Device identifier
+      description: >-
+        What this keypad is called in Foyer, under Arming devices.
+      default: keypad_hall
+      selector:
+        text:
+    panel:
+      name: Panel to follow
+      description: >-
+        The alarm panel whose state the LED ring shows. The master panel
+        follows the whole house; an area's own panel follows that area.
+      default: alarm_control_panel.foyer_master
+      selector:
+        entity:
+          domain: alarm_control_panel
+    countdown:
+      name: Countdown sensor
+      description: >-
+        The area's `sensor.foyer_countdown_*`. It is what drives the keypad's
+        own countdown, so the number on the keypad is Foyer's and not this
+        automation's guess. Leave empty for no countdown.
+      default: []
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+    away_scenario:
+      name: Scenario for the Away key
+      selector:
+        text:
+    home_scenario:
+      name: Scenario for the Home key
+      selector:
+        text:
+    panic_zone:
+      name: Panic zone (optional)
+      description: >-
+        An `input_boolean` mapped in Foyer as a panic zone. The police, fire
+        and medical keys turn it on. Left empty, those keys do nothing: Foyer
+        will not invent an alarm from a key nobody told it about.
+      default: []
+      selector:
+        entity:
+          domain: input_boolean
+          multiple: false
+
+mode: queued
+max: 10
+
+variables:
+  # --- Indicator CC (0x87) values ---------------------------------------
+  # Community mappings, not vendor documentation. Correct them here, once.
+  ind_armed_away: 11
+  ind_armed_home: 12
+  ind_disarmed: 10
+  ind_entry_delay: 17
+  ind_exit_delay: 18
+  ind_rejected: 9
+  # How long the refusal chirp lasts.
+  chirp_seconds: 2
+  ref: !input device_ref
+  away_scenario: !input away_scenario
+  home_scenario: !input home_scenario
+  countdown_entity: !input countdown
+  panic: !input panic_zone
+
+triggers:
+  - trigger: event
+    id: keypress
+    event_type: zwave_js_notification
+    event_data:
+      device_id: !input keypad
+      command_class_name: Entry Control
+  - trigger: state
+    id: panel
+    entity_id: !input panel
+
+conditions: []
+
+actions:
+  - choose:
+      # =================================================================
+      # The keypad asked for something.
+      # =================================================================
+      - conditions:
+          - condition: trigger
+            id: keypress
+        sequence:
+          - variables:
+              ev: "{{ trigger.event.data.event_type | int(0) }}"
+              code: "{{ trigger.event.data.event_data | default('') }}"
+          - choose:
+              # --- Disarm ------------------------------------------------
+              - conditions: "{{ ev == 2 }}"
+                sequence:
+                  - action: foyer.disarm
+                    data:
+                      code: "{{ code }}"
+                      device_id: "{{ ref }}"
+                    response_variable: answer
+                  - if:
+                      - condition: template
+                        value_template: "{{ not answer.success }}"
+                    then:
+                      # Refused: a wrong code, a locked keypad, or a zone that
+                      # blocks arming. Which one is in `answer.reason` and in
+                      # the log; the keypad has one chirp for all three.
+                      - action: zwave_js.set_value
+                        target:
+                          device_id: !input keypad
+                        data:
+                          command_class: "135"
+                          endpoint: 0
+                          property: "{{ ind_rejected }}"
+                          property_key: "0"
+                          value: 255
+                      - delay:
+                          seconds: "{{ chirp_seconds }}"
+                      - action: zwave_js.set_value
+                        target:
+                          device_id: !input keypad
+                        data:
+                          command_class: "135"
+                          endpoint: 0
+                          property: "{{ ind_rejected }}"
+                          property_key: "0"
+                          value: 0
+              # --- Arm away, arm home ------------------------------------
+              - conditions: "{{ ev in [3, 5] }}"
+                sequence:
+                  - action: foyer.arm
+                    data:
+                      scenario_name: >-
+                        {{ away_scenario if ev == 3 else home_scenario }}
+                      code: "{{ code }}"
+                      device_id: "{{ ref }}"
+                    response_variable: answer
+                  - if:
+                      - condition: template
+                        value_template: "{{ not answer.success }}"
+                    then:
+                      # Refused: a wrong code, a locked keypad, or a zone that
+                      # blocks arming. Which one is in `answer.reason` and in
+                      # the log; the keypad has one chirp for all three.
+                      - action: zwave_js.set_value
+                        target:
+                          device_id: !input keypad
+                        data:
+                          command_class: "135"
+                          endpoint: 0
+                          property: "{{ ind_rejected }}"
+                          property_key: "0"
+                          value: 255
+                      - delay:
+                          seconds: "{{ chirp_seconds }}"
+                      - action: zwave_js.set_value
+                        target:
+                          device_id: !input keypad
+                        data:
+                          command_class: "135"
+                          endpoint: 0
+                          property: "{{ ind_rejected }}"
+                          property_key: "0"
+                          value: 0
+              # --- Police, fire, medical ---------------------------------
+              - conditions:
+                  - "{{ ev in [16, 17, 19] }}"
+                  - "{{ panic | length > 0 }}"
+                sequence:
+                  - action: input_boolean.turn_on
+                    target:
+                      entity_id: "{{ panic }}"
+
+      # =================================================================
+      # Foyer changed state: show it on the ring.
+      # =================================================================
+      - conditions:
+          - condition: trigger
+            id: panel
+        sequence:
+          - variables:
+              state: "{{ trigger.to_state.state }}"
+              seconds: >-
+                {{ (states(countdown_entity) | int(0))
+                   if countdown_entity | length > 0 else 0 }}
+          - choose:
+              - conditions: "{{ state == 'arming' }}"
+                sequence:
+                  - action: zwave_js.set_value
+                    target:
+                      device_id: !input keypad
+                    data:
+                      command_class: "135"
+                      endpoint: 0
+                      property: "{{ ind_exit_delay }}"
+                      property_key: "7"
+                      value: "{{ [seconds, 255] | min | max(1) }}"
+              - conditions: "{{ state == 'pending' }}"
+                sequence:
+                  - action: zwave_js.set_value
+                    target:
+                      device_id: !input keypad
+                    data:
+                      command_class: "135"
+                      endpoint: 0
+                      property: "{{ ind_entry_delay }}"
+                      property_key: "7"
+                      value: "{{ [seconds, 255] | min | max(1) }}"
+              - conditions: "{{ state == 'disarmed' }}"
+                sequence:
+                  - action: zwave_js.set_value
+                    target:
+                      device_id: !input keypad
+                    data:
+                      command_class: "135"
+                      endpoint: 0
+                      property: "{{ ind_disarmed }}"
+                      property_key: "0"
+                      value: 255
+              - conditions: "{{ state.startswith('armed') }}"
+                sequence:
+                  - action: zwave_js.set_value
+                    target:
+                      device_id: !input keypad
+                    data:
+                      command_class: "135"
+                      endpoint: 0
+                      property: >-
+                        {{ ind_armed_home if state == 'armed_home'
+                           else ind_armed_away }}
+                      property_key: "0"
+                      value: 255

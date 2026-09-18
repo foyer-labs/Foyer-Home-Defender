@@ -1,0 +1,128 @@
+blueprint:
+  name: Foyer — NFC tag or remote (tag and event entities)
+  description: >-
+    Arms or disarms Foyer when a tag is scanned or a remote's button is
+    pressed, through a `tag.*` or `event.*` entity.
+
+
+    **You probably do not need this blueprint.** Foyer reads tags and remotes
+    natively: add one under Arming devices, choose its entity, say whose it is
+    and what it does, and Foyer handles the scan itself — with the person's
+    permissions, their validity window and a log row that names them. That is
+    the supported path, and it is three fields.
+
+
+    This blueprint is for the cases the native path cannot cover: a tag that
+    should arm only between certain hours, one that should act only if
+    somebody is home, a button that should force the arming past an open
+    window. It exists so that the automation editor can do what the
+    configuration deliberately does not.
+
+
+    **The security note §9.3 makes, in plain words: a stolen tag arms and
+    disarms without knowing any code.** A tag carries no code and there is
+    nowhere to type one. Treat it as a key, and give it to somebody you would
+    give a key to. The permissions of the person it names still apply, which
+    is why `user_id` below is worth filling in even though nothing forces it.
+  domain: automation
+  source_url: https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/blueprints/automation/foyer/nfc_tag_and_remote.yaml
+  input:
+    trigger_entity:
+      name: Tag or event entity
+      description: >-
+        The `tag.*` entity of an NFC tag, or the `event.*` entity of a remote.
+      selector:
+        entity:
+          domain:
+            - tag
+            - event
+    event_type:
+      name: Which button (optional)
+      description: >-
+        For a remote with more than one button: the `event_type` that counts.
+        Leave empty for a tag, which has only the scan.
+      default: ""
+      selector:
+        text:
+    what:
+      name: What it does
+      default: toggle
+      selector:
+        select:
+          options:
+            - label: Arm the scenario
+              value: arm
+            - label: Disarm everything
+              value: disarm
+            - label: Arm if disarmed, disarm if armed
+              value: toggle
+    scenario:
+      name: Scenario to arm
+      default: ""
+      selector:
+        text:
+    user_id:
+      name: Whose tag it is
+      description: >-
+        The Foyer user id this tag belongs to, from Users and codes. It is the
+        only identity a tag has: it decides what the tag may do, and it is
+        what the log will say six months from now.
+      default: ""
+      selector:
+        text:
+    panel:
+      name: Panel to read for "toggle"
+      default: alarm_control_panel.foyer_master
+      selector:
+        entity:
+          domain: alarm_control_panel
+
+mode: single
+max_exceeded: silent
+
+variables:
+  wanted_event: !input event_type
+  what: !input what
+  scenario: !input scenario
+  who: !input user_id
+  panel: !input panel
+
+triggers:
+  - trigger: state
+    entity_id: !input trigger_entity
+
+conditions:
+  # A scan is a new timestamp. A change out of `unavailable` is Home Assistant
+  # restoring the last one at startup, not somebody at the door — the same
+  # rule Foyer applies to every event zone.
+  - condition: template
+    value_template: >-
+      {{ trigger.from_state is not none
+         and trigger.to_state is not none
+         and trigger.from_state.state not in ['unknown', 'unavailable']
+         and trigger.to_state.state not in ['unknown', 'unavailable']
+         and trigger.from_state.state != trigger.to_state.state }}
+  - condition: template
+    value_template: >-
+      {{ wanted_event | length == 0
+         or trigger.to_state.attributes.get('event_type') == wanted_event }}
+
+actions:
+  - variables:
+      armed: >-
+        {{ states(panel) not in ['disarmed', 'unknown', 'unavailable'] }}
+      command: >-
+        {% if what != 'toggle' %}{{ what }}
+        {%- elif armed %}disarm
+        {%- else %}arm{% endif %}
+  - choose:
+      - conditions: "{{ command | trim == 'disarm' }}"
+        sequence:
+          - action: foyer.disarm
+            data: >-
+              {{ {'user_id': who} if who | length else {} }}
+    default:
+      - action: foyer.arm
+        data: >-
+          {{ {'scenario_name': scenario}
+             | combine({'user_id': who} if who | length else {}) }}

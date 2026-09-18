@@ -1,0 +1,180 @@
+blueprint:
+  name: Foyer — generic Zigbee keypad (Zigbee2MQTT)
+  description: >-
+    Arms and disarms Foyer from a Zigbee keypad exposed by Zigbee2MQTT, and
+    sends the panel state back so the keypad's own display and LEDs follow the
+    house.
+
+
+    Zigbee2MQTT publishes keypads that speak the IAS ACE cluster as an MQTT
+    message carrying `action` (`arm_all_zones`, `arm_day_zones`,
+    `arm_night_zones`, `disarm`, `emergency`) and `action_code`, the digits
+    typed. Some also expose them as a Home Assistant `event` entity. This
+    blueprint reads the MQTT message, which every one of them has.
+
+
+    **Declare the keypad in Foyer first**, under Arming devices, and use the
+    identifier you gave it below. Foyer refuses a device it does not carry:
+    that is what makes the lockout countable, per keypad.
+
+
+    **Tuya-family clones vary by firmware revision and must be verified one by
+    one.** Two keypads sold under the same picture can send different action
+    names, a different code field, or nothing at all until they are paired in
+    a particular order. Watch your own keypad's topic in Zigbee2MQTT before
+    trusting this, and correct the action names in `variables` below. See
+    docs/keypads.md.
+  domain: automation
+  source_url: https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/blueprints/automation/foyer/zigbee_keypad_z2m.yaml
+  input:
+    keypad_topic:
+      name: Zigbee2MQTT topic
+      description: >-
+        The keypad's topic, without a trailing slash — for example
+        `zigbee2mqtt/Hall keypad`.
+      selector:
+        text:
+    device_ref:
+      name: Device identifier
+      description: What this keypad is called in Foyer, under Arming devices.
+      default: keypad_zigbee
+      selector:
+        text:
+    away_scenario:
+      name: Scenario for "arm away"
+      selector:
+        text:
+    home_scenario:
+      name: Scenario for "arm home"
+      description: >-
+        Used for both the day and the night key unless you set a night
+        scenario below.
+      selector:
+        text:
+    night_scenario:
+      name: Scenario for "arm night" (optional)
+      default: ""
+      selector:
+        text:
+    panel:
+      name: Panel to follow
+      default: alarm_control_panel.foyer_master
+      selector:
+        entity:
+          domain: alarm_control_panel
+    panic_zone:
+      name: Panic zone (optional)
+      description: >-
+        An `input_boolean` mapped in Foyer as a panic zone, turned on by the
+        emergency key. Left empty, that key does nothing.
+      default: []
+      selector:
+        entity:
+          domain: input_boolean
+          multiple: false
+
+mode: queued
+max: 10
+
+variables:
+  ref: !input device_ref
+  away_scenario: !input away_scenario
+  home_scenario: !input home_scenario
+  night_scenario: !input night_scenario
+  panic: !input panic_zone
+  topic: !input keypad_topic
+  # What this firmware calls each key. Correct them here if yours differs.
+  action_disarm: disarm
+  action_away: arm_all_zones
+  action_home: arm_day_zones
+  action_night: arm_night_zones
+  action_panic: emergency
+  # Where the digits arrive. Some firmware uses `action_code`, some `code`.
+  code_field: action_code
+
+triggers:
+  - trigger: mqtt
+    id: keypress
+    topic: !input keypad_topic
+  - trigger: state
+    id: panel
+    entity_id: !input panel
+
+conditions: []
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: keypress
+        sequence:
+          - variables:
+              payload: "{{ trigger.payload_json | default({}) }}"
+              action: "{{ payload.action | default('') }}"
+              code: "{{ payload.get(code_field, '') }}"
+          - choose:
+              - conditions: "{{ action == action_disarm }}"
+                sequence:
+                  - action: foyer.disarm
+                    data:
+                      code: "{{ code }}"
+                      device_id: "{{ ref }}"
+                    response_variable: answer
+                  - action: mqtt.publish
+                    data:
+                      topic: "{{ topic }}/set"
+                      payload: >-
+                        {{ {'arm_mode': {'mode': 'disarm'}} | to_json
+                           if answer.success
+                           else {'arm_mode': {'mode': 'exit_delay'}} | to_json }}
+              - conditions:
+                  "{{ action in [action_away, action_home, action_night] }}"
+                sequence:
+                  - variables:
+                      scenario: >-
+                        {% if action == action_away %}{{ away_scenario }}
+                        {%- elif action == action_night and night_scenario %}
+                        {{- night_scenario }}
+                        {%- else %}{{ home_scenario }}{% endif %}
+                  - action: foyer.arm
+                    data:
+                      scenario_name: "{{ scenario | trim }}"
+                      code: "{{ code }}"
+                      device_id: "{{ ref }}"
+                    response_variable: answer
+                  - action: mqtt.publish
+                    data:
+                      topic: "{{ topic }}/set"
+                      # A keypad that is told "not ready" for a refusal shows
+                      # the household something is wrong; which something is
+                      # in `answer.reason` and in the log.
+                      payload: >-
+                        {{ {'arm_mode': {'mode': 'exit_delay'}} | to_json
+                           if answer.success
+                           else {'arm_mode': {'mode': 'not_ready'}} | to_json }}
+              - conditions:
+                  - "{{ action == action_panic }}"
+                  - "{{ panic | length > 0 }}"
+                sequence:
+                  - action: input_boolean.turn_on
+                    target:
+                      entity_id: "{{ panic }}"
+
+      - conditions:
+          - condition: trigger
+            id: panel
+        sequence:
+          - variables:
+              state: "{{ trigger.to_state.state }}"
+              mode: >-
+                {% if state == 'disarmed' %}disarm
+                {%- elif state == 'arming' %}exit_delay
+                {%- elif state == 'pending' %}entry_delay
+                {%- elif state == 'triggered' %}in_alarm
+                {%- elif state == 'armed_home' %}arm_day_zones
+                {%- elif state == 'armed_night' %}arm_night_zones
+                {%- else %}arm_all_zones{% endif %}
+          - action: mqtt.publish
+            data:
+              topic: "{{ topic }}/set"
+              payload: "{{ {'arm_mode': {'mode': mode | trim}} | to_json }}"
