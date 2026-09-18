@@ -4138,7 +4138,7 @@ var ft = ["en", "it"], pt = {
 			Number.isFinite(n) && this._saveSettings({ [t]: n });
 		}}
       />
-      <span class="hint">${i ?? U(e, "common.seconds")}</span>
+      <span class="hint">${i ?? U(e, "common.seconds_unit")}</span>
     </label>`;
 		return A`
       <div class="card">

@@ -5,6 +5,20 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.10] — the delays the Areas table stopped showing
+
+**Pre-release, for testing only.** No schema change.
+
+### Fixed
+- **Areas, Scenarios and Verification groups printed the word "Seconds" where
+  the number belonged.** `alpha.8` added a "Seconds" label for the Settings page
+  and gave it the name of the string those tables fill with a value, which had
+  been `{n} s`. Both languages were equally wrong, the key still existed, and
+  nothing noticed.
+- A test now notices: every call that passes values to a translation must
+  target a string with somewhere to put them, and every placeholder in a string
+  must be filled by the code that uses it. Reintroducing this bug now fails CI.
+
 ## [0.1.0-alpha.9] — what the first real read of the log found
 
 **Pre-release, for testing only.** No schema change.

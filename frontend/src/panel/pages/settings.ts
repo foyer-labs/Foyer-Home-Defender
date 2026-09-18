@@ -143,7 +143,7 @@ class FoyerPageSettings extends LitElement {
           if (Number.isFinite(value)) void this._saveSettings({ [key]: value });
         }}
       />
-      <span class="hint">${hint ?? t(s, "common.seconds")}</span>
+      <span class="hint">${hint ?? t(s, "common.seconds_unit")}</span>
     </label>`;
     return html`
       <div class="card">

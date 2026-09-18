@@ -252,3 +252,97 @@ def test_every_problem_and_reason_the_backend_returns_is_translated():
             fields - panel["field"].keys(),
         )
         assert {r.value for r in Reason} <= panel["reason"].keys()
+
+
+# --- placeholders, between the code and the string --------------------------------
+
+# `t(s, "some.key", { a: 1, b })` — the key, then the object of values it fills
+# the string with. Both forms of property are accepted, `a: value` and the
+# shorthand `b`.
+T_CALL_WITH_PARAMS = re.compile(
+    r"""\bt\(\s*[\w.?]+\s*,\s*(["'])([\w.]+)\1\s*,\s*\{""",
+)
+
+
+def _object_body(source: str, start: int) -> str:
+    """The text of the object literal whose opening brace is at ``start``."""
+    depth, i = 0, start
+    while i < len(source):
+        if source[i] == "{":
+            depth += 1
+        elif source[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start + 1 : i]
+        i += 1
+    return ""
+
+
+def _passed_names(body: str) -> set[str]:
+    """The top-level property names of an object literal."""
+    names, depth, current = set(), 0, ""
+    for char in body:
+        if char in "{[(":
+            depth += 1
+        elif char in "}])":
+            depth -= 1
+        if depth == 0 and char == ",":
+            names.add(current)
+            current = ""
+        elif depth == 0:
+            current += char
+        # A nested value contributes nothing: only the outer name matters.
+    names.add(current)
+    out = set()
+    for name in names:
+        head = name.split(":", 1)[0].strip()
+        if re.fullmatch(r"\w+", head):
+            out.add(head)
+    return out
+
+
+def _calls_with_params() -> list[tuple[str, str, set[str]]]:
+    found = []
+    for path in frontend_sources():
+        source = path.read_text(encoding="utf-8")
+        for match in T_CALL_WITH_PARAMS.finditer(source):
+            body = _object_body(source, match.end() - 1)
+            found.append((path.name, match.group(2), _passed_names(body)))
+    return found
+
+
+def test_a_string_that_is_given_values_has_somewhere_to_put_them():
+    """The regression this test exists for: a translation loses its `{n}` — or
+    is overwritten by one that never had it — and every table that fills it
+    silently prints the word instead of the number. Nothing else notices: the
+    key still exists, and both languages are equally wrong."""
+    strings = flatten(load(TRANSLATIONS / "panel", "en"))
+    offenders = []
+    for file, key, passed in _calls_with_params():
+        text = strings.get(key)
+        if text is None or not passed:
+            continue
+        if not placeholders(text):
+            offenders.append(f"{file}: t(…, {key!r}, {{{', '.join(sorted(passed))}}})")
+    assert not offenders, (
+        "these calls pass values to a string with no placeholder:\n"
+        + "\n".join(offenders)
+    )
+
+
+def test_every_placeholder_is_filled_by_the_code_that_uses_it():
+    """The other direction: a string asks for `{zones}` and nobody passes one,
+    so the braces reach the screen."""
+    for language in LANGUAGES:
+        strings = flatten(load(TRANSLATIONS / "panel", language))
+        wanted: dict[str, set[str]] = {}
+        for _, key, passed in _calls_with_params():
+            wanted.setdefault(key, set()).update(passed)
+        offenders = [
+            f"{key}: {sorted(placeholders(text) - names)}"
+            for key, names in wanted.items()
+            if (text := strings.get(key)) and not placeholders(text) <= names
+        ]
+        assert not offenders, (
+            f"{language}: placeholders no call site fills:\n" + "\n".join(offenders)
+        )

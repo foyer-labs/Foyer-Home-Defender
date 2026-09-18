@@ -5,13 +5,14 @@
     "not_loaded": "Foyer Home Defender non è caricato. Controlla l'integrazione nelle Impostazioni.",
     "connection_error": "Home Assistant non raggiungibile: {error}",
     "live": "In tempo reale",
-    "seconds": "Secondi",
+    "seconds": "{n} s",
     "save": "Salva",
     "cancel": "Annulla",
     "delete": "Elimina",
     "acknowledge": "Riconosci",
     "yes": "Sì",
-    "no": "No"
+    "no": "No",
+    "seconds_unit": "Secondi"
   },
   "nav": {
     "overview": "Panoramica",

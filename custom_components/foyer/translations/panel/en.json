@@ -5,13 +5,14 @@
     "not_loaded": "Foyer Home Defender is not loaded. Check the integration in Settings.",
     "connection_error": "Cannot reach Home Assistant: {error}",
     "live": "Live",
-    "seconds": "Seconds",
+    "seconds": "{n} s",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
     "acknowledge": "Acknowledge",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "seconds_unit": "Seconds"
   },
   "nav": {
     "overview": "Overview",
