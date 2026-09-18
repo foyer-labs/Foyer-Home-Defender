@@ -104,8 +104,8 @@
     "scenario_in_use": "Una zona chiave inserisce questo scenario. Modifica prima la zona chiave.",
     "unknown_kind": "Tipo di oggetto sconosciuto.",
     "invalid": "Alcuni valori non sono validi.",
-    "follows_needs_follower": "Solo una zona follower può seguire altre zone.",
-    "follows_not_delayed": "Un follower può seguire solo zone di intrusione ritardate.",
+    "follows_needs_follower": "Solo una zona percorso può seguire altre zone.",
+    "follows_not_delayed": "Una zona percorso può seguire solo zone di intrusione ritardate.",
     "request_failed": "Home Assistant non ha accettato la richiesta ({detail}). Non è stato modificato nulla. Ricarica la pagina e riprova.",
     "area_has_groups": "In quest'area è mostrato un gruppo di verifica. Spostalo o eliminalo prima.",
     "zone_in_group": "Questa zona fa parte di un gruppo di verifica. Toglila prima dal gruppo.",
@@ -238,7 +238,7 @@
   "zone_type": {
     "instant": "Istantanea",
     "delayed": "Ritardata",
-    "follower": "Follower",
+    "follower": "Percorso",
     "24h": "24h",
     "tamper": "Tamper",
     "technical": "Tecnica",
@@ -253,12 +253,12 @@
   "entry_mode": {
     "instant": "Istantanea",
     "delayed": "Ritardata",
-    "follower": "Follower"
+    "follower": "Percorso"
   },
   "entry_mode_hint": {
     "instant": "Fa scattare l'allarme subito quando l'area è inserita.",
     "delayed": "Avvia il ritardo di ingresso: la via d'accesso, come la porta d'ingresso.",
-    "follower": "Eredita un ritardo di ingresso in corso — quello della sua area o quello aperto da una zona che segue; altrimenti è istantanea."
+    "follower": "Eredita un ritardo di ingresso in corso — quello della sua area o quello aperto da una zona che segue; altrimenti è istantanea. È la zona lungo la via d'ingresso: il corridoio che attraversi dopo aver aperto la porta."
   },
   "alarm_kind": {
     "intrusion": "Intrusione",
@@ -510,7 +510,7 @@
         },
         "entry_mode": {
           "term": "Quando scatta",
-          "text": "Istantanea: allarme subito; ritardata: avvia il ritardo di ingresso; follower: lo eredita."
+          "text": "Istantanea: allarme subito; ritardata: avvia il ritardo di ingresso; percorso: lo eredita, ed è istantanea se non c'è nulla da ereditare."
         },
         "arm_policy": {
           "term": "Se aperta all'inserimento",

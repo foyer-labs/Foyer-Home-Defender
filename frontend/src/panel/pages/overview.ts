@@ -523,13 +523,16 @@ class FoyerPageOverview extends LitElement {
   }
 
   private _zoneStatus(s: Strings, zone: StatusZone) {
+    const ctx = this.ctx!;
     if (zone.fault) {
       return html`<span class="state fault">${t(s, `fault.${zone.fault}`)}</span>`;
     }
     if (zone.bypassed) {
       const until = zone.bypass_until
         ? t(s, "zones.bypass_until", {
-            time: new Date(zone.bypass_until).toLocaleTimeString(undefined, {
+            // The Home Assistant user's language, like every other time on
+            // this page: the browser's would print 9:30 PM beside 21:30.
+            time: new Date(zone.bypass_until).toLocaleTimeString(ctx.hass.language, {
               hour: "2-digit",
               minute: "2-digit",
             }),

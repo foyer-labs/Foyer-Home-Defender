@@ -258,7 +258,7 @@
   "entry_mode_hint": {
     "instant": "Triggers the alarm at once when the area is armed.",
     "delayed": "Starts the entry delay: the way in, such as the front door.",
-    "follower": "Inherits a running entry delay — its own area's, or one opened by a zone it follows; instant otherwise."
+    "follower": "Inherits a running entry delay — its own area's, or one opened by a zone it follows; instant otherwise. It is the zone along the way in: the hallway you cross after opening the front door."
   },
   "alarm_kind": {
     "intrusion": "Intrusion",
@@ -510,7 +510,7 @@
         },
         "entry_mode": {
           "term": "When it triggers",
-          "text": "Instant alarms at once; delayed starts the entry delay; follower inherits it."
+          "text": "Instant alarms at once; delayed starts the entry delay; follower inherits it, and is instant when there is nothing to inherit."
         },
         "arm_policy": {
           "term": "If open when arming",

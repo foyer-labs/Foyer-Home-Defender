@@ -278,8 +278,16 @@ def _object_body(source: str, start: int) -> str:
     return ""
 
 
+_COMMENT = re.compile(r"//[^\n]*|/\\*.*?\\*/", re.S)
+
+
 def _passed_names(body: str) -> set[str]:
-    """The top-level property names of an object literal."""
+    """The top-level property names of an object literal.
+
+    Comments come out first: a comma inside one would look like the end of a
+    property and hide the property that follows it.
+    """
+    body = _COMMENT.sub("", body)
     names, depth, current = set(), 0, ""
     for char in body:
         if char in "{[(":

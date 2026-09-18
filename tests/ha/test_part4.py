@@ -18,6 +18,7 @@ from pytest_homeassistant_custom_component.common import async_capture_events
 
 from custom_components.foyer.const import DOMAIN
 from custom_components.foyer.store.log_store import EVENT_FOYER
+from custom_components.foyer.store.schema import config_to_dict
 
 from .conftest import PANEL_ENTITY, ZONE
 from .test_part2 import _advance, _set, _state, _ws
@@ -502,3 +503,164 @@ async def test_a_forced_arm_is_recorded_as_forced(hass, hass_ws_client, loaded):
 
     rows = await _rows(client, categories=["security"])
     assert "forced_arm" in [r["event_type"] for r in rows]
+
+
+# --- what the backend does with a payload it did not expect ------------------------
+
+# Every one of these is refused by the backend, whatever the panel does or does
+# not check: the panel's own checks are a courtesy (INV-2). A refusal is a
+# structured answer, never a traceback and never a silent no-op, and the stored
+# configuration must be exactly what it was before.
+HOSTILE_ITEMS = [
+    ("zone", {"name": "", "entity_id": "binary_sensor.x", "area_id": "?"}),
+    ("zone", {"name": "X", "entity_id": "not_an_entity_id", "area_id": "?"}),
+    ("zone", {"name": "X", "entity_id": "binary_sensor.x", "area_id": "nowhere"}),
+    (
+        "zone",
+        {
+            "name": "X",
+            "entity_id": "binary_sensor.x",
+            "area_id": "?",
+            "entry_delay": 99999,
+        },
+    ),
+    (
+        "zone",
+        {
+            "name": "X",
+            "entity_id": "binary_sensor.x",
+            "area_id": "?",
+            "trigger": {"kind": "nonsense"},
+        },
+    ),
+    (
+        "zone",
+        {
+            "name": "X",
+            "entity_id": "binary_sensor.x",
+            "area_id": "?",
+            "trigger": {"kind": "state", "states": []},
+        },
+    ),
+    (
+        "zone",
+        {
+            "name": "X",
+            "entity_id": "binary_sensor.x",
+            "area_id": "?",
+            "supervision_timeout": -1,
+        },
+    ),
+    ("area", {"name": "X", "ha_state_when_armed": "armed_to_the_teeth"}),
+    (
+        "area",
+        {
+            "name": "X",
+            "ha_state_when_armed": "armed_away",
+            "default_exit_delay": 100000,
+        },
+    ),
+    ("scenario", {"name": "X", "areas": ["nowhere"], "ha_master_state": "armed_away"}),
+    ("scenario", {"name": "X", "areas": [], "ha_master_state": "armed_away"}),
+    ("group", {"name": "X", "area_id": "?", "members": [], "n": 2}),
+    ("group", {"name": "X", "area_id": "?", "members": ["nowhere"], "n": 0}),
+    ("profile", {"name": "X", "severity": 999, "actions": []}),
+    ("profile", {"name": "X", "actions": [{"kind": "launch_missiles", "moments": []}]}),
+    (
+        "profile",
+        {
+            "name": "X",
+            "actions": [
+                {
+                    "kind": "siren",
+                    "moments": ["triggered"],
+                    "conditions": [
+                        {"kind": "time", "after": "25:99", "before": "00:00"}
+                    ],
+                }
+            ],
+        },
+    ),
+    (
+        "profile",
+        {
+            "name": "X",
+            "actions": [
+                {"kind": "delay", "moments": ["triggered"], "params": {"seconds": -5}}
+            ],
+        },
+    ),
+]
+
+
+async def test_the_backend_refuses_every_malformed_item_without_falling_over(
+    hass, hass_ws_client, loaded
+):
+    client = await hass_ws_client(hass)
+    system = hass.data[DOMAIN]
+    area_id = system.config.areas[0].id
+    before = config_to_dict(system.config)
+
+    for kind, item in HOSTILE_ITEMS:
+        payload = {
+            key: (area_id if value == "?" else value) for key, value in item.items()
+        }
+        result = await _ws(
+            client,
+            {
+                "type": "foyer/config/save",
+                "kind": kind,
+                "item": payload,
+                "trigger_confirmed": True,
+            },
+        )
+        assert not result["success"], (kind, payload)
+        assert result["problems"], (kind, payload)
+        # Every problem is a code the panel can translate, not a stack trace.
+        for problem in result["problems"]:
+            assert problem["code"] and " " not in problem["code"], problem
+
+    await hass.async_block_till_done()
+    assert config_to_dict(hass.data[DOMAIN].config) == before
+
+
+async def test_an_unknown_kind_and_a_missing_item_are_refused(
+    hass, hass_ws_client, loaded
+):
+    from .test_part2 import _IDS
+
+    client = await hass_ws_client(hass)
+    await client.send_json(
+        {"id": next(_IDS), "type": "foyer/config/save", "kind": "universe", "item": {}}
+    )
+    message = await client.receive_json()
+    # Rejected by the command schema itself, before any Foyer code runs.
+    assert not message["success"]
+
+    result = await _ws(
+        client, {"type": "foyer/config/delete", "kind": "zone", "item_id": "nowhere"}
+    )
+    assert not result["success"]
+    assert result["problems"][0]["code"] == "not_found"
+
+
+async def test_settings_that_would_break_the_alarm_are_refused(
+    hass, hass_ws_client, loaded
+):
+    client = await hass_ws_client(hass)
+    config = await _ws(client, {"type": "foyer/config"})
+    base = config["config"]["settings"]
+    for bad in (
+        {"siren_duration": 100000},
+        {"siren_duration": 0},
+        {"arm_hold_timeout": 1},
+        {"silent_suppresses": ["everything"]},
+        {"log": {"retention_days": {"alarm": 0}}},
+        {"log": {"retention_days": {"alarm": 99999}}},
+        {"default_profile_id": "nowhere"},
+    ):
+        result = await _ws(
+            client, {"type": "foyer/config/settings", "settings": {**base, **bad}}
+        )
+        assert not result["success"], bad
+        assert result["problems"], bad

@@ -1221,14 +1221,15 @@ var Re = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), ze = class extend
 		!Number.isFinite(r) || r < 1 || (t.value = "", this._run(() => n.bypass(e, !0, Math.round(r) * 60)));
 	}
 	_zoneStatus(e, t) {
+		let n = this.ctx;
 		if (t.fault) return A`<span class="state fault">${U(e, `fault.${t.fault}`)}</span>`;
 		if (t.bypassed) {
-			let n = t.bypass_until ? U(e, "zones.bypass_until", { time: new Date(t.bypass_until).toLocaleTimeString(void 0, {
+			let r = t.bypass_until ? U(e, "zones.bypass_until", { time: new Date(t.bypass_until).toLocaleTimeString(n.hass.language, {
 				hour: "2-digit",
 				minute: "2-digit"
 			}) }) : U(e, "zones.bypass_indefinite");
 			return A`<span class="state bypassed">${U(e, `bypass.${t.bypassed}`)}</span>
-        <span class="hint">${t.bypassed === "manual" ? n : ""}</span>`;
+        <span class="hint">${t.bypassed === "manual" ? r : ""}</span>`;
 		}
 		return A`<span class="state open">${U(e, "zone_status.open")}</span>`;
 	}

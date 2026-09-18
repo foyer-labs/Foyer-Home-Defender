@@ -5,6 +5,40 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.12] — a front page, and the second review
+
+**Pre-release, for testing only.** No schema change.
+
+### Changed
+- **A `follower` zone is called *Percorso* in the Italian panel**, which is what
+  Italian alarm panels call it: the zone along the way in, which only alarms if
+  a delayed zone opened first. It was left in English, and the Italian README
+  had invented a word that no installer would recognise. The hint under the
+  field now says what the zone *is*, in both languages, instead of only how it
+  behaves.
+- **Both READMEs are rewritten as what they actually are: the page HACS shows.**
+  A line that says what this is before anything else, an honest "try it if /
+  not yet, if", what it does in six bullets with the rest folded away, why this
+  is not a folder of automations, a comparison with Alarmo that now says where
+  Alarmo wins, how to check the work rather than trust it, what you need, the
+  first fifteen minutes, and the questions people actually ask. The Italian one
+  says plainly that Foyer does not meet CEI 79-3 / EN 50131 where an insurance
+  policy requires it.
+- A fourth screenshot, and a better one: the zone editor at the moment it
+  refuses to save a trigger you have not confirmed against the real sensor.
+
+### Fixed
+- The overview printed one time in the browser's locale — `09:30 PM` — beside
+  times in the Home Assistant user's — `21:30`. Same page, two clocks.
+
+### Added
+- Tests that throw seventeen malformed items at the configuration API and
+  assert what comes back: a refusal with a translatable code, never a
+  traceback, and a stored configuration that did not move. Settings that would
+  break the alarm are in there too.
+- The translation guard added in `alpha.10` now sees past a comment inside the
+  values passed to a string, which was hiding one call from it.
+
 ## [0.1.0-alpha.11] — arming anyway, from the card
 
 **Pre-release, for testing only.** No schema change.
