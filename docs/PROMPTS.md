@@ -1058,6 +1058,38 @@ Inherited from Phase 1, and binding here:
 - Releases stop being GitHub pre-releases from the first beta, which is where
   the end of Phase 2 is expected to land: HACS only offers releases that are
   not pre-releases, and shows a commit hash for a repository that has none.
+
+Taken in part 1, before any code:
+ 1. ACKNOWLEDGE needs no code by DEFAULT, but stays an entry of the code
+    policy like every other operation, so an installation can raise it.
+    button.foyer_acknowledge therefore exists (§13 unchanged, decision 59
+    resolved): it honours the policy, and refuses with `code_required` —
+    logged — if the installation has raised it. The reason it is not
+    required by default: §7.2 already acknowledges from an actionable push
+    notification, which carries no code, so demanding one on the panel's
+    button would be theatre at the worst possible moment.
+ 2. Decision 6 ends, and the §8.2 defaults are written by the migration —
+    but the whole policy is INERT while the installation has no enabled user
+    holding a code. No code can be verified then, so enforcing it would only
+    make the alarm unusable, not safer; failing closed with zero codes
+    protects nothing. The panel and the card say so plainly while it lasts
+    ("no users yet: codes are not enforced"). From the first user created,
+    the policy applies in full, with no further step.
+ 3. The per-user exemption of §8.2 is a switch on the USER ("do not ask me
+    for a code on channels that identify me"), off by default, offered to
+    anyone with a linked Home Assistant user — not only to administrators:
+    what makes the exemption safe is the identification, not the role. The
+    editor states what it costs, because the wall tablet INV-6 names is
+    almost always signed in as an administrator. There is no automatic
+    exemption for admins.
+ 4. When an area and a scenario disagree about whether an operation needs a
+    code, THE STRICTEST EXPLICIT SETTING WINS: if any area involved, or the
+    scenario, says a code is required, it is required; if none of them is
+    set, the global default decides. §8.2 puts area and scenario on the same
+    step and does not say which one wins. The failure of this rule is one
+    code too many; the failure of the opposite rule is an area the owner
+    deliberately protected, opened because a permissive scenario included it.
+    The UI names the area that is asking.
 ```
 
 ### Carry-overs from Phase 1 into later phases

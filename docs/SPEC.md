@@ -810,6 +810,7 @@ cannot keep.
 | `allowed_area_ids` | null = all |
 | `allowed_scenario_ids` | null = all |
 | `valid_from` / `valid_until` | optional, for guest codes |
+| `code_exempt_when_identified` | off by default; skip the code on channels that identify this user (§8.2, decision 79) |
 | `enabled` | |
 
 **Every user has their own code.** This is not a convenience: a shared code makes
@@ -850,6 +851,21 @@ Defaults, matching real panels:
 | edit configuration | code required |
 | enter walk test | code required |
 | run a real action test | code required |
+| acknowledge an alarm | **no code** (decision 77) |
+
+Two rules the resolution needs that the arrows above do not carry:
+
+- **The strictest explicit setting wins** when an area and a scenario disagree.
+  Arming a scenario touches several areas at once, so if any area involved — or
+  the scenario — requires a code, it is required; if none of them is set, the
+  global default decides. The failure of this rule is one code too many; the
+  failure of the opposite rule is an area its owner deliberately protected,
+  opened because a permissive scenario included it (decision 80). The UI names
+  the area that is asking.
+- **The policy is inert while no enabled user holds a code.** No code can be
+  verified then, so enforcing it would make the alarm unusable rather than
+  safer. The panel and the card say so plainly while it lasts; from the first
+  user created the policy applies in full (decision 78).
 
 **Channels that identify the user:** Home Assistant UI with `ha_user_id` linked,
 a per-user NFC tag, a per-user RFID badge. **Channels that do not:** a shared
@@ -1332,7 +1348,7 @@ enough for the user to tell the cases apart.
 | `sensor.foyer_open_zones` | 1 | count, with the list as an attribute |
 | `sensor.foyer_last_event` | 1 | last significant event, for dashboards |
 | `sensor.foyer_countdown` | per area | remaining exit/entry seconds |
-| `button.foyer_acknowledge` | 1 | acknowledge an ongoing escalation. **Deferred to Phase 2** (decision 59): a button cannot carry a code, so it exists only if acknowledging needs none |
+| `button.foyer_acknowledge` | 1 | acknowledge an ongoing escalation. Acknowledging needs no code by default (decision 77), so the button exists; it honours the policy and refuses when an installation has raised it |
 | `switch.foyer_walk_test` | 1 | walk test on/off, reflecting the timeout |
 | `binary_sensor.foyer_technical_alarm` | 1 | the technical channel (§5.5), independent of arming |
 | `sensor.foyer_technical_cause` | 1 | which technical zone is in alarm |
@@ -1789,3 +1805,7 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 74 | The sidebar panel icon is `mdi:shield-home` | Home Assistant resolves a custom icon once and never retries, so a sidebar drawn before the icon module has run keeps an empty square for ever — which is what the companion app does |
 | 75 | The first-run wizard continues from the config flow instead of replacing it | The config flow already makes an area, a zone and a scenario, so a new installation is never empty; a wizard that started again would duplicate all three |
 | 76 | The log's own row for a refusal, and the incident id as a column | "Why did it not arm last night?" needs an answer, and an incident id inside a JSON detail field cannot be filtered on |
+| 77 | Acknowledging needs no code by default, and `button.foyer_acknowledge` therefore exists | §7.2 already acknowledges from an actionable push notification, which carries no code; demanding one on a button would be theatre at the worst possible moment. It stays a policy entry, so an installation can raise it — and then the button refuses, visibly, rather than lying |
+| 78 | The code policy is inert until an enabled user holds a code | Failing closed with zero codes protects nothing and makes the alarm unusable; the alpha installations upgrading into this phase would find a house they could not disarm |
+| 79 | The per-user exemption is the user's switch, off by default, and no administrator is exempt automatically | What makes the exemption safe is the identification, not the role — and the unlocked wall tablet INV-6 names is almost always signed in as an administrator |
+| 80 | Where an area and a scenario disagree, the strictest explicit setting wins | §8.2 puts them on one step; the failure of this rule is one code too many, the failure of the other is a deliberately protected area opened by a permissive scenario |
