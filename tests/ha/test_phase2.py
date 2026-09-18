@@ -283,6 +283,73 @@ async def test_a_code_that_belongs_to_somebody_else_is_refused(hass, with_user):
     assert "Luca" not in str(result)
 
 
+async def test_a_duress_code_may_not_be_the_persons_own_ordinary_code(hass, with_user):
+    """The uniqueness check skips the user being edited, so that they can keep
+    their own code — which means it cannot catch this one.
+
+    A duress code equal to its owner's ordinary code would never be reached:
+    the ordinary hash matches first, and the silent alarm could never fire.
+    """
+    client = with_user
+    user_id = hass.data[DOMAIN].config.users[0].id
+
+    same = await _ws(
+        client,
+        {
+            "type": "foyer/user/save",
+            "user": {"id": user_id, "name": "Luca", "permissions": ["arm", "disarm"]},
+            "new_duress_code": CODE,
+            "code": CODE,
+        },
+    )
+    assert not same["success"]
+    assert same["problems"][0]["code"] == "code_in_use"
+
+    # And the other way round: taking the duress code as the ordinary one
+    # would quietly retire the silent alarm.
+    reversed_ = await _ws(
+        client,
+        {
+            "type": "foyer/user/save",
+            "user": {"id": user_id, "name": "Luca", "permissions": ["arm", "disarm"]},
+            "new_code": DURESS,
+            "code": CODE,
+        },
+    )
+    assert not reversed_["success"]
+    assert reversed_["problems"][0]["code"] == "code_in_use"
+
+    # The duress code still works, which is the whole point of refusing.
+    await hass.async_block_till_done()
+    assert (await _ws(client, {"type": "foyer/disarm", "code": DURESS}))[
+        "reason"
+    ] != "bad_code"
+
+
+async def test_clearing_the_code_field_does_not_remove_the_code(hass, with_user):
+    """The editor sends the field as soon as somebody types in it. Typing and
+    then clearing must leave the code alone; only an explicit null removes."""
+    client = with_user
+    user_id = hass.data[DOMAIN].config.users[0].id
+    person = {"id": user_id, "name": "Luca", "permissions": ["arm", "disarm"]}
+
+    kept = await _ws(
+        client,
+        {"type": "foyer/user/save", "user": person, "new_code": "", "code": CODE},
+    )
+    assert kept["success"], kept
+    await hass.async_block_till_done()
+    assert hass.data[DOMAIN].config.users[0].code_hash
+
+    removed = await _ws(
+        client,
+        {"type": "foyer/user/save", "user": person, "new_code": None, "code": CODE},
+    )
+    assert removed["success"], removed
+    await hass.async_block_till_done()
+    assert hass.data[DOMAIN].config.users[0].code_hash is None
+
+
 # --- the log answers "who" (§10.1) ------------------------------------------------
 
 

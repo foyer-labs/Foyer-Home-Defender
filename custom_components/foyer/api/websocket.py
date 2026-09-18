@@ -841,11 +841,15 @@ async def ws_user_save(
         ("new_code", "code_hash"),
         ("new_duress_code", "duress_code_hash"),
     ):
-        if field not in msg:
+        # Absent, or empty, means "leave it as it is": the editor sends the
+        # field as soon as somebody types in it, so a code typed and then
+        # cleared must not silently remove the code they already had. Only an
+        # explicit null removes one.
+        code = msg.get(field) if field in msg else ""
+        if code == "":
             item[stored] = getattr(existing, stored) if existing else None
             continue
-        code = msg[field]
-        if not code:
+        if code is None:
             item[stored] = None
             continue
         try:
@@ -864,17 +868,21 @@ async def ws_user_save(
             problems.append(Problem("code_in_use", "user", item.get("id"), field))
             continue
         item[stored] = await hass.async_add_executor_job(codes.hash_code, code)
-    # The two codes of one person must differ too, or the duress code would
-    # never be reached: the ordinary one matches first.
-    if (
-        item.get("code_hash")
-        and item.get("duress_code_hash")
-        and msg.get("new_code")
-        and msg.get("new_code") == msg.get("new_duress_code")
+    # A person's two codes must differ as well, and this cannot be left to the
+    # uniqueness check above: that one skips the user being edited, precisely
+    # so they can keep their own code. Setting a duress code equal to one's own
+    # ordinary code would be accepted by it — and the duress code would then
+    # never be reached, because the ordinary hash matches first. A silent alarm
+    # that can never fire is the worst thing in this file.
+    for field, other in (
+        ("new_code", "duress_code_hash"),
+        ("new_duress_code", "code_hash"),
     ):
-        problems.append(
-            Problem("code_in_use", "user", item.get("id"), "new_duress_code")
-        )
+        code = msg.get(field)
+        if not code or not item.get(other):
+            continue
+        if await hass.async_add_executor_job(codes.matches, code, item[other]):
+            problems.append(Problem("code_in_use", "user", item.get("id"), field))
     if problems:
         connection.send_result(
             msg["id"],
