@@ -195,9 +195,9 @@ async def _gate(
     system: FoyerSystem,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
+    *,
     operation: Operation,
     permission: Permission,
-    *,
     need_code: bool = True,
 ) -> Actor | None:
     """Check, answer the caller on refusal, and record the refusal.
@@ -602,8 +602,8 @@ async def ws_config(
             system,
             connection,
             msg,
-            Operation.EDIT_CONFIG,
-            Permission.EDIT_CONFIG,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
             need_code=False,
         )
     ) is None:
@@ -679,7 +679,12 @@ async def ws_config_save(
         return
     if (
         await _gate(
-            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
         )
     ) is None:
         return
@@ -718,7 +723,14 @@ async def ws_config_delete(
         Permission.MANAGE_USERS if msg["kind"] == "user" else Permission.EDIT_CONFIG
     )
     if (
-        await _gate(hass, system, connection, msg, Operation.EDIT_CONFIG, permission)
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=permission,
+        )
     ) is None:
         return
     result = delete(system.config, system.state, msg["kind"], msg["item_id"])
@@ -750,7 +762,12 @@ async def ws_settings_save(
         return
     if (
         await _gate(
-            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
         )
     ) is None:
         return
@@ -778,7 +795,12 @@ async def ws_chime_save(
         return
     if (
         await _gate(
-            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
         )
     ) is None:
         return
@@ -824,8 +846,8 @@ async def ws_user_save(
             system,
             connection,
             msg,
-            Operation.EDIT_CONFIG,
-            Permission.MANAGE_USERS,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.MANAGE_USERS,
         )
     ) is None:
         return
@@ -919,8 +941,8 @@ async def ws_security_save(
             system,
             connection,
             msg,
-            Operation.EDIT_CONFIG,
-            Permission.MANAGE_USERS,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.MANAGE_USERS,
         )
     ) is None:
         return
@@ -1083,8 +1105,8 @@ async def ws_log_query(
             system,
             connection,
             msg,
-            Operation.EDIT_CONFIG,
-            Permission.VIEW_LOG,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.VIEW_LOG,
             need_code=False,
         )
     ) is None:
@@ -1121,8 +1143,8 @@ async def ws_log_export(
             system,
             connection,
             msg,
-            Operation.EDIT_CONFIG,
-            Permission.VIEW_LOG,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.VIEW_LOG,
             need_code=False,
         )
     ) is None:
@@ -1172,7 +1194,12 @@ async def ws_log_clear(
         return
     if (
         await _gate(
-            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
         )
     ) is None:
         return
@@ -1226,7 +1253,12 @@ async def ws_config_export(
         return
     if (
         await _gate(
-            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
         )
     ) is None:
         return
@@ -1271,7 +1303,12 @@ async def ws_config_import(
         return
     if (
         await _gate(
-            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
         )
     ) is None:
         return
