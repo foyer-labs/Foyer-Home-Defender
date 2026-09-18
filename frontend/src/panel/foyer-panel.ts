@@ -563,6 +563,54 @@ class FoyerPanel extends LitElement {
         background: var(--primary-background-color);
         color: var(--primary-text-color);
       }
+      /* The code dialog: over everything, because nothing else can happen
+         until it is answered — the command that opened it is waiting. */
+      .scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 10;
+      }
+      .code-dialog {
+        position: fixed;
+        z-index: 11;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(320px, calc(100vw - 32px));
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px;
+        border-radius: 12px;
+        background: var(--card-background-color);
+        border: 1px solid var(--divider-color);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      }
+      .code-dialog h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .code-dialog p {
+        margin: 0;
+        color: var(--secondary-text-color);
+        font-size: 14px;
+      }
+      .code-dialog input {
+        font-size: 24px;
+        letter-spacing: 8px;
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid var(--divider-color);
+        background: var(--primary-background-color);
+        color: var(--primary-text-color);
+      }
+      .code-dialog .row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
       .toolbar {
         display: flex;
         align-items: center;

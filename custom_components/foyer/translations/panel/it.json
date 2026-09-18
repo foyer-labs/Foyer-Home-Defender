@@ -337,7 +337,7 @@
     "disarm": "Disinserisci tutto"
   },
   "overview": {
-    "no_codes_warning": "Non ci sono ancora utenti né codici: chiunque abbia accesso a Home Assistant può disinserire. I codici arrivano con un aggiornamento successivo.",
+    "no_codes_warning": "Nessuno ha ancora un codice, quindi nessuno viene chiesto: chiunque abbia accesso a Home Assistant può disinserire. Crea un utente con un codice nella pagina Utenti e smette di essere vero.",
     "memory_banner": "Memoria d'allarme in {area}: {zones}. Disinserisci l'area per azzerarla.",
     "bypassed": "Inserito. Escluse: {zones}.",
     "master": "Tutta la casa",

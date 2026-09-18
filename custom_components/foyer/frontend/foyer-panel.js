@@ -928,7 +928,9 @@ var ze = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Be = class extend
 		let t = e.strings, n = e.status, r = n.areas.filter((e) => e.memory);
 		return k`
       ${this._renderTechnical(t)} ${this._renderIncident(t)}
-      <div class="notice" role="note">${H(t, "overview.no_codes_warning")}</div>
+      ${n.security.enforced ? j : k`<div class="notice" role="note">
+            ${H(t, "overview.no_codes_warning")}
+          </div>`}
       ${r.map((e) => k`<div class="alarm-memory" role="alert">
           ${e.causes.length ? H(t, "overview.memory_banner", {
 			area: e.name,
@@ -3891,7 +3893,7 @@ var mt = class extends R {
           </div>
 
           <div class="hr"></div>
-          <div class="grid-form">
+          <div class="scopes">
             ${this._scope(e, "allowed_area_ids", (n.config?.areas ?? []).map((e) => ({
 			id: e.id ?? "",
 			name: e.name
@@ -3903,28 +3905,28 @@ var mt = class extends R {
           </div>
 
           <div class="hr"></div>
-          <label class="switch-row">
-            <div>
-              <div class="lbl">${H(e, "users.exempt")}</div>
-              <div class="hint">${H(e, "users.exempt_hint")}</div>
-            </div>
+          <label class="check">
             <input
               type="checkbox"
               .checked=${t.code_exempt_when_identified}
               @change=${(e) => this._set("code_exempt_when_identified", e.target.checked)}
             />
+            <span>
+              ${H(e, "users.exempt")}
+              <span class="hint">${H(e, "users.exempt_hint")}</span>
+            </span>
           </label>
           <p class="note">${H(e, "users.exempt_note")}</p>
-          <label class="switch-row">
-            <div>
-              <div class="lbl">${H(e, "users.enabled")}</div>
-              <div class="hint">${H(e, "users.enabled_hint")}</div>
-            </div>
+          <label class="check">
             <input
               type="checkbox"
               .checked=${t.enabled}
               @change=${(e) => this._set("enabled", e.target.checked)}
             />
+            <span>
+              ${H(e, "users.enabled")}
+              <span class="hint">${H(e, "users.enabled_hint")}</span>
+            </span>
           </label>
 
           ${this._problems.length ? k`<ul class="problems">
@@ -3950,7 +3952,7 @@ var mt = class extends R {
 			let a = new Set(i ?? n.map((e) => e.id));
 			r ? a.add(e) : a.delete(e), this._set(t, [...a]);
 		};
-		return k`<div class="field">
+		return k`<div class="scope">
       <span class="lbl">${H(e, `field.${t}`)}</span>
       <label class="chip">
         <input
@@ -4082,6 +4084,17 @@ var mt = class extends R {
 			W,
 			U,
 			o`
+      .scopes {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .scope {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+      }
       .chips {
         display: flex;
         flex-wrap: wrap;
@@ -5971,6 +5984,54 @@ var Ot = class extends R {
         min-height: 100vh;
         background: var(--primary-background-color);
         color: var(--primary-text-color);
+      }
+      /* The code dialog: over everything, because nothing else can happen
+         until it is answered — the command that opened it is waiting. */
+      .scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 10;
+      }
+      .code-dialog {
+        position: fixed;
+        z-index: 11;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(320px, calc(100vw - 32px));
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px;
+        border-radius: 12px;
+        background: var(--card-background-color);
+        border: 1px solid var(--divider-color);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      }
+      .code-dialog h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .code-dialog p {
+        margin: 0;
+        color: var(--secondary-text-color);
+        font-size: 14px;
+      }
+      .code-dialog input {
+        font-size: 24px;
+        letter-spacing: 8px;
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid var(--divider-color);
+        background: var(--primary-background-color);
+        color: var(--primary-text-color);
+      }
+      .code-dialog .row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
       }
       .toolbar {
         display: flex;

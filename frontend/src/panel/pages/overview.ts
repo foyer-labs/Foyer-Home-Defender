@@ -122,7 +122,11 @@ class FoyerPageOverview extends LitElement {
     const memory = status.areas.filter((a) => a.memory);
     return html`
       ${this._renderTechnical(s)} ${this._renderIncident(s)}
-      <div class="notice" role="note">${t(s, "overview.no_codes_warning")}</div>
+      ${status.security.enforced
+        ? nothing
+        : html`<div class="notice" role="note">
+            ${t(s, "overview.no_codes_warning")}
+          </div>`}
       ${memory.map(
         (area) => html`<div class="alarm-memory" role="alert">
           ${area.causes.length

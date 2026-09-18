@@ -315,17 +315,26 @@ class FoyerPageUsers extends LitElement {
           </div>
 
           <div class="hr"></div>
-          <div class="grid-form">
-            ${this._scope(s, "allowed_area_ids", (ctx.config?.areas ?? []).map((a) => ({ id: a.id ?? "", name: a.name })), draft)}
-            ${this._scope(s, "allowed_scenario_ids", (ctx.config?.scenarios ?? []).map((sc) => ({ id: sc.id ?? "", name: sc.name })), draft)}
+          <div class="scopes">
+            ${this._scope(
+              s,
+              "allowed_area_ids",
+              (ctx.config?.areas ?? []).map((a) => ({ id: a.id ?? "", name: a.name })),
+              draft,
+            )}
+            ${this._scope(
+              s,
+              "allowed_scenario_ids",
+              (ctx.config?.scenarios ?? []).map((sc) => ({
+                id: sc.id ?? "",
+                name: sc.name,
+              })),
+              draft,
+            )}
           </div>
 
           <div class="hr"></div>
-          <label class="switch-row">
-            <div>
-              <div class="lbl">${t(s, "users.exempt")}</div>
-              <div class="hint">${t(s, "users.exempt_hint")}</div>
-            </div>
+          <label class="check">
             <input
               type="checkbox"
               .checked=${draft.code_exempt_when_identified}
@@ -335,19 +344,23 @@ class FoyerPageUsers extends LitElement {
                   (e.target as HTMLInputElement).checked,
                 )}
             />
+            <span>
+              ${t(s, "users.exempt")}
+              <span class="hint">${t(s, "users.exempt_hint")}</span>
+            </span>
           </label>
           <p class="note">${t(s, "users.exempt_note")}</p>
-          <label class="switch-row">
-            <div>
-              <div class="lbl">${t(s, "users.enabled")}</div>
-              <div class="hint">${t(s, "users.enabled_hint")}</div>
-            </div>
+          <label class="check">
             <input
               type="checkbox"
               .checked=${draft.enabled}
               @change=${(e: Event) =>
                 this._set("enabled", (e.target as HTMLInputElement).checked)}
             />
+            <span>
+              ${t(s, "users.enabled")}
+              <span class="hint">${t(s, "users.enabled_hint")}</span>
+            </span>
           </label>
 
           ${this._problems.length
@@ -386,7 +399,7 @@ class FoyerPageUsers extends LitElement {
       else chosen.delete(id);
       this._set(key, [...chosen]);
     };
-    return html`<div class="field">
+    return html`<div class="scope">
       <span class="lbl">${t(s, `field.${key}`)}</span>
       <label class="chip">
         <input
@@ -547,6 +560,17 @@ class FoyerPageUsers extends LitElement {
     formStyles,
     stateStyles,
     css`
+      .scopes {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .scope {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+      }
       .chips {
         display: flex;
         flex-wrap: wrap;

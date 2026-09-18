@@ -337,7 +337,7 @@
     "disarm": "Disarm everything"
   },
   "overview": {
-    "no_codes_warning": "No users or codes yet: anyone with access to Home Assistant can disarm. Codes arrive in a later update.",
+    "no_codes_warning": "Nobody holds a code yet, so nothing asks for one: anyone with access to Home Assistant can disarm. Create a user with a code on the Users page and it stops being true.",
     "memory_banner": "Alarm memory in {area}: {zones}. Disarm the area to clear it.",
     "bypassed": "Armed. Excluded: {zones}.",
     "master": "Whole house",
