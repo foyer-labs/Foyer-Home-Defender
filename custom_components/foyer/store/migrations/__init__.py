@@ -227,6 +227,60 @@ def _v4_1_to_v4_2(data: Document) -> Document:
     return out
 
 
+def _v4_2_to_v5_1(data: Document) -> Document:
+    """Phase 1 -> Phase 2: identity. The document learns about people.
+
+    A major step, and the reason is the sharpest of the four so far: a 4.x
+    build reading this document would find users it knows nothing about,
+    ignore every code in it, and run the house exactly as it ran before codes
+    existed. Refusing the file is the only safe downgrade there is.
+
+    The code policy moves to the defaults of SPEC §8.2, which is the end of
+    Phase 1 decision 6: forcing an arming and changing scenario while armed
+    ask for a code from now on, as disarming and excluding a zone do. This
+    changes behaviour, so it is in the changelog — but it changes nothing
+    *yet*: the policy is inert while no user holds a code (decision 78), and
+    an installation upgrading into this version has none. Without that rule
+    this very step would leave an armed house nobody could disarm.
+
+    Everything else is new and empty: no users, no per-area or per-scenario
+    override, no identity on a key zone. An installation upgrading is exactly
+    as it was, and stays so until somebody creates the first user.
+    """
+    out = copy.deepcopy(data)
+    out["users"] = []
+    out["code_policy"] = {
+        "arm": False,
+        "disarm": True,
+        "force_arm": True,
+        "change_scenario": True,
+        "acknowledge": False,
+        "bypass_zone": True,
+        "edit_config": True,
+        "walk_test": True,
+        "test_action": True,
+    }
+    out["settings"]["security"] = {
+        "code_length": 6,
+        "lockout_failures": 5,
+        "lockout_window": 300,
+        "lockout_duration": 300,
+    }
+    for area in out["areas"]:
+        area["require_code_to_arm"] = None
+        area["require_code_to_disarm"] = None
+    for scenario in out["scenarios"]:
+        scenario["require_code_to_arm"] = None
+        scenario["require_code_to_disarm"] = None
+        scenario["allowed_user_ids"] = None
+    for zone in out["zones"]:
+        if zone.get("key") is not None:
+            # Whose key it is. Nobody's, until somebody says: a key with no
+            # user is still a key, and the log records the turn either way.
+            zone["key"]["user_id"] = None
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -248,6 +302,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (2, 2): (_v2_2_to_v3_1, (3, 1)),
     (3, 1): (_v3_1_to_v4_1, (4, 1)),
     (4, 1): (_v4_1_to_v4_2, (4, 2)),
+    (4, 2): (_v4_2_to_v5_1, (5, 1)),
 }
 
 

@@ -7,6 +7,7 @@ import json
 
 from custom_components.foyer.core.models import (
     AcknowledgeIncident,
+    Actor,
     AreaState,
     CodePolicy,
     Moment,
@@ -15,7 +16,7 @@ from custom_components.foyer.core.models import (
 )
 from custom_components.foyer.store.schema import state_from_dict, state_to_dict
 
-from .helpers import BATH, DOOR, HALL, PATIO, TAMPER, WINDOW, World
+from .helpers import BATH, DOOR, HALL, PATIO, TAMPER, WINDOW, World, user
 
 
 def armed(scenario: str = "away") -> World:
@@ -120,7 +121,7 @@ def test_one_acknowledgement_then_the_areas_settling_closes_it():
     world = armed()
     world.set(WINDOW, "on")
     world.set(BATH, "on")
-    decision = world.send(AcknowledgeIncident(channel="ha_ui"))
+    decision = world.send(AcknowledgeIncident(Actor(channel="ha_ui")))
 
     assert decision.accepted
     assert world.state.incident.acknowledged  # both areas still triggered
@@ -167,7 +168,7 @@ def test_a_zone_joining_after_the_acknowledgement_clears_it():
     """Part 2 decision 8: someone must hear that a second zone went."""
     world = armed()
     world.set(WINDOW, "on")
-    world.send(AcknowledgeIncident(channel="ha_ui"))
+    world.send(AcknowledgeIncident(Actor(channel="ha_ui")))
     decision = world.set(PATIO, "on")
 
     incident = world.state.incident
@@ -238,7 +239,14 @@ def test_nothing_to_acknowledge_and_the_code_check():
     world = armed()
     assert world.send(AcknowledgeIncident()).reason is Reason.NOTHING_TO_ACKNOWLEDGE
 
-    coded = World(replace(World().config, code_policy=CodePolicy(acknowledge=True)))
+    # The policy bites only once somebody holds a code (decision 78).
+    coded = World(
+        replace(
+            World().config,
+            code_policy=CodePolicy(acknowledge=True),
+            users=(user(),),
+        )
+    )
     coded.arm("away")
     coded.advance(30)
     coded.set(WINDOW, "on")
@@ -249,7 +257,7 @@ def test_nothing_to_acknowledge_and_the_code_check():
 def test_an_incident_survives_a_restart():
     world = armed()
     world.set(WINDOW, "on")
-    world.send(AcknowledgeIncident(channel="ha_ui"))
+    world.send(AcknowledgeIncident(Actor(channel="ha_ui")))
     world.set(BATH, "on")
 
     document = json.loads(json.dumps(state_to_dict(world.state)))

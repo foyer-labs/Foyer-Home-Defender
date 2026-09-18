@@ -15,12 +15,13 @@ from custom_components.foyer.core.models import (
     BypassReason,
     BypassZone,
     CodePolicy,
+    CodeResult,
     Moment,
     Reason,
 )
 from custom_components.foyer.store.schema import state_from_dict, state_to_dict
 
-from .helpers import WINDOW, World
+from .helpers import WINDOW, World, user
 
 
 def bypassed(world: World) -> dict[str, str]:
@@ -160,16 +161,30 @@ def test_an_automatic_bypass_can_be_cleared_by_hand():
     assert "window" not in bypassed(world)
 
 
-def test_the_code_policy_is_enforced_even_though_no_code_exists_yet():
-    """Part 3 decision 9: no code before Phase 2, but the check already runs,
-    so Phase 2 changes the policy and not the plumbing (INV-2)."""
+def test_excluding_a_zone_asks_for_the_code_the_policy_wants():
+    """§8.2: excluding a zone is the one action that leaves a chosen part of
+    the house unwatched while the rest is armed, so it needs a code."""
     world = World()
-    world.config = replace(world.config, code_policy=CodePolicy(bypass_zone=True))
+    world.config = replace(
+        world.config, code_policy=CodePolicy(bypass_zone=True), users=(user(),)
+    )
     decision = world.send(BypassZone("window"))
 
     assert not decision.accepted
     assert decision.reason is Reason.CODE_REQUIRED
     assert bypassed(world) == {}
+
+    accepted = world.bypass("window", code=CodeResult.VALID, user_id="luca")
+    assert accepted.accepted
+    assert bypassed(world)["window"] == BypassReason.MANUAL.value
+
+
+def test_the_policy_is_inert_until_somebody_holds_a_code():
+    """Decision 78. Failing closed with no codes at all would not protect the
+    house; it would only make it impossible to disarm."""
+    world = World()
+    world.config = replace(world.config, code_policy=CodePolicy(bypass_zone=True))
+    assert world.send(BypassZone("window")).accepted
 
 
 def test_a_bypassed_zone_still_reports_a_fault():

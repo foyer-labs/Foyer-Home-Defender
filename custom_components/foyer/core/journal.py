@@ -25,6 +25,7 @@ from typing import Any
 from .models import (
     AcknowledgeIncident,
     AcknowledgeTechnical,
+    Actor,
     AreaState,
     ArmAreaRequest,
     ArmModeRequest,
@@ -39,6 +40,7 @@ from .models import (
     Moment,
     Occurrence,
     Outcome,
+    Reason,
     RuntimeState,
     SetChime,
     Startup,
@@ -100,6 +102,7 @@ CATEGORY: dict[Moment, LogCategory] = {
     Moment.ZONE_REJOINED: LogCategory.SECURITY,
     Moment.CODE_REJECTED: LogCategory.SECURITY,
     Moment.LOCKOUT: LogCategory.SECURITY,
+    Moment.DURESS: LogCategory.SECURITY,
     Moment.ENTRY_STARTED: LogCategory.ALARM,
     Moment.TRIGGERED: LogCategory.ALARM,
     Moment.SIREN_CUTOFF: LogCategory.ALARM,
@@ -134,6 +137,9 @@ SEVERITY: dict[Moment, LogSeverity] = {
     Moment.ZONE_REJOINED: LogSeverity.INFO,
     Moment.CODE_REJECTED: LogSeverity.WARNING,
     Moment.LOCKOUT: LogSeverity.WARNING,
+    # A duress disarm is somebody being made to open their own house. It is
+    # the loudest row in the log, and the only one the house itself hides.
+    Moment.DURESS: LogSeverity.ALARM,
     Moment.ENTRY_STARTED: LogSeverity.WARNING,
     Moment.TRIGGERED: LogSeverity.ALARM,
     Moment.SIREN_CUTOFF: LogSeverity.WARNING,
@@ -183,7 +189,11 @@ def _restart_row(occurrence: Occurrence, at: datetime) -> tuple[str, LogSeverity
 
 
 # A moment that is, in itself, a failed request.
-OUTCOME: dict[Moment, Outcome] = {Moment.ARM_FAILED: Outcome.BLOCKED}
+OUTCOME: dict[Moment, Outcome] = {
+    Moment.ARM_FAILED: Outcome.BLOCKED,
+    Moment.CODE_REJECTED: Outcome.BAD_CODE,
+    Moment.LOCKOUT: Outcome.BLOCKED,
+}
 
 # What a refused request is called and where it is filed. A refusal is worth
 # a row of its own: "why did it not arm last night?" is a question users ask,
@@ -198,6 +208,9 @@ REJECTION: dict[type, tuple[str, LogCategory]] = {
     AcknowledgeTechnical: ("acknowledge_rejected", LogCategory.ALARM),
     SetChime: ("chime_rejected", LogCategory.SYSTEM),
 }
+
+# Refusals that have already said who and why, under `security`.
+_IDENTITY_MOMENTS = frozenset({Moment.CODE_REJECTED, Moment.LOCKOUT})
 
 # States in which an area is watching its zones, for the zone_armed /
 # zone_disarmed split (§10.2). ``arming`` counts: the exit delay is part of
@@ -242,18 +255,33 @@ def row_for(occurrence: Occurrence, at: datetime) -> LogRow:
         zone_id=occurrence.zone_id,
         scenario_id=occurrence.scenario_id,
         incident_id=occurrence.incident_id,
+        user_id=occurrence.user_id,
+        user_name=occurrence.user_name,
         channel=occurrence.channel,
+        device_id=occurrence.device_id,
         outcome=(outcome or Outcome.OK).value,
         detail=detail,
     )
 
 
-def rejection_row(event: Event, decision: Decision) -> LogRow | None:
-    """The row a refused request leaves behind, if the event can be refused."""
+def rejection_row(
+    event: Event, decision: Decision, config: FoyerConfig | None = None
+) -> LogRow | None:
+    """The row a refused request leaves behind, if the event can be refused.
+
+    A refusal over identity — a wrong code, a locked channel, a permission
+    somebody does not hold — has already written its own row under `security`
+    (§8.4), which says more than "arm_rejected" ever could. Writing both would
+    put the same event in the log twice, in two categories.
+    """
     named = REJECTION.get(type(event))
     if named is None:
         return None
+    if any(o.moment in _IDENTITY_MOMENTS for o in decision.occurrences):
+        return None
     event_type, category = named
+    actor = getattr(event, "actor", None) or Actor()
+    user = config.user(actor.user_id) if config is not None else None
     detail: dict[str, Any] = {}
     if decision.reason is not None:
         detail["reason"] = decision.reason.value
@@ -267,8 +295,15 @@ def rejection_row(event: Event, decision: Decision) -> LogRow | None:
         area_id=getattr(event, "area_id", None),
         zone_id=getattr(event, "zone_id", None),
         scenario_id=getattr(event, "scenario_id", None),
-        channel=getattr(event, "channel", None),
-        outcome=Outcome.BLOCKED.value,
+        user_id=actor.user_id,
+        user_name=user.name if user else None,
+        channel=actor.channel,
+        device_id=actor.device_id,
+        outcome=(
+            Outcome.BAD_CODE
+            if decision.reason in (Reason.BAD_CODE, Reason.CODE_REQUIRED)
+            else Outcome.BLOCKED
+        ).value,
         detail=detail,
     )
 
@@ -345,7 +380,7 @@ def rows_for(
     """
     rows = [row_for(occurrence, decision.at) for occurrence in decision.occurrences]
     if not decision.accepted and not isinstance(event, Tick | Startup):
-        rejected = rejection_row(event, decision)
+        rejected = rejection_row(event, decision, config)
         if rejected is not None:
             rows.append(rejected)
     if isinstance(event, ZoneStateChanged):

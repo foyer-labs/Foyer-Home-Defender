@@ -117,7 +117,7 @@ def test_unknown_trigger_kind_is_rejected(config):
         config_from_dict(data)
 
 
-def test_seed_wires_one_of_each_with_no_code_required():
+def test_seed_wires_one_of_each_with_the_documented_code_policy():
     ids = (f"id{n}" for n in itertools.count())
     config = seed_config(
         area_name="Casa",
@@ -133,8 +133,12 @@ def test_seed_wires_one_of_each_with_no_code_required():
     assert config.zones[0].trigger.states == {"on"}
     assert Moment.ZONE_FAULT in config.profiles[0].actions[0].moments
     assert config.settings.default_profile_id == config.profiles[0].id
+    # §8.2: arming the house you are standing in needs nothing; everything
+    # that lowers the guard needs a code. A new installation has no users, so
+    # none of it is in force yet (decision 78).
     assert config.code_policy.arm is False
-    assert config.code_policy.disarm is False
+    assert config.code_policy.disarm is True
+    assert config.users == ()
     assert config_from_dict(config_to_dict(config)) == config
 
 
@@ -173,10 +177,15 @@ def test_migration_preserves_phase_0_behaviour():
     assert world.states() == {"a1": "triggered"}
 
 
-def test_migration_keeps_the_code_policy_and_adds_the_required_notifications():
+def test_migration_moves_the_code_policy_to_the_documented_defaults():
+    """The end of Phase 1 decision 6, and it changes nothing on the day: the
+    policy is inert until somebody holds a code (decision 78)."""
     config = migrated()
     assert config.code_policy.arm is False
-    assert config.code_policy.disarm is False
+    assert config.code_policy.disarm is True
+    assert config.code_policy.force_arm is True
+    assert config.code_policy.change_scenario is True
+    assert config.users == ()
     assert config.profiles[0].actions[0].moments == {
         Moment.ARMED,
         Moment.DISARMED,

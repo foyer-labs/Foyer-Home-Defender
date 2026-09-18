@@ -175,6 +175,46 @@ class Operation(StrEnum):
     CHANGE_SCENARIO = "change_scenario"
     ACKNOWLEDGE = "acknowledge"
     BYPASS_ZONE = "bypass_zone"
+    EDIT_CONFIG = "edit_config"
+    # The last two have no caller until Phase 3 builds walk test and the real
+    # action test. The policy of §8.2 is complete here on purpose: the table
+    # is one thing, and half a table is how a setting quietly goes missing.
+    WALK_TEST = "walk_test"
+    TEST_ACTION = "test_action"
+
+
+class Permission(StrEnum):
+    """What a user is allowed to do at all (SPEC §8.3).
+
+    Separate from the code policy: the policy asks whether this operation
+    needs a code, a permission asks whether this person may ask for it. A
+    permission the UI hides must still be refused when the command is sent
+    by hand, which is why the check lives here and not in the panel.
+    """
+
+    ARM = "arm"
+    DISARM = "disarm"
+    FORCE_ARM = "force_arm"
+    BYPASS_ZONE = "bypass_zone"
+    CHANGE_SCENARIO = "change_scenario"
+    EDIT_CONFIG = "edit_config"
+    VIEW_LOG = "view_log"
+    TEST_ACTIONS = "test_actions"
+    WALK_TEST = "walk_test"
+    MANAGE_USERS = "manage_users"
+
+
+class CodeResult(StrEnum):
+    """What the backend made of the code that came with a request.
+
+    The engine is never given a code (INV-2): ``security/`` verifies it and
+    the engine is told only this. ``NONE`` means nothing was supplied, which
+    is not a failed attempt and never counts towards a lockout.
+    """
+
+    NONE = "none"
+    VALID = "valid"
+    INVALID = "invalid"
 
 
 class LogCategory(StrEnum):
@@ -247,11 +287,16 @@ class Moment(StrEnum):
     CHIME = "chime"
     CHIME_SWITCHED = "chime_switched"
 
+    # A disarm with a duress code (§8.1). Silent by definition: the house
+    # behaves exactly as it does on an ordinary disarm, and this is the only
+    # trace, for the log and for a profile that alerts somebody quietly.
+    DURESS = "duress"
+
     # Moments no phase produces yet. They exist so a profile can be written
     # against them now and keep working when the phase that raises them lands;
     # the editor says which phase each one waits for.
-    CODE_REJECTED = "code_rejected"  # Phase 2
-    LOCKOUT = "lockout"  # Phase 2
+    CODE_REJECTED = "code_rejected"
+    LOCKOUT = "lockout"
     LOW_BATTERY = "low_battery"  # Phase 3
     WALK_TEST_STARTED = "walk_test_started"  # Phase 3
     WALK_TEST_ENDED = "walk_test_ended"  # Phase 3
@@ -274,6 +319,15 @@ class Reason(StrEnum):
     ZONE_NOT_BYPASSABLE = "zone_not_bypassable"
     ARM_HOLD_EXPIRED = "arm_hold_expired"
     NOTHING_TO_ACKNOWLEDGE = "nothing_to_acknowledge"
+    # Phase 2: identity. BAD_CODE is a code that was supplied and did not
+    # match; CODE_REQUIRED is one the policy wanted and nobody supplied.
+    # Neither ever says whose code it was, or how close it came.
+    BAD_CODE = "bad_code"
+    LOCKED_OUT = "locked_out"
+    NOT_PERMITTED = "not_permitted"
+    USER_NOT_VALID = "user_not_valid"
+    AREA_NOT_ALLOWED = "area_not_allowed"
+    SCENARIO_NOT_ALLOWED = "scenario_not_allowed"
 
 
 # Entity states that mean "we do not know" — a fault, never calm (INV-4).
@@ -315,6 +369,44 @@ MIN_RETENTION_DAYS = 1
 MAX_RETENTION_DAYS = 3650
 # The one category off by default (§10.2): thousands of rows a day.
 DEFAULT_LOG_DISABLED: frozenset[str] = frozenset({"zone_disarmed"})
+
+# Codes (SPEC §8.1). The length is global because a keypad has to know how
+# many digits to collect before it validates anything.
+DEFAULT_CODE_LENGTH = 6
+MIN_CODE_LENGTH = 4
+MAX_CODE_LENGTH = 12
+
+# Lockout (SPEC §8.4): N failures within W seconds lock the channel for L,
+# growing exponentially each time it happens again.
+DEFAULT_LOCKOUT_FAILURES = 5
+DEFAULT_LOCKOUT_WINDOW = 300
+DEFAULT_LOCKOUT_DURATION = 300
+MIN_LOCKOUT_FAILURES = 2
+MAX_LOCKOUT_FAILURES = 20
+MIN_LOCKOUT_SECONDS = 10
+MAX_LOCKOUT_SECONDS = 86400
+# A lockout doubles on repetition up to this, so a keypad under attack does
+# not end up locked for a fortnight while its owner stands in the rain.
+MAX_LOCKOUT_BACKOFF = 3600
+# Strikes fade: a channel that has behaved for a day starts again from the
+# first step, or one bad night would punish the next month.
+LOCKOUT_STRIKE_RESET = 86400
+
+# The channels a request can arrive through (SPEC §9.1). Only some of them
+# know who the person is without being told a code: on a shared keypad the
+# code IS the identity, which is why the per-user exemption of §8.2 can never
+# apply there. `nfc` is here for the per-user tag of part 2; a tag shared by
+# the household is a keypad by another name and must be configured as one.
+CHANNELS: tuple[str, ...] = (
+    "ha_ui",
+    "keypad",
+    "nfc",
+    "mqtt",
+    "api",
+    "automation",
+    "key_zone",
+)
+IDENTIFYING_CHANNELS: frozenset[str] = frozenset({"ha_ui", "nfc"})
 
 
 # --- configuration -----------------------------------------------------------
@@ -370,6 +462,10 @@ class KeyAction:
     on_activate: KeyCommand
     scenario_id: str | None = None  # required for arm and toggle
     on_deactivate: KeyRelease = KeyRelease.NONE
+    # Who the log attributes a turn of this key to (§4.7). A key carries no
+    # code, so this is the only identity it can have — and a key nobody owns
+    # is exactly the row that makes the log unreadable six months later.
+    user_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -547,6 +643,10 @@ class Area:
     # The area is the unit of response (part 3 decision 1): this is what
     # answers for everything happening in it. None inherits from the scenario.
     response_profile_id: str | None = None
+    # None inherits the global policy (§8.2). Where an area and a scenario
+    # disagree the strictest explicit setting wins (decision 80).
+    require_code_to_arm: bool | None = None
+    require_code_to_disarm: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -559,24 +659,88 @@ class Scenario:
     exit_delay_override: int | None = None
     siren_duration_override: int | None = None
     response_profile_id: str | None = None
+    require_code_to_arm: bool | None = None
+    require_code_to_disarm: bool | None = None
+    # Who may use this scenario at all. None = everyone with the permission;
+    # an empty tuple is a scenario nobody may arm, which validation refuses.
+    allowed_user_ids: tuple[str, ...] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class User:
+    """A person, their code and what they may do (SPEC §8.1).
+
+    Every user has their own code, and that is not a convenience: a shared
+    code makes "who disarmed at 03:14?" unanswerable and turns the audit log
+    into decoration. The hashes are written through the API and never
+    returned by it, in any shape, to anyone.
+
+    ``duress_code_hash`` disarms exactly as the ordinary code does and raises
+    a silent event; nothing about the response may betray that it was used.
+
+    ``code_exempt_when_identified`` is the per-user override of §8.2, off by
+    default: it applies only on channels that identify the user by themselves,
+    never on a shared keypad, where the code *is* the identity.
+    """
+
+    id: str
+    name: str
+    code_hash: str | None = None
+    duress_code_hash: str | None = None
+    ha_user_id: str | None = None
+    permissions: frozenset[str] = frozenset()
+    allowed_area_ids: tuple[str, ...] | None = None
+    allowed_scenario_ids: tuple[str, ...] | None = None
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+    code_exempt_when_identified: bool = False
+    enabled: bool = True
+
+    def may(self, permission: str) -> bool:
+        return permission in self.permissions
+
+    def usable(self, now: datetime) -> bool:
+        """Enabled, holding a code, and inside its validity window."""
+        if not self.enabled or not self.code_hash:
+            return False
+        if self.valid_from is not None and now < self.valid_from:
+            return False
+        return not (self.valid_until is not None and now > self.valid_until)
+
+
+@dataclass(frozen=True, slots=True)
+class SecuritySettings:
+    """Global code and lockout settings (SPEC §8.1, §8.4)."""
+
+    code_length: int = DEFAULT_CODE_LENGTH
+    lockout_failures: int = DEFAULT_LOCKOUT_FAILURES
+    lockout_window: int = DEFAULT_LOCKOUT_WINDOW
+    lockout_duration: int = DEFAULT_LOCKOUT_DURATION
 
 
 @dataclass(frozen=True, slots=True)
 class CodePolicy:
     """Whether each operation requires a code (SPEC §8.2).
 
-    There are no users and no codes before Phase 2, so the stored configuration
-    sets every operation to False explicitly. The engine still enforces the
-    policy and fails closed: a request that needs a code is refused, because no
-    code can be verified yet.
+    The defaults are that table's, which is what real panels do: arming the
+    house you are standing in needs nothing, everything that lowers the guard
+    needs a code. Acknowledging is the one the spec does not list, and it
+    needs none (decision 77) because §7.2 already acknowledges from a push
+    notification that carries no code.
+
+    The policy is enforced server-side and nowhere else (INV-2), and it is
+    inert while nobody holds a code (decision 78): see core.authz.
     """
 
     arm: bool = False
-    disarm: bool = False
-    force_arm: bool = False
-    change_scenario: bool = False
+    disarm: bool = True
+    force_arm: bool = True
+    change_scenario: bool = True
     acknowledge: bool = False
-    bypass_zone: bool = False
+    bypass_zone: bool = True
+    edit_config: bool = True
+    walk_test: bool = True
+    test_action: bool = True
 
     def requires_code(self, operation: Operation) -> bool:
         return bool(getattr(self, operation.value))
@@ -624,6 +788,7 @@ class Settings:
     silent_suppresses: tuple[str, ...] = DEFAULT_SILENT_SUPPRESSES
     camera_dir: str = DEFAULT_CAMERA_DIR
     log: LogSettings = field(default_factory=LogSettings)
+    security: SecuritySettings = field(default_factory=SecuritySettings)
     # What new areas start with, so a household that wants 45 s sets it once.
     default_entry_delay: int = DEFAULT_ENTRY_DELAY
     default_exit_delay: int = DEFAULT_EXIT_DELAY
@@ -647,6 +812,15 @@ class FoyerConfig:
     settings: Settings = field(default_factory=Settings)
     groups: tuple[Group, ...] = ()
     chime: ChimeSettings = field(default_factory=ChimeSettings)
+    users: tuple[User, ...] = ()
+
+    def user(self, user_id: str | None) -> User | None:
+        return next((u for u in self.users if u.id == user_id), None)
+
+    def user_of_ha(self, ha_user_id: str | None) -> User | None:
+        if ha_user_id is None:
+            return None
+        return next((u for u in self.users if u.ha_user_id == ha_user_id), None)
 
     def area(self, area_id: str | None) -> Area | None:
         return next((a for a in self.areas if a.id == area_id), None)
@@ -724,6 +898,10 @@ class AreaRuntime:
     resume_timer: Timer | None = None
     causes: tuple[str, ...] = ()
     channel: str | None = None  # how it was armed, for the ``armed`` record
+    # Who armed it. The ``armed`` record is written when the exit delay ends,
+    # long after the request, so the person has to be remembered here or the
+    # log says an area armed itself.
+    user_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -856,6 +1034,21 @@ class RunningAction:
 
 
 @dataclass(frozen=True, slots=True)
+class Lockout:
+    """One channel's failed attempts, and how long it stays shut (§8.4).
+
+    ``strikes`` is how many times this channel has already been locked, which
+    is what makes the next one longer. It is kept per channel and device, so
+    somebody guessing at the garden keypad does not lock the hall one.
+    """
+
+    failures: tuple[datetime, ...] = ()
+    until: datetime | None = None
+    strikes: int = 0
+    locked_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeState:
     """Everything that must survive a restart (INV-3).
 
@@ -889,6 +1082,10 @@ class RuntimeState:
     pending_runs: tuple[PendingRun, ...] = ()
     running: tuple[RunningAction, ...] = ()
     run_seq: int = 0
+    # Failed code attempts and lockouts, by channel and device (§8.4). Here
+    # rather than in memory because a lockout that a restart clears is an
+    # invitation to restart Home Assistant (INV-3).
+    lockouts: Mapping[str, Lockout] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "areas", _frozen(self.areas))
@@ -896,6 +1093,7 @@ class RuntimeState:
         object.__setattr__(self, "technical", _frozen(self.technical))
         object.__setattr__(self, "windows", _frozen(self.windows))
         object.__setattr__(self, "bypass_until", _frozen(self.bypass_until))
+        object.__setattr__(self, "lockouts", _frozen(self.lockouts))
 
     def area(self, area_id: str) -> AreaRuntime:
         return self.areas.get(area_id) or AreaRuntime()
@@ -954,12 +1152,47 @@ class SystemSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class Actor:
+    """Who is asking, and what the backend already established about them.
+
+    The engine never sees a code (INV-2). ``security/`` verifies what arrived
+    and hands over this: which user it identified, whether the code was valid,
+    and whether the channel identifies the person by itself. Everything the
+    engine decides about identity is decided from this and the configuration.
+
+    ``identified`` means the channel knows who this is without a code — the
+    Home Assistant UI of a signed-in user linked to a Foyer user. It is the
+    only thing that can activate the per-user exemption of §8.2, and it is
+    checked against the channel as well, so a keypad claiming it changes
+    nothing. ``is_admin`` marks the Home Assistant admin path, which is never
+    locked out (§8.4), so nobody can shut themselves out of their own house.
+    """
+
+    user_id: str | None = None
+    channel: str = "api"
+    device_id: str | None = None
+    code: CodeResult = CodeResult.NONE
+    identified: bool = False
+    duress: bool = False
+    is_admin: bool = False
+    # A channel where possession is the credential and no code can travel at
+    # all: the key switch of §4.7, and the NFC tag of §9.3 whose security note
+    # says plainly that a stolen tag arms and disarms without knowing a code.
+    # The permissions and the validity window of the user it names still
+    # apply; only the code policy cannot, because there is nothing to type.
+    token: bool = False
+
+    @property
+    def code_verified(self) -> bool:
+        return self.code is CodeResult.VALID
+
+
+@dataclass(frozen=True, slots=True)
 class ArmRequest:
     """Arm a scenario, or switch to it while armed (SPEC §4.6)."""
 
     scenario_id: str
-    code: str | None = None
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
     force: bool = False
 
 
@@ -968,8 +1201,7 @@ class ArmModeRequest:
     """Arm through the master panel: the one scenario reporting this mode."""
 
     mode: str
-    code: str | None = None
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
     force: bool = False
 
 
@@ -978,8 +1210,7 @@ class ArmAreaRequest:
     """Arm one area on its own, outside any scenario, from its own panel."""
 
     area_id: str
-    code: str | None = None
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
     force: bool = False
 
 
@@ -988,8 +1219,7 @@ class DisarmRequest:
     """Disarm ``area_ids``, or every area when None."""
 
     area_ids: tuple[str, ...] | None = None
-    code: str | None = None
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1022,8 +1252,7 @@ class Startup:
 class AcknowledgeIncident:
     """Acknowledge the open intrusion incident (SPEC §5.6)."""
 
-    code: str | None = None
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1034,8 +1263,7 @@ class AcknowledgeTechnical:
     a different acknowledgement (§5.5).
     """
 
-    code: str | None = None
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1050,8 +1278,7 @@ class BypassZone:
     zone_id: str
     bypass: bool = True
     seconds: int | None = None
-    code: str | None = None
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1059,7 +1286,7 @@ class SetChime:
     """switch.foyer_chime: silence the chime, or let it sound again (§6.6)."""
 
     enabled: bool
-    channel: str = "api"
+    actor: Actor = field(default_factory=Actor)
 
 
 Event = (
@@ -1098,6 +1325,12 @@ class Occurrence:
     detail: Mapping[str, str] = field(default_factory=dict)
     incident_id: str | None = None
     group_id: str | None = None
+    # Who asked, and from which device (§10.1). ``user_name`` travels with
+    # the row and is denormalised into the log on purpose: deleting a user
+    # must not erase the history of what that user did.
+    user_id: str | None = None
+    user_name: str | None = None
+    device_id: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "detail", _frozen(self.detail))

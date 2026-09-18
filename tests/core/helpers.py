@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from custom_components.foyer.core.engine import decide
 from custom_components.foyer.core.models import (
     ActionKind,
+    Actor,
     AlarmKind,
     Area,
     AreaRuntime,
@@ -24,6 +25,7 @@ from custom_components.foyer.core.models import (
     Event,
     FoyerConfig,
     Moment,
+    Permission,
     ProfileAction,
     ResponseProfile,
     RuntimeState,
@@ -32,12 +34,63 @@ from custom_components.foyer.core.models import (
     StateTrigger,
     SystemSnapshot,
     Tick,
+    User,
     Zone,
     ZoneStateChanged,
     ZoneType,
 )
 
 NOW = datetime(2026, 9, 14, 19, 32, tzinfo=UTC)
+
+# What the engine is told about whoever is asking (§8.2). Tests say
+# `channel="ha_ui"` or `code=CodeResult.VALID`; this turns that into the Actor
+# the event carries, so no test has to know how identity is plumbed.
+_ACTOR_FIELDS = (
+    "user_id",
+    "channel",
+    "device_id",
+    "code",
+    "identified",
+    "duress",
+    "is_admin",
+    "token",
+)
+
+
+def user(
+    user_id: str = "luca",
+    name: str = "Luca",
+    *,
+    permissions: frozenset[str] | None = None,
+    **kwargs,
+) -> User:
+    """A user holding a code, which is what puts the policy in force.
+
+    The hash is a placeholder: nothing in core/ ever verifies a code — that is
+    security/'s work — and what the engine reads here is only "this person
+    exists and holds one".
+    """
+    return User(
+        id=user_id,
+        name=name,
+        code_hash=kwargs.pop("code_hash", "$2b$12$placeholder"),
+        permissions=(
+            frozenset(p.value for p in Permission)
+            if permissions is None
+            else permissions
+        ),
+        **kwargs,
+    )
+
+
+def _actor(kwargs: dict) -> dict:
+    if "actor" in kwargs:
+        return kwargs
+    fields = {k: kwargs.pop(k) for k in list(kwargs) if k in _ACTOR_FIELDS}
+    if fields:
+        kwargs["actor"] = Actor(**fields)
+    return kwargs
+
 
 DOOR = "binary_sensor.front_door"
 HALL = "binary_sensor.hall_pir"
@@ -216,19 +269,19 @@ class World:
         return self.send(Tick())
 
     def arm(self, scenario_id: str, **kwargs) -> Decision:
-        return self.send(ArmRequest(scenario_id, **kwargs))
+        return self.send(ArmRequest(scenario_id, **_actor(kwargs)))
 
     def arm_area(self, area_id: str, **kwargs) -> Decision:
-        return self.send(ArmAreaRequest(area_id, **kwargs))
+        return self.send(ArmAreaRequest(area_id, **_actor(kwargs)))
 
     def arm_mode(self, mode: str, **kwargs) -> Decision:
-        return self.send(ArmModeRequest(mode, **kwargs))
+        return self.send(ArmModeRequest(mode, **_actor(kwargs)))
 
     def disarm(self, *area_ids: str, **kwargs) -> Decision:
-        return self.send(DisarmRequest(area_ids or None, **kwargs))
+        return self.send(DisarmRequest(area_ids or None, **_actor(kwargs)))
 
     def bypass(self, zone_id: str, **kwargs) -> Decision:
-        return self.send(BypassZone(zone_id, **kwargs))
+        return self.send(BypassZone(zone_id, **_actor(kwargs)))
 
     # --- reading -----------------------------------------------------------------
 

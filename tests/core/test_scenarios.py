@@ -17,6 +17,7 @@ from custom_components.foyer.core.models import (
     AreaState,
     Channel,
     CodePolicy,
+    CodeResult,
     KeyAction,
     KeyCommand,
     KeyRelease,
@@ -30,7 +31,7 @@ from custom_components.foyer.core.models import (
     ZoneType,
 )
 
-from .helpers import DOOR, WINDOW, World, make_house
+from .helpers import DOOR, WINDOW, World, make_house, user
 
 KEY = "input_boolean.key_switch"
 
@@ -201,20 +202,25 @@ def test_switching_checks_only_the_areas_it_must_arm():
 
 @pytest.mark.parametrize("operation", ["arm", "disarm", "force_arm", "change_scenario"])
 def test_code_policy_fails_closed_for_every_operation(operation):
-    """No code can be verified before Phase 2: a policy requiring one refuses."""
-    config = replace(make_house(), code_policy=CodePolicy(**{operation: True}))
-    world = World(config)
-    if operation == "disarm":
-        world.arm("night")
-        decision = world.disarm(code="1234")
-    elif operation == "force_arm":
-        decision = world.arm("night", force=True, code="1234")
-    elif operation == "change_scenario":
-        world.arm("night")
-        decision = world.arm("away", code="1234")
-    else:
-        decision = world.arm("night", code="1234")
-    assert decision.reason is Reason.CODE_REQUIRED
+    """A request with no code is refused where the policy wants one, and the
+    same request with a verified code goes through (§8.2)."""
+    config = replace(
+        make_house(), code_policy=CodePolicy(**{operation: True}), users=(user(),)
+    )
+
+    def ask(world, **kwargs):
+        if operation == "disarm":
+            world.arm("night")
+            return world.disarm(**kwargs)
+        if operation == "force_arm":
+            return world.arm("night", force=True, **kwargs)
+        if operation == "change_scenario":
+            world.arm("night")
+            return world.arm("away", **kwargs)
+        return world.arm("night", **kwargs)
+
+    assert ask(World(config)).reason is Reason.CODE_REQUIRED
+    assert ask(World(config), code=CodeResult.VALID, user_id="luca").accepted
 
 
 def test_no_code_is_needed_by_default_in_phase_1(world):

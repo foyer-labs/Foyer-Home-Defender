@@ -9,6 +9,7 @@ from custom_components.foyer.core.engine import master_state
 from custom_components.foyer.core.models import (
     AcknowledgeIncident,
     AcknowledgeTechnical,
+    Actor,
     AreaState,
     Channel,
     CodePolicy,
@@ -19,7 +20,7 @@ from custom_components.foyer.core.models import (
 from custom_components.foyer.core.presets import PRESETS
 from custom_components.foyer.store.schema import state_from_dict, state_to_dict
 
-from .helpers import DOOR, WINDOW, World, make_house, zone
+from .helpers import DOOR, WINDOW, World, make_house, user, zone
 
 SMOKE = "binary_sensor.kitchen_smoke"
 LEAK = "binary_sensor.basement_leak"
@@ -110,7 +111,7 @@ def test_disarming_does_not_clear_it():
 def test_acknowledged_while_active_clears_once_back_to_normal():
     w = world()
     w.set(SMOKE, "on")
-    decision = w.send(AcknowledgeTechnical(channel="ha_ui"))
+    decision = w.send(AcknowledgeTechnical(Actor(channel="ha_ui")))
 
     assert decision.accepted
     assert decision.moments == (Moment.TECHNICAL_ACKNOWLEDGED,)
@@ -167,8 +168,9 @@ def test_nothing_to_acknowledge_is_refused():
 
 
 def test_acknowledgement_goes_through_the_code_check():
-    """Phase 2 will change the policy, not the plumbing (INV-2)."""
-    config = replace(house(), code_policy=CodePolicy(acknowledge=True))
+    """Acknowledging needs no code by default (decision 77) — unless the
+    installation says otherwise, and somebody holds a code to say it with."""
+    config = replace(house(), code_policy=CodePolicy(acknowledge=True), users=(user(),))
     w = World(config)
     w.set(SMOKE, "on")
     decision = w.send(AcknowledgeTechnical())

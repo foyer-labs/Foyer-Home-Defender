@@ -27,6 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
+from . import authz
 from .models import (
     CUSTOM_BYPASS,
     AcknowledgeIncident,
@@ -34,6 +35,7 @@ from .models import (
     AcknowledgeTechnical,
     ActionIntent,
     Activation,
+    Actor,
     AreaRuntime,
     AreaState,
     ArmAreaRequest,
@@ -43,6 +45,7 @@ from .models import (
     BypassReason,
     BypassZone,
     Channel,
+    CodeResult,
     Contributor,
     Decision,
     DisarmRequest,
@@ -53,6 +56,7 @@ from .models import (
     Incident,
     KeyCommand,
     KeyRelease,
+    Lockout,
     Moment,
     Occurrence,
     Operation,
@@ -119,6 +123,7 @@ def decide(
 ) -> Decision:
     """Return what should happen in response to ``event``. Executes nothing."""
     run = _Run(snapshot, config, now)
+    run.actor = getattr(event, "actor", Actor())
     run.expire_windows()
     run.expire_bypasses()
     run.expire_running()
@@ -133,25 +138,22 @@ def decide(
     outcome = _ACCEPTED
     if isinstance(event, ArmRequest):
         outcome = run.arm_scenario(
-            config.scenario(event.scenario_id),
-            event.code,
-            event.channel,
-            force=event.force,
+            config.scenario(event.scenario_id), force=event.force
         )
     elif isinstance(event, ArmModeRequest):
         outcome = run.arm_mode(event)
     elif isinstance(event, ArmAreaRequest):
         outcome = run.arm_area(event)
     elif isinstance(event, DisarmRequest):
-        outcome = run.disarm(event.area_ids, event.code, event.channel)
+        outcome = run.disarm(event.area_ids)
     elif isinstance(event, AcknowledgeIncident):
-        outcome = run.acknowledge_incident(event.code, event.channel)
+        outcome = run.acknowledge_incident()
     elif isinstance(event, AcknowledgeTechnical):
-        outcome = run.acknowledge_technical(event.code, event.channel)
+        outcome = run.acknowledge_technical()
     elif isinstance(event, BypassZone):
         outcome = run.bypass_zone(event)
     elif isinstance(event, SetChime):
-        run.set_chime(event.enabled, event.channel)
+        run.set_chime(event.enabled)
     elif isinstance(event, Startup):
         # How long the gap was, measured rather than described: the log grades
         # a configuration reload and an hour with the integration disabled
@@ -294,6 +296,13 @@ class _Run:
         self.timezone = snapshot.timezone
         self.occurrences: list[Occurrence] = []
         self.new_bypasses: list[str] = []
+        # Who is asking. decide() fills it from the event; a timer or a zone
+        # opening has no actor, and the default one identifies nobody.
+        self.actor = Actor()
+        # Failed code attempts, per channel and device (§8.4). Persisted with
+        # everything else, because a lockout a restart clears is an invitation
+        # to restart Home Assistant.
+        self.lockouts: dict[str, Lockout] = dict(state.lockouts)
         # The technical channel: never read or written by the area machine.
         self.technical: dict[str, TechnicalAlarm] = {
             z: a for z, a in state.technical.items() if z in zone_ids
@@ -353,7 +362,25 @@ class _Run:
             )
         ):
             kwargs["incident_id"] = incident.id
+        # Who did it, on everything this request caused. An occurrence raised
+        # by a timer or by a door opening carries another channel, or none,
+        # and is left alone: nobody asked for it.
+        actor = self.actor
+        if kwargs.get("user_id") and "user_name" not in kwargs:
+            named = self.config.user(kwargs["user_id"])
+            kwargs["user_name"] = named.name if named else None
+        if kwargs.get("channel") == actor.channel and "user_id" not in kwargs:
+            if actor.user_id is not None:
+                kwargs["user_id"] = actor.user_id
+                user = self.config.user(actor.user_id)
+                kwargs["user_name"] = user.name if user else None
+            if actor.device_id is not None:
+                kwargs["device_id"] = actor.device_id
         self.occurrences.append(Occurrence(moment=moment, **kwargs))
+
+    @property
+    def channel(self) -> str:
+        return self.actor.channel
 
     def set_area(self, area_id: str, **changes) -> AreaRuntime:
         self.areas[area_id] = replace(self.areas[area_id], **changes)
@@ -637,12 +664,12 @@ class _Run:
             detail={"targets": ",".join(targets)},
         )
 
-    def set_chime(self, enabled: bool, channel: str) -> None:
+    def set_chime(self, enabled: bool) -> None:
         if enabled != self.chime_enabled:
             self.chime_enabled = enabled
             self.occur(
                 Moment.CHIME_SWITCHED,
-                channel=channel,
+                channel=self.channel,
                 detail={"enabled": "true" if enabled else "false"},
             )
 
@@ -676,22 +703,22 @@ class _Run:
             zone_id=zone_id,
         )
 
-    def acknowledge_technical(self, code: str | None, channel: str) -> _Outcome:
+    def acknowledge_technical(self) -> _Outcome:
         """One acknowledgement for every technical alarm pending now (part 2
         decision 11). Disarming has no authority here: only this clears it."""
         pending = [z for z, alarm in self.technical.items() if not alarm.acknowledged]
         if not pending:
             return _reject(Reason.NOTHING_TO_ACKNOWLEDGE)
-        if (reason := self.check_code(Operation.ACKNOWLEDGE)) is not None:
+        if (reason := self.authorize(Operation.ACKNOWLEDGE)) is not None:
             return _reject(reason)
         for zone_id in pending:
             self.technical[zone_id] = replace(
                 self.technical[zone_id],
                 acknowledged_at=self.now,
-                acknowledged_channel=channel,
+                acknowledged_channel=self.channel,
             )
         self.occur(
-            Moment.TECHNICAL_ACKNOWLEDGED, zone_ids=tuple(pending), channel=channel
+            Moment.TECHNICAL_ACKNOWLEDGED, zone_ids=tuple(pending), channel=self.channel
         )
         for zone_id in pending:
             if zone_id not in self.active:
@@ -720,21 +747,39 @@ class _Run:
     def key_command(self, zone: Zone, command: KeyCommand) -> None:
         """A key zone acts as a user would, on every area (decision 13)."""
         assert zone.key is not None
+        # The key is the credential: a key switch carries no code, so the
+        # policy of §8.2 cannot reach it — exactly as §9.3 says of an NFC tag.
+        # What it does carry is the identity configured on the zone, so the
+        # log can say whose key was turned, and that user's permissions and
+        # validity window still decide whether the turn is accepted.
+        previous, self.actor = (
+            self.actor,
+            Actor(
+                user_id=zone.key.user_id,
+                channel=KEY_ZONE_CHANNEL,
+                identified=zone.key.user_id is not None,
+                token=True,
+            ),
+        )
+        try:
+            self.key_act(zone, command)
+        finally:
+            self.actor = previous
+
+    def key_act(self, zone: Zone, command: KeyCommand) -> None:
+        assert zone.key is not None
         if command is KeyCommand.TOGGLE:
             armed = any(
                 rt.state is not AreaState.DISARMED for rt in self.areas.values()
             )
             command = KeyCommand.DISARM if armed else KeyCommand.ARM
         if command is KeyCommand.DISARM:
-            outcome = self.disarm(None, None, KEY_ZONE_CHANNEL)
+            outcome = self.disarm(None)
             if outcome.reason is Reason.INVALID_STATE:
                 return  # nothing was armed: a key turned twice is not a failure
         else:
             outcome = self.arm_scenario(
-                self.config.scenario(zone.key.scenario_id),
-                None,
-                KEY_ZONE_CHANNEL,
-                force=False,
+                self.config.scenario(zone.key.scenario_id), force=False
             )
         if not outcome.accepted:
             self.occur(
@@ -787,9 +832,9 @@ class _Run:
     def bypass_zone(self, event: BypassZone) -> _Outcome:
         """Exclude a zone by hand, or let it back in (SPEC §5.4, §16).
 
-        No code is required before Phase 2 (part 3 decision 9), but the request
-        still goes through the code check, so Phase 2 changes the policy and
-        not the plumbing (INV-2).
+        Excluding a zone needs a code by default (§8.2): it is the one action
+        that leaves a chosen part of the house unwatched while the rest is
+        armed.
         """
         zone = self.config.zone(event.zone_id)
         if zone is None or not zone.enabled:
@@ -801,7 +846,9 @@ class _Run:
             not event.bypass or already is BypassReason.MANUAL
         ):
             return _reject(Reason.INVALID_STATE, (zone.id,))
-        if (reason := self.check_code(Operation.BYPASS_ZONE)) is not None:
+        if (
+            reason := self.authorize(Operation.BYPASS_ZONE, area_ids=(zone.area_id,))
+        ) is not None:
             return _reject(reason)
         if not event.bypass:
             del self.bypassed[zone.id]
@@ -810,7 +857,7 @@ class _Run:
                 Moment.ZONE_REJOINED,
                 area_id=zone.area_id,
                 zone_id=zone.id,
-                channel=event.channel,
+                channel=self.channel,
                 detail={"bypass": BypassReason.MANUAL.value, "cause": "manual"},
             )
             return _ACCEPTED
@@ -826,7 +873,7 @@ class _Run:
             Moment.ZONE_BYPASSED,
             area_id=zone.area_id,
             zone_id=zone.id,
-            channel=event.channel,
+            channel=self.channel,
             detail=detail,
         )
         return _ACCEPTED
@@ -1014,13 +1061,13 @@ class _Run:
             detail={"via": via},
         )
 
-    def acknowledge_incident(self, code: str | None, channel: str) -> _Outcome:
+    def acknowledge_incident(self) -> _Outcome:
         """One acknowledgement acknowledges the whole incident (§5.6)."""
         if self.incident is None or self.incident.acknowledged:
             return _reject(Reason.NOTHING_TO_ACKNOWLEDGE)
-        if (reason := self.check_code(Operation.ACKNOWLEDGE)) is not None:
+        if (reason := self.authorize(Operation.ACKNOWLEDGE)) is not None:
             return _reject(reason)
-        self.acknowledge(channel, "acknowledge")
+        self.acknowledge(self.channel, "acknowledge")
         return _ACCEPTED
 
     def close_incident_if_settled(self) -> None:
@@ -1112,16 +1159,118 @@ class _Run:
         ]
         return faulted, open_
 
-    def check_code(self, operation: Operation) -> Reason | None:
-        """Enforce the code policy server-side (INV-2).
+    def authorize(
+        self,
+        operation: Operation,
+        *,
+        area_ids: tuple[str, ...] = (),
+        scenario: Scenario | None = None,
+    ) -> Reason | None:
+        """Everything identity has to say about one request (§8.2-§8.4).
 
-        There are no users before Phase 2 and so no code that could be verified.
-        If the policy requires one, the request is refused whatever was supplied:
-        the engine fails closed rather than accept something it cannot check.
+        Enforced here and only here (INV-2): the card and the panel transmit,
+        the backend decides. The order matters — a channel already locked is
+        answered without another attempt counting against it, a wrong code is
+        an attempt and counts, a missing code is not an attempt at all.
         """
-        if self.config.code_policy.requires_code(operation):
+        actor = self.actor
+        if (until := authz.locked_until(self.lockouts, actor, self.now)) is not None:
+            self.occur(
+                Moment.CODE_REJECTED,
+                channel=actor.channel,
+                detail={
+                    "operation": operation.value,
+                    "reason": Reason.LOCKED_OUT.value,
+                    "until": until.isoformat(),
+                },
+            )
+            return Reason.LOCKED_OUT
+        if actor.code is CodeResult.INVALID:
+            self.code_failed(operation)
+            return Reason.BAD_CODE
+        if (
+            reason := authz.check_user(
+                self.config,
+                actor,
+                operation,
+                self.now,
+                area_ids=area_ids,
+                scenario=scenario,
+            )
+        ) is not None:
+            self.occur(
+                Moment.CODE_REJECTED,
+                channel=actor.channel,
+                detail={"operation": operation.value, "reason": reason.value},
+            )
+            return reason
+        areas = tuple(
+            area for area in (self.config.area(a) for a in area_ids) if area is not None
+        )
+        if (
+            not actor.token
+            and authz.code_required(
+                self.config,
+                operation,
+                now=self.now,
+                areas=areas,
+                scenario=scenario,
+                user=self.config.user(actor.user_id),
+                identified=actor.identified,
+                channel=actor.channel,
+            )
+            and not actor.code_verified
+        ):
             return Reason.CODE_REQUIRED
+        if actor.code_verified:
+            # A correct code ends the run of failures on this channel. It does
+            # not end a lockout already in force: that is what waiting is for.
+            key = authz.lockout_key(actor)
+            cleared = authz.clear_failures(self.lockouts.get(key))
+            if cleared is None:
+                self.lockouts.pop(key, None)
+            else:
+                self.lockouts[key] = cleared
         return None
+
+    def code_failed(self, operation: Operation) -> None:
+        """A wrong code: count it, and shut the channel if it is one too many.
+
+        The admin path is counted like any other and never locked (§8.4), so
+        the attempt is still visible in the log and nobody can shut themselves
+        out of their own house.
+        """
+        actor = self.actor
+        security = self.config.settings.security
+        key = authz.lockout_key(actor)
+        lock, locked = authz.register_failure(
+            self.lockouts.get(key),
+            self.now,
+            failures=security.lockout_failures,
+            window=security.lockout_window,
+            duration=security.lockout_duration,
+        )
+        if actor.is_admin:
+            lock = replace(lock, until=None, strikes=0, locked_at=None)
+            locked = False
+        self.lockouts[key] = lock
+        self.occur(
+            Moment.CODE_REJECTED,
+            channel=actor.channel,
+            detail={"operation": operation.value, "reason": Reason.BAD_CODE.value},
+        )
+        if locked and lock.until is not None:
+            # A tamper attempt on a keypad is a genuine alarm signal, so this
+            # is a moment a response profile can answer (§6.1, §8.4).
+            self.occur(
+                Moment.LOCKOUT,
+                channel=actor.channel,
+                detail={
+                    "until": lock.until.isoformat(),
+                    "seconds": str(int((lock.until - self.now).total_seconds())),
+                    "strike": str(lock.strikes),
+                },
+            )
 
     def check_arming(
         self, area_ids: tuple[str, ...], force: bool
@@ -1143,10 +1292,10 @@ class _Run:
         self,
         area_ids: tuple[str, ...],
         scenario: Scenario | None,
-        channel: str,
         force: bool,
         to_bypass: list[Zone],
     ) -> None:
+        channel = self.channel
         if force:
             self.occur(
                 Moment.FORCED_ARM,
@@ -1167,6 +1316,7 @@ class _Run:
                 timer=Timer(TimerKind.EXIT, self.now + timedelta(seconds=delay)),
                 forced=force,
                 channel=channel,
+                user_id=self.actor.user_id,
                 causes=(),
             )
             if delay <= 0:
@@ -1224,6 +1374,7 @@ class _Run:
             area_id=area_id,
             scenario_id=rt.scenario_id,
             channel=rt.channel,
+            user_id=rt.user_id,
         )
 
     def arming_failed(self, area_id: str, zones: list[Zone], reason: Reason) -> None:
@@ -1234,6 +1385,7 @@ class _Run:
             scenario_id=rt.scenario_id,
             zone_ids=tuple(z.id for z in zones),
             channel=rt.channel,
+            user_id=rt.user_id,
             detail={"reason": reason.value},
         )
         self.clear_area(area_id)
@@ -1251,9 +1403,7 @@ class _Run:
                 detail={"bypass": reason.value},
             )
 
-    def arm_scenario(
-        self, scenario: Scenario | None, code: str | None, channel: str, *, force: bool
-    ) -> _Outcome:
+    def arm_scenario(self, scenario: Scenario | None, *, force: bool) -> _Outcome:
         """Arm a scenario, or switch to it while armed (decisions 7 and 9).
 
         Areas of the new scenario not yet armed go through their exit delay;
@@ -1286,24 +1436,27 @@ class _Run:
             return _reject(Reason.INVALID_STATE)
 
         switching = current is not None and current != scenario.id
-        for operation in (
-            Operation.ARM,
-            *((Operation.CHANGE_SCENARIO,) if switching else ()),
-            *((Operation.FORCE_ARM,) if force else ()),
+        for operation, areas in (
+            (Operation.ARM, to_arm),
+            # A switch also disarms what only the old scenario armed, so the
+            # areas it leaves behind have their say in the policy too.
+            *(((Operation.CHANGE_SCENARIO, (*to_arm, *leaving)),) if switching else ()),
+            *(((Operation.FORCE_ARM, to_arm),) if force else ()),
         ):
-            if (reason := self.check_code(operation)) is not None:
+            reason = self.authorize(operation, area_ids=tuple(areas), scenario=scenario)
+            if reason is not None:
                 return _reject(reason)
         outcome, to_bypass = self.check_arming(to_arm, force)
         if not outcome.accepted:
             return outcome
 
         for area_id in leaving:
-            self.disarm_area(area_id, channel)
+            self.disarm_area(area_id, self.channel)
         for area_id in target:
             if area_id not in to_arm:
                 self.set_area(area_id, scenario_id=scenario.id)
         self.active_scenario_id = scenario.id
-        self.begin_arming(to_arm, scenario, channel, force, to_bypass)
+        self.begin_arming(to_arm, scenario, force, to_bypass)
         return _ACCEPTED
 
     def arm_mode(self, event: ArmModeRequest) -> _Outcome:
@@ -1313,9 +1466,7 @@ class _Run:
             return _reject(Reason.NO_SCENARIO_FOR_MODE)
         if len(matches) > 1:
             return _reject(Reason.AMBIGUOUS_MODE)
-        return self.arm_scenario(
-            matches[0], event.code, event.channel, force=event.force
-        )
+        return self.arm_scenario(matches[0], force=event.force)
 
     def arm_area(self, event: ArmAreaRequest) -> _Outcome:
         """One area on its own, outside any scenario (decision 5)."""
@@ -1327,19 +1478,18 @@ class _Run:
             Operation.ARM,
             *((Operation.FORCE_ARM,) if event.force else ()),
         ):
-            if (reason := self.check_code(operation)) is not None:
+            reason = self.authorize(operation, area_ids=(event.area_id,))
+            if reason is not None:
                 return _reject(reason)
         outcome, to_bypass = self.check_arming((event.area_id,), event.force)
         if not outcome.accepted:
             return outcome
-        self.begin_arming((event.area_id,), None, event.channel, event.force, to_bypass)
+        self.begin_arming((event.area_id,), None, event.force, to_bypass)
         return _ACCEPTED
 
     # --- disarming --------------------------------------------------------------
 
-    def disarm(
-        self, area_ids: tuple[str, ...] | None, code: str | None, channel: str
-    ) -> _Outcome:
+    def disarm(self, area_ids: tuple[str, ...] | None) -> _Outcome:
         if area_ids is not None and any(a not in self.areas for a in area_ids):
             return _reject(Reason.UNKNOWN_AREA)
         candidates = area_ids if area_ids is not None else tuple(self.areas)
@@ -1351,10 +1501,23 @@ class _Run:
         ]
         if not targets:
             return _reject(Reason.INVALID_STATE)
-        if (reason := self.check_code(Operation.DISARM)) is not None:
+        scenario = self.config.scenario(self.active_scenario_id)
+        reason = self.authorize(
+            Operation.DISARM, area_ids=tuple(targets), scenario=scenario
+        )
+        if reason is not None:
             return _reject(reason)
+        if self.actor.duress:
+            # The house disarms exactly as it always does, and nothing the
+            # person at the keypad can see says otherwise (§8.1). What is
+            # different is this occurrence, which a profile can answer.
+            self.occur(
+                Moment.DURESS,
+                channel=self.channel,
+                detail={"areas": ",".join(targets)},
+            )
         for area_id in targets:
-            self.disarm_area(area_id, channel)
+            self.disarm_area(area_id, self.channel)
         return _ACCEPTED
 
     def disarm_area(self, area_id: str, channel: str | None) -> None:
@@ -1448,6 +1611,7 @@ class _Run:
             pending_runs=tuple(self.pending_runs),
             running=tuple(self.running),
             run_seq=self.run_seq,
+            lockouts=self.lockouts,
         )
         return Decision(
             at=self.now,

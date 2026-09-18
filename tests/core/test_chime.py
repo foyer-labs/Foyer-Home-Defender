@@ -6,6 +6,7 @@ from dataclasses import replace
 from zoneinfo import ZoneInfo
 
 from custom_components.foyer.core.models import (
+    Actor,
     ChimeMode,
     ChimeSettings,
     ChimeTarget,
@@ -100,7 +101,7 @@ def test_zones_without_chime_and_installations_without_targets_stay_quiet():
 
 def test_the_switch_silences_it_and_is_recorded():
     world = World(house())
-    decision = world.send(SetChime(False, channel="ha_ui"))
+    decision = world.send(SetChime(False, actor=Actor(channel="ha_ui")))
     assert decision.moments == (Moment.CHIME_SWITCHED,)
     assert not world.state.chime_enabled
     assert chimes(world.set(WINDOW, "on")) == []

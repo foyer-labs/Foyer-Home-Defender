@@ -8,6 +8,7 @@ person edits something and the other changes every time a door opens.
 
 from __future__ import annotations
 
+from dataclasses import fields
 from datetime import datetime
 from typing import Any
 
@@ -37,6 +38,7 @@ from ..core.models import (
     KeyAction,
     KeyCommand,
     KeyRelease,
+    Lockout,
     LogCategory,
     LogSettings,
     Moment,
@@ -48,6 +50,7 @@ from ..core.models import (
     RunningAction,
     RuntimeState,
     Scenario,
+    SecuritySettings,
     Settings,
     StateCondition,
     StateOperator,
@@ -57,6 +60,7 @@ from ..core.models import (
     Timer,
     TimerKind,
     TriggerSpec,
+    User,
     Zone,
     ZoneType,
 )
@@ -80,8 +84,12 @@ from ..core.models import (
 # event log's settings, the defaults for new areas and the message language
 # are additive, and a 4.1 build reading this document ignores them and behaves
 # exactly as it did. Nothing it would have protected goes unprotected.
-STORAGE_VERSION = 4
-STORAGE_MINOR_VERSION = 2
+# 5.1 is a major bump, and the reason is the sharpest one yet: a 4.x build
+# reading this document would find users it does not understand, ignore every
+# code in it and run the house with no codes at all — which is the exact state
+# this phase exists to end. Refusing the file is the only safe downgrade.
+STORAGE_VERSION = 5
+STORAGE_MINOR_VERSION = 1
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -111,6 +119,7 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
             settings=settings_from_dict(data["settings"]),
             groups=tuple(group_from_dict(g) for g in data["groups"]),
             chime=chime_from_dict(data["chime"]),
+            users=tuple(user_from_dict(u) for u in data["users"]),
         )
     except (KeyError, TypeError, ValueError) as err:
         raise ConfigError(f"invalid Foyer configuration: {err!r}") from err
@@ -123,13 +132,10 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
         "scenarios": [scenario_to_dict(s) for s in config.scenarios],
         "groups": [group_to_dict(g) for g in config.groups],
         "profiles": [profile_to_dict(p) for p in config.profiles],
+        "users": [user_to_dict(u) for u in config.users],
         "code_policy": {
-            "arm": config.code_policy.arm,
-            "disarm": config.code_policy.disarm,
-            "force_arm": config.code_policy.force_arm,
-            "change_scenario": config.code_policy.change_scenario,
-            "acknowledge": config.code_policy.acknowledge,
-            "bypass_zone": config.code_policy.bypass_zone,
+            field.name: getattr(config.code_policy, field.name)
+            for field in fields(CodePolicy)
         },
         "settings": settings_to_dict(config.settings),
         "chime": chime_to_dict(config.chime),
@@ -149,6 +155,7 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         default_exit_delay=int(s["default_exit_delay"]),
         language=s.get("language") or None,
         wizard_done=bool(s["wizard_done"]),
+        security=security_from_dict(s["security"]),
     )
 
 
@@ -165,6 +172,75 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "default_exit_delay": s.default_exit_delay,
         "language": s.language,
         "wizard_done": s.wizard_done,
+        "security": security_to_dict(s.security),
+    }
+
+
+def security_from_dict(data: dict[str, Any]) -> SecuritySettings:
+    return SecuritySettings(
+        code_length=int(data["code_length"]),
+        lockout_failures=int(data["lockout_failures"]),
+        lockout_window=int(data["lockout_window"]),
+        lockout_duration=int(data["lockout_duration"]),
+    )
+
+
+def security_to_dict(s: SecuritySettings) -> dict[str, Any]:
+    return {
+        "code_length": s.code_length,
+        "lockout_failures": s.lockout_failures,
+        "lockout_window": s.lockout_window,
+        "lockout_duration": s.lockout_duration,
+    }
+
+
+def user_from_dict(u: dict[str, Any]) -> User:
+    """Read a user, hashes and all.
+
+    The hashes live here and nowhere else: this document is the only place
+    they exist, no API ever returns them, and the panel changes a code by
+    sending a new one, never by reading the old one back (INV-2).
+    """
+    return User(
+        id=u["id"],
+        name=u["name"],
+        code_hash=u.get("code_hash") or None,
+        duress_code_hash=u.get("duress_code_hash") or None,
+        ha_user_id=u.get("ha_user_id") or None,
+        permissions=frozenset(u.get("permissions") or ()),
+        allowed_area_ids=(
+            None if u.get("allowed_area_ids") is None else tuple(u["allowed_area_ids"])
+        ),
+        allowed_scenario_ids=(
+            None
+            if u.get("allowed_scenario_ids") is None
+            else tuple(u["allowed_scenario_ids"])
+        ),
+        valid_from=_dt(u.get("valid_from")),
+        valid_until=_dt(u.get("valid_until")),
+        code_exempt_when_identified=bool(u.get("code_exempt_when_identified", False)),
+        enabled=bool(u.get("enabled", True)),
+    )
+
+
+def user_to_dict(u: User) -> dict[str, Any]:
+    return {
+        "id": u.id,
+        "name": u.name,
+        "code_hash": u.code_hash,
+        "duress_code_hash": u.duress_code_hash,
+        "ha_user_id": u.ha_user_id,
+        "permissions": sorted(u.permissions),
+        "allowed_area_ids": (
+            None if u.allowed_area_ids is None else list(u.allowed_area_ids)
+        ),
+        "allowed_scenario_ids": (
+            None if u.allowed_scenario_ids is None else list(u.allowed_scenario_ids)
+        ),
+        "valid_from": _iso(u.valid_from),
+        "valid_until": _iso(u.valid_until),
+        "code_exempt_when_identified": u.code_exempt_when_identified,
+        "enabled": u.enabled,
     }
 
 
@@ -335,6 +411,11 @@ def chime_to_dict(c: ChimeSettings) -> dict[str, Any]:
     }
 
 
+def _opt_bool(value: Any) -> bool | None:
+    """None stays None: "inherit" and "no" are different answers (§8.2)."""
+    return None if value is None else bool(value)
+
+
 def _opt_int(value: Any) -> int | None:
     return None if value is None else int(value)
 
@@ -347,6 +428,8 @@ def area_from_dict(a: dict[str, Any]) -> Area:
         default_entry_delay=int(a["default_entry_delay"]),
         default_exit_delay=int(a["default_exit_delay"]),
         response_profile_id=a.get("response_profile_id") or None,
+        require_code_to_arm=_opt_bool(a.get("require_code_to_arm")),
+        require_code_to_disarm=_opt_bool(a.get("require_code_to_disarm")),
     )
 
 
@@ -358,6 +441,8 @@ def area_to_dict(a: Area) -> dict[str, Any]:
         "default_entry_delay": a.default_entry_delay,
         "default_exit_delay": a.default_exit_delay,
         "response_profile_id": a.response_profile_id,
+        "require_code_to_arm": a.require_code_to_arm,
+        "require_code_to_disarm": a.require_code_to_disarm,
     }
 
 
@@ -371,6 +456,11 @@ def scenario_from_dict(s: dict[str, Any]) -> Scenario:
         exit_delay_override=_opt_int(s.get("exit_delay_override")),
         siren_duration_override=_opt_int(s.get("siren_duration_override")),
         response_profile_id=s.get("response_profile_id") or None,
+        require_code_to_arm=_opt_bool(s.get("require_code_to_arm")),
+        require_code_to_disarm=_opt_bool(s.get("require_code_to_disarm")),
+        allowed_user_ids=(
+            None if s.get("allowed_user_ids") is None else tuple(s["allowed_user_ids"])
+        ),
     )
 
 
@@ -384,6 +474,11 @@ def scenario_to_dict(s: Scenario) -> dict[str, Any]:
         "exit_delay_override": s.exit_delay_override,
         "siren_duration_override": s.siren_duration_override,
         "response_profile_id": s.response_profile_id,
+        "require_code_to_arm": s.require_code_to_arm,
+        "require_code_to_disarm": s.require_code_to_disarm,
+        "allowed_user_ids": (
+            None if s.allowed_user_ids is None else list(s.allowed_user_ids)
+        ),
     }
 
 
@@ -414,6 +509,7 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
             on_activate=KeyCommand(key["on_activate"]),
             scenario_id=key.get("scenario_id"),
             on_deactivate=KeyRelease(key.get("on_deactivate", "none")),
+            user_id=key.get("user_id") or None,
         ),
         chime=bool(z["chime"]),
         cross_zone_id=z.get("cross_zone_id") or None,
@@ -451,6 +547,7 @@ def zone_to_dict(z: Zone) -> dict[str, Any]:
             "on_activate": z.key.on_activate.value,
             "scenario_id": z.key.scenario_id,
             "on_deactivate": z.key.on_deactivate.value,
+            "user_id": z.key.user_id,
         },
         "chime": z.chime,
         "cross_zone_id": z.cross_zone_id,
@@ -537,6 +634,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "resume_timer": _timer_to(rt.resume_timer),
                 "causes": list(rt.causes),
                 "channel": rt.channel,
+                "user_id": rt.user_id,
             }
             for area_id, rt in state.areas.items()
         },
@@ -592,6 +690,15 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
             for r in state.running
         ],
         "run_seq": state.run_seq,
+        "lockouts": {
+            key: {
+                "failures": [at.isoformat() for at in lock.failures],
+                "until": _iso(lock.until),
+                "strikes": lock.strikes,
+                "locked_at": _iso(lock.locked_at),
+            }
+            for key, lock in state.lockouts.items()
+        },
     }
 
 
@@ -688,6 +795,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 resume_timer=_timer_from(rt.get("resume_timer")),
                 causes=tuple(z for z in rt.get("causes", ()) if z in zone_ids),
                 channel=rt.get("channel"),
+                user_id=rt.get("user_id"),
             )
         for area_id in area_ids - areas.keys():
             areas[area_id] = AreaRuntime()
@@ -767,6 +875,17 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 for r in data.get("running", ())
             ),
             run_seq=int(data.get("run_seq", 0)),
+            # A lockout that a restart clears is an invitation to restart
+            # Home Assistant, so it is written down like everything else.
+            lockouts={
+                key: Lockout(
+                    failures=tuple(_required_dt(at) for at in lock.get("failures", ())),
+                    until=_dt(lock.get("until")),
+                    strikes=int(lock.get("strikes", 0)),
+                    locked_at=_dt(lock.get("locked_at")),
+                )
+                for key, lock in data.get("lockouts", {}).items()
+            },
         )
     except (KeyError, TypeError, ValueError, AssertionError) as err:
         raise ConfigError(f"invalid Foyer runtime state: {err!r}") from err
