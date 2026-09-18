@@ -5049,7 +5049,7 @@ var Q = [
 	"test"
 ], St = 3, Ct = class extends R {
 	constructor(...e) {
-		super(...e), this._step = "area", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
+		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
 	static {
 		this.properties = {
@@ -5061,7 +5061,9 @@ var Q = [
 			_confirmed: { state: !0 },
 			_pickedEntity: { state: !0 },
 			_notifyTarget: { state: !0 },
-			_sent: { state: !0 }
+			_sent: { state: !0 },
+			_userName: { state: !0 },
+			_userCode: { state: !0 }
 		};
 	}
 	get _area() {
@@ -5323,10 +5325,69 @@ var Q = [
       </p>
     `;
 	}
+	async _createUser() {
+		let e = this.ctx;
+		if (e) {
+			this._busy = !0;
+			try {
+				let t = await e.saveUser({
+					name: this._userName.trim(),
+					has_code: !1,
+					has_duress_code: !1,
+					ha_user_id: e.hass.user?.id ?? null,
+					permissions: e.meta?.permissions ?? [],
+					allowed_area_ids: null,
+					allowed_scenario_ids: null,
+					valid_from: null,
+					valid_until: null,
+					code_exempt_when_identified: !1,
+					enabled: !0
+				}, { new_code: this._userCode });
+				this._problems = t.problems, t.success && (this._userCode = "", this._next());
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
 	_renderUser(e) {
+		let t = this.ctx?.config?.users ?? [], n = this.ctx?.status.security.code_length ?? 6;
+		if (t.length) return k`
+        <p>${H(e, "wizard.user_text")}</p>
+        <div class="notice">
+          ${H(e, "wizard.user_done", { name: t[0].name })}
+        </div>
+      `;
+		let r = this._userName.trim().length > 0 && this._userCode.length === n;
 		return k`
       <p>${H(e, "wizard.user_text")}</p>
-      <div class="notice">${H(e, "wizard.user_skipped")}</div>
+      <div class="grid-form">
+        <label class="field">
+          <span class="lbl">${H(e, "field.name")}</span>
+          <input
+            .value=${this._userName}
+            @input=${(e) => this._userName = e.target.value}
+          />
+        </label>
+        <label class="field">
+          <span class="lbl">${H(e, "users.code")}</span>
+          <input
+            type="password"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength=${n}
+            .value=${this._userCode}
+            @input=${(e) => this._userCode = e.target.value}
+          />
+          <span class="hint">${H(e, "users.code_hint", { n })}</span>
+        </label>
+      </div>
+      <p class="hint">${H(e, "wizard.user_hint")}</p>
+      <button class="btn primary" ?disabled=${this._busy || !r} @click=${this._createUser}>
+        ${H(e, "wizard.user_create")}
+      </button>
+      ${this._problems.length ? k`<ul class="problems">
+            ${this._problems.map((t) => k`<li>${G(e, t)}</li>`)}
+          </ul>` : j}
     `;
 	}
 	_renderTest(e) {

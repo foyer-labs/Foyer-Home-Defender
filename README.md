@@ -16,22 +16,22 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Apache-2.0"></a>
 </p>
 
-> ### Status: alpha. The alarm core works; there are no codes yet.
+> ### Status: alpha. The alarm core works, and it now asks for a code.
 >
-> It can protect a house, and it is doing so. Think twice before it is the
-> *only* thing protecting one: **there are no users and no codes**, so anyone
-> who can reach Home Assistant can disarm it. Codes, users and keypad support
-> are the next release, and they are what turns this from alpha into beta.
+> It can protect a house, and it is doing so. **Users, codes, permissions and
+> lockout have landed**: create a user with a code and disarming asks for one,
+> from the panel, the card and a wall tablet, with the log finally saying who
+> did it. Physical keypads and the MQTT contract are the next release, and
+> they are what turns this from alpha into beta.
 
 **Try it if** you already have door, window or motion sensors in Home
 Assistant, you want one panel with real arming scenarios instead of a folder of
 automations, and you are willing to run an alpha on a house that has other
 locks on it.
 
-**Not yet, if** the alarm must ask for a code, if other people in the house
-need their own access, or if you want something finished —
-[Alarmo](https://github.com/nielsfaber/alarmo) does those today, and does them
-well.
+**Not yet, if** you arm from a physical keypad, if you need MQTT, or if you
+want something finished — [Alarmo](https://github.com/nielsfaber/alarmo) does
+those today, and does them well.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-en.png" alt="The Foyer panel: two areas armed by one scenario, one counting down its entry delay, the zones that are not ready, and the last few events" width="900">
@@ -107,17 +107,15 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No users, no codes, no permissions.** Anyone with access to Home Assistant
-  can arm and disarm, and the log records the channel rather than the person.
-  *Next release.*
+- **No physical keypads and no MQTT.** Codes work from the panel, the card
+  and a wall tablet; a Ring or Zigbee keypad on the wall does not talk to
+  Foyer yet. *Next release.*
 - **No simulator and no walk test.** You cannot yet ask "what would happen if
   the kitchen window opened right now, in this scenario, at this hour?" without
   opening it. *After that.*
 - **No escalation.** Notifications go to a `notify` service directly; they do
   not climb from push to SMS to a phone call until somebody acknowledges.
   *After that.*
-- **No keypad support and no MQTT.** *Next release.*
-
 The order is fixed and written down, with what each step has to prove before it
 counts as done: [the roadmap](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md#16-roadmap).
 
@@ -133,12 +131,13 @@ its code. Where they differ today:
 | **Areas with independent state** | Yes: one `alarm_control_panel` each, plus a master | One panel, sensors grouped per mode |
 | **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Ordinary sensors |
 | **One incident per break-in** | Yes, with one acknowledgement | An alarm per sensor |
-| **Users, codes, permissions** | **Not yet** | Yes, per-user codes |
+| **Users, codes, permissions** | Yes: one code each, per-operation policy, duress code, lockout | Yes, per-user codes |
 | **Keypads, MQTT** | **Not yet** | Yes |
 | **Maturity** | Alpha. One author, months old | Years of use, a large installed base |
 | **Simulator, walk test** | Planned, not written | — |
 
-If you need an alarm today and codes matter to you, use Alarmo.
+If you need an alarm today and a keypad on the wall matters to you, use
+Alarmo.
 
 ## How you can check it rather than trust it
 
@@ -162,9 +161,8 @@ If you need an alarm today and codes matter to you, use Alarmo.
 
 ## Security model
 
-Foyer's codes — once they exist — protect against household members, guests,
-cleaners, non-admin Home Assistant users and anyone who finds an unlocked wall
-tablet. They do **not** protect against a Home Assistant administrator, who can
+Foyer's codes protect against household members, guests, cleaners, non-admin
+Home Assistant users and anyone who finds an unlocked wall tablet. They do **not** protect against a Home Assistant administrator, who can
 read `.storage`, disable the integration or call any service directly. The
 event log is audit-*useful*, not tamper-*proof*, for the same reason.
 
@@ -317,7 +315,7 @@ which version of Foyer and of Home Assistant, what you expected, and what the
 log page shows — the row usually contains the answer, so a screenshot of it is
 worth more than a description. English or Italian, whichever you prefer.
 
-To be told when codes and users land, watch the repository: releases are
+To be told when keypads land, watch the repository: releases are
 announced there, and the [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)
 says what changed in behaviour every time.
 

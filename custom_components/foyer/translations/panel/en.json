@@ -1192,14 +1192,16 @@
     "scenario_text": "A scenario is a named preset that arms a chosen set of areas. One that arms everything is enough to start; partial ones come later.",
     "scenario_areas": "It arms: {areas}",
     "user_text": "Your own code, so the log has somebody to credit from the first day.",
-    "user_skipped": "Skipped, honestly: users and codes are not in this version yet. Until they arrive, anyone with access to Home Assistant can arm and disarm Foyer, and the log records the channel rather than the person.",
     "test_text": "Prove that a message actually reaches you before you rely on it. This sends one straight through Home Assistant, to the target you pick.",
     "test_target": "Send to",
     "pick_target": "Choose a notification service…",
     "send_test": "Send the test",
     "test_sent": "Sent. If nothing arrived, that channel would not have reached you during an alarm either.",
     "test_hint": "Which notifications Foyer sends, and when, is set on the Response profiles page.",
-    "test_message": "Foyer Home Defender: this is a test notification."
+    "test_message": "Foyer Home Defender: this is a test notification.",
+    "user_hint": "This person is linked to your Home Assistant account and gets every permission — you are the one setting the system up. Everyone else is added on the Users page, each with their own code.",
+    "user_create": "Create user",
+    "user_done": "{name} holds a code. From now on disarming asks for one."
   },
   "config_kind": {
     "areas": "Area",

@@ -16,23 +16,23 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
 </p>
 
-> ### Stato: alpha. Il nucleo dell'allarme funziona; i codici non ci sono ancora.
+> ### Stato: alpha. Il nucleo dell'allarme funziona, e ora chiede un codice.
 >
-> Può proteggere una casa, e lo sta facendo. Pensaci due volte prima che sia
-> l'*unica* cosa a proteggerla: **non ci sono utenti né codici**, quindi
-> chiunque possa raggiungere Home Assistant può disinserire l'allarme. Codici,
-> utenti e supporto per i tastierini sono la prossima versione, ed è quello che
-> trasforma questa alpha in una beta.
+> Può proteggere una casa, e lo sta facendo. **Utenti, codici, permessi e
+> blocco dopo tentativi ripetuti ci sono**: crei un utente con un codice e il
+> disinserimento lo chiede, dal pannello, dalla card e da un tablet a muro, e
+> il registro dice finalmente chi è stato. I tastierini fisici e il contratto
+> MQTT sono la prossima versione, ed è quello che trasforma questa alpha in
+> una beta.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
 cartella di automazioni, e sei disposto a far girare una alpha su una casa che
 ha anche altre serrature.
 
-**Non ancora, se** l'allarme deve chiedere un codice, se altre persone in casa
-devono avere un accesso proprio, o se vuoi qualcosa di finito:
-[Alarmo](https://github.com/nielsfaber/alarmo) queste cose le fa oggi, e le fa
-bene.
+**Non ancora, se** inserisci da un tastierino fisico, se ti serve MQTT, o se
+vuoi qualcosa di finito: [Alarmo](https://github.com/nielsfaber/alarmo) queste
+cose le fa oggi, e le fa bene.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-it.png" alt="Il pannello di Foyer: due aree inserite da un solo scenario, una in conto alla rovescia sul ritardo d'ingresso, le zone non pronte e gli ultimi eventi" width="900">
@@ -113,17 +113,15 @@ per tutto ciò che registra, e può chiamare qualunque servizio tu voglia.
 
 ## Cosa manca ancora, e conta
 
-- **Nessun utente, nessun codice, nessun permesso.** Chiunque abbia accesso a
-  Home Assistant può inserire e disinserire, e il registro annota il canale
-  invece della persona. *Prossima versione.*
+- **Nessun tastierino fisico e nessun MQTT.** I codici funzionano dal
+  pannello, dalla card e da un tablet a muro; un tastierino Ring o Zigbee
+  appeso al muro non parla ancora con Foyer. *Prossima versione.*
 - **Nessun simulatore e nessuna prova di percorso.** Non puoi ancora chiedere
   «cosa succederebbe se la finestra della cucina si aprisse adesso, con questo
   scenario, a quest'ora?» senza aprirla. *Dopo.*
 - **Nessuna scalata delle notifiche.** Vanno direttamente a un servizio
   `notify`; non salgono da push a SMS a telefonata finché qualcuno non
   risponde. *Dopo.*
-- **Nessun supporto per tastierini e nessun MQTT.** *Prossima versione.*
-
 L'ordine è fissato e scritto, con quello che ogni passo deve dimostrare prima
 di contare come fatto:
 [la tabella di marcia](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md#16-roadmap).
@@ -140,13 +138,13 @@ copia il codice. Dove differiscono oggi:
 | **Aree con stato indipendente** | Sì: un `alarm_control_panel` ciascuna, più una centrale | Una centrale sola, sensori raggruppati per modalità |
 | **Fumo, gas, acqua** | Un canale separato, attivo a impianto disinserito, mai `triggered` su un'entità d'allarme | Sensori ordinari |
 | **Un incidente per effrazione** | Sì, con una sola presa in carico | Un allarme per sensore |
-| **Utenti, codici, permessi** | **Non ancora** | Sì, codici per utente |
+| **Utenti, codici, permessi** | Sì: un codice a testa, politica per operazione, codice di coercizione, blocco | Sì, codici per utente |
 | **Tastierini, MQTT** | **Non ancora** | Sì |
 | **Maturità** | Alpha. Un solo autore, pochi mesi di vita | Anni di utilizzo, moltissime installazioni |
 | **Simulatore, prova di percorso** | Previsti, non scritti | — |
 | **Interfaccia in italiano** | Completa: pannello, card e testi di aiuto | Solo in inglese |
 
-Se ti serve un allarme oggi e i codici ti interessano, usa Alarmo.
+Se ti serve un allarme oggi e un tastierino al muro ti interessa, usa Alarmo.
 
 ## Come puoi verificarlo invece di fidarti
 
@@ -172,7 +170,7 @@ Se ti serve un allarme oggi e i codici ti interessano, usa Alarmo.
 
 ## Modello di sicurezza
 
-I codici di Foyer — quando esisteranno — proteggono da familiari, ospiti,
+I codici di Foyer proteggono da familiari, ospiti,
 personale domestico, utenti non amministratori di Home Assistant e da chiunque
 trovi un tablet a muro sbloccato. **Non** proteggono da un amministratore di
 Home Assistant, che può leggere `.storage`, disattivare l'integrazione o
@@ -334,7 +332,7 @@ quale versione di Foyer e di Home Assistant, cosa ti aspettavi, e cosa mostra
 la pagina del registro: la riga di solito contiene già la risposta, quindi una
 schermata vale più di una descrizione. In italiano o in inglese, come preferisci.
 
-Per sapere quando arrivano codici e utenti, metti il repository fra quelli che
+Per sapere quando arrivano i tastierini, metti il repository fra quelli che
 segui: le versioni vengono annunciate lì, e il
 [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)
 dice ogni volta cosa è cambiato nel comportamento.

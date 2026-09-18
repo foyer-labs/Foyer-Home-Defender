@@ -1191,15 +1191,17 @@
     "add": "Aggiungi la zona",
     "scenario_text": "Uno scenario è un preset con un nome che inserisce un insieme di aree scelto. Uno che inserisce tutto basta per iniziare; quelli parziali vengono dopo.",
     "scenario_areas": "Inserisce: {areas}",
-    "user_text": "Un codice tuo, così il registro ha qualcuno a cui attribuire le azioni fin dal primo giorno.",
-    "user_skipped": "Saltato, e lo diciamo chiaramente: utenti e codici non ci sono ancora in questa versione. Finché non arrivano, chiunque abbia accesso a Home Assistant può inserire e disinserire Foyer, e il registro annota il canale invece della persona.",
+    "user_text": "Il tuo codice, così dal primo giorno il registro ha qualcuno a cui attribuire le cose.",
     "test_text": "Dimostra che un messaggio ti arriva davvero, prima di farci affidamento. Questo lo manda direttamente tramite Home Assistant, al destinatario che scegli.",
     "test_target": "Manda a",
     "pick_target": "Scegli un servizio di notifica…",
     "send_test": "Manda la prova",
     "test_sent": "Mandata. Se non è arrivato nulla, quel canale non ti avrebbe raggiunto nemmeno durante un allarme.",
     "test_hint": "Quali notifiche manda Foyer, e quando, si imposta nella pagina Profili di risposta.",
-    "test_message": "Foyer Home Defender: questa è una notifica di prova."
+    "test_message": "Foyer Home Defender: questa è una notifica di prova.",
+    "user_hint": "Questa persona è collegata al tuo account Home Assistant e riceve tutti i permessi: sei tu che stai configurando l’impianto. Gli altri si aggiungono dalla pagina Utenti, ognuno con il proprio codice.",
+    "user_create": "Crea utente",
+    "user_done": "{name} ha un codice. Da ora il disinserimento lo chiede."
   },
   "config_kind": {
     "areas": "Area",

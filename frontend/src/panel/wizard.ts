@@ -5,8 +5,8 @@
 // about finishing: name the area, add the zones that matter, look at the
 // scenario, prove a notification actually arrives.
 //
-// The user step of §15.1 is shown and skipped, in as many words: codes and
-// users are Phase 2, and a wizard that pretends otherwise would be lying
+// The user step creates the first person and their code, which is what turns
+// the log from "the panel disarmed at 03:14" into "Luca did"
 // about what protects the house.
 import { LitElement, css, html, nothing } from "lit";
 
@@ -34,10 +34,14 @@ class FoyerWizard extends LitElement {
     _pickedEntity: { state: true },
     _notifyTarget: { state: true },
     _sent: { state: true },
+    _userName: { state: true },
+    _userCode: { state: true },
   };
 
   ctx?: PanelContext;
   private _step: Step = "area";
+  private _userName = "";
+  private _userCode = "";
   private _busy = false;
   private _problems: Problem[] = [];
   private _proposal?: ZoneProposal;
@@ -359,12 +363,88 @@ class FoyerWizard extends LitElement {
     `;
   }
 
-  // --- step 4: users and codes, which are not this phase's ------------------------
+  // --- step 4: the first person, and their code (§8.1) ----------------------------
+
+  private async _createUser(): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    this._busy = true;
+    try {
+      const result = await ctx.saveUser(
+        {
+          name: this._userName.trim(),
+          has_code: false,
+          has_duress_code: false,
+          // Linked to whoever is doing the setting up: from now on the panel
+          // knows who they are without a code being typed (§8.2).
+          ha_user_id: ctx.hass.user?.id ?? null,
+          permissions: ctx.meta?.permissions ?? [],
+          allowed_area_ids: null,
+          allowed_scenario_ids: null,
+          valid_from: null,
+          valid_until: null,
+          code_exempt_when_identified: false,
+          enabled: true,
+        },
+        { new_code: this._userCode },
+      );
+      this._problems = result.problems;
+      if (result.success) {
+        this._userCode = "";
+        this._next();
+      }
+    } finally {
+      this._busy = false;
+    }
+  }
 
   private _renderUser(s: Strings) {
+    const users = this.ctx?.config?.users ?? [];
+    const length = this.ctx?.status.security.code_length ?? 6;
+    if (users.length) {
+      return html`
+        <p>${t(s, "wizard.user_text")}</p>
+        <div class="notice">
+          ${t(s, "wizard.user_done", { name: users[0].name })}
+        </div>
+      `;
+    }
+    const ready =
+      this._userName.trim().length > 0 && this._userCode.length === length;
     return html`
       <p>${t(s, "wizard.user_text")}</p>
-      <div class="notice">${t(s, "wizard.user_skipped")}</div>
+      <div class="grid-form">
+        <label class="field">
+          <span class="lbl">${t(s, "field.name")}</span>
+          <input
+            .value=${this._userName}
+            @input=${(e: Event) =>
+              (this._userName = (e.target as HTMLInputElement).value)}
+          />
+        </label>
+        <label class="field">
+          <span class="lbl">${t(s, "users.code")}</span>
+          <input
+            type="password"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength=${length}
+            .value=${this._userCode}
+            @input=${(e: Event) =>
+              (this._userCode = (e.target as HTMLInputElement).value)}
+          />
+          <span class="hint">${t(s, "users.code_hint", { n: length })}</span>
+        </label>
+      </div>
+      <p class="hint">${t(s, "wizard.user_hint")}</p>
+      <button class="btn primary" ?disabled=${this._busy || !ready} @click=${this._createUser}>
+        ${t(s, "wizard.user_create")}
+      </button>
+      ${this._problems.length
+        ? html`<ul class="problems">
+            ${this._problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+          </ul>`
+        : nothing}
     `;
   }
 

@@ -5,6 +5,82 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.13] — codes, and somebody to attribute them to
+
+**Pre-release, for testing only.** **Configuration schema 4.2 → 5.1, a major
+step**: a 4.x build reading this document would find users it knows nothing
+about, ignore every code in it and run the house with no codes at all, so it
+refuses the file instead. Back up before updating if you want a way back.
+
+This is the release that removes the sentence at the top of the README. Until
+now anyone who could reach Home Assistant could disarm the alarm.
+
+### Added
+- **Users, each with their own code** (SPEC §8.1), stored as bcrypt hashes that
+  no API returns in any shape — not in the configuration, not in a backup, not
+  in the log. A code may not belong to two people: a shared one makes "who
+  disarmed at 03:14?" unanswerable, and the refusal does not say whose code it
+  collided with. Code length is global, 4–12 digits, six by default, because a
+  keypad has to know how many digits to collect before it validates anything.
+- **A duress code per person.** It disarms exactly as the ordinary code does
+  and raises a silent event a response profile can answer. Nothing the person
+  at the keypad can see is different.
+- **A code policy per operation** (§8.2), with the defaults of that table:
+  arming needs nothing, disarming, forcing, changing scenario while armed,
+  excluding a zone and editing the configuration need a code. An area or a
+  scenario can ask for more, never for less — where they disagree the strictest
+  explicit setting wins, and the panel names the area that is asking.
+- **Permissions** (§8.3), enforced on every service and every WebSocket
+  command, not only in the panel: a permission the interface hides is still
+  refused when the command is sent by hand from Developer Tools.
+- **Lockout** (§8.4): repeated wrong codes shut that keypad for a while, longer
+  each time, and it survives a restart — a lockout a restart clears is an
+  invitation to restart Home Assistant. It raises an event a response profile
+  can act on, because somebody guessing at a keypad is a tamper signal. The
+  Home Assistant admin path is never locked: nobody may shut themselves out of
+  their own house.
+- **Panel page 7**, with the people, the policy table, the code length and the
+  lockout settings, and its own help panel.
+- **The card's keypad**: a new `keypad` layout for a wall tablet, and the same
+  pad folded into `full`. It collects digits and transmits them; it never
+  checks one (INV-2). It opens by itself when the backend says a code is
+  needed, and learns how many digits to collect from the backend.
+- **`button.foyer_acknowledge`**, deferred from Phase 1 because a button cannot
+  carry a code. Acknowledging needs none by default — §7.2 already acknowledges
+  from a push notification, which carries no code either — so the button
+  exists, and refuses visibly if an installation raises the policy.
+- **Per-area and per-scenario code settings**, `allowed_user_ids` on a
+  scenario, and an identity on a key zone, so the log can say whose key was
+  turned. A key switch carries no code and never could, exactly as §9.3 says of
+  an NFC tag: it authenticates by possession, and the permissions of the user
+  it names still decide whether the turn is accepted.
+- The first-run wizard now creates the first person and their code, linked to
+  the Home Assistant account doing the setting up.
+
+### Changed
+- **Phase 1 decision 6 ends.** Forcing an arming and changing scenario while
+  armed follow §8.2 from now on, which means they ask for a code. So do
+  disarming, excluding a zone and editing the configuration.
+- **…but the whole policy is inert until somebody holds a code.** An
+  installation upgrading into this version behaves exactly as it did, and says
+  so plainly in the panel and on page 7, until the first user with a code
+  exists. Enforcing a policy with no codes to verify would not protect a house;
+  it would only make it impossible to disarm, which is how an alarm teaches its
+  owner to remove it.
+- **The log finally has a person in it.** `user_id` and `user_name` are filled
+  on everything a request causes, and `user_name` is kept even after the user
+  is deleted, so removing somebody does not erase the history of what they did.
+  A refused code is a row of its own under `security`, naming nobody.
+- Reading the configuration and the log now needs a permission rather than
+  being admin-only and open-to-all respectively. A Foyer user linked to a Home
+  Assistant account is subject to Foyer's rules; with none linked, the rule is
+  the one used since Phase 0 — an administrator, and nobody else. An
+  administrator is never refused the *configuration* for want of a permission
+  (INV-6 says they can read `.storage` anyway, and the alternative is an owner
+  locked out of their own settings), but the code still applies to them.
+- Home Assistant's own alarm card now shows a keypad when the policy asks for a
+  code, because the entity says so.
+
 ## [0.1.0-alpha.12] — a front page, and the second review
 
 **Pre-release, for testing only.** No schema change.
