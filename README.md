@@ -44,6 +44,12 @@ those today, and does them well.
   armed while you are upstairs.
 - **Arming scenarios you define.** *Night, ground floor only*. *Garage only*.
   *Dog at home*. Any number of them, not four fixed modes.
+- **A code for each person.** Stored as a hash and checked in the backend
+  only — a card is a keypad that transmits a code, never something that
+  decides. Which operations ask for one is yours to set, an area or a scenario
+  can ask for more, and every row of the log says who did it. Plus a duress
+  code that disarms normally and raises a silent alarm, and a lockout after
+  repeated wrong codes.
 - **Zones that declare their own trigger.** Normally-closed and normally-open
   contacts behave in opposite ways, so Foyer proposes a trigger from the
   entity's device class and then makes you confirm it against the real sensor.
@@ -83,8 +89,11 @@ those today, and does them well.
   a siren or a phone, with quiet hours per target.
 - **State that survives a restart**, including a delay half-run and a siren
   mid-sounding.
+- **Permissions per person**, enforced on every service and every WebSocket
+  command rather than only in the interface, with a validity window for guest
+  codes and a scope limited to chosen areas or scenarios.
 - **A panel in English and Italian**, with contextual help on every page, and a
-  card with `full` and `compact` layouts.
+  card with `full`, `compact` and `keypad` layouts.
 
 </details>
 
@@ -159,6 +168,10 @@ Alarmo.
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-log-en.png" alt="The log: arming, an alarm, an arming refused with the zone that blocked it, the restart gap, a configuration change with its old and new value, and a notification that failed" width="900">
 </p>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-users-en.png" alt="Users and codes: two people with their permissions, scope and validity, and the table of which operations ask for a code" width="900">
+</p>
+
 ## Security model
 
 Foyer's codes protect against household members, guests, cleaners, non-admin
@@ -192,11 +205,13 @@ Foyer's own.
    integration. You get one area, one scenario and one zone.
 2. **Check the trigger against the real sensor.** Open the door, walk past the
    detector, watch the state change. This is the one step worth doing slowly.
-3. Send the test notification the wizard offers. If it does not arrive, nothing
+3. **Create yourself a user with a code.** Until somebody holds one, nothing
+   asks for one, and the panel says so where you cannot miss it.
+4. Send the test notification the wizard offers. If it does not arrive, nothing
    else in Foyer matters.
-4. Arm, walk in, let the entry delay run out, and let it fire — once, on
+5. Arm, walk in, let the entry delay run out, and let it fire — once, on
    purpose, while you are standing there. Then open the log and read what it
-   says about the last two minutes.
+   says about the last two minutes, and who it credits.
 
 ## Install
 
@@ -243,7 +258,7 @@ Pick *Foyer Home Defender* in the dashboard's card picker, or write it by hand:
 ```yaml
 type: custom:foyer-card
 entity: alarm_control_panel.foyer_master   # or alarm_control_panel.foyer_<area>
-layout: full                               # or compact
+layout: full                               # full, compact or keypad
 ```
 
 No dashboard resource needs adding. The card decides nothing by itself: it
@@ -252,6 +267,10 @@ refused it and the way past it.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts" width="620">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet, and the same pad opened inside the full layout" width="620">
 </p>
 
 ## Questions people ask
@@ -263,6 +282,18 @@ Both can be installed, but do not point them at the same sensors: you would
 have two systems deciding what an open window means, arming and disarming
 independently of each other. Try Foyer on a few zones, or on a test
 installation, and move the rest when it has earned it.
+
+</details>
+
+<details>
+<summary>Who can disarm it?</summary>
+
+Whoever holds a code, and only for what their permissions allow. Until you
+create the first user, nobody is asked for anything and anyone with access to
+Home Assistant can disarm — the panel says so plainly while that lasts. A
+person can be exempted from typing their code on channels that already know who
+they are, such as the Home Assistant interface signed in as them; on a shared
+keypad the code *is* the identity, so the exemption cannot apply there.
 
 </details>
 
@@ -325,6 +356,7 @@ says what changed in behaviour every time.
 custom_components/foyer/   the integration (HACS installs this directory as is)
   core/                    pure decision engine: no Home Assistant imports, ever
   runtime/ entity/ api/    Home Assistant-facing layers
+  security/                bcrypt codes, and who a request comes from
   store/                   .storage persistence, schema migrations, the log
   translations/            en.json, it.json (Home Assistant) and panel/ (UI, help)
   frontend/                built panel and card bundles, committed

@@ -45,6 +45,12 @@ cose le fa oggi, e le fa bene.
   può restare inserito mentre tu sei al primo piano.
 - **Scenari di inserimento definiti da te.** *Notte, solo piano terra*. *Solo
   garage*. *Cane in casa*. Quanti ne vuoi, non quattro modalità fisse.
+- **Un codice per ogni persona.** Salvato come hash e verificato solo nel
+  backend: una card è un tastierino che trasmette un codice, non qualcosa che
+  decide. Quali operazioni lo chiedono lo decidi tu, un'area o uno scenario
+  possono chiederne di più, e ogni riga del registro dice chi è stato. In più
+  un codice di coercizione che disinserisce normalmente facendo scattare un
+  allarme silenzioso, e il blocco dopo codici sbagliati ripetuti.
 - **Zone che dichiarano da sole cosa le fa scattare.** I contatti normalmente
   chiusi e normalmente aperti si comportano al contrario, quindi Foyer propone
   la condizione a partire dalla classe del dispositivo e poi ti chiede di
@@ -89,8 +95,11 @@ cose le fa oggi, e le fa bene.
   destinatario.
 - **Uno stato che sopravvive a un riavvio**, compresa un'attesa a metà e una
   sirena che sta suonando.
+- **Permessi per persona**, applicati su ogni servizio e ogni comando
+  WebSocket e non solo nell'interfaccia, con una finestra di validità per i
+  codici ospite e un ambito limitato ad aree o scenari scelti.
 - **Pannello in italiano e in inglese**, con aiuto contestuale in ogni pagina, e
-  una card nelle disposizioni `full` e `compact`.
+  una card nelle disposizioni `full`, `compact` e `keypad`.
 
 </details>
 
@@ -168,6 +177,10 @@ Se ti serve un allarme oggi e un tastierino al muro ti interessa, usa Alarmo.
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-log-it.png" alt="Il registro: inserimento, un allarme, un inserimento rifiutato con la zona che l'ha bloccato, il buco di riavvio, una modifica di configurazione con valore prima e dopo, e una notifica non riuscita" width="900">
 </p>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-users-it.png" alt="Utenti e codici: due persone con i loro permessi, ambito e validità, e la tabella di quali operazioni chiedono un codice" width="900">
+</p>
+
 ## Modello di sicurezza
 
 I codici di Foyer proteggono da familiari, ospiti,
@@ -206,11 +219,13 @@ verso l'esterno che parta da Foyer.
 2. **Verifica la condizione di allarme sul sensore vero.** Apri la porta, passa
    davanti al rivelatore, guarda cambiare lo stato. È l'unico passo che vale la
    pena fare con calma.
-3. Manda la notifica di prova che la procedura guidata ti offre. Se non arriva,
+3. **Crea il tuo utente con un codice.** Finché nessuno ne ha uno, nessuno
+   viene chiesto, e il pannello lo dice dove non puoi non vederlo.
+4. Manda la notifica di prova che la procedura guidata ti offre. Se non arriva,
    tutto il resto di Foyer non conta.
-4. Inserisci, rientra, lascia scadere il ritardo d'ingresso e lascialo suonare:
+5. Inserisci, rientra, lascia scadere il ritardo d'ingresso e lascialo suonare:
    una volta, apposta, mentre sei lì. Poi apri il registro e leggi cosa dice
-   degli ultimi due minuti.
+   degli ultimi due minuti, e a chi li attribuisce.
 
 ## Installazione
 
@@ -258,7 +273,7 @@ scrivila a mano:
 ```yaml
 type: custom:foyer-card
 entity: alarm_control_panel.foyer_master   # oppure alarm_control_panel.foyer_<area>
-layout: full                               # oppure compact
+layout: full                               # full, compact o keypad
 ```
 
 Non serve aggiungere alcuna risorsa alla dashboard. La card non decide nulla da
@@ -267,6 +282,10 @@ rifiutato e la via per superarla.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-it.png" alt="La card nelle disposizioni completa e compatta" width="620">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-it.png" alt="La disposizione a tastierino per un tablet a muro, e lo stesso tastierino aperto dentro la disposizione completa" width="620">
 </p>
 
 ## Domande che vengono fatte
@@ -279,6 +298,18 @@ due sistemi che decidono cosa significa una finestra aperta, e che si
 inseriscono e disinseriscono l'uno all'insaputa dell'altro. Prova Foyer su
 qualche zona, o su un'installazione di prova, e spostaci il resto quando se lo
 sarà guadagnato.
+
+</details>
+
+<details>
+<summary>Chi può disinserire?</summary>
+
+Chi ha un codice, e solo per ciò che i suoi permessi consentono. Finché non
+crei il primo utente non viene chiesto nulla a nessuno e chiunque abbia accesso
+a Home Assistant può disinserire — il pannello lo dice apertamente finché dura.
+Una persona può essere esentata dal digitare il codice sui canali che già sanno
+chi è, come l'interfaccia di Home Assistant con il suo account; su un tastierino
+condiviso il codice *è* l'identità, quindi lì l'esenzione non vale.
 
 </details>
 
@@ -343,6 +374,7 @@ dice ogni volta cosa è cambiato nel comportamento.
 custom_components/foyer/   l'integrazione (HACS installa questa cartella così com'è)
   core/                    motore decisionale puro: mai un import di Home Assistant
   runtime/ entity/ api/    gli strati che parlano con Home Assistant
+  security/                codici bcrypt, e da chi arriva una richiesta
   store/                   persistenza in .storage, migrazioni di schema, il registro
   translations/            en.json, it.json (Home Assistant) e panel/ (interfaccia, aiuto)
   frontend/                bundle compilati di pannello e card, versionati
