@@ -461,12 +461,14 @@ custom_components/foyer/   l'integrazione (HACS installa questa cartella così c
   translations/            en.json, it.json (Home Assistant) e panel/ (interfaccia, aiuto)
   frontend/                bundle compilati di pannello e card, versionati
 frontend/                  sorgenti TypeScript + Lit, compilati con Vite
+blueprints/                adattatori per tastierini e tag (si copiano a mano)
+docs/                      la specifica, il contratto dei tastierini, gli screenshot
 tests/core, tests/repo     girano senza Home Assistant installato
 tests/ha                   girano dentro l'ambiente di test di Home Assistant
 ```
 
 ```bash
-pip install pytest ruff
+pip install pytest ruff bcrypt
 pytest                       # suite pura: motore, controllo di purezza, traduzioni
 ruff check . && ruff format --check .
 cd frontend && npm ci && npm run build   # ricompila custom_components/foyer/frontend

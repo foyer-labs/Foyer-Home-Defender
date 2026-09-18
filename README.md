@@ -425,12 +425,14 @@ custom_components/foyer/   the integration (HACS installs this directory as is)
   translations/            en.json, it.json (Home Assistant) and panel/ (UI, help)
   frontend/                built panel and card bundles, committed
 frontend/                  TypeScript + Lit sources, built with Vite
+blueprints/                keypad and tag adapters (copied by hand, not by HACS)
+docs/                      the specification, the keypad contract, screenshots
 tests/core, tests/repo     run without Home Assistant installed
 tests/ha                   run inside Home Assistant's test harness
 ```
 
 ```bash
-pip install pytest ruff
+pip install pytest ruff bcrypt
 pytest                       # pure suite: engine, purity check, translations
 ruff check . && ruff format --check .
 cd frontend && npm ci && npm run build   # rebuilds custom_components/foyer/frontend
