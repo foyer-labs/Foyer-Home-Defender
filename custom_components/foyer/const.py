@@ -35,3 +35,6 @@ SIGNAL_UPDATE: Final = f"{DOMAIN}_update"
 # Channels (SPEC §9.1)
 CHANNEL_HA_UI: Final = "ha_ui"
 CHANNEL_AUTOMATION: Final = "automation"
+CHANNEL_API: Final = "api"
+CHANNEL_MQTT: Final = "mqtt"
+CHANNEL_KEYPAD: Final = "keypad"

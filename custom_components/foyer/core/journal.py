@@ -434,6 +434,38 @@ def action_row(
     )
 
 
+def security_row(
+    at: datetime,
+    *,
+    event_type: str,
+    channel: str | None = None,
+    device_id: str | None = None,
+    user_id: str | None = None,
+    user_name: str | None = None,
+    outcome: str = Outcome.BLOCKED.value,
+    detail: Mapping[str, Any] | None = None,
+) -> LogRow:
+    """A row under ``security`` for something the engine never sees (§10.2).
+
+    A device that is not declared is refused before any event is built, so
+    there is no Decision to take a row from — and a refusal that leaves no
+    trace is the one thing the log may never do (§10.2: silence is the worst
+    possible answer to "why did it not arm?").
+    """
+    return LogRow(
+        ts=at,
+        category=LogCategory.SECURITY,
+        event_type=event_type,
+        severity=LogSeverity.WARNING,
+        user_id=user_id,
+        user_name=user_name,
+        channel=channel,
+        device_id=device_id,
+        outcome=outcome,
+        detail=dict(detail or {}),
+    )
+
+
 def config_row(
     at: datetime,
     *,

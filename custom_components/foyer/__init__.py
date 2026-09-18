@@ -39,7 +39,7 @@ PLATFORMS = (
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from homeassistant.exceptions import ConfigEntryError
 
-    from .api import websocket
+    from .api import services, websocket
     from .panel import async_register_frontend
     from .runtime.system import FoyerSystem
     from .runtime.watcher import async_watch_zones
@@ -94,6 +94,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not hass.data.get(_WS_KEY):
         websocket.async_register(hass)
         hass.data[_WS_KEY] = True
+    # Registered on every setup, and removed on unload: a service that
+    # outlives the integration answers callers with a stale system.
+    services.async_register(hass)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _async_remove_stale_entities(hass, entry)
@@ -104,6 +107,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    from .api import services
     from .panel import async_unregister_panel
 
     system = entry.runtime_data
@@ -113,6 +117,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if system.log is not None:
             await system.log.async_close()
         async_unregister_panel(hass)
+        services.async_unregister(hass)
         hass.data.pop(DOMAIN, None)
     return unloaded
 

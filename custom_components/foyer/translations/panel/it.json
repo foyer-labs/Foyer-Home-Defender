@@ -188,7 +188,8 @@
     "topic_invalid": "Un topic non ha caratteri jolly (+ o #) né livelli vuoti. Lascialo vuoto per il predefinito.",
     "topics_identical": "Il topic dei comandi e quello dello stato devono essere diversi, altrimenti Foyer risponderebbe ai propri messaggi.",
     "qos_out_of_range": "{field}: 0, 1 o 2.",
-    "device_not_registered": "Quel dispositivo non è registrato qui."
+    "device_not_registered": "Quel dispositivo non è registrato qui.",
+    "user_holds_a_tag": "Questa persona possiede un tag o un telecomando. Cambia prima il dispositivo."
   },
   "field": {
     "name": "Nome",
@@ -288,7 +289,6 @@
     "user_id": "Di chi è",
     "event_type": "Quale pulsante",
     "command": "Cosa fa",
-    "scenario_id": "Scenario",
     "kind": "Tipo",
     "command_topic": "Topic dei comandi",
     "state_topic": "Topic dello stato",
@@ -778,6 +778,10 @@
     }
   },
   "notification": {
+    "device_rejected": {
+      "title": "Foyer: dispositivo sconosciuto",
+      "message": "Un dispositivo che si chiama «{device}» ha provato a comandare l'allarme e non è fra i dispositivi di inserimento di questo impianto. Non è cambiato nulla. Aggiungilo in Dispositivi di inserimento se è tuo."
+    },
     "armed": {
       "title": "Foyer: inserito",
       "message": "{area} inserito con lo scenario {scenario}."
@@ -1240,6 +1244,7 @@
     "security": "Codici e blocco"
   },
   "detail": {
+    "skip_exit_delay": "Inserito senza ritardo d'uscita",
     "reason": "Motivo",
     "cause": "Causa",
     "down_since": "Non in funzione dalle",

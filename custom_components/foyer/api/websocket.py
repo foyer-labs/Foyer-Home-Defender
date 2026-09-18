@@ -7,7 +7,7 @@ stored (INV-2). The panel's own checks are a courtesy.
 
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from functools import partial
 from typing import Any
 
@@ -76,17 +76,13 @@ from ..core.validation import (
     MAX_SEVERITY,
     ZONE_DOMAINS,
     Problem,
-    edit_conflicts,
-    validate,
 )
 from ..runtime.system import FoyerSystem
 from ..security import codes
 from ..security.identity import async_actor
-from ..store.config_store import ConfigStore
 from ..store.editing import (
     KINDS,
     EditResult,
-    config_diff,
     delete,
     update_chime,
     update_security,
@@ -94,13 +90,17 @@ from ..store.editing import (
     upsert,
 )
 from ..store.log_store import export_csv, export_json
-from ..store.migrations import MigrationError, migrate
 from ..store.schema import (
     STORAGE_MINOR_VERSION,
     STORAGE_VERSION,
-    ConfigError,
-    config_from_dict,
-    config_to_dict,
+)
+from .backup import (
+    async_write,
+    backup_document,
+    backup_filename,
+    public_config,
+    public_user,
+    restore,
 )
 
 PREFS_KEY = "foyer.prefs"
@@ -250,36 +250,14 @@ async def _gate(
 def _public_config(config) -> dict[str, Any]:
     """The configuration as the panel may see it: no hashes, ever (§8.1).
 
-    A hash never leaves the backend — not here, not in an export, not in a
-    diagnostic. What the panel needs is whether a code exists, which is a
-    boolean, and that is what it gets.
+    Built where every other caller builds it (api/backup), so what the panel
+    is shown and what a backup contains can never drift apart.
     """
-    document = config_to_dict(config)
-    document["users"] = [_public_user(u) for u in config.users]
-    return document
+    return public_config(config)
 
 
 def _public_user(user: User) -> dict[str, Any]:
-    return {
-        "id": user.id,
-        "name": user.name,
-        "has_code": bool(user.code_hash),
-        "has_duress_code": bool(user.duress_code_hash),
-        "ha_user_id": user.ha_user_id,
-        "permissions": sorted(user.permissions),
-        "allowed_area_ids": (
-            None if user.allowed_area_ids is None else list(user.allowed_area_ids)
-        ),
-        "allowed_scenario_ids": (
-            None
-            if user.allowed_scenario_ids is None
-            else list(user.allowed_scenario_ids)
-        ),
-        "valid_from": user.valid_from.isoformat() if user.valid_from else None,
-        "valid_until": user.valid_until.isoformat() if user.valid_until else None,
-        "code_exempt_when_identified": user.code_exempt_when_identified,
-        "enabled": user.enabled,
-    }
+    return public_user(user)
 
 
 @callback
@@ -387,19 +365,8 @@ async def ws_translations(
 def _result(
     system: FoyerSystem, decision: Decision, ha_user: Any = None
 ) -> dict[str, Any]:
-    """The structured result of SPEC §9.1, so the UI can name the zone."""
-    names = {z.id: z.name for z in system.config.zones}
-    return {
-        "success": decision.accepted,
-        "reason": decision.reason.value if decision.reason else None,
-        "blocking_zones": [
-            {"id": z, "name": names.get(z, z)} for z in decision.blocking_zones
-        ],
-        "bypassed_zones": [
-            {"id": z, "name": names.get(z, z)} for z in decision.bypassed_zones
-        ],
-        "state": system.status(ha_user),
-    }
+    """The structured result of SPEC §9.1, built where everything builds it."""
+    return system.result(decision, ha_user)
 
 
 @websocket_api.websocket_command(
@@ -624,35 +591,17 @@ async def _apply(
     kind: str = "config",
 ) -> None:
     """Store a validated edit and reload, or return its problems untouched."""
-    if result.config is None:
-        connection.send_result(
-            msg_id,
-            {"success": False, "problems": [asdict(p) for p in result.problems]},
-        )
-        return
-    # Who changed what, with a summary of what moved (§10.2, category
-    # ``config``). Recorded before the reload, which replaces this system.
-    system.async_record(
-        (
-            config_row(
-                dt_util.utcnow(),
-                operation=operation,
-                kind=kind,
-                item_id=result.id,
-                user_id=connection.user.id,
-                user_name=connection.user.name,
-                channel=CHANNEL_HA_UI,
-                changes=config_diff(system.config, result.config),
-            ),
-        )
+    answer = await async_write(
+        hass,
+        system,
+        result,
+        operation=operation,
+        kind=kind,
+        channel=CHANNEL_HA_UI,
+        user_id=connection.user.id,
+        user_name=connection.user.name,
     )
-    await ConfigStore(hass).async_save(result.config)
-    # The entities follow the configuration: reload to rebuild them. The alarm
-    # state is saved on unload and restored on setup (INV-3).
-    entry = next(iter(hass.config_entries.async_entries(DOMAIN)), None)
-    if entry is not None:
-        hass.config_entries.async_schedule_reload(entry.entry_id)
-    connection.send_result(msg_id, {"success": True, "id": result.id, "problems": []})
+    connection.send_result(msg_id, answer)
 
 
 @websocket_api.websocket_command(
@@ -1226,10 +1175,6 @@ async def ws_log_clear(
 
 # --- configuration backup and restore (SPEC §15.1) ---------------------------------
 
-# What an export is, so an import can tell a Foyer backup from any other JSON
-# file dropped on it.
-BACKUP_MAGIC = "foyer.config"
-
 
 @websocket_api.websocket_command(
     {
@@ -1262,19 +1207,12 @@ async def ws_config_export(
         )
     ) is None:
         return
-    stamp = dt_util.now().strftime("%Y%m%d-%H%M")
-    document = {
-        "foyer": BACKUP_MAGIC,
-        "version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
-        "created": dt_util.now().isoformat(),
-        # Without the hashes: a backup is a file that leaves the machine, and
-        # a code hash in it is an offline guessing exercise waiting to happen.
-        # A restore keeps the codes of the people it recognises (§8.1).
-        "config": _public_config(system.config),
-    }
     connection.send_result(
         msg["id"],
-        {"filename": f"foyer-config-{stamp}.json", "document": document},
+        {
+            "filename": backup_filename("config"),
+            "document": backup_document(system.config),
+        },
     )
 
 
@@ -1312,59 +1250,7 @@ async def ws_config_import(
         )
     ) is None:
         return
-    document = msg["document"]
-    if document.get("foyer") != BACKUP_MAGIC or "config" not in document:
-        connection.send_result(
-            msg["id"],
-            {
-                "success": False,
-                "problems": [asdict(Problem("not_a_foyer_backup", "config"))],
-            },
-        )
-        return
-    version = document.get("version") or [STORAGE_VERSION, STORAGE_MINOR_VERSION]
-    try:
-        data = migrate(
-            (int(version[0]), int(version[1])),
-            (STORAGE_VERSION, STORAGE_MINOR_VERSION),
-            document["config"],
-        )
-        config = config_from_dict(data)
-    except MigrationError:
-        connection.send_result(
-            msg["id"],
-            {
-                "success": False,
-                "problems": [asdict(Problem("backup_version_unsupported", "config"))],
-            },
-        )
-        return
-    except (ConfigError, KeyError, TypeError, ValueError, IndexError):
-        connection.send_result(
-            msg["id"],
-            {"success": False, "problems": [asdict(Problem("invalid", "config"))]},
-        )
-        return
-
-    # A backup carries no hashes, so the people in it come back without their
-    # codes — except those already here under the same id, whose codes are
-    # kept. Nothing in a file can set a hash: that way lies a backup that
-    # hands somebody a code of their choosing.
-    config = replace(
-        config,
-        users=tuple(
-            replace(
-                user,
-                code_hash=(k.code_hash if (k := system.config.user(user.id)) else None),
-                duress_code_hash=(k.duress_code_hash if k else None),
-            )
-            for user in config.users
-        ),
-    )
-    problems = validate(config) + edit_conflicts(system.config, config, system.state)
-    result = EditResult(
-        config=None if problems else config, problems=tuple(problems), id=None
-    )
+    result = restore(system, msg["document"])
     await _apply(
         hass, connection, msg["id"], system, result, operation="restore", kind="config"
     )

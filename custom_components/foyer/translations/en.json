@@ -165,5 +165,267 @@
         "name": "Acknowledge"
       }
     }
+  },
+  "services": {
+    "arm": {
+      "name": "Arm",
+      "description": "Arm a scenario, one area, or a master mode. Returns the structured result of §9.1.",
+      "fields": {
+        "scenario_id": {
+          "name": "Scenario",
+          "description": "The scenario to arm, by id."
+        },
+        "scenario_name": {
+          "name": "Scenario name",
+          "description": "The scenario to arm, by name, for an adapter that has no ids."
+        },
+        "area_id": {
+          "name": "Area",
+          "description": "Arm this one area on its own, outside any scenario."
+        },
+        "mode": {
+          "name": "Master mode",
+          "description": "Arm through the master panel: the one scenario reporting this mode. Refused when two scenarios share it."
+        },
+        "force": {
+          "name": "Force",
+          "description": "Arm anyway, excluding the zones that block it. Needs the force_arm permission and is logged as a forced arming."
+        },
+        "skip_exit_delay": {
+          "name": "Skip the exit delay",
+          "description": "Arm at once, with no time to leave. Whoever may arm may arm at once, and the log records that it happened."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "disarm": {
+      "name": "Disarm",
+      "description": "Disarm the named areas, or every area.",
+      "fields": {
+        "area_ids": {
+          "name": "Areas",
+          "description": "Which areas to disarm. Left out, every area is disarmed."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "bypass_zone": {
+      "name": "Exclude a zone",
+      "description": "Exclude one zone by hand, with or without a duration.",
+      "fields": {
+        "zone_id": {
+          "name": "Zone",
+          "description": "The zone to exclude."
+        },
+        "seconds": {
+          "name": "For",
+          "description": "How long the exclusion lasts. Without it, the exclusion ends at the next disarm; with it, it outlives the disarm and announces the zone's return."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "unbypass_zone": {
+      "name": "Let a zone back in",
+      "description": "End a manual exclusion and let the zone protect again.",
+      "fields": {
+        "zone_id": {
+          "name": "Zone",
+          "description": "The zone to let back in."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "acknowledge": {
+      "name": "Acknowledge",
+      "description": "Say that somebody has seen the alarm. Needs no code by default.",
+      "fields": {
+        "target": {
+          "name": "What",
+          "description": "The intrusion incident, or the technical channel. They are separate alarms with separate acknowledgements."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "export_log": {
+      "name": "Export the log",
+      "description": "The rows the given filters match, as JSON or CSV.",
+      "fields": {
+        "format": {
+          "name": "Format",
+          "description": "JSON or CSV."
+        },
+        "start": {
+          "name": "From",
+          "description": "The earliest timestamp to include."
+        },
+        "end": {
+          "name": "To",
+          "description": "The latest timestamp to include."
+        },
+        "categories": {
+          "name": "Categories",
+          "description": "Which log categories to include."
+        },
+        "severity": {
+          "name": "Severity",
+          "description": "Only rows of this severity."
+        },
+        "area_id": {
+          "name": "Area",
+          "description": "Only rows about this area."
+        },
+        "zone_id": {
+          "name": "Zone",
+          "description": "Only rows about this zone."
+        },
+        "incident_id": {
+          "name": "Incident",
+          "description": "Only rows belonging to this incident."
+        },
+        "outcome": {
+          "name": "Outcome",
+          "description": "Only rows with this outcome."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "export_config": {
+      "name": "Export the configuration",
+      "description": "The whole configuration with its schema version, and no code hashes.",
+      "fields": {
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "import_config": {
+      "name": "Restore the configuration",
+      "description": "Restore an exported configuration. It is migrated, validated, and refused if it would change an armed area.",
+      "fields": {
+        "document": {
+          "name": "Document",
+          "description": "The exported document, as it came out."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    }
   }
 }

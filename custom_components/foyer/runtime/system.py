@@ -42,6 +42,7 @@ from ..core.models import (
     LogCategory,
     Operation,
     Outcome,
+    Reason,
     RuntimeState,
     Scenario,
     Startup,
@@ -154,6 +155,11 @@ class FoyerSystem:
         self._unsub_wakeup: CALLBACK_TYPE | None = None
         self._unsubs: list[CALLBACK_TYPE] = []
         self._started = False
+
+    @property
+    def language(self) -> str:
+        """What Foyer speaks in what it sends out (§15.1, part 4 decision 2)."""
+        return self._executor.language
 
     # --- lifecycle -----------------------------------------------------------
 
@@ -391,6 +397,44 @@ class FoyerSystem:
 
     def master(self) -> tuple[AreaState, str | None]:
         return master_state(self.state, self.config)
+
+    def result(self, decision: Decision, ha_user: Any = None) -> dict[str, Any]:
+        """The structured result of SPEC §9.1.
+
+        One function, so that a service call, a WebSocket command and an MQTT
+        message cannot answer three different shapes — which is the whole
+        point of §9.1: a keypad adapter must be able to tell a wrong code from
+        arming blocked by an open zone, whatever it is speaking through. The
+        zones are named as well as identified, because a keypad with a display
+        shows a name and has no configuration to look one up in.
+        """
+        names = {z.id: z.name for z in self.config.zones}
+        return {
+            "success": decision.accepted,
+            "reason": decision.reason.value if decision.reason else None,
+            "blocking_zones": [
+                {"id": z, "name": names.get(z, z)} for z in decision.blocking_zones
+            ],
+            "bypassed_zones": [
+                {"id": z, "name": names.get(z, z)} for z in decision.bypassed_zones
+            ],
+            "state": self.status(ha_user),
+        }
+
+    def refusal(self, reason: Reason, ha_user: Any = None) -> dict[str, Any]:
+        """The same shape for a request refused before the engine saw it.
+
+        A device that is not registered never reaches decide(): there is
+        nothing for the engine to decide about it (part 2 decision 1). The
+        caller must still be answered in the shape it was promised.
+        """
+        return {
+            "success": False,
+            "reason": reason.value,
+            "blocking_zones": [],
+            "bypassed_zones": [],
+            "state": self.status(ha_user),
+        }
 
     def status(self, ha_user: Any = None) -> dict[str, Any]:
         """The live state as sent to the panel and the card. Contains no secrets.

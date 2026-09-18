@@ -165,5 +165,267 @@
         "name": "Riconosci"
       }
     }
+  },
+  "services": {
+    "arm": {
+      "name": "Inserisci",
+      "description": "Inserisce uno scenario, una sola area o una modalità del master. Restituisce il risultato strutturato di §9.1.",
+      "fields": {
+        "scenario_id": {
+          "name": "Scenario",
+          "description": "Lo scenario da inserire, per id."
+        },
+        "scenario_name": {
+          "name": "Nome dello scenario",
+          "description": "Lo scenario da inserire, per nome, per un adattatore che non conosce gli id."
+        },
+        "area_id": {
+          "name": "Area",
+          "description": "Inserisce questa sola area, fuori da ogni scenario."
+        },
+        "mode": {
+          "name": "Modalità del master",
+          "description": "Inserisce attraverso il pannello master: l'unico scenario che riporta questa modalità. Rifiutata se due scenari la condividono."
+        },
+        "force": {
+          "name": "Forza",
+          "description": "Inserisce comunque, escludendo le zone che lo bloccano. Richiede il permesso force_arm ed è registrato come inserimento forzato."
+        },
+        "skip_exit_delay": {
+          "name": "Salta il ritardo d'uscita",
+          "description": "Inserisce subito, senza dare tempo di uscire. Chi può inserire può inserire subito, e il registro dice che è successo."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "disarm": {
+      "name": "Disinserisci",
+      "description": "Disinserisce le aree indicate, o tutte.",
+      "fields": {
+        "area_ids": {
+          "name": "Aree",
+          "description": "Quali aree disinserire. Se manca, vengono disinserite tutte."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "bypass_zone": {
+      "name": "Escludi una zona",
+      "description": "Esclude a mano una zona, con o senza durata.",
+      "fields": {
+        "zone_id": {
+          "name": "Zona",
+          "description": "La zona da escludere."
+        },
+        "seconds": {
+          "name": "Per",
+          "description": "Quanto dura l'esclusione. Senza durata finisce al disinserimento; con una durata sopravvive al disinserimento e annuncia il rientro della zona."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "unbypass_zone": {
+      "name": "Reinserisci una zona",
+      "description": "Chiude un'esclusione manuale e rimette la zona a protezione.",
+      "fields": {
+        "zone_id": {
+          "name": "Zona",
+          "description": "La zona da reinserire."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "acknowledge": {
+      "name": "Prendi atto",
+      "description": "Dichiara che qualcuno ha visto l'allarme. Di base non richiede codice.",
+      "fields": {
+        "target": {
+          "name": "Cosa",
+          "description": "L'incidente di intrusione o il canale tecnico. Sono due allarmi distinti con due prese d'atto distinte."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "export_log": {
+      "name": "Esporta il registro",
+      "description": "Le righe che i filtri indicati selezionano, in JSON o CSV.",
+      "fields": {
+        "format": {
+          "name": "Formato",
+          "description": "JSON o CSV."
+        },
+        "start": {
+          "name": "Dal",
+          "description": "Il primo istante da includere."
+        },
+        "end": {
+          "name": "Al",
+          "description": "L'ultimo istante da includere."
+        },
+        "categories": {
+          "name": "Categorie",
+          "description": "Quali categorie del registro includere."
+        },
+        "severity": {
+          "name": "Gravità",
+          "description": "Solo le righe di questa gravità."
+        },
+        "area_id": {
+          "name": "Area",
+          "description": "Solo le righe di quest'area."
+        },
+        "zone_id": {
+          "name": "Zona",
+          "description": "Solo le righe di questa zona."
+        },
+        "incident_id": {
+          "name": "Incidente",
+          "description": "Solo le righe di questo incidente."
+        },
+        "outcome": {
+          "name": "Esito",
+          "description": "Solo le righe con questo esito."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "export_config": {
+      "name": "Esporta la configurazione",
+      "description": "Tutta la configurazione con la sua versione di schema, senza nessun hash dei codici.",
+      "fields": {
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "import_config": {
+      "name": "Ripristina la configurazione",
+      "description": "Ripristina una configurazione esportata. Viene migrata, validata e rifiutata se cambierebbe un'area inserita.",
+      "fields": {
+        "document": {
+          "name": "Documento",
+          "description": "Il documento esportato, così com'è."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    }
   }
 }

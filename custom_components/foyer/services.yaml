@@ -1,0 +1,326 @@
+# The service contract of SPEC §9.1. Every state-changing service takes a code,
+# a user, a channel and a device, and returns the structured result of §9.1, so
+# that an adapter can tell a wrong code from arming blocked by an open zone.
+#
+# `device_id` is the name a registered arming device answers to (page 8), not a
+# Home Assistant device id. A name this installation does not carry is refused:
+# page 8 is a white list, because the lockout of §8.4 counts per device and a
+# caller free to invent one is a caller who is never locked out.
+#
+# `channel` may only say `api` or `automation`. Everything else — keypad, nfc —
+# is a property of a registered device, never a claim a message makes, or an
+# automation could buy the per-user code exemption of §8.2 by typing a word.
+#
+# foyer.walk_test and foyer.test_action are in §14.1 and are deliberately not
+# here: Phase 3 builds them, and a service that exists and does nothing answers
+# its caller with silence.
+
+arm:
+  fields:
+    scenario_id:
+      required: false
+      selector:
+        text:
+    scenario_name:
+      required: false
+      example: Night
+      selector:
+        text:
+    area_id:
+      required: false
+      selector:
+        text:
+    mode:
+      required: false
+      selector:
+        select:
+          options:
+            - armed_home
+            - armed_away
+            - armed_night
+            - armed_vacation
+            - armed_custom_bypass
+    force:
+      required: false
+      default: false
+      selector:
+        boolean:
+    skip_exit_delay:
+      required: false
+      default: false
+      selector:
+        boolean:
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+disarm:
+  fields:
+    area_ids:
+      required: false
+      selector:
+        object:
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+bypass_zone:
+  fields:
+    zone_id:
+      required: true
+      selector:
+        text:
+    seconds:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 86400
+          unit_of_measurement: s
+          mode: box
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+unbypass_zone:
+  fields:
+    zone_id:
+      required: true
+      selector:
+        text:
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+acknowledge:
+  fields:
+    target:
+      required: false
+      default: incident
+      selector:
+        select:
+          options:
+            - incident
+            - technical
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+export_log:
+  fields:
+    format:
+      required: false
+      default: json
+      selector:
+        select:
+          options:
+            - json
+            - csv
+    start:
+      required: false
+      selector:
+        text:
+    end:
+      required: false
+      selector:
+        text:
+    categories:
+      required: false
+      selector:
+        object:
+    severity:
+      required: false
+      selector:
+        select:
+          options:
+            - info
+            - warning
+            - alarm
+    area_id:
+      required: false
+      selector:
+        text:
+    zone_id:
+      required: false
+      selector:
+        text:
+    incident_id:
+      required: false
+      selector:
+        text:
+    outcome:
+      required: false
+      selector:
+        text:
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+export_config:
+  fields:
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+import_config:
+  fields:
+    document:
+      required: true
+      selector:
+        object:
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+

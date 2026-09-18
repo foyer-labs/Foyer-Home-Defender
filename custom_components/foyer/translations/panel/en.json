@@ -188,7 +188,8 @@
     "topic_invalid": "A topic has no wildcard (+ or #) and no empty level. Leave it empty for the default.",
     "topics_identical": "The command and state topics must differ, or Foyer would answer its own messages.",
     "qos_out_of_range": "{field}: 0, 1 or 2.",
-    "device_not_registered": "That device is not registered here."
+    "device_not_registered": "That device is not registered here.",
+    "user_holds_a_tag": "This person owns a tag or a remote. Change the device first."
   },
   "field": {
     "name": "Name",
@@ -288,7 +289,6 @@
     "user_id": "Belongs to",
     "event_type": "Which button",
     "command": "What it does",
-    "scenario_id": "Scenario",
     "kind": "Kind",
     "command_topic": "Command topic",
     "state_topic": "State topic",
@@ -778,6 +778,10 @@
     }
   },
   "notification": {
+    "device_rejected": {
+      "title": "Foyer: unknown device",
+      "message": "A device calling itself “{device}” tried to command the alarm and is not one of this installation's arming devices. Nothing was changed. Add it under Arming devices if it is yours."
+    },
     "armed": {
       "title": "Foyer: armed",
       "message": "{area} armed with scenario {scenario}."
@@ -1240,6 +1244,7 @@
     "security": "Codes and lockout"
   },
   "detail": {
+    "skip_exit_delay": "Armed with no exit delay",
     "reason": "Reason",
     "cause": "Cause",
     "down_since": "Not running since",

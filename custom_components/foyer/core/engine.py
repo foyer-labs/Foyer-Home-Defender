@@ -141,7 +141,9 @@ def decide(
     outcome = _ACCEPTED
     if isinstance(event, ArmRequest):
         outcome = run.arm_scenario(
-            config.scenario(event.scenario_id), force=event.force
+            config.scenario(event.scenario_id),
+            force=event.force,
+            skip_exit_delay=event.skip_exit_delay,
         )
     elif isinstance(event, ArmModeRequest):
         outcome = run.arm_mode(event)
@@ -1381,6 +1383,7 @@ class _Run:
         scenario: Scenario | None,
         force: bool,
         to_bypass: list[Zone],
+        skip_exit_delay: bool = False,
     ) -> None:
         channel = self.channel
         if force:
@@ -1395,7 +1398,7 @@ class _Run:
         for area_id in area_ids:
             area = self.config.area(area_id)
             assert area is not None
-            delay = self.config.exit_delay(area, scenario)
+            delay = 0 if skip_exit_delay else self.config.exit_delay(area, scenario)
             self.set_area(
                 area_id,
                 state=AreaState.ARMING,
@@ -1405,6 +1408,7 @@ class _Run:
                 channel=channel,
                 user_id=self.actor.user_id,
                 device_id=self.actor.device_id,
+                skipped_exit=skip_exit_delay,
                 causes=(),
             )
             if delay <= 0:
@@ -1464,6 +1468,7 @@ class _Run:
             channel=rt.channel,
             user_id=rt.user_id,
             device_id=rt.device_id,
+            detail={"skip_exit_delay": "1"} if rt.skipped_exit else {},
         )
 
     def arming_failed(self, area_id: str, zones: list[Zone], reason: Reason) -> None:
@@ -1493,7 +1498,9 @@ class _Run:
                 detail={"bypass": reason.value},
             )
 
-    def arm_scenario(self, scenario: Scenario | None, *, force: bool) -> _Outcome:
+    def arm_scenario(
+        self, scenario: Scenario | None, *, force: bool, skip_exit_delay: bool = False
+    ) -> _Outcome:
         """Arm a scenario, or switch to it while armed (decisions 7 and 9).
 
         Areas of the new scenario not yet armed go through their exit delay;
@@ -1546,7 +1553,7 @@ class _Run:
             if area_id not in to_arm:
                 self.set_area(area_id, scenario_id=scenario.id)
         self.active_scenario_id = scenario.id
-        self.begin_arming(to_arm, scenario, force, to_bypass)
+        self.begin_arming(to_arm, scenario, force, to_bypass, skip_exit_delay)
         return _ACCEPTED
 
     def arm_mode(self, event: ArmModeRequest) -> _Outcome:
@@ -1556,7 +1563,9 @@ class _Run:
             return _reject(Reason.NO_SCENARIO_FOR_MODE)
         if len(matches) > 1:
             return _reject(Reason.AMBIGUOUS_MODE)
-        return self.arm_scenario(matches[0], force=event.force)
+        return self.arm_scenario(
+            matches[0], force=event.force, skip_exit_delay=event.skip_exit_delay
+        )
 
     def arm_area(self, event: ArmAreaRequest) -> _Outcome:
         """One area on its own, outside any scenario (decision 5)."""
@@ -1574,7 +1583,9 @@ class _Run:
         outcome, to_bypass = self.check_arming((event.area_id,), event.force)
         if not outcome.accepted:
             return outcome
-        self.begin_arming((event.area_id,), None, event.force, to_bypass)
+        self.begin_arming(
+            (event.area_id,), None, event.force, to_bypass, event.skip_exit_delay
+        )
         return _ACCEPTED
 
     # --- disarming --------------------------------------------------------------

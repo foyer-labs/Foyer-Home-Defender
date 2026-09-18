@@ -1053,6 +1053,11 @@ class AreaRuntime:
     # reason and answers a different question: which keypad, of the three.
     user_id: str | None = None
     device_id: str | None = None
+    # Armed with no exit delay at all (§9.1). Remembered for the same reason
+    # as `forced`: the row that says so is written when the area reaches
+    # `armed`, and "why did it sound while I was still in the hall?" is a
+    # question the log has to be able to answer.
+    skipped_exit: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1348,6 +1353,11 @@ class ArmRequest:
     scenario_id: str
     actor: Actor = field(default_factory=Actor)
     force: bool = False
+    # Arm with no exit delay at all (§9.1): the last person out, already
+    # outside, pressing the key on the door frame. It needs no permission of
+    # its own (part 2 decision 5) — whoever may arm may arm at once — but it
+    # turns every delayed zone into an instant one, so the log records it.
+    skip_exit_delay: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1357,6 +1367,11 @@ class ArmModeRequest:
     mode: str
     actor: Actor = field(default_factory=Actor)
     force: bool = False
+    # Arm with no exit delay at all (§9.1): the last person out, already
+    # outside, pressing the key on the door frame. It needs no permission of
+    # its own (part 2 decision 5) — whoever may arm may arm at once — but it
+    # turns every delayed zone into an instant one, so the log records it.
+    skip_exit_delay: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1366,6 +1381,11 @@ class ArmAreaRequest:
     area_id: str
     actor: Actor = field(default_factory=Actor)
     force: bool = False
+    # Arm with no exit delay at all (§9.1): the last person out, already
+    # outside, pressing the key on the door frame. It needs no permission of
+    # its own (part 2 decision 5) — whoever may arm may arm at once — but it
+    # turns every delayed zone into an instant one, so the log records it.
+    skip_exit_delay: bool = False
 
 
 @dataclass(frozen=True, slots=True)

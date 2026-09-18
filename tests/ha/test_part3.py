@@ -193,7 +193,7 @@ async def test_a_phase_0_installation_keeps_its_notifications(
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    assert (STORAGE_VERSION, STORAGE_MINOR_VERSION) == (5, 1)
+    assert (STORAGE_VERSION, STORAGE_MINOR_VERSION) == (5, 2)
     config = hass.data[DOMAIN].config
     [profile] = config.profiles
     assert config.settings.default_profile_id == profile.id

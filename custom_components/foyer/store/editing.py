@@ -22,6 +22,7 @@ from ..core.models import (
     FoyerConfig,
     LogCategory,
     LogSettings,
+    MqttSettings,
     RuntimeState,
     Settings,
     ZoneType,
@@ -33,8 +34,10 @@ from .schema import (
     area_from_dict,
     chime_from_dict,
     config_to_dict,
+    device_from_dict,
     group_from_dict,
     log_from_dict,
+    mqtt_from_dict,
     profile_from_dict,
     scenario_from_dict,
     security_from_dict,
@@ -42,7 +45,7 @@ from .schema import (
     zone_from_dict,
 )
 
-KINDS = ("area", "zone", "scenario", "group", "profile", "user")
+KINDS = ("area", "zone", "scenario", "group", "profile", "user", "device")
 
 # What a new area is given when the panel does not say. The delays come from
 # the global settings, so a household that wants 45 s sets it once (§15.1).
@@ -99,6 +102,21 @@ _USER_DEFAULTS: dict[str, Any] = {
 }
 
 
+# A new arming device. A keypad by default, because that is what somebody is
+# holding when they open page 8; a tag is chosen deliberately, and then has to
+# name its entity and its owner before it may exist at all (core.validation).
+_DEVICE_DEFAULTS: dict[str, Any] = {
+    "kind": "keypad",
+    "ref": None,
+    "entity_id": None,
+    "event_type": None,
+    "user_id": None,
+    "command": "toggle",
+    "scenario_id": None,
+    "enabled": True,
+}
+
+
 @dataclass(frozen=True, slots=True)
 class EditResult:
     config: FoyerConfig | None
@@ -135,6 +153,9 @@ def upsert(
         elif kind == "user":
             obj = user_from_dict({**_USER_DEFAULTS, **data})
             new = replace(config, users=_replace_in(config.users, obj))
+        elif kind == "device":
+            obj = device_from_dict({**_DEVICE_DEFAULTS, **data})
+            new = replace(config, devices=_replace_in(config.devices, obj))
         elif kind == "group":
             obj = group_from_dict({**_GROUP_DEFAULTS, **data})
             new = replace(config, groups=_replace_in(config.groups, obj))
@@ -193,12 +214,22 @@ def delete(
         # has, and a scenario's guest list would quietly widen. Say so.
         if any(z.key is not None and z.key.user_id == item_id for z in config.zones):
             return _fail(Problem("user_holds_a_key", kind, item_id))
+        # A tag is nothing but the person it names (§9.3): deleting them would
+        # leave a token that opens the house and belongs to nobody.
+        if any(d.user_id == item_id for d in config.devices):
+            return _fail(Problem("user_holds_a_tag", kind, item_id))
         if any(
             s.allowed_user_ids is not None and item_id in s.allowed_user_ids
             for s in config.scenarios
         ):
             return _fail(Problem("user_in_scenario", kind, item_id))
         new = replace(config, users=tuple(u for u in config.users if u.id != item_id))
+    elif kind == "device":
+        if config.device(item_id) is None:
+            return _fail(Problem("not_found", kind, item_id))
+        new = replace(
+            config, devices=tuple(d for d in config.devices if d.id != item_id)
+        )
     elif kind == "group":
         if config.group(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))
@@ -273,6 +304,7 @@ def update_settings(
                 ),
                 language=settings.get("language", current.language) or None,
                 wizard_done=bool(settings.get("wizard_done", current.wizard_done)),
+                mqtt=_mqtt_from(settings.get("mqtt"), current.mqtt),
             ),
         )
     except (KeyError, TypeError, ValueError):
@@ -288,6 +320,17 @@ def update_settings(
     ):
         return _fail(Problem("retention_out_of_range", "settings", None, "log"))
     return _check(config, new, state, None)
+
+
+def _mqtt_from(data: Any, current: MqttSettings) -> MqttSettings:
+    """The MQTT block, or the current one when the caller leaves it out.
+
+    Parsed by the same function that reads the stored document, so what page 8
+    sends and what is on disk can never mean two different things.
+    """
+    if not isinstance(data, dict):
+        return current
+    return mqtt_from_dict(data)
 
 
 def _log_from(data: Any, current: LogSettings) -> LogSettings:
@@ -343,7 +386,7 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
     """
     before, after = config_to_dict(old), config_to_dict(new)
     changes: dict[str, Any] = {}
-    for kind in ("areas", "zones", "scenarios", "groups", "profiles"):
+    for kind in ("areas", "zones", "scenarios", "groups", "profiles", "devices"):
         was = {item["id"]: item for item in before.get(kind, [])}
         now = {item["id"]: item for item in after.get(kind, [])}
         added = [now[i].get("name", i) for i in now.keys() - was.keys()]
