@@ -1090,6 +1090,37 @@ Taken in part 1, before any code:
     code too many; the failure of the opposite rule is an area the owner
     deliberately protected, opened because a permissive scenario included it.
     The UI names the area that is asking.
+
+Engine and runtime shape after part 1 (do not work around it):
+- Every request event carries an Actor (user_id, channel, device_id, a
+  CodeResult, identified, duress, is_admin, token) instead of a code and a
+  channel. core/ never sees a plaintext code: security/codes.py compares it
+  and hands over the result (INV-2). A new channel builds its Actor through
+  security/identity.async_actor and nowhere else.
+- core/authz.py is the ONE place that resolves §8.2 and §8.3. The engine's
+  `authorize(operation, area_ids=, scenario=)` is the only gate on a
+  state-changing request; api/websocket `_gate` is the only gate on a
+  configuration or log command. A new command calls one of the two.
+- Lockouts live in RuntimeState.lockouts, keyed `channel:device_id`, and are
+  persisted like every other piece of state (INV-3).
+- `token=True` marks a channel where possession IS the credential and no code
+  can travel: the key zone of §4.7 today, the NFC tag of §9.3 in part 2. The
+  permissions and the validity window of the user it names still apply.
+- The code policy is complete (all nine operations of §8.2). WALK_TEST and
+  TEST_ACTION simply have no caller until Phase 3.
+- An occurrence carries user_id / user_name / device_id, filled from the actor
+  when its channel matches; AreaRuntime remembers `user_id`, because the
+  `armed` row is written when the exit delay ends, long after the request.
+- No hash leaves the backend: foyer/config redacts users, a backup carries no
+  hashes and an import cannot set one, and page 7 sends a new code rather than
+  reading the old one back.
+- A Home Assistant administrator is never refused the CONFIGURATION for want
+  of a permission (INV-6 makes that refusal meaningless, and it would lock an
+  owner out of their own settings), but the code policy still applies to them.
+  Permissions bite in full on the state-changing path, administrator or not.
+- Schema 5.1 (major): `users`, `code_policy` with nine entries,
+  `settings.security`, require_code_to_arm/disarm on areas and scenarios,
+  allowed_user_ids on scenarios, `user_id` on a key zone.
 ```
 
 ### Carry-overs from Phase 1 into later phases
