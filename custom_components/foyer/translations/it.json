@@ -93,6 +93,24 @@
     },
     "rejected_unknown_zone": {
       "message": "Quella zona non esiste."
+    },
+    "rejected_bad_code": {
+      "message": "Il codice non è corretto."
+    },
+    "rejected_locked_out": {
+      "message": "Troppi codici errati. Questo canale è bloccato per ora."
+    },
+    "rejected_not_permitted": {
+      "message": "Non hai il permesso di farlo."
+    },
+    "rejected_user_not_valid": {
+      "message": "Questo codice non è valido in questo momento."
+    },
+    "rejected_area_not_allowed": {
+      "message": "Non puoi agire su quell’area."
+    },
+    "rejected_scenario_not_allowed": {
+      "message": "Non puoi usare quello scenario."
     }
   },
   "entity": {
@@ -137,6 +155,11 @@
     "switch": {
       "chime": {
         "name": "Campanello"
+      }
+    },
+    "button": {
+      "acknowledge": {
+        "name": "Riconosci"
       }
     }
   }

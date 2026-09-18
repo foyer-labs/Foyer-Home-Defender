@@ -65,6 +65,9 @@ export interface StatusArea {
   timer: { kind: TimerKind; due: string } | null;
   ready: boolean;
   blocking: { fault: string[]; open: string[] };
+  /** Whether arming or disarming this area would ask the connected user for
+   * a code right now (SPEC §8.2). A courtesy: the backend decides (INV-2). */
+  require_code: { arm: boolean; disarm: boolean };
 }
 
 export interface StatusZone {
@@ -90,6 +93,25 @@ export interface StatusScenario {
   icon: string | null;
   areas: string[];
   ha_master_state: string;
+  require_code: { arm: boolean; disarm: boolean };
+}
+
+/** What the connected user needs to know about codes (SPEC §8.2, §8.4). */
+export interface StatusSecurity {
+  /** False while nobody holds a code: nothing asks for one, and the panel
+   * says so plainly rather than looking secured when it is not. */
+  enforced: boolean;
+  code_length: number;
+  has_users: boolean;
+  me: {
+    user_id: string;
+    name: string;
+    permissions: string[];
+    code_exempt: boolean;
+  } | null;
+  require_code: Record<string, boolean>;
+  /** When this channel stops being locked out, ISO, or null. */
+  locked_until: string | null;
 }
 
 // The technical channel (§5.5): one entry per zone in alarm or in memory.
@@ -121,6 +143,7 @@ export interface FoyerStatus {
   technical: StatusTechnical[];
   incident: StatusIncident | null;
   chime_enabled: boolean;
+  security: StatusSecurity;
 }
 
 // Result of foyer/arm and foyer/disarm (SPEC §9.1).
@@ -152,6 +175,10 @@ export interface AreaConfig {
   default_entry_delay: number;
   default_exit_delay: number;
   response_profile_id: string | null;
+  /** null inherits the global policy; where an area and a scenario disagree
+   * the strictest explicit setting wins (SPEC §8.2, decision 80). */
+  require_code_to_arm: boolean | null;
+  require_code_to_disarm: boolean | null;
 }
 
 // --- response profiles (SPEC §6) --------------------------------------------------
@@ -263,6 +290,38 @@ export interface ScenarioConfig {
   exit_delay_override: number | null;
   siren_duration_override: number | null;
   response_profile_id: string | null;
+  require_code_to_arm: boolean | null;
+  require_code_to_disarm: boolean | null;
+  /** Who may use this scenario. null = everyone with the permission. */
+  allowed_user_ids: string[] | null;
+}
+
+/** A person (SPEC §8.1). No hash ever crosses the API: what the panel is told
+ * is whether a code exists, and what it sends is a new one. */
+export interface UserConfig {
+  id?: string;
+  name: string;
+  has_code: boolean;
+  has_duress_code: boolean;
+  ha_user_id: string | null;
+  permissions: string[];
+  allowed_area_ids: string[] | null;
+  allowed_scenario_ids: string[] | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  code_exempt_when_identified: boolean;
+  enabled: boolean;
+}
+
+/** Which operations need a code (SPEC §8.2). */
+export type CodePolicyConfig = Record<string, boolean>;
+
+/** Code length and lockout (SPEC §8.1, §8.4). */
+export interface SecurityConfig {
+  code_length: number;
+  lockout_failures: number;
+  lockout_window: number;
+  lockout_duration: number;
 }
 
 /** Which categories the log writes, and for how long (SPEC §10.2, §10.3). */
@@ -286,6 +345,7 @@ export interface SettingsConfig {
   language: string | null;
   /** Whether the first-run wizard has been completed or dismissed (§15.1). */
   wizard_done: boolean;
+  security: SecurityConfig;
 }
 
 export interface FoyerConfig {
@@ -296,6 +356,8 @@ export interface FoyerConfig {
   profiles: ProfileConfig[];
   settings: SettingsConfig;
   chime: ChimeConfig;
+  users: UserConfig[];
+  code_policy: CodePolicyConfig;
 }
 
 export interface ConfigMeta {
@@ -317,6 +379,14 @@ export interface ConfigMeta {
   log_severities: string[];
   outcomes: string[];
   retention_bounds: [number, number];
+  /** §8.3, and the operations of the §8.2 table, for page 7. */
+  permissions: string[];
+  operations: string[];
+  /** Operations no phase raises yet: the policy is complete, the features
+   * are not, and the page says which is which. */
+  future_operations: string[];
+  /** The channels on which the per-user exemption of §8.2 can apply. */
+  identifying_channels: string[];
   /** The stored configuration's schema version, shown beside a backup. */
   schema_version: [number, number];
 }
@@ -407,5 +477,6 @@ export type PageId =
   | "scenarios"
   | "profiles"
   | "groups"
+  | "users"
   | "log"
   | "settings";

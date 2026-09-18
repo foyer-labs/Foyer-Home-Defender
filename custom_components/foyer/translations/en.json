@@ -93,6 +93,24 @@
     },
     "rejected_unknown_zone": {
       "message": "That zone does not exist."
+    },
+    "rejected_bad_code": {
+      "message": "That code is not right."
+    },
+    "rejected_locked_out": {
+      "message": "Too many wrong codes. This channel is locked for now."
+    },
+    "rejected_not_permitted": {
+      "message": "You are not allowed to do that."
+    },
+    "rejected_user_not_valid": {
+      "message": "That code is not valid at the moment."
+    },
+    "rejected_area_not_allowed": {
+      "message": "You are not allowed to act on that area."
+    },
+    "rejected_scenario_not_allowed": {
+      "message": "You are not allowed to use that scenario."
     }
   },
   "entity": {
@@ -137,6 +155,11 @@
     "switch": {
       "chime": {
         "name": "Chime"
+      }
+    },
+    "button": {
+      "acknowledge": {
+        "name": "Acknowledge"
       }
     }
   }

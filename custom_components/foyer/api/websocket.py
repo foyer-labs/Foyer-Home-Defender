@@ -7,7 +7,8 @@ stored (INV-2). The panel's own checks are a courtesy.
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from functools import partial
 from typing import Any
 
 from homeassistant.components import websocket_api
@@ -19,19 +20,27 @@ import voluptuous as vol
 
 from .. import i18n
 from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
+from ..core import authz
 from ..core.journal import config_row
 from ..core.models import (
     ARMED_HA_STATES,
+    IDENTIFYING_CHANNELS,
     MAX_ARM_HOLD_TIMEOUT,
+    MAX_CODE_LENGTH,
     MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
     MAX_EXIT_DELAY,
+    MAX_LOCKOUT_FAILURES,
+    MAX_LOCKOUT_SECONDS,
     MAX_RETENTION_DAYS,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_VERIFICATION_WINDOW,
     MIN_ARM_HOLD_TIMEOUT,
+    MIN_CODE_LENGTH,
+    MIN_LOCKOUT_FAILURES,
+    MIN_LOCKOUT_SECONDS,
     MIN_RETENTION_DAYS,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
@@ -39,16 +48,22 @@ from ..core.models import (
     AcknowledgeIncident,
     AcknowledgeTechnical,
     ActionKind,
+    Actor,
     ArmAreaRequest,
     ArmModeRequest,
     ArmRequest,
     BypassZone,
+    CodeResult,
     Decision,
     DisarmRequest,
     LogCategory,
     LogSeverity,
     Moment,
+    Operation,
     Outcome,
+    Permission,
+    Reason,
+    User,
     ZoneType,
 )
 from ..core.presets import UNAVAILABLE_TYPES, preset
@@ -65,6 +80,8 @@ from ..core.validation import (
     validate,
 )
 from ..runtime.system import FoyerSystem
+from ..security import codes
+from ..security.identity import async_actor
 from ..store.config_store import ConfigStore
 from ..store.editing import (
     KINDS,
@@ -72,6 +89,7 @@ from ..store.editing import (
     config_diff,
     delete,
     update_chime,
+    update_security,
     update_settings,
     upsert,
 )
@@ -99,6 +117,167 @@ FUTURE_MOMENTS: tuple[Moment, ...] = (
 )
 
 
+# Commands the panel sends that change nothing and reveal nothing: reading the
+# live state is open to any signed-in Home Assistant user, as the entities are.
+
+
+async def _actor(
+    hass: HomeAssistant,
+    system: FoyerSystem,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> Actor:
+    """Who is asking over this connection, with whatever code came with it."""
+    return await async_actor(
+        hass,
+        system.config,
+        ha_user_id=connection.user.id,
+        code=msg.get("code"),
+        channel=CHANNEL_HA_UI,
+        is_admin=connection.user.is_admin,
+    )
+
+
+def _may_configure(
+    system: FoyerSystem,
+    connection: websocket_api.ActiveConnection,
+    actor: Actor,
+    operation: Operation,
+    permission: Permission,
+    *,
+    need_code: bool = True,
+) -> Reason | None:
+    """The gate in front of every configuration and log command (§8.3).
+
+    Foyer knows this person, or it does not. If a Foyer user is linked to
+    their Home Assistant account, Foyer's own rules apply in full: the
+    permission, and the code the policy asks for. If none is, the rule is the
+    one this integration has used since Phase 0 — a Home Assistant
+    administrator, and nobody else.
+
+    That second half is deliberate and belongs in the open: an administrator
+    who is not a Foyer user configures without a code. INV-6 says as much
+    already — an administrator can read .storage, call any service and
+    disable the integration — and the alternative is an installation whose
+    owner has locked themselves out of their own configuration.
+    """
+    user = system.config.user(actor.user_id)
+    if actor.code is CodeResult.INVALID:
+        return Reason.BAD_CODE
+    if user is None:
+        return None if connection.user.is_admin else Reason.NOT_PERMITTED
+    if not user.enabled or not user.in_window(dt_util.utcnow()):
+        return Reason.USER_NOT_VALID
+    if not user.may(permission):
+        return Reason.NOT_PERMITTED
+    if (
+        need_code
+        and authz.code_required(
+            system.config,
+            operation,
+            now=dt_util.utcnow(),
+            user=user,
+            identified=actor.identified,
+            channel=actor.channel,
+        )
+        and not actor.code_verified
+    ):
+        return Reason.CODE_REQUIRED
+    return None
+
+
+async def _gate(
+    hass: HomeAssistant,
+    system: FoyerSystem,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    operation: Operation,
+    permission: Permission,
+    *,
+    need_code: bool = True,
+) -> Actor | None:
+    """Check, answer the caller on refusal, and record the refusal.
+
+    ``need_code`` is False for the commands that only read: §8.2 asks for a
+    code to *edit* the configuration, and a panel that demanded one to open a
+    page would teach the household to keep the code on a sticky note.
+    """
+    actor = await _actor(hass, system, connection, msg)
+    reason = _may_configure(
+        system, connection, actor, operation, permission, need_code=need_code
+    )
+    if reason is None:
+        return actor
+    system.async_record(
+        (
+            config_row(
+                dt_util.utcnow(),
+                operation="refused",
+                kind=operation.value,
+                user_id=actor.user_id,
+                user_name=(
+                    named.name if (named := system.config.user(actor.user_id)) else None
+                ),
+                channel=CHANNEL_HA_UI,
+                changes={"reason": reason.value},
+            ),
+        )
+    )
+    if need_code:
+        # A refused write answers like any other refused edit, so the page
+        # shows it where it shows every other problem — and, for a missing or
+        # wrong code, so the panel knows to ask for one.
+        connection.send_result(
+            msg["id"],
+            {
+                "success": False,
+                "reason": reason.value,
+                "problems": [asdict(Problem(reason.value, "code", None, "code"))],
+            },
+        )
+    else:
+        # A refused read fails the request outright: there is no half-read
+        # configuration to show, and a page that got an empty one would look
+        # like an installation with nothing in it.
+        connection.send_error(msg["id"], reason.value, reason.value)
+    return None
+
+
+def _public_config(config) -> dict[str, Any]:
+    """The configuration as the panel may see it: no hashes, ever (§8.1).
+
+    A hash never leaves the backend — not here, not in an export, not in a
+    diagnostic. What the panel needs is whether a code exists, which is a
+    boolean, and that is what it gets.
+    """
+    document = config_to_dict(config)
+    document["users"] = [_public_user(u) for u in config.users]
+    return document
+
+
+def _public_user(user: User) -> dict[str, Any]:
+    return {
+        "id": user.id,
+        "name": user.name,
+        "has_code": bool(user.code_hash),
+        "has_duress_code": bool(user.duress_code_hash),
+        "ha_user_id": user.ha_user_id,
+        "permissions": sorted(user.permissions),
+        "allowed_area_ids": (
+            None if user.allowed_area_ids is None else list(user.allowed_area_ids)
+        ),
+        "allowed_scenario_ids": (
+            None
+            if user.allowed_scenario_ids is None
+            else list(user.allowed_scenario_ids)
+        ),
+        "valid_from": user.valid_from.isoformat() if user.valid_from else None,
+        "valid_until": user.valid_until.isoformat() if user.valid_until else None,
+        "code_exempt_when_identified": user.code_exempt_when_identified,
+        "enabled": user.enabled,
+    }
+
+
 @callback
 def async_register(hass: HomeAssistant) -> None:
     for command in (
@@ -110,6 +289,8 @@ def async_register(hass: HomeAssistant) -> None:
         ws_config_delete,
         ws_settings_save,
         ws_chime_save,
+        ws_security_save,
+        ws_user_save,
         ws_propose_zone,
         ws_arm,
         ws_disarm,
@@ -146,7 +327,7 @@ def ws_status(
     msg: dict[str, Any],
 ) -> None:
     if (system := _system(hass, connection, msg["id"])) is not None:
-        connection.send_result(msg["id"], system.status())
+        connection.send_result(msg["id"], system.status(connection.user))
 
 
 @websocket_api.websocket_command({vol.Required("type"): "foyer/subscribe"})
@@ -169,7 +350,7 @@ def ws_subscribe(
     def forward() -> None:
         if (system := hass.data.get(DOMAIN)) is not None:
             connection.send_message(
-                websocket_api.event_message(msg["id"], system.status())
+                websocket_api.event_message(msg["id"], system.status(connection.user))
             )
 
     connection.subscriptions[msg["id"]] = async_dispatcher_connect(
@@ -199,7 +380,9 @@ async def ws_translations(
 # --- arming from the panel and the card -----------------------------------------------
 
 
-def _result(system: FoyerSystem, decision: Decision) -> dict[str, Any]:
+def _result(
+    system: FoyerSystem, decision: Decision, ha_user: Any = None
+) -> dict[str, Any]:
     """The structured result of SPEC §9.1, so the UI can name the zone."""
     names = {z.id: z.name for z in system.config.zones}
     return {
@@ -211,7 +394,7 @@ def _result(system: FoyerSystem, decision: Decision) -> dict[str, Any]:
         "bypassed_zones": [
             {"id": z, "name": names.get(z, z)} for z in decision.bypassed_zones
         ],
-        "state": system.status(),
+        "state": system.status(ha_user),
     }
 
 
@@ -234,18 +417,19 @@ async def ws_arm(
     """Arm a scenario, one area, or a master mode. The engine decides (INV-2)."""
     if (system := _system(hass, connection, msg["id"])) is None:
         return
-    code, force = msg.get("code"), msg["force"]
+    force = msg["force"]
+    actor = await _actor(hass, system, connection, msg)
     if "scenario_id" in msg:
-        event: Any = ArmRequest(msg["scenario_id"], code, CHANNEL_HA_UI, force)
+        event: Any = ArmRequest(msg["scenario_id"], actor, force)
     elif "area_id" in msg:
-        event = ArmAreaRequest(msg["area_id"], code, CHANNEL_HA_UI, force)
+        event = ArmAreaRequest(msg["area_id"], actor, force)
     elif "mode" in msg:
-        event = ArmModeRequest(msg["mode"], code, CHANNEL_HA_UI, force)
+        event = ArmModeRequest(msg["mode"], actor, force)
     else:
         connection.send_error(msg["id"], "invalid_format", "no target")
         return
     decision = await system.async_handle(event)
-    connection.send_result(msg["id"], _result(system, decision))
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
 
 
 @websocket_api.websocket_command(
@@ -264,12 +448,11 @@ async def ws_disarm(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     area_ids = msg.get("area_ids")
+    actor = await _actor(hass, system, connection, msg)
     decision = await system.async_handle(
-        DisarmRequest(
-            tuple(area_ids) if area_ids else None, msg.get("code"), CHANNEL_HA_UI
-        )
+        DisarmRequest(tuple(area_ids) if area_ids else None, actor)
     )
-    connection.send_result(msg["id"], _result(system, decision))
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
 
 
 @websocket_api.websocket_command(
@@ -286,18 +469,22 @@ async def ws_acknowledge(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Acknowledge the incident or the technical alarm. The engine checks the
-    code policy (INV-2): no code is needed before Phase 2, and the check runs
-    already so that Phase 2 changes the policy, not this command."""
+    """Acknowledge the incident or the technical alarm.
+
+    No code by default (decision 77): §7.2 already acknowledges from a push
+    notification that carries none. An installation that has raised the policy
+    is refused here by the engine, like any other request (INV-2).
+    """
     if (system := _system(hass, connection, msg["id"])) is None:
         return
+    actor = await _actor(hass, system, connection, msg)
     event: Any = (
-        AcknowledgeIncident(msg.get("code"), CHANNEL_HA_UI)
+        AcknowledgeIncident(actor)
         if msg["target"] == "incident"
-        else AcknowledgeTechnical(msg.get("code"), CHANNEL_HA_UI)
+        else AcknowledgeTechnical(actor)
     )
     decision = await system.async_handle(event)
-    connection.send_result(msg["id"], _result(system, decision))
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
 
 
 @websocket_api.websocket_command(
@@ -316,9 +503,7 @@ async def ws_bypass(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Exclude a zone by hand, or let it back in. The engine checks the code
-    policy (INV-2): no code is needed before Phase 2, and the check runs
-    already so that Phase 2 changes the policy, not this command."""
+    """Exclude a zone by hand, or let it back in. The engine decides (INV-2)."""
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     decision = await system.async_handle(
@@ -326,11 +511,10 @@ async def ws_bypass(
             zone_id=msg["zone_id"],
             bypass=msg["bypass"],
             seconds=msg.get("seconds"),
-            code=msg.get("code"),
-            channel=CHANNEL_HA_UI,
+            actor=await _actor(hass, system, connection, msg),
         )
     )
-    connection.send_result(msg["id"], _result(system, decision))
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
 
 
 # --- configuration (admin only) -------------------------------------------------------
@@ -361,6 +545,9 @@ def _meta() -> dict[str, Any]:
             "volume": [0, 100],
             "severity": [1, MAX_SEVERITY],
             "delay": [1, MAX_ACTION_DELAY],
+            "code_length": [MIN_CODE_LENGTH, MAX_CODE_LENGTH],
+            "lockout_failures": [MIN_LOCKOUT_FAILURES, MAX_LOCKOUT_FAILURES],
+            "lockout_seconds": [MIN_LOCKOUT_SECONDS, MAX_LOCKOUT_SECONDS],
         },
         # What page 5 needs to build an action editor without knowing the
         # engine: the catalogue, where each kind may point, and the moments.
@@ -378,22 +565,48 @@ def _meta() -> dict[str, Any]:
         "log_severities": [s.value for s in LogSeverity],
         "outcomes": [o.value for o in Outcome],
         "retention_bounds": [MIN_RETENTION_DAYS, MAX_RETENTION_DAYS],
+        # What page 7 needs to build the permission list and the policy table
+        # without knowing §8.2 and §8.3 by heart.
+        "permissions": [p.value for p in Permission],
+        "operations": [o.value for o in Operation],
+        # The operations no phase raises yet: the policy is complete, the
+        # features are not, and the page says which is which.
+        "future_operations": [Operation.WALK_TEST.value, Operation.TEST_ACTION.value],
+        "identifying_channels": sorted(IDENTIFYING_CHANNELS),
         "schema_version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
     }
 
 
 @websocket_api.websocket_command({vol.Required("type"): "foyer/config"})
-@websocket_api.require_admin
-@callback
-def ws_config(
+@websocket_api.async_response
+async def ws_config(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    if (system := _system(hass, connection, msg["id"])) is not None:
-        connection.send_result(
-            msg["id"], {"config": config_to_dict(system.config), "meta": _meta()}
+    """The whole configuration, minus every hash in it (§8.1).
+
+    Reading needs the permission but no code: §8.2 asks for a code to change
+    the configuration, and a panel that demanded one to open a page would
+    teach the household to keep the code on a sticky note by the tablet.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            Operation.EDIT_CONFIG,
+            Permission.EDIT_CONFIG,
+            need_code=False,
         )
+    ) is None:
+        return
+    connection.send_result(
+        msg["id"], {"config": _public_config(system.config), "meta": _meta()}
+    )
 
 
 async def _apply(
@@ -446,7 +659,6 @@ async def _apply(
         vol.Optional("trigger_confirmed", default=False): bool,
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def ws_config_save(
     hass: HomeAssistant,
@@ -454,6 +666,17 @@ async def ws_config_save(
     msg: dict[str, Any],
 ) -> None:
     if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    # A user is saved through its own command, which has to hash a code and
+    # check it against every other one first.
+    if msg["kind"] == "user":
+        connection.send_error(msg["id"], "invalid_format", "use foyer/user/save")
+        return
+    if (
+        await _gate(
+            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+        )
+    ) is None:
         return
     result = upsert(
         system.config,
@@ -476,7 +699,6 @@ async def ws_config_save(
         vol.Required("item_id"): str,
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def ws_config_delete(
     hass: HomeAssistant,
@@ -484,6 +706,14 @@ async def ws_config_delete(
     msg: dict[str, Any],
 ) -> None:
     if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    # Deleting a person is managing users, not editing the configuration.
+    permission = (
+        Permission.MANAGE_USERS if msg["kind"] == "user" else Permission.EDIT_CONFIG
+    )
+    if (
+        await _gate(hass, system, connection, msg, Operation.EDIT_CONFIG, permission)
+    ) is None:
         return
     result = delete(system.config, system.state, msg["kind"], msg["item_id"])
     await _apply(
@@ -503,7 +733,6 @@ async def ws_config_delete(
         vol.Required("settings"): dict,
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def ws_settings_save(
     hass: HomeAssistant,
@@ -511,6 +740,12 @@ async def ws_settings_save(
     msg: dict[str, Any],
 ) -> None:
     if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+        )
+    ) is None:
         return
     result = update_settings(system.config, system.state, msg["settings"])
     await _apply(
@@ -524,7 +759,6 @@ async def ws_settings_save(
         vol.Required("chime"): dict,
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def ws_chime_save(
     hass: HomeAssistant,
@@ -534,9 +768,153 @@ async def ws_chime_save(
     """The global chime block (§6.6), validated like every configuration edit."""
     if (system := _system(hass, connection, msg["id"])) is None:
         return
+    if (
+        await _gate(
+            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+        )
+    ) is None:
+        return
     result = update_chime(system.config, system.state, msg["chime"])
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="chime"
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/user/save",
+        vol.Required("user"): dict,
+        # The new code for this person, and their duress code. Absent means
+        # "leave it as it is"; null means "remove it".
+        vol.Optional("new_code"): vol.Any(str, None),
+        vol.Optional("new_duress_code"): vol.Any(str, None),
+        # The code of whoever is doing the saving, for the policy (§8.2).
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_user_save(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Create or change a person, and hash whatever code came with them.
+
+    Codes travel one way. What arrives is hashed here and stored; what is
+    stored is never sent back, so changing a person's name cannot round-trip
+    their code through a browser (§8.1, INV-2).
+
+    A code already belonging to somebody else is refused, and the refusal does
+    not say whose it was — that would turn this command into a way of testing
+    codes against the household.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            Operation.EDIT_CONFIG,
+            Permission.MANAGE_USERS,
+        )
+    ) is None:
+        return
+
+    item = dict(msg["user"])
+    # Whatever the client sent, hashes come from here and nowhere else.
+    item.pop("code_hash", None)
+    item.pop("duress_code_hash", None)
+    existing = system.config.user(item.get("id"))
+    length = system.config.settings.security.code_length
+    problems: list[Problem] = []
+    for field, stored in (
+        ("new_code", "code_hash"),
+        ("new_duress_code", "duress_code_hash"),
+    ):
+        if field not in msg:
+            item[stored] = getattr(existing, stored) if existing else None
+            continue
+        code = msg[field]
+        if not code:
+            item[stored] = None
+            continue
+        try:
+            codes.validate(code, length)
+        except codes.CodeError:
+            problems.append(Problem("code_length", "user", item.get("id"), field))
+            continue
+        if await hass.async_add_executor_job(
+            partial(
+                codes.collides,
+                system.config.users,
+                code,
+                ignore_user_id=item.get("id"),
+            )
+        ):
+            problems.append(Problem("code_in_use", "user", item.get("id"), field))
+            continue
+        item[stored] = await hass.async_add_executor_job(codes.hash_code, code)
+    # The two codes of one person must differ too, or the duress code would
+    # never be reached: the ordinary one matches first.
+    if (
+        item.get("code_hash")
+        and item.get("duress_code_hash")
+        and msg.get("new_code")
+        and msg.get("new_code") == msg.get("new_duress_code")
+    ):
+        problems.append(
+            Problem("code_in_use", "user", item.get("id"), "new_duress_code")
+        )
+    if problems:
+        connection.send_result(
+            msg["id"],
+            {"success": False, "problems": [asdict(p) for p in problems]},
+        )
+        return
+
+    result = upsert(system.config, system.state, "user", item)
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="save", kind="user"
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/config/security",
+        vol.Required("code_policy"): dict,
+        vol.Required("security"): dict,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_security_save(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """The code policy and the lockout settings (§8.2, §8.4)."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            Operation.EDIT_CONFIG,
+            Permission.MANAGE_USERS,
+        )
+    ) is None:
+        return
+    result = update_security(
+        system.config,
+        system.state,
+        {"code_policy": msg["code_policy"], "security": msg["security"]},
+    )
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="save", kind="security"
     )
 
 
@@ -683,6 +1061,18 @@ async def ws_log_query(
     """Page 10, and the recent events on page 1."""
     if (system := _system(hass, connection, msg["id"])) is None:
         return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            Operation.EDIT_CONFIG,
+            Permission.VIEW_LOG,
+            need_code=False,
+        )
+    ) is None:
+        return
     if system.log is None:
         connection.send_error(msg["id"], "no_log", "the event log is not available")
         return
@@ -709,6 +1099,18 @@ async def ws_log_export(
     """Exactly the rows the current filters show, as CSV or JSON (§10.3)."""
     if (system := _system(hass, connection, msg["id"])) is None:
         return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            Operation.EDIT_CONFIG,
+            Permission.VIEW_LOG,
+            need_code=False,
+        )
+    ) is None:
+        return
     if system.log is None:
         connection.send_error(msg["id"], "no_log", "the event log is not available")
         return
@@ -732,8 +1134,12 @@ async def ws_log_export(
     )
 
 
-@websocket_api.websocket_command({vol.Required("type"): "foyer/log/clear"})
-@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/log/clear",
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
 @websocket_api.async_response
 async def ws_log_clear(
     hass: HomeAssistant,
@@ -747,6 +1153,12 @@ async def ws_log_clear(
     audit-useful, not tamper-proof.
     """
     if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+        )
+    ) is None:
         return
     if system.log is None:
         connection.send_error(msg["id"], "no_log", "the event log is not available")
@@ -776,10 +1188,14 @@ async def ws_log_clear(
 BACKUP_MAGIC = "foyer.config"
 
 
-@websocket_api.websocket_command({vol.Required("type"): "foyer/config/export"})
-@websocket_api.require_admin
-@callback
-def ws_config_export(
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/config/export",
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_config_export(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
@@ -792,12 +1208,21 @@ def ws_config_export(
     """
     if (system := _system(hass, connection, msg["id"])) is None:
         return
+    if (
+        await _gate(
+            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+        )
+    ) is None:
+        return
     stamp = dt_util.now().strftime("%Y%m%d-%H%M")
     document = {
         "foyer": BACKUP_MAGIC,
         "version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
         "created": dt_util.now().isoformat(),
-        "config": config_to_dict(system.config),
+        # Without the hashes: a backup is a file that leaves the machine, and
+        # a code hash in it is an offline guessing exercise waiting to happen.
+        # A restore keeps the codes of the people it recognises (§8.1).
+        "config": _public_config(system.config),
     }
     connection.send_result(
         msg["id"],
@@ -809,9 +1234,9 @@ def ws_config_export(
     {
         vol.Required("type"): "foyer/config/import",
         vol.Required("document"): dict,
+        vol.Optional("code"): vol.Any(str, None),
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def ws_config_import(
     hass: HomeAssistant,
@@ -827,6 +1252,12 @@ async def ws_config_import(
     change an armed area is refused like any other edit.
     """
     if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass, system, connection, msg, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+        )
+    ) is None:
         return
     document = msg["document"]
     if document.get("foyer") != BACKUP_MAGIC or "config" not in document:
@@ -862,6 +1293,21 @@ async def ws_config_import(
         )
         return
 
+    # A backup carries no hashes, so the people in it come back without their
+    # codes — except those already here under the same id, whose codes are
+    # kept. Nothing in a file can set a hash: that way lies a backup that
+    # hands somebody a code of their choosing.
+    config = replace(
+        config,
+        users=tuple(
+            replace(
+                user,
+                code_hash=(k.code_hash if (k := system.config.user(user.id)) else None),
+                duress_code_hash=(k.duress_code_hash if k else None),
+            )
+            for user in config.users
+        ),
+    )
     problems = validate(config) + edit_conflicts(system.config, config, system.state)
     result = EditResult(
         config=None if problems else config, problems=tuple(problems), id=None

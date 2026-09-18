@@ -699,13 +699,20 @@ class User:
     def may(self, permission: str) -> bool:
         return permission in self.permissions
 
-    def usable(self, now: datetime) -> bool:
-        """Enabled, holding a code, and inside its validity window."""
-        if not self.enabled or not self.code_hash:
-            return False
+    def in_window(self, now: datetime) -> bool:
+        """Inside the validity window, if there is one (guest codes, §8.1)."""
         if self.valid_from is not None and now < self.valid_from:
             return False
         return not (self.valid_until is not None and now > self.valid_until)
+
+    def usable(self, now: datetime) -> bool:
+        """Enabled, holding a code, and inside its validity window.
+
+        This is what puts the policy in force (decision 78): a user somebody
+        started creating and has not given a code to cannot verify anything,
+        so they cannot make the house ask for one either.
+        """
+        return self.enabled and bool(self.code_hash) and self.in_window(now)
 
 
 @dataclass(frozen=True, slots=True)

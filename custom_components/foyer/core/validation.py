@@ -16,14 +16,20 @@ from .models import (
     ARMED_HA_STATES,
     FAULT_STATES,
     MAX_ARM_HOLD_TIMEOUT,
+    MAX_CODE_LENGTH,
     MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
     MAX_EXIT_DELAY,
+    MAX_LOCKOUT_FAILURES,
+    MAX_LOCKOUT_SECONDS,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_VERIFICATION_WINDOW,
     MIN_ARM_HOLD_TIMEOUT,
+    MIN_CODE_LENGTH,
+    MIN_LOCKOUT_FAILURES,
+    MIN_LOCKOUT_SECONDS,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
     SILENCEABLE,
@@ -39,6 +45,7 @@ from .models import (
     KeyCommand,
     NumericOperator,
     NumericTrigger,
+    Permission,
     ProfileAction,
     ResponseProfile,
     RuntimeState,
@@ -231,6 +238,8 @@ def validate(config: FoyerConfig) -> list[Problem]:
 
     problems.extend(_group_problems(config, zones, area_ids))
     problems.extend(_chime_problems(config.chime))
+    problems.extend(_user_problems(config, area_ids, scenario_ids))
+    problems.extend(_security_problems(config))
     for profile in config.profiles:
         problems.extend(_profile_problems(profile))
     # A reference to a profile that does not exist would silently fall through
@@ -248,6 +257,109 @@ def validate(config: FoyerConfig) -> list[Problem]:
                 problems.append(
                     Problem("unknown_profile", kind, obj.id, "response_profile_id")
                 )
+    return problems
+
+
+def _user_problems(
+    config: FoyerConfig, area_ids: set[str], scenario_ids: set[str]
+) -> list[Problem]:
+    """People, their scope and their validity (SPEC §8.1).
+
+    Codes are not checked here: this module is pure and never sees one. What
+    it can check is everything around them — that the scope points at things
+    that exist, that a window is not closed before it opens, and that one
+    Home Assistant account is linked to at most one person, or "who did this"
+    would have two answers.
+    """
+    problems: list[Problem] = []
+    ids = [u.id for u in config.users]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        problems.append(Problem("duplicate_id", "user", dup))
+    linked: set[str] = set()
+    for user in config.users:
+        if not user.name.strip():
+            problems.append(Problem("name_required", "user", user.id, "name"))
+        if user.ha_user_id:
+            if user.ha_user_id in linked:
+                problems.append(
+                    Problem("ha_user_already_linked", "user", user.id, "ha_user_id")
+                )
+            linked.add(user.ha_user_id)
+        for permission in sorted(user.permissions):
+            if permission not in {p.value for p in Permission}:
+                problems.append(
+                    Problem("unknown_permission", "user", user.id, "permissions")
+                )
+        if user.allowed_area_ids is not None and any(
+            a not in area_ids for a in user.allowed_area_ids
+        ):
+            problems.append(
+                Problem("unknown_area", "user", user.id, "allowed_area_ids")
+            )
+        if user.allowed_scenario_ids is not None and any(
+            s not in scenario_ids for s in user.allowed_scenario_ids
+        ):
+            problems.append(
+                Problem("unknown_scenario", "user", user.id, "allowed_scenario_ids")
+            )
+        if (
+            user.valid_from is not None
+            and user.valid_until is not None
+            and user.valid_until <= user.valid_from
+        ):
+            problems.append(Problem("window_inverted", "user", user.id, "valid_until"))
+        # An exemption on somebody no Home Assistant account points at can
+        # never apply, and reads as a setting that does nothing.
+        if user.code_exempt_when_identified and not user.ha_user_id:
+            problems.append(
+                Problem(
+                    "exemption_needs_a_linked_account",
+                    "user",
+                    user.id,
+                    "code_exempt_when_identified",
+                )
+            )
+    user_ids = {u.id for u in config.users}
+    for scenario in config.scenarios:
+        allowed = scenario.allowed_user_ids
+        if allowed is None:
+            continue
+        if not allowed:
+            # A scenario nobody may arm is not a restriction, it is a scenario
+            # that does not work. "Everyone" is the empty answer, not this.
+            problems.append(
+                Problem("no_user_allowed", "scenario", scenario.id, "allowed_user_ids")
+            )
+        for user_id in allowed:
+            if user_id not in user_ids:
+                problems.append(
+                    Problem("unknown_user", "scenario", scenario.id, "allowed_user_ids")
+                )
+    for zone in config.zones:
+        if zone.key is not None and zone.key.user_id not in (None, *user_ids):
+            problems.append(Problem("unknown_user", "zone", zone.id, "key"))
+    return problems
+
+
+def _security_problems(config: FoyerConfig) -> list[Problem]:
+    """The code length and the lockout numbers (§8.1, §8.4)."""
+    problems: list[Problem] = []
+    security = config.settings.security
+    if not _in_range(security.code_length, MIN_CODE_LENGTH, MAX_CODE_LENGTH):
+        problems.append(
+            Problem("code_length_out_of_range", "settings", None, "code_length")
+        )
+    if not _in_range(
+        security.lockout_failures, MIN_LOCKOUT_FAILURES, MAX_LOCKOUT_FAILURES
+    ):
+        problems.append(
+            Problem("lockout_out_of_range", "settings", None, "lockout_failures")
+        )
+    for field in ("lockout_window", "lockout_duration"):
+        if not _in_range(
+            getattr(security, field), MIN_LOCKOUT_SECONDS, MAX_LOCKOUT_SECONDS
+        ):
+            problems.append(Problem("lockout_out_of_range", "settings", None, field))
     return problems
 
 

@@ -751,9 +751,9 @@ o`
 `;
 //#endregion
 //#region src/card/foyer-card.ts
-var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), ye = class extends J {
+var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), ye = /* @__PURE__ */ new Set(["code_required", "bad_code"]), be = class extends J {
 	constructor(...e) {
-		super(...e), this._busy = !1, this._tick = 0, this._offset = 0;
+		super(...e), this._busy = !1, this._code = "", this._padOpen = !1, this._tick = 0, this._offset = 0;
 	}
 	static {
 		this.properties = {
@@ -763,6 +763,8 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 			_status: { state: !0 },
 			_busy: { state: !0 },
 			_feedback: { state: !0 },
+			_code: { state: !0 },
+			_padOpen: { state: !0 },
 			_tick: { state: !0 }
 		};
 	}
@@ -784,7 +786,17 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		return this._layout === "compact" ? 1 : 3;
 	}
 	get _layout() {
-		return this._config?.layout === "compact" ? "compact" : "full";
+		let e = this._config?.layout;
+		return e === "compact" || e === "keypad" ? e : "full";
+	}
+	get _codeLength() {
+		return this._status?.security.code_length ?? 6;
+	}
+	get _codeUsed() {
+		return !!this._status?.security.enforced;
+	}
+	_press(e) {
+		this._code.length >= this._codeLength || (this._code += e, this._feedback = void 0);
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._timer = window.setInterval(() => {
@@ -806,22 +818,26 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		return this._status?.areas.find((e) => e.entity_id === this._config?.entity);
 	}
 	async _run(e) {
-		if (this.hass) {
-			this._busy = !0, this._feedback = void 0;
-			try {
-				let t = await this.hass.callWS(e);
-				t.success || (this._feedback = {
-					text: Z(this._strings, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => e.name).join(", ") }),
-					retry: e.type === "foyer/arm" && !e.force && ve.has(t.reason ?? "") ? {
-						...e,
-						force: !0
-					} : void 0
-				});
-			} catch (e) {
-				this._feedback = { text: String(e?.message ?? e) };
-			} finally {
-				this._busy = !1;
-			}
+		if (!this.hass) return;
+		this._busy = !0, this._feedback = void 0;
+		let t = this._code;
+		this._code = "";
+		try {
+			let n = await this.hass.callWS({
+				...e,
+				...t ? { code: t } : {}
+			});
+			n.success || (ye.has(n.reason ?? "") && (this._padOpen = !0), this._feedback = {
+				text: Z(this._strings, `reason.${n.reason ?? "unknown"}`, { zones: n.blocking_zones.map((e) => e.name).join(", ") }),
+				retry: e.type === "foyer/arm" && !e.force && ve.has(n.reason ?? "") ? {
+					...e,
+					force: !0
+				} : void 0
+			});
+		} catch (e) {
+			this._feedback = { text: String(e?.message ?? e) };
+		} finally {
+			this._busy = !1;
 		}
 	}
 	render() {
@@ -829,7 +845,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		if (!e || !this.hass) return z;
 		this._tick;
 		let t = this._config?.entity;
-		return t ? this.hass.states[t] ? this._layout === "compact" ? this._renderCompact(e) : this._isMaster ? this._renderMaster(e) : this._renderArea(e) : this._message(Z(e, "card.entity_missing", { entity: t })) : this._message(Z(e, "card.no_entity"));
+		return t ? this.hass.states[t] ? this._layout === "compact" ? this._renderCompact(e) : this._layout === "keypad" ? this._renderKeypadLayout(e) : this._isMaster ? this._renderMaster(e) : this._renderArea(e) : this._message(Z(e, "card.entity_missing", { entity: t })) : this._message(Z(e, "card.no_entity"));
 	}
 	_renderCompact(e) {
 		let t = this._status;
@@ -894,6 +910,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
         <div class="content">
           ${this._renderAlerts(e)} ${this._head(t.name, t.state, t.memory)}
           ${this._countdown(e, t)} ${this._renderBlocking(e, t)}
+          ${this._renderInlinePad(e)}
           <div class="buttons">
             ${t.state === "disarmed" ? L`<button
                   class="primary"
@@ -959,7 +976,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
                 ${this._countdown(e, t)}
               </div>`)}
           </div>
-          ${this._renderNotReady(e)}
+          ${this._renderNotReady(e)} ${this._renderInlinePad(e)}
           <div class="buttons">
             ${t.scenarios.map((e) => L`<button
                 class=${e.id === t.active_scenario_id ? "primary" : ""}
@@ -1067,6 +1084,104 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		}) : i}
     </div>`;
 	}
+	_renderPad(e) {
+		return L`
+      <div class="pad">
+        <div class="display" aria-live="polite" aria-label=${Z(e, "card.code_entered")}>
+          ${this._code ? "•".repeat(this._code.length) : L`<span class="placeholder"
+                >${Z(e, "card.code_hint", { n: this._codeLength })}</span
+              >`}
+        </div>
+        <div class="keys">
+          ${[
+			"1",
+			"2",
+			"3",
+			"4",
+			"5",
+			"6",
+			"7",
+			"8",
+			"9"
+		].map((e) => L`<button
+              class="key"
+              ?disabled=${this._busy}
+              @click=${() => this._press(e)}
+            >
+              ${e}
+            </button>`)}
+          <button
+            class="key wide"
+            ?disabled=${this._busy || !this._code}
+            @click=${() => this._code = ""}
+          >
+            ${Z(e, "card.code_clear")}
+          </button>
+          <button class="key" ?disabled=${this._busy} @click=${() => this._press("0")}>
+            0
+          </button>
+        </div>
+      </div>
+    `;
+	}
+	_renderKeypadLayout(e) {
+		let t = this._status;
+		if (!t) return this._message(Z(e, "common.loading"));
+		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = this._isMaster ? t.scenarios : [];
+		return L`
+      <ha-card>
+        <div class="content">
+          ${this._renderAlerts(e)}
+          ${this._head(this._isMaster ? Z(e, "overview.master") : n?.name ?? "", r, i)}
+          ${n ? this._countdown(e, n) : z}
+          ${this._renderPad(e)}
+          <div class="buttons">
+            ${a ? z : o.length ? o.map((e) => L`<button
+                      ?disabled=${this._busy}
+                      @click=${() => this._run({
+			type: "foyer/arm",
+			scenario_id: e.id
+		})}
+                    >
+                      ${e.name}
+                    </button>`) : L`<button
+                    ?disabled=${this._busy}
+                    @click=${() => this._run({
+			type: "foyer/arm",
+			area_id: n?.id
+		})}
+                  >
+                    ${Z(e, "card.arm")}
+                  </button>`}
+            <button
+              class="primary"
+              ?disabled=${this._busy}
+              @click=${() => this._run({
+			type: "foyer/disarm",
+			...this._isMaster || !n ? {} : { area_ids: [n.id] }
+		})}
+            >
+              ${Z(e, "card.disarm")}
+            </button>
+          </div>
+          ${this._renderFeedback()}
+        </div>
+      </ha-card>
+    `;
+	}
+	_renderInlinePad(e) {
+		return this._codeUsed ? this._padOpen ? L`${this._renderPad(e)}
+      <button
+        class="link pad-toggle"
+        @click=${() => {
+			this._padOpen = !1, this._code = "";
+		}}
+      >
+        ${Z(e, "card.code_hide")}
+      </button>` : L`<button class="link pad-toggle" @click=${() => this._padOpen = !0}>
+        ${Z(e, "card.code_show")}
+      </button>` : z;
+	}
 	_renderFeedback() {
 		let e = this._feedback;
 		if (!e) return z;
@@ -1088,6 +1203,52 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 	}
 	static {
 		this.styles = [_e, o`
+      .pad {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 4px 0;
+      }
+      .display {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 8px;
+        font-size: 22px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        padding: 4px 8px;
+      }
+      .display .placeholder {
+        letter-spacing: normal;
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+      .keys {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .key {
+        padding: 14px 0;
+        font-size: 20px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+        cursor: pointer;
+      }
+      .key:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .key.wide {
+        font-size: 14px;
+      }
+      .pad-toggle {
+        align-self: flex-start;
+      }
       .content {
         padding: 16px;
         display: flex;
@@ -1230,8 +1391,8 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
     `];
 	}
 };
-customElements.get("foyer-card") || customElements.define("foyer-card", ye);
-var be = class extends J {
+customElements.get("foyer-card") || customElements.define("foyer-card", be);
+var xe = class extends J {
 	constructor(...e) {
 		super(...e), this._config = { type: "custom:foyer-card" };
 	}
@@ -1279,7 +1440,11 @@ var be = class extends J {
           <select
             @change=${(e) => this._emit({ layout: e.target.value })}
           >
-            ${["full", "compact"].map((t) => L`<option
+            ${[
+			"full",
+			"compact",
+			"keypad"
+		].map((t) => L`<option
                 .value=${t}
                 ?selected=${t === (this._config.layout ?? "full")}
               >
@@ -1324,7 +1489,7 @@ var be = class extends J {
   `;
 	}
 };
-customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", be), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
+customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", xe), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
 	type: "foyer-card",
 	name: "Foyer Home Defender",
 	preview: !0

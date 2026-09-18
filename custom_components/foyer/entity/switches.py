@@ -16,7 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from ..const import DOMAIN
 from ..core.models import SetChime
 from ..runtime.system import FoyerSystem
-from .common import FoyerEntity, channel_of, hub_device
+from .common import FoyerEntity, actor_of, hub_device
 
 
 async def async_setup_switches(
@@ -41,8 +41,12 @@ class FoyerChimeSwitch(FoyerEntity, SwitchEntity):
     def is_on(self) -> bool:
         return self._system.state.chime_enabled
 
+    async def _set(self, enabled: bool) -> None:
+        actor = await actor_of(self.hass, self._system, self._context)
+        await self._system.async_handle(SetChime(enabled, actor))
+
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self._system.async_handle(SetChime(True, channel_of(self._context)))
+        await self._set(True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self._system.async_handle(SetChime(False, channel_of(self._context)))
+        await self._set(False)

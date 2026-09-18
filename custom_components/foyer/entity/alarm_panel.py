@@ -18,22 +18,26 @@ from homeassistant.components.alarm_control_panel import (
     AlarmControlPanelEntity,
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
+    CodeFormat,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import slugify
+from homeassistant.util import dt as dt_util, slugify
 
 from ..const import DOMAIN
+from ..core import authz
 from ..core.models import (
+    Actor,
     Area,
     AreaState,
     ArmAreaRequest,
     ArmModeRequest,
     DisarmRequest,
+    Operation,
 )
 from ..runtime.system import FoyerSystem
-from .common import FoyerEntity, area_device, channel_of, hub_device, raise_if_rejected
+from .common import FoyerEntity, actor_of, area_device, hub_device, raise_if_rejected
 
 _ARM_FEATURES: dict[str, AlarmControlPanelEntityFeature] = {
     "armed_home": AlarmControlPanelEntityFeature.ARM_HOME,
@@ -66,10 +70,40 @@ async def async_setup_entry(
 
 
 class _Panel(FoyerEntity, AlarmControlPanelEntity):
-    # No codes before Phase 2. The engine still applies the code policy and
-    # would refuse a request that needs one (INV-2); see CodePolicy.
-    _attr_code_format = None
-    _attr_code_arm_required = False
+    """What Home Assistant's own alarm card talks to.
+
+    ``code_format`` and ``code_arm_required`` tell that card whether to draw a
+    keypad. They are read from the policy, for nobody in particular, because
+    an entity is not a connection and does not know who is looking — so they
+    describe what the policy asks of everyone. Whether this particular person
+    needs to type anything is decided when the request arrives (INV-2), and a
+    code typed where none was needed is simply ignored.
+    """
+
+    @property
+    def code_format(self) -> CodeFormat | None:
+        return CodeFormat.NUMBER if self._wants_code() else None
+
+    @property
+    def code_arm_required(self) -> bool:
+        return self._asks(Operation.ARM)
+
+    def _wants_code(self) -> bool:
+        return any(self._asks(o) for o in (Operation.ARM, Operation.DISARM))
+
+    def _asks(self, operation: Operation) -> bool:
+        return authz.code_required(
+            self._system.config,
+            operation,
+            now=dt_util.utcnow(),
+            areas=self._policy_areas(),
+        )
+
+    def _policy_areas(self) -> tuple[Area, ...]:
+        return ()
+
+    async def _actor(self, code: str | None) -> Actor:
+        return await actor_of(self.hass, self._system, self._context, code)
 
     async def _run(self, event: Any) -> None:
         decision = await self._system.async_handle(event)
@@ -114,9 +148,12 @@ class FoyerAreaPanel(_Panel):
             "timer_due": rt.timer.due.isoformat() if rt.timer else None,
         }
 
+    def _policy_areas(self) -> tuple[Area, ...]:
+        return (self._area,)
+
     async def _arm(self, code: str | None) -> None:
         await self._run(
-            ArmAreaRequest(self._area.id, code=code, channel=channel_of(self._context))
+            ArmAreaRequest(self._area.id, await self._actor(code)),
         )
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
@@ -135,11 +172,7 @@ class FoyerAreaPanel(_Panel):
         await self._arm(code)
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
-        await self._run(
-            DisarmRequest(
-                (self._area.id,), code=code, channel=channel_of(self._context)
-            )
-        )
+        await self._run(DisarmRequest((self._area.id,), await self._actor(code)))
 
 
 class FoyerMasterPanel(_Panel):
@@ -175,9 +208,7 @@ class FoyerMasterPanel(_Panel):
         }
 
     async def _arm(self, mode: str, code: str | None) -> None:
-        await self._run(
-            ArmModeRequest(mode, code=code, channel=channel_of(self._context))
-        )
+        await self._run(ArmModeRequest(mode, await self._actor(code)))
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         await self._arm("armed_away", code)
@@ -195,6 +226,4 @@ class FoyerMasterPanel(_Panel):
         await self._arm("armed_custom_bypass", code)
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
-        await self._run(
-            DisarmRequest(None, code=code, channel=channel_of(self._context))
-        )
+        await self._run(DisarmRequest(None, await self._actor(code)))

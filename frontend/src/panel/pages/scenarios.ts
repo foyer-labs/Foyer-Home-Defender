@@ -16,6 +16,9 @@ const NEW_SCENARIO: ScenarioConfig = {
   exit_delay_override: null,
   siren_duration_override: null,
   response_profile_id: null,
+  require_code_to_arm: null,
+  require_code_to_disarm: null,
+  allowed_user_ids: null,
 };
 
 class FoyerPageScenarios extends LitElement {

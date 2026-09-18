@@ -27,22 +27,27 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
-from ..const import SIGNAL_UPDATE
+from ..const import CHANNEL_HA_UI, SIGNAL_UPDATE
+from ..core import authz
 from ..core.conditions import condition_entities
 from ..core.engine import arm_blockers, decide, master_state, next_wakeup
 from ..core.journal import LogRow, action_row, rows_for
 from ..core.models import (
+    Area,
     AreaState,
     Decision,
     EntityState,
     Event,
     FoyerConfig,
     LogCategory,
+    Operation,
     Outcome,
     RuntimeState,
+    Scenario,
     Startup,
     SystemSnapshot,
     Tick,
+    User,
     ZoneStateChanged,
 )
 from ..core.triggers import fault_cause
@@ -387,9 +392,20 @@ class FoyerSystem:
     def master(self) -> tuple[AreaState, str | None]:
         return master_state(self.state, self.config)
 
-    def status(self) -> dict[str, Any]:
-        """The live state as sent to the panel and the card. Contains no secrets."""
+    def status(self, ha_user: Any = None) -> dict[str, Any]:
+        """The live state as sent to the panel and the card. Contains no secrets.
+
+        It is personal, which is why the connected Home Assistant user is
+        passed in: whether a code will be asked for depends on who is asking
+        (§8.2), and a card that demanded one from somebody exempt — or hid the
+        keypad from somebody who needs it — would be wrong in both directions.
+        The answer is a courtesy either way; the backend decides (INV-2).
+        """
         now = dt_util.utcnow()
+        # The Foyer user linked to this Home Assistant account, if any. It is
+        # what makes the answer personal; a connection with no linked user is
+        # simply told what the policy asks of everybody.
+        me = self.config.user_of_ha(getattr(ha_user, "id", None))
         snapshot = self._snapshot()
         master, mode = master_state(self.state, self.config)
         areas = []
@@ -410,6 +426,7 @@ class FoyerSystem:
                     else {"kind": rt.timer.kind.value, "due": rt.timer.due.isoformat()},
                     "ready": not faulted and not open_,
                     "blocking": {"fault": list(faulted), "open": list(open_)},
+                    "require_code": self._require_code(area=area, user=me, now=now),
                 }
             )
         zones = []
@@ -452,6 +469,7 @@ class FoyerSystem:
                     "icon": s.icon,
                     "areas": list(s.areas),
                     "ha_master_state": s.ha_master_state,
+                    "require_code": self._require_code(scenario=s, user=me, now=now),
                 }
                 for s in self.config.scenarios
             ],
@@ -459,7 +477,80 @@ class FoyerSystem:
             "technical": self.technical_status(),
             "incident": self.incident_status(),
             "chime_enabled": self.state.chime_enabled,
+            "security": self.security_status(me, now),
         }
+
+    def security_status(self, me: User | None, now: datetime) -> dict[str, Any]:
+        """What the panel and the card need to know about codes (§8.2, §8.4).
+
+        No code, no hash and no name of anybody else: who is connected already
+        knows who they are, and everything here is about them.
+        """
+        locked = self.state.lockouts.get(f"{CHANNEL_HA_UI}:")
+        return {
+            # False while nobody holds a code: the panel says so plainly,
+            # because "anyone who can reach Home Assistant can disarm" is a
+            # fact about this installation and not a detail (decision 78).
+            "enforced": authz.enforced(self.config, now),
+            "code_length": self.config.settings.security.code_length,
+            "has_users": bool(self.config.users),
+            "me": (
+                None
+                if me is None
+                else {
+                    "user_id": me.id,
+                    "name": me.name,
+                    "permissions": sorted(me.permissions),
+                    "code_exempt": me.code_exempt_when_identified,
+                }
+            ),
+            # What each operation would ask of this person right now, with no
+            # area or scenario in mind: the global picture, refined per area
+            # and per scenario above.
+            "require_code": {
+                operation.value: self._require_code(
+                    operation=operation, user=me, now=now
+                )
+                for operation in Operation
+            },
+            "locked_until": (
+                locked.until.isoformat()
+                if locked is not None and locked.until and locked.until > now
+                else None
+            ),
+        }
+
+    def _require_code(
+        self,
+        *,
+        now: datetime,
+        user: User | None = None,
+        area: Area | None = None,
+        scenario: Scenario | None = None,
+        operation: Operation | None = None,
+    ) -> Any:
+        """Resolve §8.2 for the panel, through the same function the engine uses."""
+
+        def ask(op: Operation) -> bool:
+            areas = (area,) if area is not None else ()
+            if scenario is not None:
+                areas = tuple(
+                    a for a in (self.config.area(i) for i in scenario.areas) if a
+                )
+            return authz.code_required(
+                self.config,
+                op,
+                now=now,
+                areas=tuple(a for a in areas if a is not None),
+                scenario=scenario,
+                user=user,
+                identified=user is not None,
+                channel=CHANNEL_HA_UI,
+            )
+
+        if operation is not None:
+            return ask(operation)
+        return {"arm": ask(Operation.ARM), "disarm": ask(Operation.DISARM)}
 
     def technical_status(self) -> list[dict[str, Any]]:
         """The technical channel (§5.5): every zone in alarm or in memory."""

@@ -2,11 +2,17 @@
 // (SPEC §15.3). The card decides nothing (INV-2): it sends a command, the
 // engine accepts or refuses, and the card renders the answer.
 //
-// Two layouts in this phase. `full` is the alarm dashboard: every area with
-// its state and countdown, the scenario selector, and the zones that would
-// stop it arming, each with a way out. `compact` is one row for the top of an
-// existing dashboard: the state and one action. The keypad of §15.3 belongs
-// to Phase 2, because a keypad without codes to check is decoration.
+// Three layouts. `full` is the alarm dashboard: every area with its state and
+// countdown, the scenario selector, the zones that would stop it arming, and —
+// when a code may be needed — the keypad. `compact` is one row for the top of
+// an existing dashboard. `keypad` is the wall tablet: the state, a PIN pad and
+// the actions, nothing else.
+//
+// The keypad collects digits and transmits them. It never checks one, never
+// knows how many are right, and never decides what a code allows (INV-2): a
+// check here would be decoration, since anyone with Home Assistant access can
+// call the service directly. What it does know is how many digits to collect,
+// which the backend tells it, because a keypad has to know when to stop.
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 
 import { loadStrings, t, type Strings } from "../shared/i18n";
@@ -19,7 +25,7 @@ import type {
   StatusArea,
 } from "../shared/types";
 
-type Layout = "full" | "compact";
+type Layout = "full" | "compact" | "keypad";
 
 interface FoyerCardConfig {
   type: string;
@@ -35,6 +41,10 @@ const MASTER = "alarm_control_panel.foyer_master";
 // excluding the zones one by one, from the thing on the wall, while leaving.
 const FORCEABLE = new Set(["zone_open", "zone_fault"]);
 
+// Refusals the keypad answers: the first asks for a code, the second says the
+// one typed was wrong. Both clear the pad and leave it open.
+const WANTS_CODE = new Set(["code_required", "bad_code"]);
+
 interface Feedback {
   text: string;
   /** The command to repeat with force, when forcing could get past it. */
@@ -49,6 +59,8 @@ class FoyerCard extends LitElement {
     _status: { state: true },
     _busy: { state: true },
     _feedback: { state: true },
+    _code: { state: true },
+    _padOpen: { state: true },
     _tick: { state: true },
   };
 
@@ -58,6 +70,10 @@ class FoyerCard extends LitElement {
   private _status?: FoyerStatus;
   private _busy = false;
   private _feedback?: Feedback;
+  // What has been typed on the pad. Held for as long as it takes to send it,
+  // never stored anywhere, and cleared the moment the backend answers.
+  private _code = "";
+  private _padOpen = false;
   private _tick = 0;
   private _offset = 0;
   private _language?: string;
@@ -88,7 +104,24 @@ class FoyerCard extends LitElement {
   }
 
   private get _layout(): Layout {
-    return this._config?.layout === "compact" ? "compact" : "full";
+    const layout = this._config?.layout;
+    return layout === "compact" || layout === "keypad" ? layout : "full";
+  }
+
+  private get _codeLength(): number {
+    return this._status?.security.code_length ?? 6;
+  }
+
+  /** Is the keypad worth showing at all? While nobody holds a code, nothing
+   * will ever ask for one, and a pad that can only be ignored is furniture. */
+  private get _codeUsed(): boolean {
+    return Boolean(this._status?.security.enforced);
+  }
+
+  private _press(digit: string): void {
+    if (this._code.length >= this._codeLength) return;
+    this._code += digit;
+    this._feedback = undefined;
   }
 
   override connectedCallback(): void {
@@ -135,9 +168,17 @@ class FoyerCard extends LitElement {
     if (!this.hass) return;
     this._busy = true;
     this._feedback = undefined;
+    const typed = this._code;
+    this._code = "";
     try {
-      const result = await this.hass.callWS<CommandResult>(command);
+      const result = await this.hass.callWS<CommandResult>({
+        ...command,
+        ...(typed ? { code: typed } : {}),
+      });
       if (!result.success) {
+        // A code was wanted, or the one typed was wrong: open the pad and
+        // leave it open. The card never decides that — the backend did.
+        if (WANTS_CODE.has(result.reason ?? "")) this._padOpen = true;
         this._feedback = {
           text: t(this._strings, `reason.${result.reason ?? "unknown"}`, {
             zones: result.blocking_zones.map((z) => z.name).join(", "),
@@ -169,6 +210,7 @@ class FoyerCard extends LitElement {
       return this._message(t(s, "card.entity_missing", { entity: entityId }));
     }
     if (this._layout === "compact") return this._renderCompact(s);
+    if (this._layout === "keypad") return this._renderKeypadLayout(s);
     return this._isMaster ? this._renderMaster(s) : this._renderArea(s);
   }
 
@@ -255,6 +297,7 @@ class FoyerCard extends LitElement {
         <div class="content">
           ${this._renderAlerts(s)} ${this._head(area.name, area.state, area.memory)}
           ${this._countdown(s, area)} ${this._renderBlocking(s, area)}
+          ${this._renderInlinePad(s)}
           <div class="buttons">
             ${area.state === "disarmed"
               ? html`<button
@@ -336,7 +379,7 @@ class FoyerCard extends LitElement {
               </div>`,
             )}
           </div>
-          ${this._renderNotReady(s)}
+          ${this._renderNotReady(s)} ${this._renderInlinePad(s)}
           <div class="buttons">
             ${status.scenarios.map(
               (sc) => html`<button
@@ -468,6 +511,126 @@ class FoyerCard extends LitElement {
     </div>`;
   }
 
+  // --- the keypad (§15.3) ---------------------------------------------------------
+
+  /** The pad: a display, ten digits, clear. No action buttons — those belong
+   * to the layout around it, because what is armable differs per card. */
+  private _renderPad(s: Strings) {
+    const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    return html`
+      <div class="pad">
+        <div class="display" aria-live="polite" aria-label=${t(s, "card.code_entered")}>
+          ${this._code
+            ? "•".repeat(this._code.length)
+            : html`<span class="placeholder"
+                >${t(s, "card.code_hint", { n: this._codeLength })}</span
+              >`}
+        </div>
+        <div class="keys">
+          ${digits.map(
+            (digit) => html`<button
+              class="key"
+              ?disabled=${this._busy}
+              @click=${() => this._press(digit)}
+            >
+              ${digit}
+            </button>`,
+          )}
+          <button
+            class="key wide"
+            ?disabled=${this._busy || !this._code}
+            @click=${() => (this._code = "")}
+          >
+            ${t(s, "card.code_clear")}
+          </button>
+          <button class="key" ?disabled=${this._busy} @click=${() => this._press("0")}>
+            0
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  /** Layout `keypad`: the wall tablet. State, pad, and what can be done. */
+  private _renderKeypadLayout(s: Strings) {
+    const status = this._status;
+    if (!status) return this._message(t(s, "common.loading"));
+    const area = this._area;
+    const state = this._isMaster ? status.master.state : (area?.state ?? "disarmed");
+    const memory = this._isMaster
+      ? status.areas.some((a) => a.memory)
+      : Boolean(area?.memory);
+    const armed = state !== "disarmed" || memory;
+    const scenarios = this._isMaster ? status.scenarios : [];
+    return html`
+      <ha-card>
+        <div class="content">
+          ${this._renderAlerts(s)}
+          ${this._head(
+            this._isMaster ? t(s, "overview.master") : (area?.name ?? ""),
+            state,
+            memory,
+          )}
+          ${area ? this._countdown(s, area) : nothing}
+          ${this._renderPad(s)}
+          <div class="buttons">
+            ${armed
+              ? nothing
+              : scenarios.length
+                ? scenarios.map(
+                    (sc) => html`<button
+                      ?disabled=${this._busy}
+                      @click=${() =>
+                        this._run({ type: "foyer/arm", scenario_id: sc.id })}
+                    >
+                      ${sc.name}
+                    </button>`,
+                  )
+                : html`<button
+                    ?disabled=${this._busy}
+                    @click=${() =>
+                      this._run({ type: "foyer/arm", area_id: area?.id })}
+                  >
+                    ${t(s, "card.arm")}
+                  </button>`}
+            <button
+              class="primary"
+              ?disabled=${this._busy}
+              @click=${() =>
+                this._run({
+                  type: "foyer/disarm",
+                  ...(this._isMaster || !area ? {} : { area_ids: [area.id] }),
+                })}
+            >
+              ${t(s, "card.disarm")}
+            </button>
+          </div>
+          ${this._renderFeedback()}
+        </div>
+      </ha-card>
+    `;
+  }
+
+  /** The pad inside layout `full`, folded away until it is worth opening. */
+  private _renderInlinePad(s: Strings) {
+    if (!this._codeUsed) return nothing;
+    if (!this._padOpen) {
+      return html`<button class="link pad-toggle" @click=${() => (this._padOpen = true)}>
+        ${t(s, "card.code_show")}
+      </button>`;
+    }
+    return html`${this._renderPad(s)}
+      <button
+        class="link pad-toggle"
+        @click=${() => {
+          this._padOpen = false;
+          this._code = "";
+        }}
+      >
+        ${t(s, "card.code_hide")}
+      </button>`;
+  }
+
   private _renderFeedback() {
     const feedback = this._feedback;
     if (!feedback) return nothing;
@@ -494,6 +657,52 @@ class FoyerCard extends LitElement {
   static override styles = [
     stateStyles,
     css`
+      .pad {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 4px 0;
+      }
+      .display {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 8px;
+        font-size: 22px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        padding: 4px 8px;
+      }
+      .display .placeholder {
+        letter-spacing: normal;
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+      .keys {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .key {
+        padding: 14px 0;
+        font-size: 20px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        background: var(--card-background-color);
+        color: var(--primary-text-color);
+        cursor: pointer;
+      }
+      .key:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .key.wide {
+        font-size: 14px;
+      }
+      .pad-toggle {
+        align-self: flex-start;
+      }
       .content {
         padding: 16px;
         display: flex;
@@ -709,7 +918,7 @@ class FoyerCardEditor extends LitElement {
             @change=${(e: Event) =>
               this._emit({ layout: (e.target as HTMLSelectElement).value as Layout })}
           >
-            ${(["full", "compact"] as Layout[]).map(
+            ${(["full", "compact", "keypad"] as Layout[]).map(
               (layout) => html`<option
                 .value=${layout}
                 ?selected=${layout === (this._config.layout ?? "full")}

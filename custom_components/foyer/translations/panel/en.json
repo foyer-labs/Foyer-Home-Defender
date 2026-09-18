@@ -12,7 +12,8 @@
     "acknowledge": "Acknowledge",
     "yes": "Yes",
     "no": "No",
-    "seconds_unit": "Seconds"
+    "seconds_unit": "Seconds",
+    "ok": "OK"
   },
   "nav": {
     "overview": "Overview",
@@ -22,7 +23,8 @@
     "groups": "Verification groups",
     "settings": "Settings",
     "profiles": "Response profiles",
-    "log": "Log"
+    "log": "Log",
+    "users": "Users"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -67,7 +69,13 @@
     "arm_hold_expired": "Arming failed: still open: {zones}.",
     "unknown": "The request was refused.",
     "nothing_to_acknowledge": "There is nothing to acknowledge.",
-    "unknown_zone": "That zone does not exist."
+    "unknown_zone": "That zone does not exist.",
+    "bad_code": "That code is not right.",
+    "locked_out": "Too many wrong codes. This channel is locked for now.",
+    "not_permitted": "You are not allowed to do that.",
+    "user_not_valid": "That code is not valid at the moment.",
+    "area_not_allowed": "You are not allowed to act on that area.",
+    "scenario_not_allowed": "You are not allowed to use that scenario."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -148,7 +156,27 @@
     "brightness_out_of_range": "Brightness is a number from 0 to 255.",
     "not_a_foyer_backup": "That file is not a Foyer configuration backup.",
     "backup_version_unsupported": "That backup was written by a newer version of Foyer than this one. Update Foyer first.",
-    "profile_in_use": "Something still uses this profile. Point it elsewhere first."
+    "profile_in_use": "Something still uses this profile. Point it elsewhere first.",
+    "code_length": "{field}: wrong number of digits.",
+    "code_in_use": "{field}: that code already belongs to somebody.",
+    "unknown_permission": "Unknown permission.",
+    "unknown_user": "{field}: that user does not exist.",
+    "ha_user_already_linked": "That Home Assistant account is already linked to another user.",
+    "window_inverted": "{field}: the end is before the start.",
+    "exemption_needs_a_linked_account": "The exemption needs a linked Home Assistant account: without one, nothing can identify this person without a code.",
+    "no_user_allowed": "{field}: a scenario nobody may use cannot be armed. Leave it open to everyone instead.",
+    "user_holds_a_key": "A key zone is attributed to this user. Change the zone first.",
+    "user_in_scenario": "A scenario names this user. Change the scenario first.",
+    "code_length_out_of_range": "{field}: out of range.",
+    "lockout_out_of_range": "{field}: out of range.",
+    "code_required": "A code is required.",
+    "bad_code": "That code is not right.",
+    "not_permitted": "You are not allowed to do that.",
+    "user_not_valid": "That code is not valid at the moment.",
+    "locked_out": "Too many wrong codes. This channel is locked for now.",
+    "area_not_allowed": "You are not allowed to act on that area.",
+    "scenario_not_allowed": "You are not allowed to use that scenario.",
+    "unknown_scenario": "{field}: that scenario does not exist."
   },
   "field": {
     "name": "Name",
@@ -167,7 +195,7 @@
     "allow_arm_when_faulted": "Allow arming while in fault",
     "enabled": "Enabled",
     "supervision_timeout": "Supervision (seconds)",
-    "key": "Key action",
+    "key": "Key",
     "on_activate": "When activated",
     "on_deactivate": "When released",
     "scenario_id": "Scenario",
@@ -226,7 +254,24 @@
     "actions": "Actions",
     "camera_entity_id": "Attach a camera",
     "log": "Event log",
-    "language": "Language of messages"
+    "language": "Language of messages",
+    "permissions": "Permissions",
+    "allowed_area_ids": "Areas",
+    "allowed_scenario_ids": "Scenarios",
+    "allowed_user_ids": "Who may use it",
+    "valid_from": "Valid from",
+    "valid_until": "Valid until",
+    "ha_user_id": "Home Assistant account",
+    "require_code_to_arm": "Code to arm",
+    "require_code_to_disarm": "Code to disarm",
+    "code_length": "Code length",
+    "lockout_failures": "Failed attempts",
+    "lockout_window": "Window",
+    "lockout_duration": "Lockout",
+    "new_code": "Code",
+    "new_duress_code": "Duress code",
+    "code": "Code",
+    "code_exempt_when_identified": "Skip the code where identified"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -435,7 +480,13 @@
     "editor_layout": "Layout",
     "layout_full": "Full — areas, scenarios, countdown and what blocks arming",
     "layout_compact": "Compact — state and one action",
-    "editor_hint": "The keypad layouts arrive with codes and users, in the next phase."
+    "editor_hint": "The keypad layouts arrive with codes and users, in the next phase.",
+    "layout_keypad": "Keypad",
+    "code_hint": "{n} digits",
+    "code_clear": "Clear",
+    "code_entered": "Code entered",
+    "code_show": "Enter a code",
+    "code_hide": "Hide the keypad"
   },
   "help": {
     "toggle": "About this section",
@@ -671,6 +722,36 @@
           "text": "CSV or JSON of exactly the rows the filters above are showing — not of the whole database."
         }
       }
+    },
+    "users": {
+      "title": "What this page decides",
+      "intro": "Everyone has their own code, because a shared one makes “who disarmed at 03:14?” unanswerable. Codes are stored as hashes and checked in the backend only: a card is a keypad that transmits a code, never something that decides.",
+      "items": {
+        "own_code": {
+          "term": "One code each",
+          "text": "A code may not belong to two people. Change one and the log keeps every action the old one signed."
+        },
+        "policy": {
+          "term": "Code policy",
+          "text": "Which operations ask for a code. An area or a scenario can ask for more; where they disagree, the one that asks wins."
+        },
+        "identified": {
+          "term": "Where a code can be skipped",
+          "text": "Only on channels that already know who you are. On a shared keypad the code is the identity, so the exemption cannot apply there."
+        },
+        "duress": {
+          "term": "Duress code",
+          "text": "Disarms exactly as the ordinary code does and raises a silent alarm. Nothing the person at the keypad can see is different."
+        },
+        "lockout": {
+          "term": "Lockout",
+          "text": "Repeated wrong codes shut that keypad for a while, longer each time. It is also an event a response profile can answer: somebody guessing at a keypad is a tamper signal."
+        },
+        "scope": {
+          "term": "Scope and validity",
+          "text": "A code can be limited to some areas or scenarios, and can stop working on a date — which is what makes a guest code a guest code."
+        }
+      }
     }
   },
   "notification": {
@@ -793,6 +874,10 @@
     "escalation_exhausted": {
       "title": "Foyer: nobody answered",
       "message": "The escalation reached its last step without an acknowledgement."
+    },
+    "duress": {
+      "title": "Duress code used",
+      "message": "{user} disarmed {area} with a duress code at {time}."
     }
   },
   "chime_mode": {
@@ -1125,7 +1210,9 @@
     "settings": "Settings",
     "chime": "Chime",
     "code_policy": "Code policy",
-    "log": "Event log"
+    "log": "Event log",
+    "user": "User",
+    "security": "Codes and lockout"
   },
   "detail": {
     "reason": "Reason",
@@ -1154,5 +1241,81 @@
     "zone": "Zone",
     "scenario": "Scenario",
     "state": "State"
+  },
+  "code": {
+    "title": "Code",
+    "prompt": "Type your code ({n} digits).",
+    "wrong": "That code is not right. Try again."
+  },
+  "code_policy": {
+    "inherit": "As the global policy",
+    "required": "Code required",
+    "not_required": "No code",
+    "strictest": "Where an area and a scenario disagree, the one that asks for a code wins.",
+    "inert": "Nothing asks for a code yet: no user holds one."
+  },
+  "permission": {
+    "arm": "Arm",
+    "disarm": "Disarm",
+    "force_arm": "Force arming",
+    "bypass_zone": "Exclude a zone",
+    "change_scenario": "Change scenario",
+    "edit_config": "Edit the configuration",
+    "view_log": "Read the log",
+    "test_actions": "Test actions",
+    "walk_test": "Walk test",
+    "manage_users": "Manage users and codes"
+  },
+  "operation": {
+    "arm": "Arm",
+    "disarm": "Disarm",
+    "force_arm": "Force arming",
+    "change_scenario": "Change scenario while armed",
+    "acknowledge": "Acknowledge an alarm",
+    "bypass_zone": "Exclude a zone",
+    "edit_config": "Edit the configuration",
+    "walk_test": "Enter walk test",
+    "test_action": "Run a real action test"
+  },
+  "users": {
+    "title": "Users",
+    "add": "Add user",
+    "new": "New user",
+    "none": "No users yet. Until somebody holds a code, anyone who can reach Home Assistant can disarm.",
+    "not_enforced": "Codes are not in force",
+    "not_enforced_hint": "No user holds a code, so nothing asks for one. Create a user with a code and the policy below starts applying at once.",
+    "code": "Code",
+    "code_set": "Set",
+    "code_missing": "None",
+    "code_unchanged": "Unchanged",
+    "code_digits": "{n} digits",
+    "code_optional": "Optional",
+    "code_hint": "{n} digits, and it may not be anybody else's. Leave it empty to keep the current one.",
+    "duress": "Duress code",
+    "duress_hint": "Disarms exactly as the ordinary code does, and raises a silent alarm. Nothing visible changes.",
+    "scope": "Areas",
+    "every_area": "Every area",
+    "everything": "Everything",
+    "disabled": "Disabled",
+    "linked": "Linked",
+    "not_linked": "Not linked",
+    "linked_hint": "Linking a Home Assistant account lets the panel know who is acting without a code being typed.",
+    "validity_hint": "For a guest code: outside this window the code is refused.",
+    "exempt": "Do not ask me for a code where I am identified",
+    "exempt_hint": "Only on channels that identify you by themselves — the Home Assistant UI of your own account.",
+    "exempt_note": "On a shared keypad the code is the identity: the system cannot know who is typing until they type. The exemption never applies there. And a tablet left signed in as you is a disarm anybody passing can press.",
+    "enabled": "Enabled",
+    "enabled_hint": "A disabled user's code is refused, and their history is kept.",
+    "policy": "Code policy",
+    "policy_hint": "Which operations ask for a code. Areas and scenarios can ask for more, never for less.",
+    "operation": "Operation",
+    "needs_code": "Code required",
+    "later_phase": "later phase",
+    "code_length": "Code length",
+    "code_length_hint": "The same for everybody, because a keypad has to know how many digits to collect. Four digits is ten thousand combinations: it leans entirely on the lockout below.",
+    "lockout_failures": "Failed attempts",
+    "lockout_window": "Within (seconds)",
+    "lockout_duration": "Lock for (seconds)",
+    "lockout_hint": "Each further lockout on the same channel lasts twice as long. The Home Assistant admin path is never locked, so nobody can shut themselves out."
   }
 }

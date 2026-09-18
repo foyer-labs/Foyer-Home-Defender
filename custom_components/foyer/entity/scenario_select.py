@@ -16,7 +16,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from ..const import DOMAIN
 from ..core.models import ArmRequest
 from ..runtime.system import FoyerSystem
-from .common import FoyerEntity, channel_of, hub_device, raise_if_rejected
+from .common import FoyerEntity, actor_of, hub_device, raise_if_rejected
 
 
 async def async_setup_entry(
@@ -51,7 +51,8 @@ class FoyerScenarioSelect(FoyerEntity, SelectEntity):
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key="rejected_unknown_scenario"
             )
-        decision = await self._system.async_handle(
-            ArmRequest(scenario.id, channel=channel_of(self._context))
-        )
+        # A select carries no code, like a button (§13): a scenario whose
+        # arming needs one is refused here and says so, rather than arming.
+        actor = await actor_of(self.hass, self._system, self._context)
+        decision = await self._system.async_handle(ArmRequest(scenario.id, actor))
         raise_if_rejected(self._system, decision)

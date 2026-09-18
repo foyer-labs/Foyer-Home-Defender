@@ -13,10 +13,12 @@ from dataclasses import dataclass, replace
 from typing import Any
 import uuid
 
+from ..core.authz import DEFAULT_PERMISSIONS
 from ..core.models import (
     MAX_RETENTION_DAYS,
     MIN_RETENTION_DAYS,
     SILENCEABLE,
+    CodePolicy,
     FoyerConfig,
     LogCategory,
     LogSettings,
@@ -35,10 +37,12 @@ from .schema import (
     log_from_dict,
     profile_from_dict,
     scenario_from_dict,
+    security_from_dict,
+    user_from_dict,
     zone_from_dict,
 )
 
-KINDS = ("area", "zone", "scenario", "group", "profile")
+KINDS = ("area", "zone", "scenario", "group", "profile", "user")
 
 # What a new area is given when the panel does not say. The delays come from
 # the global settings, so a household that wants 45 s sets it once (§15.1).
@@ -78,6 +82,21 @@ _GROUP_DEFAULTS: dict[str, Any] = {
     "response_profile_id": None,
 }
 _PROFILE_DEFAULTS: dict[str, Any] = {"severity": 1, "actions": []}
+# A new person: the everyday permissions, no scope limits, no validity window.
+# Not manage_users and not edit_config — handing out codes and rewriting the
+# configuration are given deliberately, never by default (core.authz).
+_USER_DEFAULTS: dict[str, Any] = {
+    "code_hash": None,
+    "duress_code_hash": None,
+    "ha_user_id": None,
+    "permissions": sorted(DEFAULT_PERMISSIONS),
+    "allowed_area_ids": None,
+    "allowed_scenario_ids": None,
+    "valid_from": None,
+    "valid_until": None,
+    "code_exempt_when_identified": False,
+    "enabled": True,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +132,9 @@ def upsert(
         elif kind == "scenario":
             obj = scenario_from_dict(data)
             new = replace(config, scenarios=_replace_in(config.scenarios, obj))
+        elif kind == "user":
+            obj = user_from_dict({**_USER_DEFAULTS, **data})
+            new = replace(config, users=_replace_in(config.users, obj))
         elif kind == "group":
             obj = group_from_dict({**_GROUP_DEFAULTS, **data})
             new = replace(config, groups=_replace_in(config.groups, obj))
@@ -164,6 +186,19 @@ def delete(
         if any(z.cross_zone_id == item_id for z in config.zones):
             return _fail(Problem("zone_is_cross_partner", kind, item_id))
         new = replace(config, zones=tuple(z for z in config.zones if z.id != item_id))
+    elif kind == "user":
+        if config.user(item_id) is None:
+            return _fail(Problem("not_found", kind, item_id))
+        # A key zone pointing at this person would lose the only identity it
+        # has, and a scenario's guest list would quietly widen. Say so.
+        if any(z.key is not None and z.key.user_id == item_id for z in config.zones):
+            return _fail(Problem("user_holds_a_key", kind, item_id))
+        if any(
+            s.allowed_user_ids is not None and item_id in s.allowed_user_ids
+            for s in config.scenarios
+        ):
+            return _fail(Problem("user_in_scenario", kind, item_id))
+        new = replace(config, users=tuple(u for u in config.users if u.id != item_id))
     elif kind == "group":
         if config.group(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))
@@ -333,6 +368,30 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
         if was_block != now_block:
             changes[block] = _fields(was_block, now_block)
     return changes
+
+
+def update_security(
+    config: FoyerConfig, state: RuntimeState, data: dict[str, Any]
+) -> EditResult:
+    """The code policy and the code and lockout settings (§8.2, §8.4).
+
+    Separate from the settings block because it is separate in the document:
+    the policy is a property of the installation, not of its defaults, and
+    every path in the system resolves it.
+    """
+    try:
+        policy = CodePolicy(
+            **{k: bool(v) for k, v in (data.get("code_policy") or {}).items()}
+        )
+        security = security_from_dict(data["security"])
+    except (ConfigError, KeyError, TypeError, ValueError):
+        return _fail(Problem("invalid", "settings"))
+    new = replace(
+        config,
+        code_policy=policy,
+        settings=replace(config.settings, security=security),
+    )
+    return _check(config, new, state, None)
 
 
 def update_chime(

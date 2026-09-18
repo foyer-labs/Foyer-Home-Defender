@@ -395,14 +395,19 @@ async def _config(client) -> dict:
     return (await client.receive_json())["result"]
 
 
-async def test_ws_config_is_admin_only(
+async def test_ws_config_needs_the_permission(
     hass, loaded, hass_ws_client, hass_read_only_access_token
 ):
+    """Foyer knows this person, or it does not (§8.3).
+
+    Nobody here is a Foyer user, so the rule is the one this integration has
+    used since Phase 0: a Home Assistant administrator, and nobody else.
+    """
     client = await hass_ws_client(hass, hass_read_only_access_token)
     await client.send_json({"id": 1, "type": "foyer/config"})
     msg = await client.receive_json()
     assert not msg["success"]
-    assert msg["error"]["code"] == "unauthorized"
+    assert msg["error"]["code"] == "not_permitted"
 
 
 async def test_ws_propose_zone(hass, loaded, hass_ws_client):

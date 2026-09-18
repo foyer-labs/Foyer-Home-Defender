@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from homeassistant.core import Context, callback
+from homeassistant.core import Context, HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
 from ..const import CHANNEL_AUTOMATION, CHANNEL_HA_UI, DOMAIN
-from ..core.models import Area, Decision, FoyerConfig
+from ..core.models import Actor, Area, Decision, FoyerConfig
 from ..runtime.system import FoyerSystem
+from ..security.identity import async_actor
 
 MANUFACTURER = "Foyer Home Defender"
 
@@ -47,6 +48,7 @@ def expected_unique_ids(entry_id: str, config: FoyerConfig) -> set[str]:
             "incident",
             "last_event",
             "chime",
+            "acknowledge",
         )
     }
     for area in config.areas:
@@ -60,6 +62,29 @@ def channel_of(context: Context | None) -> str:
     """A person in the UI, or an automation: the log will say which."""
     return (
         CHANNEL_HA_UI if context is not None and context.user_id else CHANNEL_AUTOMATION
+    )
+
+
+async def actor_of(
+    hass: HomeAssistant,
+    system: FoyerSystem,
+    context: Context | None,
+    code: str | None = None,
+) -> Actor:
+    """Who called this service, and what the code they typed was worth.
+
+    Home Assistant hands the entity a context with the account behind the
+    call, or none at all when an automation made it. Both are channels of
+    §9.1, and the difference matters: an automation identifies nobody, so the
+    per-user exemption of §8.2 can never apply to it.
+    """
+    user_id = context.user_id if context is not None else None
+    return await async_actor(
+        hass,
+        system.config,
+        ha_user_id=user_id,
+        code=code,
+        channel=channel_of(context),
     )
 
 

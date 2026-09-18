@@ -12,7 +12,8 @@
     "acknowledge": "Riconosci",
     "yes": "Sì",
     "no": "No",
-    "seconds_unit": "Secondi"
+    "seconds_unit": "Secondi",
+    "ok": "OK"
   },
   "nav": {
     "overview": "Panoramica",
@@ -22,7 +23,8 @@
     "groups": "Gruppi di verifica",
     "settings": "Impostazioni",
     "profiles": "Profili di risposta",
-    "log": "Registro"
+    "log": "Registro",
+    "users": "Utenti"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -67,7 +69,13 @@
     "arm_hold_expired": "Inserimento fallito: ancora aperta: {zones}.",
     "unknown": "La richiesta è stata rifiutata.",
     "nothing_to_acknowledge": "Non c'è nulla da riconoscere.",
-    "unknown_zone": "Quella zona non esiste."
+    "unknown_zone": "Quella zona non esiste.",
+    "bad_code": "Il codice non è corretto.",
+    "locked_out": "Troppi codici errati. Questo canale è bloccato per ora.",
+    "not_permitted": "Non hai il permesso di farlo.",
+    "user_not_valid": "Questo codice non è valido in questo momento.",
+    "area_not_allowed": "Non puoi agire su quell’area.",
+    "scenario_not_allowed": "Non puoi usare quello scenario."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -148,7 +156,27 @@
     "brightness_out_of_range": "La luminosità è un numero da 0 a 255.",
     "not_a_foyer_backup": "Quel file non è un backup della configurazione di Foyer.",
     "backup_version_unsupported": "Quel backup è stato scritto da una versione di Foyer più recente di questa. Aggiorna prima Foyer.",
-    "profile_in_use": "Qualcosa usa ancora questo profilo. Spostalo altrove prima."
+    "profile_in_use": "Qualcosa usa ancora questo profilo. Spostalo altrove prima.",
+    "code_length": "{field}: numero di cifre sbagliato.",
+    "code_in_use": "{field}: quel codice appartiene già a qualcuno.",
+    "unknown_permission": "Permesso sconosciuto.",
+    "unknown_user": "{field}: quell’utente non esiste.",
+    "ha_user_already_linked": "Quell’account Home Assistant è già collegato a un altro utente.",
+    "window_inverted": "{field}: la fine precede l’inizio.",
+    "exemption_needs_a_linked_account": "L’esenzione richiede un account Home Assistant collegato: senza, nulla può identificare questa persona senza un codice.",
+    "no_user_allowed": "{field}: uno scenario che nessuno può usare non si può inserire. Lascialo aperto a tutti.",
+    "user_holds_a_key": "Una zona chiave è attribuita a questo utente. Modifica prima la zona.",
+    "user_in_scenario": "Uno scenario nomina questo utente. Modifica prima lo scenario.",
+    "code_length_out_of_range": "{field}: fuori intervallo.",
+    "lockout_out_of_range": "{field}: fuori intervallo.",
+    "code_required": "È richiesto un codice.",
+    "bad_code": "Il codice non è corretto.",
+    "not_permitted": "Non hai il permesso di farlo.",
+    "user_not_valid": "Questo codice non è valido in questo momento.",
+    "locked_out": "Troppi codici errati. Questo canale è bloccato per ora.",
+    "area_not_allowed": "Non puoi agire su quell’area.",
+    "scenario_not_allowed": "Non puoi usare quello scenario.",
+    "unknown_scenario": "{field}: quello scenario non esiste."
   },
   "field": {
     "name": "Nome",
@@ -167,7 +195,7 @@
     "allow_arm_when_faulted": "Consenti l'inserimento anche in guasto",
     "enabled": "Attiva",
     "supervision_timeout": "Supervisione (secondi)",
-    "key": "Azione chiave",
+    "key": "Chiave",
     "on_activate": "Quando si attiva",
     "on_deactivate": "Quando si rilascia",
     "scenario_id": "Scenario",
@@ -226,7 +254,24 @@
     "actions": "Azioni",
     "camera_entity_id": "Allega una telecamera",
     "log": "Registro eventi",
-    "language": "Lingua dei messaggi"
+    "language": "Lingua dei messaggi",
+    "permissions": "Permessi",
+    "allowed_area_ids": "Aree",
+    "allowed_scenario_ids": "Scenari",
+    "allowed_user_ids": "Chi può usarlo",
+    "valid_from": "Valido dal",
+    "valid_until": "Valido fino al",
+    "ha_user_id": "Account Home Assistant",
+    "require_code_to_arm": "Codice per inserire",
+    "require_code_to_disarm": "Codice per disinserire",
+    "code_length": "Lunghezza del codice",
+    "lockout_failures": "Tentativi falliti",
+    "lockout_window": "Finestra",
+    "lockout_duration": "Blocco",
+    "new_code": "Codice",
+    "new_duress_code": "Codice di coercizione",
+    "code": "Codice",
+    "code_exempt_when_identified": "Salta il codice dove sono identificato"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -435,7 +480,13 @@
     "editor_layout": "Disposizione",
     "layout_full": "Completa: aree, scenari, conto alla rovescia e cosa blocca l'inserimento",
     "layout_compact": "Compatta: stato e un'azione",
-    "editor_hint": "Le disposizioni con tastierino arrivano con codici e utenti, nella fase successiva."
+    "editor_hint": "Le disposizioni con tastierino arrivano con codici e utenti, nella fase successiva.",
+    "layout_keypad": "Tastierino",
+    "code_hint": "{n} cifre",
+    "code_clear": "Cancella",
+    "code_entered": "Codice inserito",
+    "code_show": "Inserisci un codice",
+    "code_hide": "Nascondi il tastierino"
   },
   "help": {
     "toggle": "Informazioni su questa sezione",
@@ -671,6 +722,36 @@
           "text": "CSV o JSON esattamente delle righe che i filtri qui sopra stanno mostrando, non dell'intero archivio."
         }
       }
+    },
+    "users": {
+      "title": "Cosa decide questa pagina",
+      "intro": "Ognuno ha il proprio codice, perché un codice condiviso rende «chi ha disinserito alle 03:14?» una domanda senza risposta. I codici sono salvati come hash e verificati solo nel backend: una card è un tastierino che trasmette un codice, non qualcosa che decide.",
+      "items": {
+        "own_code": {
+          "term": "Un codice a testa",
+          "text": "Un codice non può appartenere a due persone. Se lo cambi, il registro conserva tutto ciò che il vecchio ha firmato."
+        },
+        "policy": {
+          "term": "Politica dei codici",
+          "text": "Quali operazioni chiedono un codice. Un’area o uno scenario possono chiedere di più; se non concordano, vince chi lo chiede."
+        },
+        "identified": {
+          "term": "Dove il codice si può saltare",
+          "text": "Solo sui canali che già sanno chi sei. Su un tastierino condiviso il codice è l’identità, quindi lì l’esenzione non vale."
+        },
+        "duress": {
+          "term": "Codice di coercizione",
+          "text": "Disinserisce esattamente come quello normale e fa scattare un allarme silenzioso. Chi è al tastierino non vede alcuna differenza."
+        },
+        "lockout": {
+          "term": "Blocco",
+          "text": "Codici sbagliati ripetuti chiudono quel tastierino per un po’, sempre più a lungo. È anche un evento a cui un profilo di risposta può rispondere: qualcuno che tenta a caso su un tastierino è un segnale di manomissione."
+        },
+        "scope": {
+          "term": "Ambito e validità",
+          "text": "Un codice può essere limitato ad alcune aree o scenari e può smettere di funzionare a una certa data — che è ciò che rende un codice ospite un codice ospite."
+        }
+      }
     }
   },
   "notification": {
@@ -793,6 +874,10 @@
     "escalation_exhausted": {
       "title": "Foyer: nessuno ha risposto",
       "message": "L'escalation ha raggiunto l'ultimo passo senza presa in carico."
+    },
+    "duress": {
+      "title": "Codice di coercizione usato",
+      "message": "{user} ha disinserito {area} con un codice di coercizione alle {time}."
     }
   },
   "chime_mode": {
@@ -1125,7 +1210,9 @@
     "settings": "Impostazioni",
     "chime": "Campanello",
     "code_policy": "Politica dei codici",
-    "log": "Registro eventi"
+    "log": "Registro eventi",
+    "user": "Utente",
+    "security": "Codici e blocco"
   },
   "detail": {
     "reason": "Motivo",
@@ -1154,5 +1241,81 @@
     "zone": "Zona",
     "scenario": "Scenario",
     "state": "Stato"
+  },
+  "code": {
+    "title": "Codice",
+    "prompt": "Digita il tuo codice ({n} cifre).",
+    "wrong": "Il codice non è corretto. Riprova."
+  },
+  "code_policy": {
+    "inherit": "Come la politica globale",
+    "required": "Codice richiesto",
+    "not_required": "Senza codice",
+    "strictest": "Se un’area e uno scenario non concordano, vince quello che chiede il codice.",
+    "inert": "Per ora nessuno chiede un codice: nessun utente ne ha uno."
+  },
+  "permission": {
+    "arm": "Inserire",
+    "disarm": "Disinserire",
+    "force_arm": "Inserimento forzato",
+    "bypass_zone": "Escludere una zona",
+    "change_scenario": "Cambiare scenario",
+    "edit_config": "Modificare la configurazione",
+    "view_log": "Leggere il registro",
+    "test_actions": "Provare le azioni",
+    "walk_test": "Walk test",
+    "manage_users": "Gestire utenti e codici"
+  },
+  "operation": {
+    "arm": "Inserimento",
+    "disarm": "Disinserimento",
+    "force_arm": "Inserimento forzato",
+    "change_scenario": "Cambio scenario a impianto inserito",
+    "acknowledge": "Riconoscimento di un allarme",
+    "bypass_zone": "Esclusione di una zona",
+    "edit_config": "Modifica della configurazione",
+    "walk_test": "Ingresso in walk test",
+    "test_action": "Prova reale di un’azione"
+  },
+  "users": {
+    "title": "Utenti",
+    "add": "Aggiungi utente",
+    "new": "Nuovo utente",
+    "none": "Nessun utente. Finché nessuno ha un codice, chiunque raggiunga Home Assistant può disinserire.",
+    "not_enforced": "I codici non sono attivi",
+    "not_enforced_hint": "Nessun utente ha un codice, quindi nessuno viene chiesto. Crea un utente con un codice e la politica qui sotto inizia a valere subito.",
+    "code": "Codice",
+    "code_set": "Impostato",
+    "code_missing": "Assente",
+    "code_unchanged": "Invariato",
+    "code_digits": "{n} cifre",
+    "code_optional": "Facoltativo",
+    "code_hint": "{n} cifre, e non può essere quello di un altro. Lascia vuoto per non cambiarlo.",
+    "duress": "Codice di coercizione",
+    "duress_hint": "Disinserisce esattamente come il codice normale e fa scattare un allarme silenzioso. Nulla di visibile cambia.",
+    "scope": "Aree",
+    "every_area": "Tutte le aree",
+    "everything": "Tutto",
+    "disabled": "Disattivato",
+    "linked": "Collegato",
+    "not_linked": "Non collegato",
+    "linked_hint": "Collegare un account Home Assistant permette al pannello di sapere chi sta agendo senza digitare un codice.",
+    "validity_hint": "Per un codice ospite: fuori da questa finestra il codice viene rifiutato.",
+    "exempt": "Non chiedermi il codice dove sono identificato",
+    "exempt_hint": "Solo sui canali che ti identificano da soli — l’interfaccia di Home Assistant con il tuo account.",
+    "exempt_note": "Su un tastierino condiviso il codice è l’identità: il sistema non può sapere chi sta digitando finché non digita. Lì l’esenzione non vale mai. E un tablet lasciato aperto con il tuo account è un disinserimento a portata di chiunque passi.",
+    "enabled": "Attivo",
+    "enabled_hint": "Il codice di un utente disattivato viene rifiutato, e la sua storia resta nel registro.",
+    "policy": "Politica dei codici",
+    "policy_hint": "Quali operazioni chiedono un codice. Aree e scenari possono chiedere di più, mai di meno.",
+    "operation": "Operazione",
+    "needs_code": "Codice richiesto",
+    "later_phase": "fase successiva",
+    "code_length": "Lunghezza del codice",
+    "code_length_hint": "Uguale per tutti, perché un tastierino deve sapere quante cifre raccogliere. Quattro cifre sono diecimila combinazioni: si appoggia interamente al blocco qui sotto.",
+    "lockout_failures": "Tentativi falliti",
+    "lockout_window": "Entro (secondi)",
+    "lockout_duration": "Blocca per (secondi)",
+    "lockout_hint": "Ogni blocco successivo sullo stesso canale dura il doppio. Il percorso dell’amministratore Home Assistant non viene mai bloccato, così nessuno può chiudersi fuori."
   }
 }

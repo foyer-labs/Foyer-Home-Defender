@@ -160,7 +160,7 @@ def check_user(
     user = config.user(actor.user_id)
     if user is None:
         return None
-    if not user.enabled or not _in_window(user, now):
+    if not user.enabled or not user.in_window(now):
         return Reason.USER_NOT_VALID
     permission = PERMISSION_OF.get(operation)
     if permission is not None and not user.may(permission):
@@ -177,12 +177,6 @@ def check_user(
         if listed is not None and user.id not in listed:
             return Reason.SCENARIO_NOT_ALLOWED
     return None
-
-
-def _in_window(user: User, now: datetime) -> bool:
-    if user.valid_from is not None and now < user.valid_from:
-        return False
-    return not (user.valid_until is not None and now > user.valid_until)
 
 
 # --- lockout (§8.4) ------------------------------------------------------------

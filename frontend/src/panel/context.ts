@@ -4,6 +4,7 @@
 import { t, type Strings } from "../shared/i18n";
 import type {
   ChimeConfig,
+  CodePolicyConfig,
   CommandResult,
   ConfigBackup,
   ConfigMeta,
@@ -16,7 +17,9 @@ import type {
   LogQuery,
   PageId,
   Problem,
+  SecurityConfig,
   SettingsConfig,
+  UserConfig,
 } from "../shared/types";
 
 export interface PanelContext {
@@ -26,6 +29,9 @@ export interface PanelContext {
   config?: FoyerConfig;
   meta?: ConfigMeta;
   isAdmin: boolean;
+  /** Home Assistant's own accounts, for linking a person to one (§8.2).
+   * Admin only, and empty when the list could not be read. */
+  haUsers?: { id: string; name: string }[];
   /** Server time now, corrected for the browser clock's offset. */
   now(): number;
   navigate(page: PageId): void;
@@ -37,6 +43,13 @@ export interface PanelContext {
   remove(kind: string, id: string): Promise<EditResult>;
   saveChime(chime: ChimeConfig): Promise<EditResult>;
   saveSettings(settings: Partial<SettingsConfig>): Promise<EditResult>;
+  /** Create or change a person. The codes travel separately and one way:
+   * absent means "leave it", null means "remove it" (SPEC §8.1). */
+  saveUser(
+    user: UserConfig,
+    codes: { new_code?: string | null; new_duress_code?: string | null },
+  ): Promise<EditResult>;
+  saveSecurity(policy: CodePolicyConfig, security: SecurityConfig): Promise<EditResult>;
   /** Exclude a zone by hand, with an optional duration (SPEC §16). */
   bypass(zoneId: string, bypass: boolean, seconds?: number): Promise<CommandResult>;
   /** The event log (§10): read, export exactly what the filters show, empty. */

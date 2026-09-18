@@ -24,6 +24,7 @@ import "./pages/zones";
 import "./pages/scenarios";
 import "./pages/profiles";
 import "./pages/groups";
+import "./pages/users";
 import "./pages/log";
 import "./pages/settings";
 import "./wizard";
@@ -36,10 +37,19 @@ const PAGES: PageId[] = [
   "scenarios",
   "profiles",
   "groups",
+  "users",
   "log",
   "settings",
 ];
-const CONFIG_PAGES: PageId[] = ["areas", "zones", "scenarios", "profiles", "groups", "settings"];
+const CONFIG_PAGES: PageId[] = [
+  "areas",
+  "zones",
+  "scenarios",
+  "profiles",
+  "groups",
+  "users",
+  "settings",
+];
 
 // One line per setting in each page's help (translations: help.<page>.items).
 const HELP_ITEMS: Record<PageId, string[]> = {
@@ -58,9 +68,17 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   scenarios: ["areas", "reports_master", "switching", "exit_override", "siren"],
   profiles: ["inheritance", "moments", "conditions", "severity", "silent"],
   groups: ["threshold", "members", "suppress", "derived"],
+  users: ["own_code", "policy", "identified", "duress", "lockout", "scope"],
   log: ["category", "zone_disarmed", "incident", "user", "export"],
   settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
 };
+
+/** The code, when there is one. An absent key means "nothing typed", which is
+ * not the same as an empty string: one is a request without a code, the other
+ * is a wrong code. */
+function withCode(code?: string): Record<string, string> {
+  return code === undefined || code === "" ? {} : { code };
+}
 
 /** Drop empty filters: "everything" is an absent key, not an empty string. */
 function prune(query: object): Record<string, unknown> {
@@ -104,6 +122,12 @@ class FoyerPanel extends LitElement {
   private _page: PageId = "overview";
   private _prefs: Prefs = {};
   private _tick = 0;
+  // The code of whoever is using the panel, held in memory for this visit
+  // only — never stored, never put in a URL. It is re-sent with each command
+  // that needs one, because the backend verifies every single time (INV-2).
+  private _code?: string;
+  private _asking?: { resolve: (code?: string) => void; retry: boolean };
+  private _haUsers?: { id: string; name: string }[];
   private _offset = 0; // server clock minus browser clock, in ms
   private _language?: string;
   private _unsubscribe?: Promise<() => Promise<void>>;
@@ -140,6 +164,50 @@ class FoyerPanel extends LitElement {
     return Boolean(this.hass?.user?.is_admin);
   }
 
+  /** Who may see the configuration pages (§8.3).
+   *
+   * A Home Assistant administrator, as since Phase 0, or a Foyer user holding
+   * edit_config — which is the point of having permissions at all. Hiding a
+   * page is a courtesy either way: the backend refuses the command (INV-2). */
+  private get _canConfigure(): boolean {
+    const me = this._status?.security.me;
+    return this._isAdmin || Boolean(me?.permissions.includes("edit_config"));
+  }
+
+  /** Ask for a code and resolve once it is typed, or once the user gives up. */
+  private _askForCode(retry: boolean): Promise<string | undefined> {
+    return new Promise((resolve) => {
+      this._asking = { resolve, retry };
+      this.requestUpdate();
+    });
+  }
+
+  private _answerCode(code?: string): void {
+    const asking = this._asking;
+    this._asking = undefined;
+    this._code = code;
+    this.requestUpdate();
+    asking?.resolve(code);
+  }
+
+  /** Run a command, and ask for a code if the backend says one is needed.
+   *
+   * The panel never decides whether a code is required: it sends the command,
+   * and the refusal that comes back is what opens the keypad (INV-2). */
+  private async _coded<T extends { success: boolean; reason?: string | null }>(
+    run: (code?: string) => Promise<T>,
+  ): Promise<T> {
+    let result = await run(this._code);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (result.success) return result;
+      if (result.reason !== "code_required" && result.reason !== "bad_code") return result;
+      const code = await this._askForCode(result.reason === "bad_code");
+      if (code === undefined) return result;
+      result = await run(code);
+    }
+    return result;
+  }
+
   private _start(): void {
     if (!this.hass || this._unsubscribe) return;
     this._unsubscribe = this.hass.connection.subscribeMessage<FoyerStatus>(
@@ -147,6 +215,9 @@ class FoyerPanel extends LitElement {
         this._offset = Date.parse(status.now) - Date.now();
         this._status = status;
         this._error = undefined;
+        // Who is connected only becomes known with the first status, and it
+        // is what says whether the configuration may be read at all (§8.3).
+        if (!this._config && this._canConfigure) this._loadConfig().catch(() => undefined);
       },
       { type: "foyer/subscribe" },
     );
@@ -163,7 +234,16 @@ class FoyerPanel extends LitElement {
       .callWS<Prefs>({ type: "foyer/prefs" })
       .then((prefs) => (this._prefs = prefs))
       .catch(() => undefined);
-    if (this._isAdmin) this._loadConfig();
+    if (this._isAdmin) {
+      // For linking a person to a Home Assistant account (§8.2). Best effort:
+      // page 7 simply offers no list if this is refused.
+      this.hass
+        .callWS<{ id: string; name: string; system_generated: boolean }[]>({
+          type: "config/auth/list",
+        })
+        .then((users) => (this._haUsers = users.filter((u) => !u.system_generated)))
+        .catch(() => undefined);
+    }
   }
 
   private async _loadConfig(): Promise<void> {
@@ -187,17 +267,29 @@ class FoyerPanel extends LitElement {
       config: this._config,
       meta: this._meta,
       isAdmin: this._isAdmin,
+      haUsers: this._haUsers,
       now: () => Date.now() + this._offset,
       navigate: (page) => (this._page = page),
       arm: (target) =>
-        hass.callWS<CommandResult>({ type: "foyer/arm", ...target }),
+        this._coded((code) =>
+          hass.callWS<CommandResult>({ type: "foyer/arm", ...target, ...withCode(code) }),
+        ),
       disarm: (areaIds) =>
-        hass.callWS<CommandResult>({
-          type: "foyer/disarm",
-          ...(areaIds ? { area_ids: areaIds } : {}),
-        }),
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/disarm",
+            ...(areaIds ? { area_ids: areaIds } : {}),
+            ...withCode(code),
+          }),
+        ),
       acknowledge: (target) =>
-        hass.callWS<CommandResult>({ type: "foyer/acknowledge", target }),
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/acknowledge",
+            target,
+            ...withCode(code),
+          }),
+        ),
       saveChime: (chime) => this._edit("chime", { type: "foyer/config/chime", chime }),
       saveSettings: (settings) =>
         this._edit("settings", {
@@ -218,11 +310,22 @@ class FoyerPanel extends LitElement {
       importConfig: (document) =>
         this._edit("config", { type: "foyer/config/import", document }),
       bypass: (zoneId, bypass, seconds) =>
-        hass.callWS<CommandResult>({
-          type: "foyer/bypass",
-          zone_id: zoneId,
-          bypass,
-          ...(seconds ? { seconds } : {}),
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/bypass",
+            zone_id: zoneId,
+            bypass,
+            ...(seconds ? { seconds } : {}),
+            ...withCode(code),
+          }),
+        ),
+      saveUser: (user, codes) =>
+        this._edit("user", { type: "foyer/user/save", user, ...codes }),
+      saveSecurity: (code_policy, security) =>
+        this._edit("settings", {
+          type: "foyer/config/security",
+          code_policy,
+          security,
         }),
       save: (kind, item, triggerConfirmed = false) =>
         this._edit(kind, {
@@ -242,7 +345,11 @@ class FoyerPanel extends LitElement {
   private async _edit(kind: string, message: Record<string, unknown>): Promise<EditResult> {
     let result: EditResult;
     try {
-      result = await this.hass!.callWS<EditResult>(message);
+      // Editing the configuration needs a code too (§8.2), and the backend is
+      // what says so: this asks only when it has refused for that reason.
+      result = await this._coded((code) =>
+        this.hass!.callWS<EditResult>({ ...message, ...withCode(code) }),
+      );
     } catch (err) {
       const detail = String((err as { message?: string })?.message ?? err);
       return {
@@ -311,11 +418,46 @@ class FoyerPanel extends LitElement {
       </div>
       ${s ? this._renderTabs(s) : nothing}
       <main>${s ? this._renderBody(s) : nothing}</main>
+      ${this._asking && s ? this._renderCodeDialog(s) : nothing}
+    `;
+  }
+
+  private _renderCodeDialog(s: Strings) {
+    const length = this._status?.security.code_length ?? 6;
+    const submit = (event: Event) => {
+      event.preventDefault();
+      const input = (event.target as HTMLFormElement).elements.namedItem(
+        "code",
+      ) as HTMLInputElement;
+      this._answerCode(input.value);
+    };
+    return html`
+      <div class="scrim" @click=${() => this._answerCode(undefined)}></div>
+      <form class="code-dialog" @submit=${submit} @click=${(e: Event) => e.stopPropagation()}>
+        <h2>${t(s, "code.title")}</h2>
+        <p>${this._asking?.retry ? t(s, "code.wrong") : t(s, "code.prompt", { n: length })}</p>
+        <input
+          name="code"
+          type="password"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength=${length}
+          autofocus
+        />
+        <div class="row">
+          <button type="button" class="btn" @click=${() => this._answerCode(undefined)}>
+            ${t(s, "common.cancel")}
+          </button>
+          <button type="submit" class="btn primary">${t(s, "common.ok")}</button>
+        </div>
+      </form>
     `;
   }
 
   private _renderTabs(s: Strings) {
-    const pages = this._isAdmin ? PAGES : PAGES.filter((p) => !CONFIG_PAGES.includes(p));
+    const pages = this._canConfigure
+      ? PAGES
+      : PAGES.filter((p) => !CONFIG_PAGES.includes(p));
     if (pages.length < 2) return nothing;
     return html`
       <nav class="tabs" role="tablist">
@@ -342,7 +484,7 @@ class FoyerPanel extends LitElement {
     // The first-run wizard sits above whatever page is open until it is
     // finished or dismissed: it is about the installation, not about a page.
     const wizard =
-      this._isAdmin && this._config && !this._config.settings.wizard_done
+      this._canConfigure && this._config && !this._config.settings.wizard_done
         ? html`<foyer-wizard
             .ctx=${ctx}
             @wizard-done=${() => void this._loadConfig()}
@@ -368,6 +510,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-profiles .ctx=${ctx}></foyer-page-profiles>`;
       case "groups":
         return html`<foyer-page-groups .ctx=${ctx}></foyer-page-groups>`;
+      case "users":
+        return html`<foyer-page-users .ctx=${ctx}></foyer-page-users>`;
       case "log":
         return html`<foyer-page-log .ctx=${ctx}></foyer-page-log>`;
       case "settings":

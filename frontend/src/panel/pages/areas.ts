@@ -5,6 +5,7 @@ import { LitElement, html, nothing } from "lit";
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { AreaConfig, Problem } from "../../shared/types";
+import { codeFields } from "../code-fields";
 import { problemText, type PanelContext } from "../context";
 import { effectiveHint, profileField } from "../profile-picker";
 
@@ -14,6 +15,8 @@ const NEW_AREA: AreaConfig = {
   default_entry_delay: 30,
   default_exit_delay: 30,
   response_profile_id: null,
+  require_code_to_arm: null,
+  require_code_to_disarm: null,
 };
 
 class FoyerPageAreas extends LitElement {
@@ -171,6 +174,12 @@ class FoyerPageAreas extends LitElement {
             </label>
             ${profileField(this.ctx!, draft.response_profile_id, (value) =>
               this._set("response_profile_id", value),
+            )}
+            ${codeFields(
+              s,
+              draft,
+              (key, value) => this._set(key, value),
+              this.ctx!.status.security.enforced,
             )}
           </div>
           ${effectiveHint(this.ctx!, draft.id ?? null)}
