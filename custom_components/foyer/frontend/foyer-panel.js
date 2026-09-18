@@ -906,10 +906,10 @@ var Re = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), ze = class extend
       ${this._renderTechnical(t)} ${this._renderIncident(t)}
       <div class="notice" role="note">${U(t, "overview.no_codes_warning")}</div>
       ${r.map((e) => A`<div class="alarm-memory" role="alert">
-          ${U(t, "overview.memory_banner", {
+          ${e.causes.length ? U(t, "overview.memory_banner", {
 			area: e.name,
 			zones: this._zoneNames(e.causes)
-		})}
+		}) : U(t, "overview.memory_banner_plain", { area: e.name })}
         </div>`)}
       ${this._renderMaster(t)} ${this._renderFeedback(t)}
       <div class="tiles">${n.areas.map((e) => this._renderArea(t, e))}</div>

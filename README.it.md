@@ -12,19 +12,22 @@ dall'utente, semantica delle zone, un motore di risposta, utenti identificati,
 tastiere fisiche, un registro eventi verificabile e un simulatore che permette
 di controllare la configurazione prima di fidarsene.
 
-> **Stato: Fase 1 in corso — il nucleo dell'allarme. Non ancora qualcosa su cui
-> fare affidamento.** Aree, zone, scenari, gruppi di verifica e profili di
-> risposta si configurano dal pannello nella barra laterale. La macchina a stati
-> ha ritardi di uscita e di ingresso, zone istantanee, ritardate, seguistrada,
-> 24h, antimanomissione e antirapina, politiche di inserimento, inserimento
-> forzato, esclusione manuale e temporizzata di una zona, un tempo massimo di
-> sirena con memoria d'allarme, e uno stato che sopravvive a un riavvio. Fumo,
-> gas e acqua viaggiano su un canale proprio, che il disinserimento non può
-> zittire. Un allarme ora fa suonare sirene, lampeggiare luci, registrare una
-> telecamera e inviare notifiche. Ciò che manca conta: non c'è **nessun registro
-> eventi**, quindi il pannello non sa ancora raccontarti cos'è successo stanotte;
-> le notifiche vanno a un solo servizio e non scalano finché qualcuno non
-> risponde; e non ci sono utenti né codici, quindi **chiunque possa raggiungere
+> **Stato: Fase 1 completa — il nucleo dell'allarme. Una casa si può proteggere
+> con questo; pensaci due volte prima che sia l'unica cosa a proteggerla.**
+> Aree, zone, scenari, gruppi di verifica e profili di risposta si configurano
+> dal pannello nella barra laterale, e una procedura guidata di primo avvio ti
+> porta a un allarme funzionante. La macchina a stati ha ritardi di uscita e di
+> ingresso, zone istantanee, ritardate, seguistrada, 24h, antimanomissione e
+> antirapina, politiche di inserimento, inserimento forzato, esclusione manuale
+> e temporizzata di una zona, un tempo massimo di sirena con memoria d'allarme,
+> e uno stato che sopravvive a un riavvio. Fumo, gas e acqua viaggiano su un
+> canale proprio, che il disinserimento non può zittire. Un allarme fa suonare
+> sirene, lampeggiare luci, registrare una telecamera e inviare notifiche. **Un
+> registro eventi** in un archivio tutto suo annota cos'è successo, dove e
+> attraverso quale canale, lo conserva per il tempo che decidi tu e lo esporta.
+> Ciò che manca conta: le notifiche vanno a un solo servizio e non scalano
+> finché qualcuno non risponde; non ci sono ancora simulatore né prova di
+> percorso; e non ci sono utenti né codici, quindi **chiunque possa raggiungere
 > Home Assistant può disinserire l'allarme.**
 
 Il progetto completo è in [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md) (in inglese, come tutto il codice e la documentazione tecnica).

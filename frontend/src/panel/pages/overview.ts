@@ -103,10 +103,15 @@ class FoyerPageOverview extends LitElement {
       <div class="notice" role="note">${t(s, "overview.no_codes_warning")}</div>
       ${memory.map(
         (area) => html`<div class="alarm-memory" role="alert">
-          ${t(s, "overview.memory_banner", {
-            area: area.name,
-            zones: this._zoneNames(area.causes),
-          })}
+          ${area.causes.length
+            ? t(s, "overview.memory_banner", {
+                area: area.name,
+                zones: this._zoneNames(area.causes),
+              })
+            : // A memory whose zones are no longer known — a restart, a zone
+              // deleted since — still has to say the alarm went off, without
+              // a dangling colon where the names should be.
+              t(s, "overview.memory_banner_plain", { area: area.name })}
         </div>`,
       )}
       ${this._renderMaster(s)} ${this._renderFeedback(s)}

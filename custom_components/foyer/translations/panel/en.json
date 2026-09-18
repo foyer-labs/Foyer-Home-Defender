@@ -318,7 +318,8 @@
     "incident_acknowledged": "Acknowledged — it closes once every area is disarmed or armed again",
     "incident_hint": "One incident gathers every zone of one alarm. Disarming also acknowledges it.",
     "recent": "Recent events",
-    "full_log": "Full log"
+    "full_log": "Full log",
+    "memory_banner_plain": "Alarm memory in {area}. Disarm the area to clear it."
   },
   "areas": {
     "title": "Areas",

@@ -552,6 +552,52 @@ Added in part 3:
   their own quiet hours.
 - The panel has pages Overview, Areas, Zones, Scenarios, Response profiles,
   Verification groups and Settings (chime plus the response block).
+
+Taken in part 4 (SPEC decisions 72-76):
+44. The event log uses the stdlib `sqlite3` in an executor thread, not
+    aiosqlite. It is what Home Assistant's recorder does, and it adds no
+    dependency: an integration that fails to load because a wheel could not
+    be fetched at first setup is a failure mode an alarm does not need.
+    SPEC §3.2 was amended.
+45. The "language" setting of §15.1 is the language of what Foyer SENDS
+    (notifications, the spoken zone name), never the panel's: the panel
+    follows each Home Assistant user. Default: the system language.
+46. The first-run wizard continues from the config flow, which keeps
+    creating one area, one zone and one scenario. `settings.wizard_done`
+    (installation state, not a preference) hides it once it is finished or
+    dismissed; the 4.1 -> 4.2 migration sets it true, because an
+    installation that already has zones is not a first run.
+47. Log retention is 30 days for every category, the letter of §10.3, and
+    `zone_disarmed` is the one category off by default (§10.2).
+48. The sidebar panel icon is `mdi:shield-home`. Home Assistant resolves a
+    custom icon once and never retries, so a sidebar drawn before the icon
+    module has run keeps an empty square for ever — which is what the
+    companion app does from a cached page. `foyer:shield` stays registered
+    for dashboards; the shield is drawn inline in the panel and the card.
+49. The log's schema is §10.1 plus an `incident_id` column: §5.6 wants the
+    incident id on every related row and a JSON field cannot be filtered on.
+    A refused request gets a row of its own, in the category of the request.
+
+Engine and runtime shape after part 4 (do not work around it):
+- core/journal.py is pure and is the ONE place that says what a row IS: its
+  category, its severity, its event type and its outcome. A test asserts
+  every Moment has a category and a severity, so a moment added later
+  cannot vanish from the log. New behaviour adds to the tables.
+- store/log_store.py owns the database (`<config>/foyer-log.db`), the write
+  queue and the daily purge. Writing is a hand-off: the alarm path queues
+  and returns. Reading flushes first, under the same lock the writer holds.
+- FoyerSystem.async_record(rows) is how anything reaches the log; it also
+  keeps `last_row` for sensor.foyer_last_event. Config edits are recorded in
+  api/websocket.py `_apply`, with store/editing.config_diff for the summary.
+- The stored configuration is schema 4.2 (minor, additive): settings gained
+  `log` (per-category enabled + retention_days, read sparse so a category
+  nobody touched follows §10.2), `default_entry_delay`, `default_exit_delay`,
+  `language` and `wizard_done`.
+- The panel has all of pages 1-5, 10, 11 and 13, plus the wizard, and the
+  card has layouts full and compact with a visual editor.
+- tests/ha/test_acceptance.py is the Phase 1 acceptance, written against the
+  WebSocket API rather than the engine: keep it passing, and add to it when a
+  later phase changes what "a real house can be protected" means.
 ```
 
 ### Phase 1, part 2
@@ -853,6 +899,18 @@ Paste the relevant block after that phase's prompt. These are things Phase 1
 deliberately left for the phase that owns them.
 
 Phase 2 (security and arming channels):
+- The log's `user_id` / `user_name` columns exist and are empty: fill them
+  once users exist, and add the `view_log` permission to foyer/log/query and
+  foyer/log/export (open to any signed-in user today) and `edit_config` to
+  foyer/log/clear and foyer/config/import (admin-only today).
+- The wizard's "user and code" step is shown and explicitly skipped; build it
+  when codes land.
+- The foyer.export_log / foyer.export_config / foyer.import_config services
+  of §14.1 were not built: the panel does all three over the WebSocket API,
+  and the services belong with Phase 2's service contract and its code check.
+- The wizard's test notification calls the `notify` service directly from the
+  browser. Once §11.4's real action test exists (Phase 3) it should go
+  through it, so the test is logged as a test.
 - Area fields require_code_to_arm / require_code_to_disarm and scenario
   fields require_code_to_arm / require_code_to_disarm / allowed_user_ids
   (§4.5, §4.6) were not added in Phase 1: add them with the code policy

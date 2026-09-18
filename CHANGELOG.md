@@ -5,6 +5,78 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.7] — Phase 1, part 4: the event log, the wizard, the card
+
+**Pre-release, for testing only.** It is, however, the end of Phase 1: with
+this release a real house can be protected, and the acceptance for that is
+written down as a test suite rather than as a claim. Still missing before it
+should guard anything valuable: users and codes (Phase 2), the simulator and
+walk test (Phase 3), and escalation across contacts (Phase 4).
+
+### Changed — read this if you run an alpha
+- Stored configuration moves from schema 4.1 to **4.2**, a *minor* step: an
+  older 4.1 build reading this document ignores the keys added here and
+  protects exactly what it protected before. Nothing is lost by going back.
+- **The sidebar icon is now an mdi shield.** It was a custom Foyer icon, and
+  Home Assistant resolves a custom icon exactly once: when the sidebar is drawn
+  before the module that registers it has run — which is what the companion app
+  does when it starts from a cached page — it gave up and left an empty square
+  for ever. The Foyer shield stays in the panel header and on the card, where
+  it is always drawn.
+
+### Added
+- **The event log** (panel page 10), in a SQLite database of Foyer's own, next
+  to your configuration and never touched by Home Assistant's recorder — whose
+  ten-day purge would quietly destroy a thirty-day requirement. It records
+  arming and disarming with the channel they came through, alarms and incidents,
+  every action with whether it actually worked, configuration changes with a
+  summary of what moved, refusals with the zone that blocked them, and zone
+  activity. Filter by date, area, zone, category, severity and outcome; one
+  click shows a whole incident; export exactly what the filters show as CSV or
+  JSON.
+  - **Zone activity while disarmed is off by default.** One motion sensor
+    produces thousands of rows a day and buries everything that matters. Switch
+    it on while diagnosing, and off again afterwards.
+  - Every row also fires the `foyer_event` bus event, so an automation or an
+    external collector needs one trigger and no database.
+  - **The restart gap is recorded** as `system_unavailable`, from the last
+    moment Foyer is known to have been running to the moment it came back. The
+    log never implies the house was covered when it was not.
+  - A log failure never delays the alarm: rows are queued and written by a
+    worker, and a full disk costs you the row, never the siren.
+- **`sensor.foyer_last_event`**, for a dashboard: the last thing worth showing,
+  which is not the thousandth motion of the day.
+- **Settings** (page 11) gains the defaults new areas start from, the siren
+  cutoff and the arm-after-closing wait, **per-category log retention** (thirty
+  days each by default), **configuration backup and restore**, and the language
+  of the messages Foyer *sends out* — notifications and the spoken zone name.
+  The panel itself has always followed each Home Assistant user's own language
+  and still does.
+  - A restore migrates an older backup through the same steps a real upgrade
+    uses, refuses one written by a newer major version rather than reading it
+    half-way, and is then validated and refused if it would change an armed
+    area — like any other edit.
+- **The first-run wizard**, which continues from the config flow instead of
+  starting again: the area it made, two more zones with their triggers
+  confirmed one by one, the scenario, and a notification actually sent so you
+  know the channel works. The user-and-code step is shown and skipped, in as
+  many words: codes are Phase 2, and a wizard that implied otherwise would be
+  lying about what protects the house.
+- **Card layouts `full` and `compact`**, with a visual editor. `full` is the
+  card to look at before leaving: every area with its state and countdown, the
+  scenarios, and the zones that would stop it arming, each with a way out.
+  `compact` is one row for the top of an existing dashboard. The keypad
+  layouts wait for codes, in Phase 2.
+- **The overview shows recent events**, which page 1 has always promised and
+  which only became possible now there is a log to read them from.
+- **A zone can be excluded for any number of minutes.** It offered one hour and
+  eight hours, which does not cover "twenty minutes while the window airs the
+  room" — and a duration you cannot choose is one you round up.
+
+### Fixed
+- The alarm-memory banner no longer reads "Alarm memory in Upstairs: ." when
+  the zones that caused it are no longer known.
+
 ## [0.1.0-alpha.6] — what the first real use of page 5 found
 
 **Pre-release, for testing only**, like the alphas before it. No schema change:

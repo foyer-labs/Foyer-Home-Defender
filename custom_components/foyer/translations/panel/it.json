@@ -318,7 +318,8 @@
     "incident_acknowledged": "Riconosciuto — si chiude quando ogni area è disinserita o di nuovo inserita",
     "incident_hint": "Un incidente raccoglie tutte le zone di un allarme. Anche il disinserimento lo riconosce.",
     "recent": "Eventi recenti",
-    "full_log": "Registro completo"
+    "full_log": "Registro completo",
+    "memory_banner_plain": "Memoria d'allarme in {area}. Disinserisci l'area per azzerarla."
   },
   "areas": {
     "title": "Aree",

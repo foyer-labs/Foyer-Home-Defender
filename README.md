@@ -11,18 +11,22 @@ with their own armed state, user-defined arming scenarios, zone semantics, a
 response engine, identified users, physical keypads, an auditable event log, and
 a simulator that lets you check the configuration before you trust it.
 
-> **Status: Phase 1 in progress — the alarm core. Not yet something to rely on.**
+> **Status: Phase 1 complete — the alarm core. A house can be protected with
+> it; think twice before it is the only thing protecting one.**
 > Areas, zones, scenarios, verification groups and response profiles are
-> configured from the sidebar panel. The state machine has exit and entry
-> delays, instant, delayed, follower, 24h, tamper and panic zones, arm
-> policies, forced arming, manual and timed exclusion of a zone, a siren cutoff
-> with alarm memory, and alarm state that survives a restart. Smoke, gas and
-> water run on their own channel, which disarming cannot silence. An alarm now
-> sounds sirens, flashes lights, records a camera and sends notifications.
-> What is still missing matters: there is **no event log**, so the panel cannot
-> yet tell you what happened last night; notifications go to one service and do
-> not escalate until somebody answers; and there are no users or codes, so
-> **anyone who can reach Home Assistant can disarm it.**
+> configured from the sidebar panel, and a first-run wizard walks you to a
+> working alarm. The state machine has exit and entry delays, instant, delayed,
+> follower, 24h, tamper and panic zones, arm policies, forced arming, manual
+> and timed exclusion of a zone, a siren cutoff with alarm memory, and alarm
+> state that survives a restart. Smoke, gas and water run on their own channel,
+> which disarming cannot silence. An alarm sounds sirens, flashes lights,
+> records a camera and sends notifications. **An event log** in a database of
+> Foyer's own records what happened, where and through which channel, keeps it
+> for as long as you say, and exports it.
+> What is still missing matters: notifications go to one service and do not
+> escalate until somebody answers; there is no simulator or walk test yet; and
+> there are no users or codes, so **anyone who can reach Home Assistant can
+> disarm it.**
 
 The full design is in [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md).
 
