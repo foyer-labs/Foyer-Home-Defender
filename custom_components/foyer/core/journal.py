@@ -252,6 +252,7 @@ def zone_rows(
     state: RuntimeState,
     config: FoyerConfig,
     at: datetime,
+    *,
     old: str | None = None,
     was_active: frozenset[str] = frozenset(),
 ) -> tuple[LogRow, ...]:
@@ -324,7 +325,12 @@ def rows_for(
     if isinstance(event, ZoneStateChanged):
         rows.extend(
             zone_rows(
-                event, decision.state, config, decision.at, old_state, was_active
+                event,
+                decision.state,
+                config,
+                decision.at,
+                old=old_state,
+                was_active=was_active,
             )
         )
     return tuple(rows)

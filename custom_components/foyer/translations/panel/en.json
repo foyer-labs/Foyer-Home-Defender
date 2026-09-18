@@ -1015,7 +1015,7 @@
     "config_delete": "Configuration item deleted",
     "config_restore": "Configuration restored",
     "config_log_cleared": "Log emptied",
-    "action_notify": "Notification sent",
+    "action_notify": "Notification",
     "action_persistent_notification": "Home Assistant notification",
     "action_siren": "Siren",
     "action_light": "Light",
@@ -1026,7 +1026,7 @@
     "action_call_service": "Service call",
     "action_delay": "Delay",
     "action_chime": "Chime",
-    "action_revert": "Switched back off"
+    "action_revert": "Switched off again"
   },
   "log": {
     "filters": "Filters",

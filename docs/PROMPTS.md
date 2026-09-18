@@ -899,6 +899,10 @@ Paste the relevant block after that phase's prompt. These are things Phase 1
 deliberately left for the phase that owns them.
 
 Phase 2 (security and arming channels):
+- Releases become ordinary GitHub releases from the first beta, instead of
+  pre-releases: HACS only offers releases that are not pre-releases, and shows
+  the commit for a repository that has none, which is unreadable for a user.
+  The user chose to stay on pre-releases while the product is alpha.
 - The log's `user_id` / `user_name` columns exist and are empty: fill them
   once users exist, and add the `view_log` permission to foyer/log/query and
   foyer/log/export (open to any signed-in user today) and `edit_config` to

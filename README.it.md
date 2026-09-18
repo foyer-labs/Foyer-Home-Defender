@@ -4,35 +4,97 @@
 
 <p align="center"><a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/README.md">English</a> · <strong>Italiano</strong></p>
 
-# Foyer Home Defender
+<h1 align="center">Foyer Home Defender</h1>
 
-Foyer Home Defender trasforma Home Assistant in un vero centralino antintrusione:
-aree con il proprio stato di inserimento, scenari di inserimento definiti
-dall'utente, semantica delle zone, un motore di risposta, utenti identificati,
-tastiere fisiche, un registro eventi verificabile e un simulatore che permette
-di controllare la configurazione prima di fidarsene.
+<p align="center">
+  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?include_prereleases&sort=semver&label=versione" alt="Ultima versione"></a>
+  <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5" alt="Home Assistant 2025.1 o successivo">
+  <img src="https://img.shields.io/badge/HACS-repository%20personalizzato-41BDF5" alt="Repository personalizzato HACS">
+  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
+</p>
 
-> **Stato: Fase 1 completa — il nucleo dell'allarme. Una casa si può proteggere
-> con questo; pensaci due volte prima che sia l'unica cosa a proteggerla.**
-> Aree, zone, scenari, gruppi di verifica e profili di risposta si configurano
-> dal pannello nella barra laterale, e una procedura guidata di primo avvio ti
-> porta a un allarme funzionante. La macchina a stati ha ritardi di uscita e di
-> ingresso, zone istantanee, ritardate, seguistrada, 24h, antimanomissione e
-> antirapina, politiche di inserimento, inserimento forzato, esclusione manuale
-> e temporizzata di una zona, un tempo massimo di sirena con memoria d'allarme,
-> e uno stato che sopravvive a un riavvio. Fumo, gas e acqua viaggiano su un
-> canale proprio, che il disinserimento non può zittire. Un allarme fa suonare
-> sirene, lampeggiare luci, registrare una telecamera e inviare notifiche. **Un
-> registro eventi** in un archivio tutto suo annota cos'è successo, dove e
-> attraverso quale canale, lo conserva per il tempo che decidi tu e lo esporta.
-> Ciò che manca conta: le notifiche vanno a un solo servizio e non scalano
-> finché qualcuno non risponde; non ci sono ancora simulatore né prova di
-> percorso; e non ci sono utenti né codici, quindi **chiunque possa raggiungere
-> Home Assistant può disinserire l'allarme.**
+Foyer Home Defender trasforma Home Assistant in una vera centrale d'allarme:
+aree con un proprio stato di inserimento, scenari di inserimento che definisci
+tu, zone che dichiarano cosa significa «in allarme» per loro, un motore di
+risposta, un registro eventi verificabile e — nelle fasi successive — utenti
+identificati, tastiere fisiche e un simulatore che permette di controllare la
+configurazione prima di fidarsene.
 
-Il progetto completo è in [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md) (in inglese, come tutto il codice e la documentazione tecnica).
+> ### Stato: Fase 1 completa — il nucleo dell'allarme
+>
+> Una casa si può proteggere con questo. Pensaci due volte prima che sia
+> l'*unica* cosa a proteggerla: **non ci sono ancora utenti né codici**, quindi
+> chiunque possa raggiungere Home Assistant può disinserire l'allarme. I codici
+> arrivano nella fase successiva.
 
-## Cosa esiste già, e cosa distingue Foyer
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-it.png" alt="Il pannello di Foyer: due aree inserite da un solo scenario, una in conto alla rovescia sul ritardo d'ingresso, e le zone non pronte" width="900">
+</p>
+
+## Cosa fa già oggi
+
+- **Aree con un proprio stato di inserimento**, ciascuna con la sua entità
+  `alarm_control_panel`, più una centrale che le aggrega.
+- **Scenari definiti da te**: *Notte, solo piano terra*, *Solo garage*, *Cane in
+  casa*. Non quattro modalità fisse.
+- **Zone che dichiarano il proprio stato di allarme.** I contatti normalmente
+  chiusi e normalmente aperti si comportano al contrario; Foyer propone la
+  condizione a partire dalla classe del dispositivo e ti chiede di confermarla,
+  perché un errore qui produce un allarme che non suona mai.
+- **Otto preimpostazioni di zona** su proprietà modificabili: istantanea,
+  ritardata, seguistrada, 24h, antimanomissione, tecnica, antirapina, e zone
+  chiave che inseriscono o disinseriscono invece di allarmare.
+- **Ritardi di uscita e di ingresso**, quattro politiche per una zona aperta al
+  momento dell'inserimento (blocca, escludila, aspetta che si chiuda, ignorala),
+  inserimento forzato, esclusione manuale e temporizzata, tempo massimo di
+  sirena con memoria d'allarme.
+- **Un canale separato per fumo, gas e acqua.** È attivo che la casa sia
+  inserita o no, non tocca mai `alarm_control_panel` — dove *triggered* significa
+  «effrazione» per HomeKit, Google e Alexa — e il disinserimento non lo azzera.
+- **Incidenti, non allarmi per zona.** Un'effrazione vera fa scattare più zone:
+  diventano un solo incidente, con una sola presa in carico, invece di tre
+  raffiche di notifiche nel momento peggiore possibile.
+- **Gruppi di verifica**, N su M entro una finestra, con i membri che mantengono
+  la propria risposta: un rivelatore notifica, due fanno suonare la sirena.
+- **Profili di risposta**: dieci azioni — notifica, sirena, luce, telecamera,
+  scena, interruttore, messaggio vocale, chiamata a qualunque servizio di Home
+  Assistant, attesa — ciascuna con al massimo due condizioni, ereditate
+  area → scenario → predefinito.
+- **Campanello** quando una zona si apre mentre la sua area non la sorveglia, su
+  un altoparlante, una sirena o il telefono, con ore di silenzio per singolo
+  destinatario.
+- **Un registro eventi** in un archivio tutto suo, che la cancellazione dopo
+  dieci giorni del recorder di Home Assistant non può toccare: cosa è successo,
+  dove, attraverso quale canale, se ogni azione ha davvero funzionato, e chi ha
+  cambiato cosa.
+- **Uno stato che sopravvive a un riavvio**, compresi un'attesa in corso e una
+  sirena che sta suonando — e il buco stesso viene registrato, così il registro
+  non lascia mai credere che la casa fosse protetta quando non lo era.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-log-it.png" alt="La pagina del registro: inserimento, un allarme, un inserimento rifiutato che nomina la zona, il buco di riavvio e una notifica non riuscita" width="900">
+</p>
+
+## Cosa manca ancora, e conta
+
+- **Nessun utente, nessun codice, nessun permesso.** Chiunque abbia accesso a
+  Home Assistant può inserire e disinserire, e il registro annota il canale
+  invece della persona. Fase 2.
+- **Nessun simulatore e nessuna prova di percorso.** Non puoi ancora chiedere
+  «cosa succederebbe se la finestra della cucina si aprisse adesso?» senza
+  aprirla. Fase 3.
+- **Nessuna scalata delle notifiche.** Vanno direttamente a un servizio
+  `notify`; non salgono da push a SMS a telefonata finché qualcuno non risponde.
+  Fase 4.
+- **Nessun supporto per tastierini, nessun MQTT.** Fase 2.
+
+Il progetto completo, fasi comprese, è in
+[docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md)
+(in inglese, come tutto il codice e la documentazione tecnica); cosa è cambiato
+in ogni versione è in
+[CHANGELOG.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md).
+
+## Accanto ad Alarmo
 
 [Alarmo](https://github.com/nielsfaber/alarmo) è l'implementazione di
 riferimento in questo campo, ed è fatta bene: modalità di inserimento, ritardi
@@ -40,67 +102,80 @@ per sensore, un motore di azioni, utenti con codice, MQTT e una card Lovelace.
 Foyer è scritto da zero e non ne copia il codice. Punta a tre cose che Alarmo
 non fa:
 
-- **Scenari illimitati, definiti dall'utente.** Alarmo è legato alle quattro
-  modalità fisse di Home Assistant. Le case vere hanno bisogno di "Notte, solo
-  piano terra", "Solo garage", "Cane in casa".
-- **Un simulatore e un walk test.** Rispondere a "cosa succederebbe se si
-  aprisse la finestra della cucina adesso, in questo scenario, a quest'ora?"
-  senza aprirla.
-- **Escalation con presa in carico.** Notifiche che scalano fra canali e persone
-  finché un essere umano non prende in carico l'allarme.
+| | Foyer | Alarmo |
+|---|---|---|
+| **Scenari di inserimento** | Quanti ne vuoi, ciascuno inserisce un insieme di aree scelto — *già disponibile* | Le quattro modalità fisse di Home Assistant |
+| **Simulatore e prova di percorso** | Previsti, Fase 3: lo stesso motore, un orologio finto, nulla di eseguito | — |
+| **Scalata con presa in carico** | Prevista, Fase 4: push, poi SMS, poi telefonata, e si ferma quando una persona risponde | — |
 
-Nessuna di queste esiste ancora: arrivano nelle fasi successive (SPEC §16).
+Alarmo è un'integrazione finita e molto usata; Foyer è una alpha. Se ti serve un
+allarme oggi e i codici ti interessano, usa Alarmo.
 
 ## Modello di sicurezza
 
-I codici di Foyer proteggono da familiari, ospiti, addetti alle pulizie, utenti
-non amministratori di Home Assistant e da chiunque trovi un tablet a muro
-sbloccato. **Non** proteggono da un amministratore di Home Assistant, che può
-leggere `.storage`, disattivare l'integrazione o chiamare qualsiasi servizio
-direttamente. Foyer non è un sistema d'allarme certificato.
+I codici di Foyer — quando esisteranno — proteggono da familiari, ospiti,
+personale domestico, utenti non amministratori di Home Assistant e da chiunque
+trovi un tablet a muro sbloccato. **Non** proteggono da un amministratore di
+Home Assistant, che può leggere `.storage`, disattivare l'integrazione o
+chiamare qualunque servizio. Per lo stesso motivo il registro eventi è *utile*
+come traccia, non *inalterabile*.
 
-I codici arrivano nella Fase 2. Fino ad allora non c'è nulla che protegga da
-nessuno.
+**Foyer non è un sistema d'allarme certificato**, e **non è un sistema
+antincendio**: un rivelatore di fumo collegato a Home Assistant non sostituisce
+rivelatori certificati e interconnessi.
 
-**Foyer non è un sistema antincendio.** Un rivelatore di fumo collegato a Home
-Assistant non sostituisce rivelatori certificati e interconnessi fra loro.
-
-## Installazione (repository personalizzato HACS)
+## Installazione
 
 1. In HACS, apri il menu → *Repository personalizzati*, aggiungi l'URL di questo
    repository con categoria *Integrazione*.
 2. Installa *Foyer Home Defender* e riavvia Home Assistant.
 3. *Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Foyer Home
-   Defender*. Dai un nome alla prima area e al primo scenario, scegli l'entità
-   della prima zona, poi conferma gli stati in cui va considerata in allarme.
-   Verificali sul sensore vero: apri la porta, passa davanti al sensore e guarda
-   come cambia lo stato.
-4. Nella barra laterale compare la voce **Foyer**. Le altre aree, zone e scenari
-   si aggiungono da lì (solo amministratori). Per mettere la card in una
-   dashboard, scegli *Foyer Home Defender* nel selettore delle card, oppure usa:
-
-   ```yaml
-   type: custom:foyer-card
-   entity: alarm_control_panel.foyer_<area>   # oppure alarm_control_panel.foyer_master
-   ```
-
-   La card viene caricata da sola: non serve aggiungere nessuna risorsa alla
-   dashboard.
+   Defender*. Dài un nome alla prima area e al primo scenario, scegli l'entità
+   della prima zona, poi conferma gli stati in cui conta come «in allarme».
+   Verificali sul sensore vero: apri la porta, passa davanti al rivelatore,
+   guarda il suo stato.
+4. Nella barra laterale compare una voce **Foyer**, e una breve procedura
+   guidata completa la configurazione: le altre zone, lo scenario, e una
+   notifica di prova per sapere che il canale funziona.
 
 Richiede Home Assistant 2025.1 o successivo.
 
-## Sviluppo
+> **Finché Foyer è in alpha, ogni versione è pubblicata come pre-release su
+> GitHub**, e HACS mostra il commit anziché il numero di versione per i
+> repository che non ne hanno nessuna marcata stabile. Per vedere e scegliere i
+> nomi delle versioni, abilita l'entità *switch* che HACS crea per questo
+> repository (*Impostazioni → Dispositivi e servizi → Entità*, cerca «pre
+> release»; è disabilitata di default). Dalla prima beta le versioni saranno
+> pubblicate normalmente.
 
-Codice, entità, servizi, messaggi di commit e documentazione tecnica sono in
-inglese; l'interfaccia è tradotta in italiano e in inglese fin dal primo giorno.
+### La card
+
+Scegli *Foyer Home Defender* nel selettore delle card della dashboard, oppure
+scrivila a mano:
+
+```yaml
+type: custom:foyer-card
+entity: alarm_control_panel.foyer_master   # oppure alarm_control_panel.foyer_<area>
+layout: full                               # oppure compact
+```
+
+La card viene caricata da sola: non serve aggiungere alcuna risorsa alla
+dashboard. Non decide nulla da sé: manda un comando e mostra la risposta,
+compreso il nome della zona che l'ha rifiutato.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-it.png" alt="La card nelle disposizioni completa e compatta" width="900">
+</p>
+
+## Sviluppo
 
 ```
 custom_components/foyer/   l'integrazione (HACS installa questa cartella così com'è)
   core/                    motore decisionale puro: mai un import di Home Assistant
-  runtime/ entity/ api/    gli strati rivolti a Home Assistant
-  store/                   persistenza in .storage e migrazioni di schema
-  translations/            en.json, it.json (Home Assistant) e panel/ (UI, aiuto)
-  frontend/                bundle di pannello e card già compilati, versionati
+  runtime/ entity/ api/    gli strati che parlano con Home Assistant
+  store/                   persistenza in .storage, migrazioni di schema, il registro
+  translations/            en.json, it.json (Home Assistant) e panel/ (interfaccia, aiuto)
+  frontend/                bundle compilati di pannello e card, versionati
 frontend/                  sorgenti TypeScript + Lit, compilati con Vite
 tests/core, tests/repo     girano senza Home Assistant installato
 tests/ha                   girano dentro l'ambiente di test di Home Assistant
@@ -120,11 +195,13 @@ pip install pytest-homeassistant-custom-component
 pytest -p pytest_homeassistant_custom_component -o asyncio_mode=auto tests/ha
 ```
 
-`core/` non deve mai importare `homeassistant`. La CI lo verifica; se quel
-controllo fallisce, la cosa da correggere è il codice, mai il test.
+`core/` non deve mai importare `homeassistant`: è ciò che mantiene il motore
+decisionale una funzione pura, e quindi ciò che renderà veritiera la traccia del
+simulatore. La CI lo verifica; se quel controllo fallisce, si corregge il
+codice, mai il test.
 
-Per aggiungere una lingua: copia `translations/en.json` e
-`translations/panel/en.json` nel nuovo codice lingua, traduci e apri una pull
+Per aggiungere una lingua, copia `translations/en.json` e
+`translations/panel/en.json` nel nuovo codice lingua, traduci, e apri una pull
 request. La CI fallisce se gli insiemi di chiavi non coincidono.
 
 ## Licenza

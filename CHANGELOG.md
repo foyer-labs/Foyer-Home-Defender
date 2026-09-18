@@ -5,6 +5,39 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-alpha.8] — what the end-of-phase review found
+
+**Pre-release, for testing only.** No schema change: this is `alpha.7` with
+four defects fixed, and it is the version worth testing.
+
+### Fixed
+- **Log retention never ran on most installations.** The purge was on a daily
+  timer, and every configuration change reloads the integration and restarts
+  that timer: a house touched more often than once a day would have kept every
+  row for ever. It now also runs at each start.
+- **The language setting did nothing.** It is the language of what Foyer
+  *sends out* — notifications, the spoken zone name — and the executor was
+  still reading Home Assistant's. Left empty it still follows Home Assistant,
+  and now it follows it as messages are sent rather than as Foyer was loaded,
+  so changing Home Assistant's language no longer needs a reload.
+- **The overview asked the log a question every second** while a countdown was
+  running. It now reloads its recent events when something has happened.
+- **An attribute-only report was recorded as zone activity.** A battery level
+  arriving is not a door opening. A row is written when the state moved, or
+  when what Foyer makes of it moved — which is what a numeric trigger crossing
+  its band does without changing the state at all.
+- The log page is open to every user, but its category filters came from the
+  administrators-only configuration: a non-admin saw the page with no filters.
+- A failed notification was labelled "Notification sent" in the log. The event
+  says what was attempted; the outcome column says how it went.
+- The alarm-memory banner no longer reads "Alarm memory in Upstairs: ." when
+  the zones that caused it are no longer known.
+
+### Added
+- A refresh button on the log page, and the first-run wizard's entity picker no
+  longer stops at the first two hundred entities.
+- Screenshots and a version badge in the README, which is the page HACS shows.
+
 ## [0.1.0-alpha.7] — Phase 1, part 4: the event log, the wizard, the card
 
 **Pre-release, for testing only.** It is, however, the end of Phase 1: with

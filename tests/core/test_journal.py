@@ -233,7 +233,9 @@ def test_an_attribute_only_report_is_not_zone_activity():
     world.set(DOOR, "on")
     decision = world.set(DOOR, "on", battery_level=61)
 
-    assert [r for r in rows(world, decision, old="on") if r.event_type == "zone_state"] == []
+    assert [
+        r for r in rows(world, decision, old="on") if r.event_type == "zone_state"
+    ] == []
 
 
 def test_a_numeric_trigger_crossing_its_band_is_recorded_though_the_state_is_the_same():
@@ -259,6 +261,8 @@ def test_a_numeric_trigger_crossing_its_band_is_recorded_though_the_state_is_the
     world.set(WINDOW, "on", level=10)
     decision = world.set(WINDOW, "on", level=40)
 
-    zone_rows = [r for r in rows(world, decision, old="on") if r.event_type == "zone_state"]
+    zone_rows = [
+        r for r in rows(world, decision, old="on") if r.event_type == "zone_state"
+    ]
     assert len(zone_rows) == 1
     assert zone_rows[0].detail["active"] is True

@@ -505,7 +505,10 @@ class FoyerCard extends LitElement {
         flex-wrap: wrap;
       }
       .area-name {
-        flex: 1;
+        /* Keep the name on one line: the state chip and the countdown wrap
+           below it rather than squeezing it to two words a line. */
+        flex: 1 0 auto;
+        min-width: 40%;
         font-size: 14px;
       }
       .blocking-hd {

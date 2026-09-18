@@ -1015,7 +1015,7 @@
     "config_delete": "Elemento di configurazione eliminato",
     "config_restore": "Configurazione ripristinata",
     "config_log_cleared": "Registro svuotato",
-    "action_notify": "Notifica inviata",
+    "action_notify": "Notifica",
     "action_persistent_notification": "Notifica di Home Assistant",
     "action_siren": "Sirena",
     "action_light": "Luce",
@@ -1026,7 +1026,7 @@
     "action_call_service": "Chiamata di servizio",
     "action_delay": "Attesa",
     "action_chime": "Campanello",
-    "action_revert": "Riportato allo stato precedente"
+    "action_revert": "Riportato a riposo"
   },
   "log": {
     "filters": "Filtri",
