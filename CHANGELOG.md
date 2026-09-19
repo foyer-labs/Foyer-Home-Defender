@@ -5,6 +5,55 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.3] — the picture, and the page you were on
+
+Three defects found by using it rather than by reading it, and one of them
+has been in every release since cameras landed.
+
+### Fixed
+- **The camera folder was created unusable.** `os.makedirs` takes `exist_ok`
+  as its third argument and was being given `True` as its *second* — the
+  mode — so the folder came out as `0o001`: no read, no write, for anybody.
+  Every snapshot into a newly created folder failed, at the moment of the
+  alarm. No test had ever run the camera action; one does now, and it
+  asserts the folder can be written to. If you have a broken `media/foyer`
+  from an earlier release, delete it and Foyer will make it properly.
+- **Saving anything in the panel sent you back to the dashboard.** Every
+  accepted edit reloads the integration, a reload unloads it first, and
+  unloading removed the sidebar panel — so for that moment the page you were
+  standing on did not exist, and Home Assistant did what it does with a page
+  that does not exist. The panel is now registered once per Home Assistant
+  run and removed when the integration is removed.
+- **The card's keypad had no key to press.** It collected digits and left you
+  there: the design assumed you would press the action button again, and said
+  so nowhere. The pad now grows a confirm key while a command is waiting for
+  a code, and it repeats that exact command. The key is labelled with what it
+  will do — *Arm*, *Disarm*, *Exclude*, *Arm anyway (forced)* — which also
+  answers the question it used to raise, because "a code is required" with no
+  object reads as though arming wanted one. Arming does not. Forcing past an
+  open zone does, and so does excluding a zone; both lower the guard (§8.2).
+
+### Changed
+- **A notification says which app its camera picture is for.** The Companion
+  app reads `image` and is happy with a link to the authenticated camera
+  proxy, with no file written. Telegram reads `photo` and needs a file,
+  because its own server fetches the picture from outside the house with no
+  session and cannot follow that link. Foyer asks rather than guessing from
+  the service name — a bot may be called anything, and every transport
+  discards a key it does not know in silence, so a guess that fails fails
+  invisibly. Existing notify actions keep the Companion behaviour.
+
+  For the file transports the snapshot is taken at the moment of the
+  notification, and the message goes without the picture if the camera does
+  not answer. The camera folder must be in `allowlist_external_dirs`.
+
+### Specification
+- **Decision 90**, and §6.2 now states the attachment rule in both
+  directions instead of describing only the proxy link.
+
+Configuration schema unchanged (5.2). Foyer is not a certified alarm system
+and is not a fire alarm system.
+
 ## [0.1.0-beta.2] — what the log knows, and what it only heard
 
 A small release, and two of the three entries change a contract published
