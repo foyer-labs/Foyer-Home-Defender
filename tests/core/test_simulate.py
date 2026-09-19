@@ -654,3 +654,54 @@ def test_a_follower_inherits_the_entry_window_in_the_trace():
     # The follower does not open a second window; it inherits the running one.
     triggered = step_with(sim, Moment.TRIGGERED)
     assert triggered.at == entries[0][0] + timedelta(seconds=30)
+
+
+# --- the premise goes through §8.2 like any other arming ---------------------------
+
+
+def with_a_user_and_a_policy(**policy):
+    from custom_components.foyer.core.models import CodePolicy
+
+    from .helpers import user
+
+    config = make_house()
+    return replace(
+        config,
+        users=(user(),),
+        code_policy=CodePolicy(**policy),
+    )
+
+
+def test_the_premise_is_refused_when_the_house_asks_for_a_code_to_arm():
+    """§8.2 has no entry for a rehearsal, and inventing an exemption here
+    would be a second authorisation path. The trace says so on line one,
+    which is itself a true answer about the configuration."""
+    config = with_a_user_and_a_policy(arm=True)
+    sim = run(config, SimulationRequest(start=START, scenario_id="night"), live(config))
+    request = next(s for s in sim.steps if s.kind == "request")
+    assert not request.accepted
+    assert request.reason == Reason.CODE_REQUIRED.value
+
+
+def test_the_premise_goes_ahead_when_the_person_running_it_holds_a_code():
+    from custom_components.foyer.core.models import Actor, CodeResult
+
+    config = with_a_user_and_a_policy(arm=True)
+    sim = run(
+        config,
+        SimulationRequest(
+            start=START,
+            scenario_id="night",
+            actor=Actor(user_id="luca", code=CodeResult.VALID),
+        ),
+        live(config),
+    )
+    assert next(s for s in sim.steps if s.kind == "request").accepted
+    assert Moment.ARMED in [m for _, m in moments(sim)]
+
+
+def test_an_installation_with_no_codes_rehearses_with_no_code():
+    """The policy is inert while nobody holds one (decision 78), so the
+    ordinary case asks for nothing."""
+    sim = simulate(make_house(), scenario_id="night")
+    assert next(s for s in sim.steps if s.kind == "request").accepted

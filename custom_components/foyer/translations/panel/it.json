@@ -1549,7 +1549,8 @@
       "entities_hint": "Solo le entità lette dalle condizioni delle azioni. Lasciane una vuota per usare ciò che dice davvero adesso.",
       "as_now": "Com’è adesso",
       "run": "Esegui la simulazione",
-      "reset": "Azzera"
+      "reset": "Azzera",
+      "premise_code": "Questa installazione chiede un codice per inserire, e la simulazione inserisce la casa prima che accada altro — quindi lo chiede anche lei. In ogni caso non viene eseguito nulla."
     },
     "trace": {
       "title": "Traccia della decisione",

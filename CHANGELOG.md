@@ -31,6 +31,12 @@ doing rather than what you meant it to do.
 
   Every run is recorded under `system` with its inputs, so a configuration
   change can be justified afterwards. New command `foyer/simulate`.
+
+  The arming the run uses as its premise goes through §8.2 like any other
+  arming: if the installation asks for a code to arm, the simulator asks for
+  one. §8.2 has no entry for a rehearsal, and an exemption invented here would
+  be a second authorisation path — which is the one thing this feature exists
+  to avoid.
 - **Live zone diagnostics** (page 9 → *Diagnostics*). Every mapped zone with
   its backing entity, live state, **resolved trigger evaluation** — would Foyer
   count this as triggered right now, read through that zone's own trigger —

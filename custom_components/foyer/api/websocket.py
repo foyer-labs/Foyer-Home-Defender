@@ -1338,6 +1338,10 @@ async def ws_diagnostics(
         vol.Optional("horizon", default=DEFAULT_HORIZON): vol.All(
             int, vol.Range(min=1, max=MAX_HORIZON)
         ),
+        # Not for the command, which only reads: for the arming the run uses
+        # as its premise. An installation that asks for a code to arm asks
+        # for one here too, and the trace says so rather than pretending.
+        vol.Optional("code"): vol.Any(str, None),
     }
 )
 @websocket_api.async_response
@@ -1377,6 +1381,7 @@ async def ws_simulate(
         ),
         entities=dict(msg["entities"]),
         horizon=msg["horizon"],
+        actor=actor,
     )
     # §11.2: every run is logged with its inputs, so a configuration change
     # can be justified after the fact — which only works if the row carries

@@ -111,6 +111,12 @@ bug is a second evaluation path somewhere, never the trace.
   "only if nobody is home" can be rehearsed both ways. Leave one empty to use
   what it really says right now.
 
+**If your installation asks for a code to arm**, the simulator asks for one
+too. The premise is a real arming, run through the real engine, and §8.2 has no
+exemption for a rehearsal — inventing one would be a second authorisation path,
+which is exactly what this feature is built to avoid. The trace says so on its
+first line and the page offers the field. Nothing is executed either way.
+
 The house starts disarmed whatever it is really doing, with your sensors'
 real current readings underneath your overrides. If a window is genuinely open,
 the simulator will tell you the arming would be refused, which is a useful

@@ -1549,7 +1549,8 @@
       "entities_hint": "Only the entities an action's conditions read. Leave one empty to use what it really says right now.",
       "as_now": "As now",
       "run": "Run simulation",
-      "reset": "Reset"
+      "reset": "Reset",
+      "premise_code": "This installation asks for a code to arm, and the simulation arms the house before anything else happens — so it asks for one too. Nothing is executed either way."
     },
     "trace": {
       "title": "Decision trace",

@@ -90,6 +90,7 @@ class FoyerPageTest extends LitElement {
     _start: { state: true },
     _overrides: { state: true },
     _entities: { state: true },
+    _code: { state: true },
   };
 
   ctx?: PanelContext;
@@ -102,6 +103,7 @@ class FoyerPageTest extends LitElement {
   private _start = "";
   private _overrides: Override[] = [];
   private _entities: Record<string, string> = {};
+  private _code = "";
   private _loaded = false;
   private _mentioned = new Set<string>();
 
@@ -135,6 +137,7 @@ class FoyerPageTest extends LitElement {
       start: this._start ? new Date(this._start).toISOString() : null,
       zones: this._overrides.filter((o) => o.zone_id && o.state),
       entities: this._entities,
+      code: this._code || undefined,
     };
     try {
       this._simulation = await this.ctx.simulate(query);
@@ -563,6 +566,28 @@ class FoyerPageTest extends LitElement {
                     .filter((step) => this._worthShowing(step))
                     .map((step) => this._renderStep(s, step))}
                 </ol>
+                ${this._premiseNeedsCode(simulation)
+                  ? html`<div class="notice">
+                      <p>${t(s, "test.simulator.premise_code")}</p>
+                      <input
+                        type="password"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        .value=${this._code}
+                        @change=${(e: Event) =>
+                          (this._code = (e.target as HTMLInputElement).value)}
+                      />
+                      <div class="actions">
+                        <button
+                          class="btn primary"
+                          ?disabled=${this._busy}
+                          @click=${() => void this._run()}
+                        >
+                          ${t(s, "test.simulator.run")}
+                        </button>
+                      </div>
+                    </div>`
+                  : nothing}
                 ${simulation.truncated
                   ? html`<p class="notice">${t(s, "test.trace.truncated")}</p>`
                   : nothing}
@@ -570,6 +595,19 @@ class FoyerPageTest extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  /** Whether the run never got off the ground because the house asks for a
+   * code to arm (§8.2). The code policy is not suspended for a rehearsal —
+   * inventing an exemption would be a second authorisation path — so the
+   * page asks, the way every other page asks. */
+  private _premiseNeedsCode(simulation: Simulation): boolean {
+    const first = simulation.steps.find((step) => step.kind === "request");
+    return (
+      !!first &&
+      !first.accepted &&
+      (first.reason === "code_required" || first.reason === "bad_code")
+    );
   }
 
   /** A tick that decided nothing and changed nothing is noise. The setup

@@ -37,6 +37,7 @@ from typing import Any
 from .engine import decide, next_wakeup
 from .models import (
     ActionIntent,
+    Actor,
     AreaRuntime,
     AreaState,
     ArmAreaRequest,
@@ -116,6 +117,13 @@ class SimulationRequest:
     # nobody is home" can be rehearsed both ways.
     entities: Mapping[str, str] = field(default_factory=dict)
     horizon: int = DEFAULT_HORIZON
+    # Who is asking, carried on the premise arming. The code policy is not
+    # suspended for a rehearsal (§8.2 has no entry for one, and inventing an
+    # exemption here would be a second authorisation path): if this
+    # installation asks for a code to arm, the trace says so on its first
+    # line, which is a true and useful answer — and the panel can then ask
+    # for one exactly as it does everywhere else.
+    actor: Actor = field(default_factory=Actor)
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,10 +246,10 @@ def _queue(
     """
     events: list[tuple[datetime, Event]] = []
     if request.scenario_id:
-        events.append((request.start, ArmRequest(request.scenario_id)))
+        events.append((request.start, ArmRequest(request.scenario_id, request.actor)))
     else:
         for area_id in request.area_ids:
-            events.append((request.start, ArmAreaRequest(area_id)))
+            events.append((request.start, ArmAreaRequest(area_id, request.actor)))
     zones = {z.id: z for z in config.zones}
     for override in request.zones:
         zone = zones.get(override.zone_id)

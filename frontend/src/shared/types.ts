@@ -653,6 +653,9 @@ export interface SimulationQuery {
   zones?: { zone_id: string; state: string; at: number }[];
   entities?: Record<string, string>;
   horizon?: number;
+  /** Not for the command, which only reads: for the arming the run uses as
+   * its premise, which goes through §8.2 like any other arming. */
+  code?: string;
 }
 
 export type PageId =
