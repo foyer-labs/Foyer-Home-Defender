@@ -31,13 +31,18 @@ from ..const import CHANNEL_HA_UI, SIGNAL_UPDATE
 from ..core import authz
 from ..core.conditions import condition_entities
 from ..core.diagnostics import as_dict as diagnostics_dict, diagnose
-from ..core.engine import arm_blockers, decide, master_state, next_wakeup
+from ..core.engine import (
+    arm_blockers,
+    decide,
+    master_state,
+    next_wakeup,
+    walk_test_zones,
+)
 from ..core.journal import LogRow, action_row, rows_for, test_action_row
 from ..core.models import (
     Actor,
     Area,
     AreaState,
-    Channel,
     Decision,
     EntityState,
     Event,
@@ -526,14 +531,9 @@ class FoyerSystem:
         walk = self.state.walk_test
         if walk is None:
             return None
-        expected = [
-            z.id
-            for z in self.config.zones
-            if z.enabled
-            and z.channel is Channel.INTRUSION
-            and not z.always_on
-            and z.id not in self.state.bypassed
-        ]
+        # The engine's own list, so the table and the row the engine writes
+        # when the test ends can never name different zones.
+        expected = list(walk_test_zones(self.config, self.state.bypassed))
         return {
             "started_at": walk.started_at.isoformat(),
             "until": walk.until.isoformat(),

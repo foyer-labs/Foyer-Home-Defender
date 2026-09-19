@@ -24,6 +24,7 @@ records what the areas did but decides nothing for them.
 
 from __future__ import annotations
 
+from collections.abc import Container
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
@@ -223,6 +224,30 @@ def arm_blockers(
     run.refresh_active()
     faulted, open_ = run.blockers(area_ids)
     return tuple(z.id for z in faulted), tuple(z.id for z in open_)
+
+
+def walk_test_zones(
+    config: FoyerConfig, bypassed: Container[str] = ()
+) -> tuple[str, ...]:
+    """The zones a walk should reach, so that silence can be a finding (§11.3).
+
+    Intrusion zones that are enabled and not excluded. An `always_on` zone is
+    left out: it is live rather than under test, and nobody sets off the
+    smoke detector to prove it works.
+
+    A read model, here rather than in the runtime, because the engine answers
+    the same question when it says which zones never reacted — and a table
+    listing a zone the engine had not expected would be a finding nobody
+    could act on.
+    """
+    return tuple(
+        z.id
+        for z in config.zones
+        if z.enabled
+        and z.channel is Channel.INTRUSION
+        and not z.always_on
+        and z.id not in bypassed
+    )
 
 
 def zone_fault(
@@ -865,13 +890,12 @@ class _Run:
         walk = self.walk_test
         if walk is None:
             return
-        expected = self.expected_zones(walk)
+        expected = walk_test_zones(self.config, self.bypassed)
         missed = tuple(z for z in expected if z not in walk.detections)
         self.walk_test = None
         for area_id in walk.armed_areas:
-            if area_id in self.areas and self.areas[area_id].state is not (
-                AreaState.DISARMED
-            ):
+            rt = self.areas.get(area_id)
+            if rt is not None and rt.state is not AreaState.DISARMED:
                 self.disarm_area(area_id, walk.channel)
         self.occur(
             Moment.WALK_TEST_ENDED,
@@ -905,22 +929,6 @@ class _Run:
             self.end_walk_test("hard_timeout")
         elif self.now >= walk.until:
             self.end_walk_test("timeout")
-
-    def expected_zones(self, walk: WalkTest) -> tuple[str, ...]:
-        """The zones a walk should have reached, so silence can be a finding.
-
-        Intrusion zones that are enabled and not excluded. An `always_on`
-        zone is left out: it is live rather than under test, and nobody sets
-        off the smoke detector to prove it works.
-        """
-        return tuple(
-            z.id
-            for z in self.config.zones
-            if z.enabled
-            and z.channel is Channel.INTRUSION
-            and not z.always_on
-            and z.id not in self.bypassed
-        )
 
     def walk_test_detection(self, zone: Zone) -> None:
         """A zone saw somebody during the walk test. That is all it does.
