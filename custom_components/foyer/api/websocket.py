@@ -120,11 +120,12 @@ PREFS_KEY = "foyer.prefs"
 # Moments a profile can already be written against, though the phase that
 # raises them has not landed (SPEC §6.1; part 3 appendix).
 FUTURE_MOMENTS: tuple[Moment, ...] = (
-    Moment.CODE_REJECTED,
-    Moment.LOCKOUT,
-    Moment.LOW_BATTERY,
-    # The walk test's two moments left this list in Phase 3 part 2, which is
-    # the phase that raises them.
+    # One left, and it is the only one no phase raises: Phase 4 builds
+    # escalation. The others left as their phase landed — code_rejected and
+    # lockout with Phase 2's identity, low_battery and the walk test's two
+    # with Phase 3 — and a moment still labelled "nothing raises this yet"
+    # after something does is a label that teaches people to skip a working
+    # setting.
     Moment.ESCALATION_EXHAUSTED,
 )
 
