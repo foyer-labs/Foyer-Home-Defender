@@ -14,3 +14,4 @@ Thumbs.db
 # built, not what it is. They stay on disk and out of the repository.
 CLAUDE.md
 docs/PROMPTS.md
+docs/PROMPT-phase-*.md
