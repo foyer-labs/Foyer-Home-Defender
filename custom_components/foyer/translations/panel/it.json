@@ -1597,6 +1597,10 @@
       "entry": "ritardo d'ingresso",
       "siren": "sirena",
       "hold": "attesa della chiusura"
+    },
+    "condition": {
+      "time": "orario {after}-{before}",
+      "state": "{entity_id} {operator} {state}"
     }
   }
 }

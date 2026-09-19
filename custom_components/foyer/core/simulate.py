@@ -144,9 +144,10 @@ class PlannedAction:
     ran: bool
     # None when it ran. One of response.SKIP_*, which the panel translates.
     skipped: str | None = None
-    # For SKIP_CONDITION: which conditions failed, in words (§11.2 asks the
-    # trace to explain a skip "well enough to act on").
-    conditions: tuple[str, ...] = ()
+    # For SKIP_CONDITION: which conditions failed, as fields the panel turns
+    # into a sentence (§11.2 asks the trace to explain a skip "well enough to
+    # act on", and §15.2 asks that no backend write the words).
+    conditions: tuple[Mapping[str, str], ...] = ()
     params: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -504,7 +505,7 @@ def _batch(
             continue
         did_run = action.id in ran
         why: str | None = None
-        conditions: tuple[str, ...] = ()
+        conditions: tuple[Mapping[str, str], ...] = ()
         if not did_run:
             if held_at is not None and index >= held_at:
                 why = SKIP_HELD_BY_DELAY
@@ -760,7 +761,7 @@ def _action_dict(action: PlannedAction) -> dict[str, Any]:
         "profile_id": action.profile_id,
         "ran": action.ran,
         "skipped": action.skipped,
-        "conditions": list(action.conditions),
+        "conditions": [dict(c) for c in action.conditions],
     }
 
 

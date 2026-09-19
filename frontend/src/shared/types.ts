@@ -579,8 +579,13 @@ export interface TraceAction {
   /** "silent" | "already_running" | "condition" | "held_by_delay", or null
    * when it ran. Translated in the panel, never sent as a sentence. */
   skipped: string | null;
-  /** For "condition": which ones failed, well enough to act on (§11.2). */
-  conditions: string[];
+  /** For "condition": which ones failed, as fields rather than a sentence.
+   * The backend writes no words a person reads (§15.2); the panel builds the
+   * phrase from `kind` plus the rest. */
+  conditions: (
+    | { kind: "time"; after: string; before: string }
+    | { kind: "state"; entity_id: string; operator: string; state: string }
+  )[];
 }
 
 export interface TraceBatch {

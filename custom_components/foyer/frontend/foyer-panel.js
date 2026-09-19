@@ -5149,7 +5149,11 @@ var Ot = class extends I {
 	_renderAction(e, t) {
 		let n = t.name || B(e, `action_kind.${t.kind}`);
 		if (t.ran) return D`<div class="yes">${B(e, "test.trace.ran", { action: n })}</div>`;
-		let r = t.skipped === "condition" ? B(e, "test.skip.condition", { conditions: t.conditions.join(", ") }) : B(e, `test.skip.${t.skipped}`);
+		let r = t.skipped === "condition" ? B(e, "test.skip.condition", { conditions: t.conditions.map((t) => t.kind === "time" ? B(e, "test.condition.time", t) : B(e, "test.condition.state", {
+			entity_id: t.entity_id,
+			operator: B(e, `condition.${t.operator}`),
+			state: t.state
+		})).join(", ") }) : B(e, `test.skip.${t.skipped}`);
 		return D`<div class=${t.skipped === "held_by_delay" ? "wait" : "no"}>
       ${B(e, "test.trace.skipped", {
 			action: n,

@@ -604,15 +604,31 @@ def chime_suppressed(config: FoyerConfig, zone: Zone) -> bool:
     return zone.silent and "chime" in config.settings.silent_suppresses
 
 
-def condition_summary(action: ProfileAction, ctx: PlanContext) -> tuple[str, ...]:
-    """Why an action was skipped, in words the trace can show (§11.2)."""
-    out = []
+def condition_summary(
+    action: ProfileAction, ctx: PlanContext
+) -> tuple[Mapping[str, str], ...]:
+    """Which of an action's conditions failed, so the trace can say why (§11.2).
+
+    Data, never a sentence. "time 22:00-07:00" and "binary_sensor.x is on"
+    read like English because they are English, and a backend that writes the
+    words a person reads is a backend an Italian installation cannot
+    translate. The panel builds the sentence from these fields, as it does for
+    every other word on the page.
+    """
+    out: list[Mapping[str, str]] = []
     for condition in unmet(action, ctx.snapshot, ctx.now, ctx.tz):
         if isinstance(condition, TimeCondition):
-            out.append(f"time {condition.after}-{condition.before}")
+            out.append(
+                {"kind": "time", "after": condition.after, "before": condition.before}
+            )
         elif isinstance(condition, StateCondition):
             out.append(
-                f"{condition.entity_id} {condition.operator.value} {condition.state}"
+                {
+                    "kind": "state",
+                    "entity_id": condition.entity_id,
+                    "operator": condition.operator.value,
+                    "state": condition.state,
+                }
             )
     return tuple(out)
 

@@ -257,9 +257,19 @@ def test_a_skipped_action_says_which_condition_failed():
     assert by_id["siren"].ran
     assert not by_id["night_light"].ran
     assert by_id["night_light"].skipped == SKIP_CONDITION
-    assert by_id["night_light"].conditions == ("time 22:00-07:00",)
+    # Fields, never a sentence: the backend writes no word a person reads.
+    assert by_id["night_light"].conditions == (
+        {"kind": "time", "after": "22:00", "before": "07:00"},
+    )
     assert by_id["nas"].skipped == SKIP_CONDITION
-    assert by_id["nas"].conditions == ("binary_sensor.nobody_home is on",)
+    assert by_id["nas"].conditions == (
+        {
+            "kind": "state",
+            "entity_id": "binary_sensor.nobody_home",
+            "operator": "is",
+            "state": "on",
+        },
+    )
 
 
 def test_the_hypothetical_clock_is_what_a_time_condition_is_read_against():

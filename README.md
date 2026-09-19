@@ -6,7 +6,7 @@
 
 <h1 align="center">Foyer Home Defender</h1>
 
-<p align="center"><em>A real intruder alarm panel for Home Assistant: areas that arm on their own, scenarios you define yourself, zones that say what "triggered" means for them, a keypad by the door, and a log that tells you the truth.</em></p>
+<p align="center"><em>A real intruder alarm panel for Home Assistant: areas with a state each, arming scenarios you define yourself, zones that say what "triggered" means for them — and a simulator that tells you what the alarm would do, before you find out the hard way.</em></p>
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=version" alt="Latest version"></a>
@@ -16,20 +16,22 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Apache-2.0"></a>
 </p>
 
-> ### Status: beta. The alarm core works, it asks for a code, and there can be a keypad by the door.
+> ### Status: beta. The alarm core works, and you can ask it what it would do before you trust it.
 >
-> It can protect a house, and it is doing so. **Physical arming has landed**:
-> keypads, NFC tags, RFID badges and remotes, a full `foyer.*` service contract
-> and MQTT in both directions — so a keypad can tell *that code is wrong* from
-> *the kitchen window is open* instead of beeping the same way at both. Codes,
-> users, permissions and lockout arrived in the release before. Beside it now
-> sits the simulator: ask what would happen, and it tells you without anything
-> happening. What is still missing is the walk test and escalation.
+> It can protect a house, and it is protecting the author's. **The simulator
+> has landed**: pick a scenario and an hour, force a window open a minute in,
+> and read the whole decision — which area changed state, which delay started,
+> which profile answered, and which actions would have run and which would not,
+> with the reason. It calls the same engine the alarm calls and never hands the
+> answer to the part that runs sirens. Before it came physical arming —
+> keypads, NFC tags, badges, the `foyer.*` service contract and MQTT in both
+> directions — and before that, codes, users and permissions. Still missing:
+> the walk test, and escalation until somebody acknowledges.
 
 **Try it if** you already have door, window or motion sensors in Home
-Assistant, you want one panel with real arming scenarios instead of a folder of
-automations, you want to arm from the wall rather than from a phone, and you are
-willing to run a beta on a house that has other locks on it.
+Assistant, you want one panel with arming scenarios of your own instead of a
+folder of automations, you would rather check a configuration than hope it is
+right, and you are willing to run a beta on a house that has other locks on it.
 
 **Not yet, if** you want something finished, or you need escalation across
 channels, or a walk test to prove which zones really see you — [Alarmo](https://github.com/nielsfaber/alarmo)
@@ -77,18 +79,15 @@ project has not had yet.
   cannot touch: what happened, where, through which channel, whether each
   action actually worked, and who changed what.
 - **A simulator that answers "what would happen if…" without anything
-  happening.** Pick a scenario and an hour, force a window open sixty seconds
-  in, and read the whole decision: which area changed state, which delay
-  started, which profile answered and where it was inherited from, which
-  actions ran, and which did not *with the reason* — a condition that was not
-  met, a siren already sounding, a delay still holding the rest of the
-  sequence. It calls the same engine the alarm calls and simply never hands
-  the answer to the part that runs sirens, which is what the pure function
-  above was for.
-- **A live table of every zone**, with the one column the configuration pages
-  cannot show you: whether Foyer would count that sensor as *triggered right
-  now*, read through that zone's own trigger. Plus whether it would block
-  arming and why, its battery, its radio, and when it last actually moved.
+  happening.** Pick a scenario and an hour, force a window open a minute in,
+  and read the whole decision, including the actions that would *not* have run
+  and why. [Below](#asking-what-would-happen-without-anything-happening), with
+  an example.
+- **Test & diagnostics: a live table of every zone**, with the one column the
+  configuration pages cannot show you — whether Foyer would count that sensor
+  as *triggered right now*, read through that zone's own trigger. Plus whether
+  it would block arming and for which of the two reasons, its battery, its
+  radio, and when it last actually moved.
 
 <details>
 <summary><strong>The rest of what is already there</strong></summary>
@@ -135,6 +134,56 @@ project has not had yet.
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-zone-en.png" alt="The zone editor asking which states count as triggered, and requiring confirmation against the real sensor" width="900">
 </p>
+
+## Asking what would happen, without anything happening
+
+The simulator calls the same decision engine the alarm calls, with a made-up
+world and a made-up clock, and then never hands the result to the part that
+would run the sirens. That is a structural guarantee rather than a promise: the
+engine is a pure function, so "run it and throw the answer away" is the whole of
+the implementation, and a test asserts that the simulator and the running alarm
+reach an identical decision from identical inputs.
+
+Pick a scenario and an hour, force zones into a state at chosen offsets, and
+read what would happen — including the actions that would *not* have run, each
+with the reason:
+
+```
+21:32:00  Area "Ground floor": Disarmed → Arming · exit delay until 21:32:30
+21:32:30  Area "Ground floor": Arming → Armed
+            Profile "Default", inherited from the global default
+            ✓ Home Assistant notification
+21:33:30  Zone "Open plan PIR 1" → on
+          Area "Ground floor": Armed → Triggered · siren until 21:36:30
+          Group "Open plan": 1 of 2 within 60 s → not satisfied
+          Incident opened 20260914-213330-1
+            Profile "Silent", inherited from the zone
+            ✓ Notify Luca
+          ⏱ siren cutoff at 21:36:30
+21:34:00  Zone "Open plan PIR 2" → on
+          Group "Open plan": 2 of 2 within 60 s → SATISFIED
+          Zone joined the incident 20260914-213330-1
+            Profile "Full", inherited from the group
+            ✓ Indoor siren
+            ✗ Hall lights — condition not met: time 22:00-07:00
+            ✗ Landing lights — held back by a delay earlier in the sequence
+          ⏱ the rest of this sequence at 21:34:30
+21:36:30  Area "Ground floor": Triggered → Armed
+          Siren cutoff
+```
+
+One detector on its own is *Silent*; two within the window are *Full*. That is
+what graduated response looks like before a burglar shows you.
+
+Two limits, because they are the difference between a useful tool and a false
+sense of one. It rehearses the **decision**, not the transport: it will tell you
+a notification would be sent to a given target, not that the target works. And
+it does not replace a walk test — forcing a zone into a state proves what the
+engine does about it, and proves nothing about whether the hallway PIR is aimed
+at the hallway.
+
+How to read a trace, and what is worth rehearsing before you trust a
+configuration: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
 
 ## Arming from the wall
 
@@ -190,6 +239,7 @@ Each one imports into your own Home Assistant with one button, in
 [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md) —
 which also holds the contract, the hardware comparison and how to write your
 own adapter.
+
 A keypad should never be your only way in: batteries die, radios jam, brokers
 stop. Keep the panel and the card.
 
@@ -225,6 +275,7 @@ everything it records, and it can call any service you like.
   *After that.*
 - **No ESPHome keypad of our own.** DIY builds fit the contract like anything
   else, but this project does not maintain one in v1.
+
 The order is fixed and written down, with what each step has to prove before it
 counts as done: [the roadmap](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md#16-roadmap).
 
@@ -236,16 +287,15 @@ its code. Where they differ today:
 
 | | Foyer | Alarmo |
 |---|---|---|
+| **Simulator** | Yes: the same engine, a made-up world and a made-up clock, and a trace saying why each action would or would not have run | — |
 | **Arming scenarios** | Any number, each arming a chosen set of areas | Home Assistant's four fixed modes |
 | **Areas with independent state** | Yes: one `alarm_control_panel` each, plus a master | One panel, sensors grouped per mode |
 | **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Ordinary sensors |
 | **One incident per break-in** | Yes, with one acknowledgement | An alarm per sensor |
 | **Users, codes, permissions** | Yes: one code each, per-operation policy, duress code, lockout | Yes, per-user codes |
-| **Keypads, tags, MQTT** | Yes: a service contract and MQTT both ways, devices declared before they may command, three blueprints | Yes |
-| **What a refused command tells the device** | A stable reason and the blocking zones by name | Success or failure |
+| **Keypads, tags, MQTT** | Yes, and a refused command comes back with a stable reason and the blocking zones by name, so a keypad can sound different for *wrong code* and *kitchen window open* | Yes |
+| **Verification groups (N of M)** | Yes, with the members keeping their own response | — |
 | **Maturity** | Beta. One author, months old | Years of use, a large installed base |
-| **Simulator** | Yes: the same engine, a made-up world and clock, and a trace saying why each action ran or did not | — |
-| **Walk test** | Next release | — |
 
 If you need an alarm that thousands of houses have already shaken the bugs out
 of, use Alarmo. Foyer is a beta, and the honest difference between the two
@@ -454,7 +504,7 @@ which version of Foyer and of Home Assistant, what you expected, and what the
 log page shows — the row usually contains the answer, so a screenshot of it is
 worth more than a description. English or Italian, whichever you prefer.
 
-To be told when the simulator lands, watch the repository: releases are
+To be told when the walk test lands, watch the repository: releases are
 announced there, and the [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)
 says what changed in behaviour every time.
 

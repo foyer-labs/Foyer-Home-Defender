@@ -814,7 +814,19 @@ class FoyerPageTest extends LitElement {
     // itself; everything else has one sentence that says the whole reason.
     const why =
       action.skipped === "condition"
-        ? t(s, "test.skip.condition", { conditions: action.conditions.join(", ") })
+        ? t(s, "test.skip.condition", {
+            conditions: action.conditions
+              .map((condition) =>
+                condition.kind === "time"
+                  ? t(s, "test.condition.time", condition)
+                  : t(s, "test.condition.state", {
+                      entity_id: condition.entity_id,
+                      operator: t(s, `condition.${condition.operator}`),
+                      state: condition.state,
+                    }),
+              )
+              .join(", "),
+          })
         : t(s, `test.skip.${action.skipped}`);
     const held = action.skipped === "held_by_delay";
     return html`<div class=${held ? "wait" : "no"}>

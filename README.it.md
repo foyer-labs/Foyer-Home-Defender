@@ -6,7 +6,7 @@
 
 <h1 align="center">Foyer Home Defender</h1>
 
-<p align="center"><em>Una vera centrale d'allarme per Home Assistant: aree che si inseriscono da sole, scenari definiti da te, zone che dichiarano cosa le fa scattare, un tastierino alla porta, e un registro che dice la verità.</em></p>
+<p align="center"><em>Una vera centrale d'allarme per Home Assistant: aree con uno stato ciascuna, scenari di inserimento definiti da te, zone che dichiarano cosa le fa scattare — e un simulatore che ti dice cosa farebbe l'allarme, prima che tu lo scopra nel modo peggiore.</em></p>
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=versione" alt="Ultima versione"></a>
@@ -16,20 +16,20 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
 </p>
 
-> ### Stato: beta. Si inserisce dal muro, e il registro dice chi è stato.
+> ### Stato: beta. Il nucleo dell'allarme funziona, e puoi chiedergli cosa farebbe prima di fidartene.
 >
 > Può proteggere una casa, e lo sta facendo. Siamo alle **prime beta**: agli
 > utenti, ai codici per persona e ai permessi si aggiungono i dispositivi di
-> inserimento fisici — tastierini Ring e Zigbee, tag NFC, badge e telecomandi —
+> inserimento fisici — tastiere Ring e Zigbee, tag NFC, badge e telecomandi —
 > con il contratto dei servizi `foyer.*` e MQTT nelle due direzioni. Un
-> tastierino riceve una risposta vera: distingue «codice sbagliato» da
-> «bloccato dalla finestra della cucina», invece di fallire in silenzio. Fuori
+> tastiera riceve una risposta vera: distingue «codice sbagliato» da
+> «bloccato dalla finestra della cucina», invece di fallire in silenzio.
 > Accanto c'è il simulatore: chiedi cosa succederebbe, e te lo dice senza che
 > succeda. Fuori restano la prova di percorso e la scalata delle notifiche.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
-cartella di automazioni, e vuoi inserire e disinserire da un tastierino, un tag
+cartella di automazioni, e vuoi inserire e disinserire da una tastiera, un tag
 o un badge con un registro che dice chi è stato.
 
 **Non ancora, se** ti serve camminare per casa a impianto inserito per sapere
@@ -45,21 +45,22 @@ oggi è la scelta prudente.
 
 ## Cosa fa
 
-- **Aree che si inseriscono da sole.** Ognuna ha la sua entità
+- **Aree con stato indipendente.** Ognuna ha la sua entità
   `alarm_control_panel` e il suo stato; una centrale le aggrega. Il piano terra
   può restare inserito mentre tu sei al primo piano.
-- **Scenari di inserimento definiti da te.** *Notte, solo piano terra*. *Solo
-  garage*. *Cane in casa*. Quanti ne vuoi, non quattro modalità fisse.
+- **Scenari di inserimento definiti da te.** La parzializzazione che vuoi tu:
+  *Notte, solo piano terra*. *Solo garage*. *Cane in casa*. Quanti ne vuoi, non
+  quattro modalità fisse.
 - **Un codice per ogni persona.** Salvato come hash e verificato solo nel
   backend: una card è un tastierino che trasmette un codice, non qualcosa che
   decide. Quali operazioni lo chiedono lo decidi tu, un'area o uno scenario
   possono chiederne di più, e ogni riga del registro dice chi è stato. In più
-  un codice di coercizione che disinserisce normalmente facendo scattare un
+  un codice sotto costrizione, che disinserisce normalmente e fa scattare un
   allarme silenzioso, e il blocco dopo codici sbagliati ripetuti.
-- **Inserimento da un tastierino alla porta.** Tastierini Ring e Zigbee, tag
+- **Inserimento dalla tastiera alla porta.** Tastiere Ring e Zigbee, tag
   NFC, badge RFID e telecomandi. Foyer non parla con i singoli modelli: espone
   un contratto — i servizi `foyer.*` e MQTT nelle due direzioni, con topic
-  configurabili — e risponde in modo strutturato, così un tastierino può dare
+  configurabili — e risponde in modo strutturato, così una tastiera può emettere
   due suoni diversi a «codice sbagliato» e a «non adesso, la finestra della
   cucina è aperta». Ogni riga del registro nomina la persona, il canale e il
   dispositivo.
@@ -80,19 +81,16 @@ oggi è la scelta prudente.
   dieci giorni del recorder non può toccare: cosa è successo, dove, attraverso
   quale canale, se ogni azione ha davvero funzionato, e chi ha cambiato cosa.
 - **Un simulatore che risponde a «cosa succederebbe se…» senza che succeda
-  niente.** Scegli uno scenario e un'ora, forza l'apertura di una finestra
-  sessanta secondi dopo, e leggi tutta la decisione: quale area ha cambiato
-  stato, quale ritardo è partito, quale profilo ha risposto e da dove è stato
-  ereditato, quali azioni sono partite e quali no *con il motivo* — una
-  condizione non soddisfatta, una sirena già in funzione, un ritardo che
-  trattiene ancora il resto della sequenza. Chiama lo stesso motore che chiama
-  l'allarme e semplicemente non consegna mai la risposta a chi farebbe suonare
-  le sirene: è a questo che serviva la funzione pura di cui sopra.
-- **Una tabella in tempo reale di ogni zona**, con l'unica colonna che le
-  pagine di configurazione non possono mostrarti: se Foyer considererebbe
-  quel sensore *scattato adesso*, letto attraverso il trigger di quella zona.
-  E poi se bloccherebbe l'inserimento e perché, la batteria, il segnale radio,
-  e quando si è mosso davvero l'ultima volta.
+  niente.** Scegli uno scenario e un'ora, forza l'apertura di una finestra un
+  minuto dopo, e leggi tutta la decisione, comprese le azioni che *non*
+  sarebbero partite e perché. [Qui sotto](#chiedere-cosa-succederebbe-senza-che-succeda-niente),
+  con un esempio.
+- **Test e diagnostica: una tabella in tempo reale di ogni zona**, con
+  l'unica colonna che le pagine di configurazione non possono mostrarti — se
+  Foyer considererebbe quel sensore *scattato adesso*, letto attraverso il
+  trigger di quella zona. In più: se bloccherebbe l'inserimento e per quale dei
+  due motivi, lo stato della batteria, il segnale radio, e quando ha rilevato
+  qualcosa l'ultima volta.
 
 <details>
 <summary><strong>Il resto di ciò che c'è già</strong></summary>
@@ -158,9 +156,59 @@ alle 02:14?* e il recorder l'ha cancellato dieci giorni fa.
 Foyer è quelle parti. Le tue automazioni restano benvenute: emette un evento
 per tutto ciò che registra, e può chiamare qualunque servizio tu voglia.
 
-## Tastierini, tag e telecomandi
+## Chiedere cosa succederebbe, senza che succeda niente
 
-Foyer non parla con i tastierini: espone un contratto. I modelli cambiano ogni
+Il simulatore usa lo stesso motore decisionale dell'allarme vero, con un mondo
+e un orologio inventati, e poi non consegna mai il risultato a chi farebbe
+suonare le sirene. Non è una promessa, è una garanzia strutturale: il motore è
+una funzione pura, quindi «eseguilo e butta via la risposta» è tutta
+l'implementazione — e un test verifica che il simulatore e l'allarme in
+funzione arrivino alla stessa identica decisione dagli stessi identici dati.
+
+Scegli uno scenario e un'ora, forza lo stato delle zone a intervalli decisi da
+te, e leggi cosa succederebbe — comprese le azioni che *non* sarebbero partite,
+ognuna con il suo motivo:
+
+```
+21:32:00  Area «Piano terra»: Disinserito → In inserimento · ritardo d'uscita fino alle 21:32:30
+21:32:30  Area «Piano terra»: In inserimento → Inserito
+            Profilo «Base», ereditato dal profilo predefinito
+            ✓ Notifica di Home Assistant
+21:33:30  Zona «Open space PIR 1» → on
+          Area «Piano terra»: Inserito → In allarme · sirena fino alle 21:36:30
+          Gruppo «Open space»: 1 su 2 entro 60 s → non soddisfatto
+          Incidente aperto 20260914-213330-1
+            Profilo «Silenzioso», ereditato dalla zona
+            ✓ Avvisa Luca
+          ⏱ taglio della sirena alle 21:36:30
+21:34:00  Zona «Open space PIR 2» → on
+          Gruppo «Open space»: 2 su 2 entro 60 s → SODDISFATTO
+          Zona aggiunta all'incidente 20260914-213330-1
+            Profilo «Completo», ereditato dal gruppo
+            ✓ Sirena interna
+            ✗ Luci ingresso — condizione non soddisfatta: orario 22:00-07:00
+            ✗ Luci pianerottolo — trattenuta da un ritardo precedente nella sequenza
+          ⏱ il resto di questa sequenza alle 21:34:30
+21:36:30  Area «Piano terra»: In allarme → Inserito
+          Fine della sirena
+```
+
+Un rivelatore da solo è *Silenzioso*; due entro la finestra sono *Completo*.
+Ecco com'è fatta una risposta graduata, vista prima che te la mostri un ladro.
+
+Due limiti, perché sono la differenza fra uno strumento utile e l'illusione di
+averne uno. Prova la **decisione**, non il trasporto: ti dice che una notifica
+partirebbe verso un certo destinatario, non che quel destinatario funzioni. E
+non sostituisce una prova di percorso — forzare lo stato di una zona dimostra
+cosa ne fa il motore, e non dimostra niente su dove sia puntato il rivelatore
+del corridoio.
+
+Come si legge una traccia, e cosa vale la pena provare prima di fidarsi di una
+configurazione: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md) (in inglese).
+
+## Tastiere, tag e telecomandi
+
+Foyer non parla con le singole tastiere: espone un contratto. I modelli cambiano ogni
 sei mesi, il contratto no. Tutto ciò che sa chiamare un servizio di Home
 Assistant o pubblicare su un broker MQTT può inserire e disinserire questa
 casa. E qualunque strada prenda, il registro non scrive «disinserito»: scrive
@@ -176,7 +224,7 @@ chi, da quale canale, con quale dispositivo.
 - **Il riscontro è strutturato, non un silenzio.** Ogni servizio che cambia
   stato risponde con l'esito, un motivo stabile — `bad_code`, `zone_open`,
   `locked_out`, `not_permitted`, e gli altri — e il nome delle zone che hanno
-  bloccato l'inserimento. È quello che permette a un tastierino di distinguere
+  bloccato l'inserimento. È quello che permette a una tastiera di distinguere
   *il codice è sbagliato* da *non adesso*: sono due problemi diversi, e una
   famiglia che sente lo stesso suono per entrambi ridigita un codice che non
   era il problema.
@@ -190,7 +238,7 @@ chi, da quale canale, con quale dispositivo.
 - **Tag NFC, badge e telecomandi in modo nativo.** Un'entità `tag.*` o
   `event.*`, la persona a cui appartiene, e cosa fa una scansione: nessuna
   automazione da scrivere, e il registro nomina quella persona — che è tutto il
-  motivo per cui un tag vale come canale che identifica. Un tastierino
+  motivo per cui un tag vale come canale che identifica. Una tastiera
   condiviso è l'opposto: lì il codice *è* l'identità, e l'esenzione dal codice
   per persona non può valere. Un tag però non ha nessun codice da digitare:
   chi lo trova inserisce e disinserisce come chi lo possiede, quindi va
@@ -201,15 +249,16 @@ chi, da quale canale, con quale dispositivo.
 </p>
 
 - **Tre blueprint pronti**: Ring Alarm Keypad v2 su Z-Wave JS con l'anello LED
-  e i conti alla rovescia di uscita e di ingresso, un tastierino Zigbee
+  e i conti alla rovescia di uscita e di ingresso, una tastiera Zigbee
   generico via Zigbee2MQTT, e tag e telecomandi per i casi che la
   configurazione nativa non copre apposta. Due avvertenze, perché servono: i
   valori degli indicatori LED del Ring sono mappature della comunità, non
-  documentazione del produttore, e i cloni della famiglia Tuya cambiano nomi
-  delle azioni e campi da una revisione di firmware all'altra, quindi il tuo
-  tastierino va guardato una volta sul suo topic prima di fidartene. Quello che
+  documentazione del produttore e vanno verificati sul tuo firmware con
+  `zwave_js.set_value`; e i cloni della famiglia Tuya cambiano i nomi delle
+  azioni e i campi da una revisione di firmware all'altra, quindi la tua
+  tastiera Zigbee va guardata una volta sul suo topic prima di fidartene. Quello che
   i blueprint fanno con Foyer funziona comunque: a sbagliare è solo ciò che il
-  tastierino ti mostra.
+  tastiera ti mostra.
 
 Ogni blueprint si importa sul tuo Home Assistant con un pulsante, da
 [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md),
@@ -217,8 +266,12 @@ che contiene anche il contratto completo — servizi, MQTT, cosa vale onestament
 ogni tipo di hardware e come scrivere il proprio adattatore (in inglese, come
 tutta la documentazione tecnica).
 
+Una tastiera non deve mai essere l'unica via d'ingresso: le batterie si
+scaricano, le radio si disturbano, i broker si fermano. Tieni il pannello e la
+card.
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-devices-it.png" alt="Dispositivi di inserimento: due tastierini e un tag, ognuno dichiarato prima di poter comandare qualcosa, e il contratto MQTT con il messaggio che pubblicherà davvero" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-devices-it.png" alt="Dispositivi di inserimento: due tastiere e un tag, ognuno dichiarato prima di poter comandare qualcosa, e il contratto MQTT con il messaggio che pubblicherà davvero" width="900">
 </p>
 
 ## Cosa manca ancora, e conta
@@ -229,14 +282,16 @@ tutta la documentazione tecnica).
   suonare la sirena per tre secondi sul serio. `foyer.walk_test` e
   `foyer.test_action` non sono registrati di proposito, invece di esserlo e
   restare muti. *Prossima versione.*
-- **Nessun inserimento automatico.** Foyer non si inserisce da solo quando la
-  casa si svuota. Arriva insieme alla scalata delle notifiche, non prima: il
-  conto alla rovescia annullabile che serve a entrambe è lo stesso meccanismo,
-  e scriverlo due volte sarebbe spreco. *Dopo.*
+- **Nessuna regola automatica.** Inserire a orario, sulla presenza o su una
+  condizione tua è ancora un'automazione che scrivi tu, che chiama
+  `foyer.arm`. Il conto alla rovescia annullabile che serve qui è lo stesso
+  della scalata delle notifiche, quindi le due cose arrivano insieme e non
+  prima: scriverlo due volte sarebbe spreco. *Dopo.*
 - **Nessuna rubrica dei contatti e nessuna scalata delle notifiche.** Vanno
   direttamente a un servizio
   `notify`; non salgono da push a SMS a telefonata finché qualcuno non
   risponde. *Dopo.*
+
 L'ordine è fissato e scritto, con quello che ogni passo deve dimostrare prima
 di contare come fatto:
 [la tabella di marcia](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md#16-roadmap).
@@ -249,21 +304,21 @@ copia il codice. Dove differiscono oggi:
 
 | | Foyer | Alarmo |
 |---|---|---|
+| **Simulatore** | Sì: lo stesso motore, un mondo e un orologio inventati, e una traccia che dice perché ogni azione sarebbe partita o no | — |
 | **Scenari di inserimento** | Quanti ne vuoi, ciascuno inserisce un insieme di aree scelto | Le quattro modalità fisse di Home Assistant |
 | **Aree con stato indipendente** | Sì: un `alarm_control_panel` ciascuna, più una centrale | Una centrale sola, sensori raggruppati per modalità |
 | **Fumo, gas, acqua** | Un canale separato, attivo a impianto disinserito, mai `triggered` su un'entità d'allarme | Sensori ordinari |
 | **Un incidente per effrazione** | Sì, con una sola presa in carico | Un allarme per sensore |
-| **Utenti, codici, permessi** | Sì: un codice a testa, politica per operazione, codice di coercizione, blocco | Sì, codici per utente |
-| **Tastierini, MQTT** | Sì: contratto dei servizi e MQTT nelle due direzioni, dispositivi dichiarati, tre blueprint | Sì |
+| **Utenti, codici, permessi** | Sì: un codice a testa, politica per operazione, codice sotto costrizione, blocco | Sì, codici per utente |
+| **Tastiere, MQTT** | Sì, e un comando rifiutato torna indietro con un motivo stabile e le zone che hanno bloccato, per nome: una tastiera può suonare diversamente per *codice sbagliato* e per *finestra della cucina aperta* | Sì |
 | **Tag NFC e telecomandi** | Nativi, legati a una persona, senza automazioni da scrivere | Tramite automazioni |
+| **Gruppi di verifica (N su M)** | Sì, con i membri che mantengono la propria risposta | — |
 | **Maturità** | Beta. Un solo autore, pochi mesi di vita | Anni di utilizzo, moltissime installazioni |
-| **Simulatore** | Sì: lo stesso motore, un mondo e un orologio inventati, e una traccia che dice perché ogni azione è partita o no | — |
-| **Prova di percorso** | Prossima versione | — |
-| **Interfaccia in italiano** | Completa: pannello, card e testi di aiuto | Solo in inglese |
+| **Italiano** | Pannello, card, testi di aiuto e documentazione utente | Interfaccia tradotta |
 
-Il tastierino non è più la riga che decide. Quella che resta è l'ultima: se
-vuoi un impianto che sia già stato collaudato da molti altri prima che da te,
-usa Alarmo.
+La tastiera non è più la riga che separa i due progetti. Quella che decide
+resta la maturità: se vuoi un impianto che sia già stato collaudato da molti
+altri prima che da te, usa Alarmo.
 
 ## Come puoi verificarlo invece di fidarti
 
@@ -328,13 +383,13 @@ Assistant non sostituisce rivelatori certificati e interconnessi.
   implementa.
 - Una sirena, un interruttore o una presa smart, se vuoi far rumore.
   Facoltativo.
-- Un tastierino, un tag NFC, un badge o un telecomando, se vuoi inserire dal
-  muro invece che dal telefono. Facoltativo, e
+- Una tastiera, un tag NFC, un badge o un telecomando, se vuoi inserire dalla
+  tastiera invece che dal telefono. Facoltativo, e
   [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md)
   dice cosa vale ogni tipo di hardware prima che tu lo compri.
 
 Nient'altro: nessun account cloud e nessuna connessione verso l'esterno che
-parta da Foyer. Un broker MQTT serve solo se colleghi un tastierino per quella
+parta da Foyer. Un broker MQTT serve solo se colleghi una tastiera per quella
 strada, e resta spento finché non lo accendi tu.
 
 ## I primi quindici minuti
@@ -344,8 +399,8 @@ strada, e resta spento finché non lo accendi tu.
 2. **Verifica la condizione di allarme sul sensore vero.** Apri la porta, passa
    davanti al rivelatore, guarda cambiare lo stato. È l'unico passo che vale la
    pena fare con calma.
-3. **Crea il tuo utente con un codice.** Finché nessuno ne ha uno, nessuno
-   viene chiesto, e il pannello lo dice dove non puoi non vederlo.
+3. **Crea il tuo utente con un codice.** Finché nessuno ne ha uno, non viene
+   chiesto a nessuno, e il pannello lo dice dove non puoi non vederlo.
 4. Manda la notifica di prova che la procedura guidata ti offre. Se non arriva,
    tutto il resto di Foyer non conta.
 5. Inserisci, rientra, lascia scadere il ritardo d'ingresso e lascialo suonare:
@@ -433,7 +488,7 @@ Chi ha un codice, e solo per ciò che i suoi permessi consentono. Finché non
 crei il primo utente non viene chiesto nulla a nessuno e chiunque abbia accesso
 a Home Assistant può disinserire — il pannello lo dice apertamente finché dura.
 Una persona può essere esentata dal digitare il codice sui canali che già sanno
-chi è, come l'interfaccia di Home Assistant con il suo account; su un tastierino
+chi è, come l'interfaccia di Home Assistant con il suo account; su una tastiera
 condiviso il codice *è* l'identità, quindi lì l'esenzione non vale.
 
 </details>
@@ -504,8 +559,8 @@ custom_components/foyer/   l'integrazione (HACS installa questa cartella così c
   translations/            en.json, it.json (Home Assistant) e panel/ (interfaccia, aiuto)
   frontend/                bundle compilati di pannello e card, versionati
 frontend/                  sorgenti TypeScript + Lit, compilati con Vite
-blueprints/                adattatori per tastierini e tag (si copiano a mano)
-docs/                      la specifica, il contratto dei tastierini, gli screenshot
+blueprints/                adattatori per tastiere e tag (si copiano a mano)
+docs/                      la specifica, il contratto delle tastiere, gli screenshot
 tests/core, tests/repo     girano senza Home Assistant installato
 tests/ha                   girano dentro l'ambiente di test di Home Assistant
 ```
