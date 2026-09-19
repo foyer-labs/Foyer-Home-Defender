@@ -148,6 +148,30 @@ export interface FoyerStatus {
   incident: StatusIncident | null;
   chime_enabled: boolean;
   security: StatusSecurity;
+  /** A walk test in progress (§11.3), or null. The panel and every card
+   * layout read the banner from here: one payload, so the two can never
+   * disagree about whether the house is answering. */
+  walk_test: WalkTestStatus | null;
+}
+
+/** What a walk test looks like from outside (SPEC §11.3). */
+export interface WalkTestStatus {
+  started_at: string;
+  /** When it ends if nothing else happens: the nearer of the two below. */
+  deadline: string;
+  /** Pushed back by every detection. */
+  until: string;
+  /** Never moves, whatever detects (part 2 decision 4). */
+  hard_until: string;
+  window: number;
+  armed_areas: string[];
+  user_id: string | null;
+  user_name: string | null;
+  channel: string | null;
+  /** Every zone the walk should have reached, so that a zone with no
+   * detection reads as a finding rather than as an empty row. */
+  expected_zones: string[];
+  detections: Record<string, { first: string; last: string; count: number }>;
 }
 
 // Result of foyer/arm and foyer/disarm (SPEC §9.1).
@@ -660,6 +684,25 @@ export interface SimulationQuery {
   horizon?: number;
   /** Not for the command, which only reads: for the arming the run uses as
    * its premise, which goes through §8.2 like any other arming. */
+  code?: string;
+}
+
+/** What a real action test did (§11.4). It really executed. */
+export interface TestActionResult {
+  success: boolean;
+  reason: string | null;
+  kind?: string;
+  error?: string | null;
+}
+
+export interface TestActionQuery {
+  /** One configured action of one profile (page 5)… */
+  profile_id?: string;
+  action_id?: string;
+  /** …or a notification channel on its own, which is the half of §11.4's
+   * "every contact channel" that exists before the contact book of Phase 4. */
+  service?: string;
+  message?: string;
   code?: string;
 }
 

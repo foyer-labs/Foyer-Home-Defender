@@ -22,6 +22,8 @@ import type {
   SettingsConfig,
   Simulation,
   SimulationQuery,
+  TestActionQuery,
+  TestActionResult,
   UserConfig,
 } from "../shared/types";
 
@@ -64,6 +66,13 @@ export interface PanelContext {
    * decide() the runtime calls and never hands the result to the executor. */
   diagnostics(): Promise<Diagnostics>;
   simulate(query: SimulationQuery): Promise<Simulation>;
+  /** Page 9, tabs 3 and 4 (§11.3, §11.4). Both are writes and both are
+   * gated as writes: `walk_test` and `test_actions`, each with a code. The
+   * walk test goes through the engine like any other state-changing
+   * request; the action test really executes, which is the point. */
+  walkTest(enable: boolean, options?: { duration?: number; code?: string }):
+    Promise<CommandResult>;
+  testAction(query: TestActionQuery): Promise<TestActionResult>;
   /** Configuration backup and restore (§15.1). */
   exportConfig(): Promise<{ filename: string; document: ConfigBackup }>;
   importConfig(document: unknown): Promise<EditResult>;

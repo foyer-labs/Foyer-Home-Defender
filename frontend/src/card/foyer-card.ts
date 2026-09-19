@@ -17,6 +17,7 @@ import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 
 import { loadStrings, t, type Strings } from "../shared/i18n";
 import { stateStyles } from "../shared/styles";
+import { mmss, secondsUntil } from "../shared/time";
 import type {
   AreaState,
   CommandResult,
@@ -246,6 +247,11 @@ class FoyerCard extends LitElement {
 
   /** Colour-coded state only, for embedding in an existing dashboard.
    *
+   * It has nothing to press and still shows the walk test (§11.3), because
+   * the banner is required on *every* layout: a badge reading "armed" while
+   * every response was inhibited would be the most misleading thing on the
+   * dashboard.
+   *
    * It decides nothing and offers nothing to press, which is the point: a
    * badge sits among the lights and the thermostat, where a stray tap must
    * never disarm a house. Tapping it opens the entity's own dialog, as every
@@ -294,6 +300,11 @@ class FoyerCard extends LitElement {
         ${memory
           ? html`<span class="state memory">${t(s, "overview.memory")}</span>`
           : nothing}
+        ${status.walk_test
+          ? html`<span class="state walk-chip" title=${t(s, "walk.badge_title")}
+              >${t(s, "walk.badge")}</span
+            >`
+          : nothing}
       </div>
     `;
   }
@@ -331,6 +342,7 @@ class FoyerCard extends LitElement {
     return html`
       <ha-card>
         <div class="content compact">
+          ${this._walkBanner(s)}
           <div class="head">
             <div class="name">${name}</div>
             <span class="state ${state}">${t(s, `state.${state}`)}</span>
@@ -545,6 +557,36 @@ class FoyerCard extends LitElement {
 
   // The technical alarm and the open incident show on every card, whatever
   // area it shows (§5.5): each with its own acknowledgement, never merged.
+  /** The walk-test banner of §11.3, on every layout that has room for one.
+   *
+   * "A permanent, unmissable banner in the panel and on every card while
+   * active" is not a nicety: a real intrusion during a walk test produces
+   * nothing at all, by construction, and this is one of the three things
+   * standing between that fact and a household that has forgotten. So it is
+   * rendered before anything else on the card, it says when the test ends,
+   * and it says what is still live — because "have I just switched the
+   * smoke detector off?" is the first question, and the answer is no.
+   */
+  private _walkBanner(s: Strings) {
+    const walk = this._status?.walk_test;
+    if (!walk) return nothing;
+    const left = secondsUntil(walk.deadline, this._offset);
+    return html`
+      <div class="alert walk" role="alert">
+        <span>
+          <strong>${t(s, "walk.banner_title")}</strong>
+          ${t(s, "walk.card_banner", { time: mmss(left) })}
+        </span>
+        <button
+          ?disabled=${this._busy}
+          @click=${() => this._run({ type: "foyer/walk_test", enable: false })}
+        >
+          ${t(s, "walk.end")}
+        </button>
+      </div>
+    `;
+  }
+
   private _renderAlerts(s: Strings) {
     const status = this._status;
     if (!status) return nothing;
@@ -552,6 +594,7 @@ class FoyerCard extends LitElement {
     const technical = status.technical ?? [];
     const incident = status.incident;
     return html`
+      ${this._walkBanner(s)}
       ${technical.length
         ? html`<div class="alert technical" role="alert">
             <span>${t(s, "card.technical", { zones: technical.map((a) => a.name).join(", ") })}</span>
@@ -1001,6 +1044,17 @@ class FoyerCard extends LitElement {
       }
       .alert button {
         padding: 6px 12px;
+      }
+      /* The walk test is the loudest thing the card can say, because for as
+         long as it runs the house answers nothing (§11.3). */
+      .alert.walk {
+        border-left-color: var(--warning-color, #c77700);
+        background: color-mix(in srgb, var(--warning-color, #c77700) 14%, transparent);
+      }
+      .state.walk-chip {
+        background: var(--warning-color, #c77700);
+        color: var(--text-primary-color, #fff);
+        font-weight: 600;
       }
     `,
   ];

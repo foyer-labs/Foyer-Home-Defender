@@ -827,7 +827,7 @@
     },
     "test": {
       "title": "What this page proves",
-      "intro": "The point of an alarm you configured yourself is that you can check it before trusting it. The table says what every zone is doing right now; the simulator says what the house would do about it, without doing any of it.",
+      "intro": "The point of an alarm you configured yourself is that you can check it before trusting it. The first two tabs only look: the table says what every zone is doing right now, and the simulator says what the house would do about it without doing any of it. The last two act: the walk test really arms the house and holds the response back, and the action test really sounds the siren.",
       "items": {
         "trigger_column": {
           "term": "Trigger evaluation",
@@ -856,6 +856,22 @@
         "inherited": {
           "term": "Where the profile came from",
           "text": "Zone, group, area, scenario or the global default. If a response looks arbitrary, this line is usually why."
+        },
+        "walk_never": {
+          "term": "The zones that never reacted",
+          "text": "This is the finding, not the ones that did. A zone with no detection is either a door nobody opened or a PIR pointing at the wrong wall, and only you can tell which."
+        },
+        "walk_timeout": {
+          "term": "The walk test ends itself",
+          "text": "Every detection pushes the timeout back so a large house can be walked in one pass, and an absolute cap ends it whatever happens. Neither can be switched off: while it runs, a real intrusion produces nothing."
+        },
+        "walk_live": {
+          "term": "What stays live",
+          "text": "24h, tamper, technical and panic zones respond in full, alarm included. A walk test never silences a smoke detector."
+        },
+        "action_real": {
+          "term": "The action test really executes",
+          "text": "That is what makes it worth having: the failure it prevents is discovering during the emergency that the emergency channel was misconfigured. It asks first, and every run is in the log as a test rather than as an alarm."
         }
       }
     }
@@ -1491,7 +1507,9 @@
   "test": {
     "tab": {
       "diagnostics": "Diagnostics",
-      "simulator": "Simulator"
+      "simulator": "Simulator",
+      "walktest": "Walk test",
+      "actiontest": "Action test"
     },
     "refresh": "Refresh",
     "ok": "OK",
@@ -1607,6 +1625,74 @@
     "condition": {
       "time": "time {after}-{before}",
       "state": "{entity_id} {operator} {state}"
+    }
+  },
+  "walk": {
+    "banner_title": "Walk test running.",
+    "banner": "Every response is held back. It ends in {time}, or when you end it. Started by {who}.",
+    "card_banner": "Every response is held back. Ends in {time}.",
+    "badge": "Walk test",
+    "badge_title": "A walk test is running: every response is held back.",
+    "somebody": "somebody",
+    "always_on_live": "24h, tamper, technical and panic zones stay fully live. A walk test never silences a smoke detector.",
+    "end": "End walk test",
+    "idle_title": "Nothing is running.",
+    "idle": "Starting a walk test really arms the house and really reads the sensors. What is held back is the response: no siren, no notification, no light.",
+    "active_title": "Walk test running.",
+    "active": "Walk the house. The table below fills in as zones detect you, and the ones that never do are the finding.",
+    "start_title": "Start a walk test",
+    "start_sub": "Really armed, really reading, nothing answering",
+    "explainer": "Every area that can arm is armed, and every area is disarmed again when the test ends — except one that was already armed before it started. An area a zone is holding open simply stays out, and is named.",
+    "duration": "Timeout",
+    "duration_default": "Installation default",
+    "duration_hint": "Minutes without a detection before it ends itself. Each detection pushes it back. It can only be shorter than the installation's setting, never longer: the auto-exit cannot be switched off.",
+    "start": "Start walk test",
+    "table_title": "Detection during this walk test",
+    "started_by": "Started at {at} by {who} · ends in {time}",
+    "detected": "detected",
+    "never": "never detected",
+    "never_reacted": "{n} zone(s) have not reacted yet. A door nobody opened reads the same as a PIR pointing at the wrong wall — walk them again before you trust the list.",
+    "all_reacted": "Every zone under test has detected you at least once.",
+    "partly_armed": "The walk test is running, but these zones kept their area out of it: {zones}. Those areas were never armed, so their zones cannot detect anything.",
+    "col": {
+      "area": "Area",
+      "result": "Result",
+      "first": "First detection",
+      "count": "Detections"
+    }
+  },
+  "action_test": {
+    "warn_title": "These really execute.",
+    "warn": "Sirens really sound and messages really send. That is the point: an emergency channel discovered broken during the emergency is what this page exists to prevent. Every run is recorded in the log as a test.",
+    "subtitle": "One button per action, and it really runs",
+    "no_profiles": "No response profiles yet. Create one under Response profiles.",
+    "no_actions": "This profile has no action to test.",
+    "test": "Test",
+    "never": "never tested",
+    "ok": "worked",
+    "failed": "FAILED",
+    "failed_detail": "The test of “{action}” failed: {detail}",
+    "confirm": "Really run “{action}” now? It executes for real.",
+    "confirm_yes": "Yes, run it",
+    "confirm_short": "Really run it",
+    "col": {
+      "action": "Action",
+      "what": "What the test does",
+      "last": "Last result"
+    },
+    "what": {
+      "notify": "Sends the notification",
+      "persistent_notification": "Raises a Home Assistant notification",
+      "siren": "Sounds for three seconds",
+      "light": "Switches the lights as configured",
+      "camera": "Takes the snapshot or the recording",
+      "scene": "Activates the scene",
+      "switch": "Switches as configured",
+      "tts": "Speaks the message",
+      "call_service": "Calls the service",
+      "chime": "Plays the chime",
+      "revert": "Switches back off",
+      "delay": "Nothing: a delay is the waiting itself"
     }
   }
 }

@@ -256,7 +256,7 @@ var v = class extends HTMLElement {
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, b = (e) => e, x = y.trustedTypes, S = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, C = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, T = "?" + w, ae = `<${T}>`, E = document, D = () => E.createComment(""), O = (e) => e === null || typeof e != "object" && typeof e != "function", k = Array.isArray, oe = (e) => k(e) || typeof e?.[Symbol.iterator] == "function", A = "[ 	\n\f\r]", j = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, se = /-->/g, M = />/g, N = RegExp(`>|${A}(?:([^\\s"'>=/]+)(${A}*=${A}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), P = /'/g, F = /"/g, I = /^(?:script|style|textarea|title)$/i, L = ((e) => (t, ...n) => ({
+var y = globalThis, b = (e) => e, x = y.trustedTypes, S = x ? x.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, C = "$lit$", w = `lit$${Math.random().toFixed(9).slice(2)}$`, T = "?" + w, ae = `<${T}>`, E = document, D = () => E.createComment(""), O = (e) => e === null || typeof e != "object" && typeof e != "function", k = Array.isArray, oe = (e) => k(e) || typeof e?.[Symbol.iterator] == "function", A = "[ 	\n\f\r]", j = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, M = /-->/g, se = />/g, N = RegExp(`>|${A}(?:([^\\s"'>=/]+)(${A}*=${A}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), P = /'/g, F = /"/g, I = /^(?:script|style|textarea|title)$/i, L = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
@@ -269,7 +269,7 @@ var ce = (e, t) => {
 	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = j;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === j ? c[1] === "!--" ? o = se : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = N) : (I.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = N) : o = M : o === N ? c[0] === ">" ? (o = i ?? j, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? N : c[3] === "\"" ? F : P) : o === F || o === P ? o = N : o === se || o === M ? o = j : (o = N, i = void 0);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === j ? c[1] === "!--" ? o = M : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = N) : (I.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = N) : o = se : o === N ? c[0] === ">" ? (o = i ?? j, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? N : c[3] === "\"" ? F : P) : o === F || o === P ? o = N : o === M || o === se ? o = j : (o = N, i = void 0);
 		let d = o === N && e[t + 1].startsWith("/>") ? " " : "";
 		a += o === j ? n + ae : l >= 0 ? (r.push(s), n.slice(0, l) + C + n.slice(l) + w + d) : n + w + (l === -2 ? t : d);
 	}
@@ -750,8 +750,17 @@ o`
   }
 `;
 //#endregion
+//#region src/shared/time.ts
+function ve(e) {
+	let t = Math.max(0, Math.round(e));
+	return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+}
+function ye(e, t = 0) {
+	return Math.max(0, Math.round((Date.parse(e) - (Date.now() + t)) / 1e3));
+}
+//#endregion
 //#region src/card/foyer-card.ts
-var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), ye = /* @__PURE__ */ new Set(["code_required", "bad_code"]), be = class extends J {
+var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), xe = /* @__PURE__ */ new Set(["code_required", "bad_code"]), Se = class extends J {
 	constructor(...e) {
 		super(...e), this._busy = !1, this._code = "", this._padOpen = !1, this._tick = 0, this._offset = 0;
 	}
@@ -831,9 +840,9 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 			this._pending = void 0, n.success && n.low_battery_zones.length && (this._feedback = {
 				text: Z(this._strings, "card.low_battery", { zones: n.low_battery_zones.map((e) => e.name).join(", ") }),
 				warning: !0
-			}), n.success || (ye.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
+			}), n.success || (xe.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
 				text: Z(this._strings, `reason.${n.reason ?? "unknown"}`, { zones: n.blocking_zones.map((e) => e.name).join(", ") }),
-				retry: e.type === "foyer/arm" && !e.force && ve.has(n.reason ?? "") ? {
+				retry: e.type === "foyer/arm" && !e.force && be.has(n.reason ?? "") ? {
 					...e,
 					force: !0
 				} : void 0
@@ -869,6 +878,9 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
         <span class="badge-name">${s}</span>
         <span class="state ${i}">${l}</span>
         ${a ? L`<span class="state memory">${Z(e, "overview.memory")}</span>` : z}
+        ${t.walk_test ? L`<span class="state walk-chip" title=${Z(e, "walk.badge_title")}
+              >${Z(e, "walk.badge")}</span
+            >` : z}
       </div>
     `;
 	}
@@ -887,6 +899,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		return L`
       <ha-card>
         <div class="content compact">
+          ${this._walkBanner(e)}
           <div class="head">
             <div class="name">${s}</div>
             <span class="state ${i}">${Z(e, `state.${i}`)}</span>
@@ -1064,11 +1077,34 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
       </div>
     ` : z;
 	}
+	_walkBanner(e) {
+		let t = this._status?.walk_test;
+		if (!t) return z;
+		let n = ye(t.deadline, this._offset);
+		return L`
+      <div class="alert walk" role="alert">
+        <span>
+          <strong>${Z(e, "walk.banner_title")}</strong>
+          ${Z(e, "walk.card_banner", { time: ve(n) })}
+        </span>
+        <button
+          ?disabled=${this._busy}
+          @click=${() => this._run({
+			type: "foyer/walk_test",
+			enable: !1
+		})}
+        >
+          ${Z(e, "walk.end")}
+        </button>
+      </div>
+    `;
+	}
 	_renderAlerts(e) {
 		let t = this._status;
 		if (!t) return z;
 		let n = new Map(t.zones.map((e) => [e.id, e.name])), r = t.technical ?? [], i = t.incident;
 		return L`
+      ${this._walkBanner(e)}
       ${r.length ? L`<div class="alert technical" role="alert">
             <span>${Z(e, "card.technical", { zones: r.map((e) => e.name).join(", ") })}</span>
             ${r.some((e) => !e.acknowledged) ? L`<button
@@ -1470,11 +1506,22 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
       .alert button {
         padding: 6px 12px;
       }
+      /* The walk test is the loudest thing the card can say, because for as
+         long as it runs the house answers nothing (§11.3). */
+      .alert.walk {
+        border-left-color: var(--warning-color, #c77700);
+        background: color-mix(in srgb, var(--warning-color, #c77700) 14%, transparent);
+      }
+      .state.walk-chip {
+        background: var(--warning-color, #c77700);
+        color: var(--text-primary-color, #fff);
+        font-weight: 600;
+      }
     `];
 	}
 };
-customElements.get("foyer-card") || customElements.define("foyer-card", be);
-var xe = class extends J {
+customElements.get("foyer-card") || customElements.define("foyer-card", Se);
+var Ce = class extends J {
 	constructor(...e) {
 		super(...e), this._config = { type: "custom:foyer-card" };
 	}
@@ -1572,7 +1619,7 @@ var xe = class extends J {
   `;
 	}
 };
-customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", xe), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
+customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", Ce), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
 	type: "foyer-card",
 	name: "Foyer Home Defender",
 	preview: !0

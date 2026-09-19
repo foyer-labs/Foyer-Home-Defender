@@ -827,7 +827,7 @@
     },
     "test": {
       "title": "Cosa dimostra questa pagina",
-      "intro": "Il senso di un allarme configurato da sé è poterlo verificare prima di fidarsene. La tabella dice cosa sta facendo ogni zona adesso; il simulatore dice cosa ne farebbe la casa, senza farne nulla.",
+      "intro": "Il senso di un allarme che hai configurato tu è poterlo verificare prima di fidartene. Le prime due schede guardano soltanto: la tabella dice che cosa sta facendo ogni zona adesso, e il simulatore dice che cosa ne farebbe la casa senza farne nulla. Le ultime due agiscono: il walk test inserisce davvero la casa trattenendo la risposta, e la prova azioni fa suonare davvero la sirena.",
       "items": {
         "trigger_column": {
           "term": "Valutazione del trigger",
@@ -856,6 +856,22 @@
         "inherited": {
           "term": "Da dove viene il profilo",
           "text": "Zona, gruppo, area, scenario o il profilo predefinito. Se una risposta sembra arbitraria, di solito il motivo è questa riga."
+        },
+        "walk_never": {
+          "term": "Le zone che non hanno mai reagito",
+          "text": "È questo il risultato, non quelle che hanno reagito. Una zona senza rilevazioni è una porta che nessuno ha aperto oppure un PIR puntato sulla parete sbagliata, e solo tu puoi dire quale delle due."
+        },
+        "walk_timeout": {
+          "term": "Il walk test si chiude da solo",
+          "text": "Ogni rilevazione rimanda il timeout, così una casa grande si cammina in un giro solo, e un tetto assoluto lo chiude comunque. Nessuno dei due si disattiva: finché è attivo, un'intrusione vera non produce nulla."
+        },
+        "walk_live": {
+          "term": "Che cosa resta attivo",
+          "text": "Le zone 24h, tamper, tecniche e panico rispondono per intero, allarme compreso. Un walk test non silenzia mai un rilevatore di fumo."
+        },
+        "action_real": {
+          "term": "La prova azioni si esegue davvero",
+          "text": "È questo che la rende utile: l'errore che evita è scoprire durante l'emergenza che il canale d'emergenza era configurato male. Chiede conferma, e ogni prova finisce nel registro come prova, non come allarme."
         }
       }
     }
@@ -1491,7 +1507,9 @@
   "test": {
     "tab": {
       "diagnostics": "Diagnostica",
-      "simulator": "Simulatore"
+      "simulator": "Simulatore",
+      "walktest": "Walk test",
+      "actiontest": "Prova azioni"
     },
     "refresh": "Aggiorna",
     "ok": "OK",
@@ -1607,6 +1625,74 @@
     "condition": {
       "time": "orario {after}-{before}",
       "state": "{entity_id} {operator} {state}"
+    }
+  },
+  "walk": {
+    "banner_title": "Walk test in corso.",
+    "banner": "Ogni risposta è trattenuta. Finisce fra {time}, o quando lo chiudi tu. Avviato da {who}.",
+    "card_banner": "Ogni risposta è trattenuta. Finisce fra {time}.",
+    "badge": "Walk test",
+    "badge_title": "È in corso un walk test: ogni risposta è trattenuta.",
+    "somebody": "qualcuno",
+    "always_on_live": "Le zone 24h, tamper, tecniche e panico restano completamente attive. Un walk test non silenzia mai un rilevatore di fumo.",
+    "end": "Chiudi il walk test",
+    "idle_title": "Non è in corso nulla.",
+    "idle": "Avviare un walk test inserisce davvero la casa e legge davvero i sensori. Quel che viene trattenuto è la risposta: niente sirena, niente notifiche, niente luci.",
+    "active_title": "Walk test in corso.",
+    "active": "Cammina per la casa. La tabella qui sotto si riempie mano a mano che le zone ti rilevano, e quelle che non lo fanno mai sono il risultato che conta.",
+    "start_title": "Avvia un walk test",
+    "start_sub": "Davvero inserito, davvero in ascolto, nessuna risposta",
+    "explainer": "Viene inserita ogni area che può esserlo, e tutte vengono disinserite alla fine — tranne quelle già inserite prima. Un'area tenuta aperta da una zona resta semplicemente fuori, e viene indicata.",
+    "duration": "Timeout",
+    "duration_default": "Valore dell'installazione",
+    "duration_hint": "Minuti senza rilevazioni prima che si chiuda da solo. Ogni rilevazione lo rimanda. Può solo essere più breve dell'impostazione dell'installazione, mai più lungo: l'uscita automatica non si disattiva.",
+    "start": "Avvia il walk test",
+    "table_title": "Rilevazioni durante questo walk test",
+    "started_by": "Avviato alle {at} da {who} · finisce fra {time}",
+    "detected": "rilevata",
+    "never": "mai rilevata",
+    "never_reacted": "{n} zone non hanno ancora reagito. Una porta che nessuno ha aperto sembra identica a un PIR puntato sulla parete sbagliata: ripassale prima di fidarti dell'elenco.",
+    "all_reacted": "Ogni zona sotto test ti ha rilevato almeno una volta.",
+    "partly_armed": "Il walk test è in corso, ma queste zone hanno tenuto fuori la loro area: {zones}. Quelle aree non sono mai state inserite, quindi le loro zone non possono rilevare nulla.",
+    "col": {
+      "area": "Area",
+      "result": "Esito",
+      "first": "Prima rilevazione",
+      "count": "Rilevazioni"
+    }
+  },
+  "action_test": {
+    "warn_title": "Queste prove si eseguono davvero.",
+    "warn": "Le sirene suonano sul serio e i messaggi partono sul serio. È il punto: scoprire durante l'emergenza che il canale d'emergenza era configurato male è esattamente ciò che questa pagina serve a evitare. Ogni prova finisce nel registro marcata come prova.",
+    "subtitle": "Un pulsante per azione, e si esegue davvero",
+    "no_profiles": "Nessun profilo di risposta. Creane uno in Profili di risposta.",
+    "no_actions": "Questo profilo non ha azioni da provare.",
+    "test": "Prova",
+    "never": "mai provata",
+    "ok": "ha funzionato",
+    "failed": "FALLITA",
+    "failed_detail": "La prova di “{action}” è fallita: {detail}",
+    "confirm": "Eseguire davvero “{action}” adesso? Si esegue sul serio.",
+    "confirm_yes": "Sì, esegui",
+    "confirm_short": "Esegui davvero",
+    "col": {
+      "action": "Azione",
+      "what": "Che cosa fa la prova",
+      "last": "Ultimo esito"
+    },
+    "what": {
+      "notify": "Invia la notifica",
+      "persistent_notification": "Crea una notifica di Home Assistant",
+      "siren": "Suona per tre secondi",
+      "light": "Accende le luci come configurato",
+      "camera": "Scatta l'istantanea o registra",
+      "scene": "Attiva la scena",
+      "switch": "Commuta come configurato",
+      "tts": "Pronuncia il messaggio",
+      "call_service": "Chiama il servizio",
+      "chime": "Suona il gong",
+      "revert": "Rimette a posto",
+      "delay": "Nulla: un ritardo è l'attesa stessa"
     }
   }
 }

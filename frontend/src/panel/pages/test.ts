@@ -1,32 +1,41 @@
-// Page 9 — Test & diagnostics (SPEC §15.1, §11). Two tabs in part 1: the live
-// zone table (§11.1) and the simulator (§11.2). The walk test and the real
-// action test are part 2's, and their tabs arrive with them rather than
-// sitting here doing nothing.
+// Page 9 — Test & diagnostics (SPEC §15.1, §11). Four tabs, and the division
+// that matters is not what they show but what they do.
 //
-// Both tabs only read. Neither can change a thing in the house, and the
-// simulator cannot even by accident: the backend calls the same decide() the
-// runtime calls and never hands the Decision to the executor (INV-1). The
-// banner on the tab says so, because a page that looks like it might fire the
-// siren is a page nobody presses the button on.
+// The first two only read: the live zone table (§11.1) and the simulator
+// (§11.2). Neither can change a thing in the house, and the simulator cannot
+// even by accident — the backend calls the same decide() the runtime calls and
+// never hands the Decision to the executor (INV-1). The banner on that tab
+// says so, because a page that looks like it might fire the siren is a page
+// nobody presses the button on.
+//
+// The last two are writes, and their banners say the opposite. The walk test
+// (§11.3) really arms the house and really holds the response back; the action
+// test (§11.4) really sounds the siren. Both are gated accordingly —
+// `walk_test` and `test_actions`, each with a code — and both say plainly what
+// they are about to do.
 import { LitElement, css, html, nothing } from "lit";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
+import { mmss } from "../../shared/time";
 import type {
   Diagnostics,
   DiagnosticsDevice,
   DiagnosticsZone,
+  ActionConfig,
+  ProfileConfig,
   Simulation,
   SimulationQuery,
+  WalkTestStatus,
   TraceAction,
   TraceBatch,
   TraceStep,
 } from "../../shared/types";
-import type { PanelContext } from "../context";
+import { reasonText, type PanelContext } from "../context";
 
-type Tab = "diagnostics" | "simulator";
+type Tab = "diagnostics" | "simulator" | "walktest" | "actiontest";
 
-const TABS: Tab[] = ["diagnostics", "simulator"];
+const TABS: Tab[] = ["diagnostics", "simulator", "walktest", "actiontest"];
 
 // Moments where a profile running nothing is itself the answer: the alarm of
 // a zone, the entry it opens, a satisfied group, a technical alarm. Anywhere
@@ -92,6 +101,9 @@ class FoyerPageTest extends LitElement {
     _entities: { state: true },
     _code: { state: true },
     _codeWanted: { state: true },
+    _walkDuration: { state: true },
+    _tested: { state: true },
+    _confirming: { state: true },
   };
 
   ctx?: PanelContext;
@@ -108,6 +120,9 @@ class FoyerPageTest extends LitElement {
   private _codeWanted = false;
   private _loaded = false;
   private _mentioned = new Set<string>();
+  private _walkDuration = "";
+  private _tested: Record<string, { ok: boolean; at: number; error?: string }> = {};
+  private _confirming?: { profile_id: string; action_id: string; name: string };
 
   override updated(): void {
     if (!this._loaded && this.ctx) {
@@ -182,7 +197,11 @@ class FoyerPageTest extends LitElement {
         : nothing}
       ${this._tab === "diagnostics"
         ? this._renderDiagnostics(s)
-        : this._renderSimulator(s)}
+        : this._tab === "simulator"
+          ? this._renderSimulator(s)
+          : this._tab === "walktest"
+            ? this._renderWalkTest(s)
+            : this._renderActionTest(s)}
     `;
   }
 
@@ -834,6 +853,326 @@ class FoyerPageTest extends LitElement {
     </div>`;
   }
 
+  // --- tab 3: the walk test (§11.3) ------------------------------------------------
+
+  /** Really armed, really reading, nothing answering.
+   *
+   * The table is the feature. Not the zones that detected you — those are
+   * the reassuring half — but the ones that never did, which is where a
+   * misaimed PIR and a dead battery are found. So the zones that never
+   * reacted are listed first, and the ones that did are below them.
+   */
+  private _renderWalkTest(s: Strings) {
+    const walk = this.ctx!.status.walk_test;
+    return html`
+      <div class="notice ${walk ? "danger" : "warn"}">
+        <strong>${t(s, walk ? "walk.active_title" : "walk.idle_title")}</strong>
+        ${t(s, walk ? "walk.active" : "walk.idle")}
+        <div class="hint">${t(s, "walk.always_on_live")}</div>
+      </div>
+      ${walk ? this._renderWalkRunning(s, walk) : this._renderWalkStart(s)}
+    `;
+  }
+
+  private _renderWalkStart(s: Strings) {
+    return html`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t(s, "walk.start_title")}</h2>
+          <span class="hint">${t(s, "walk.start_sub")}</span>
+        </div>
+        <div class="card-bd">
+          <p>${t(s, "walk.explainer")}</p>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${t(s, "walk.duration")}</span>
+              <input
+                type="number"
+                min="1"
+                .value=${this._walkDuration}
+                placeholder=${t(s, "walk.duration_default")}
+                @change=${(e: Event) =>
+                  (this._walkDuration = (e.target as HTMLInputElement).value)}
+              />
+              <span class="hint">${t(s, "walk.duration_hint")}</span>
+            </label>
+          </div>
+          <div class="actions">
+            <button
+              class="btn primary"
+              ?disabled=${this._busy}
+              @click=${() => void this._startWalkTest()}
+            >
+              ${t(s, "walk.start")}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderWalkRunning(s: Strings, walk: WalkTestStatus) {
+    const ctx = this.ctx!;
+    const zones = new Map(ctx.status.zones.map((z) => [z.id, z]));
+    const areas = new Map(ctx.status.areas.map((a) => [a.id, a.name]));
+    const missed = walk.expected_zones.filter((id) => !walk.detections[id]);
+    const seen = walk.expected_zones.filter((id) => walk.detections[id]);
+    const row = (id: string) => {
+      const zone = zones.get(id);
+      const detection = walk.detections[id];
+      return html`
+        <tr>
+          <td><strong>${zone?.name ?? id}</strong></td>
+          <td>${areas.get(zone?.area_id ?? "") ?? ""}</td>
+          <td>
+            <span class="state ${detection ? "closed" : "fault"}">
+              ${t(s, detection ? "walk.detected" : "walk.never")}
+            </span>
+          </td>
+          <td class="mono">${detection ? hhmm(detection.first) : "—"}</td>
+          <td class="mono">${detection ? detection.count : 0}</td>
+          <td>
+            ${zone?.fault
+              ? html`<span class="state fault">${t(s, `fault.${zone.fault}`)}</span>`
+              : nothing}
+          </td>
+        </tr>
+      `;
+    };
+    return html`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t(s, "walk.table_title")}</h2>
+          <span class="hint">
+            ${t(s, "walk.started_by", {
+              who: walk.user_name ?? t(s, "walk.somebody"),
+              at: hhmm(walk.started_at),
+              time: mmss((Date.parse(walk.deadline) - ctx.now()) / 1000),
+            })}
+          </span>
+          <button
+            class="btn danger"
+            ?disabled=${this._busy}
+            @click=${() => void this._endWalkTest()}
+          >
+            ${t(s, "walk.end")}
+          </button>
+        </div>
+        <div class="card-bd">
+          ${missed.length
+            ? html`<div class="problems" role="alert">
+                ${t(s, "walk.never_reacted", { n: missed.length })}
+              </div>`
+            : html`<div class="notice">${t(s, "walk.all_reacted")}</div>`}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>${t(s, "test.col.zone")}</th>
+                  <th>${t(s, "walk.col.area")}</th>
+                  <th>${t(s, "walk.col.result")}</th>
+                  <th>${t(s, "walk.col.first")}</th>
+                  <th>${t(s, "walk.col.count")}</th>
+                  <th>${t(s, "test.col.health")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${missed.map(row)}${seen.map(row)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private async _startWalkTest(): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    this._busy = true;
+    this._error = undefined;
+    try {
+      const minutes = Number(this._walkDuration) || 0;
+      const result = await ctx.walkTest(true, {
+        duration: minutes > 0 ? minutes * 60 : undefined,
+      });
+      if (!result.success) {
+        this._error = reasonText(ctx.strings, result);
+      } else if (result.blocking_zones.length) {
+        // Not a refusal: the test is running, and those areas are not in it
+        // (part 2 decision 7). Said plainly, because a zone that was never
+        // armed cannot have detected anything.
+        this._error = t(ctx.strings, "walk.partly_armed", {
+          zones: result.blocking_zones.map((z) => z.name).join(", "),
+        });
+      }
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private async _endWalkTest(): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    this._busy = true;
+    try {
+      await ctx.walkTest(false);
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  // --- tab 4: the real action test (§11.4) -----------------------------------------
+
+  /** A test button beside every action, and it really executes.
+   *
+   * That is the whole feature, and the reason it is worth the risk: the
+   * failure it prevents is discovering during the emergency that the
+   * emergency channel was misconfigured. So it asks first, it says what is
+   * about to happen, and every run leaves a row in the log marked as a test.
+   *
+   * §11.4 also asks for a button beside every *contact channel*. The contact
+   * book is Phase 4's, so what exists here today is the actions; the
+   * channels arrive with page 6.
+   */
+  private _renderActionTest(s: Strings) {
+    const profiles = this.ctx!.config?.profiles ?? [];
+    return html`
+      <div class="notice danger">
+        <strong>${t(s, "action_test.warn_title")}</strong>
+        ${t(s, "action_test.warn")}
+      </div>
+      ${this._confirming ? this._renderConfirm(s) : nothing}
+      ${profiles.length === 0
+        ? html`<p class="empty">${t(s, "action_test.no_profiles")}</p>`
+        : profiles.map((profile) => this._renderProfileTests(s, profile))}
+    `;
+  }
+
+  private _renderProfileTests(s: Strings, profile: ProfileConfig) {
+    const actions = profile.actions.filter((a) => a.kind !== "delay");
+    return html`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${profile.name}</h2>
+          <span class="hint">${t(s, "action_test.subtitle")}</span>
+        </div>
+        <div class="card-bd">
+          ${actions.length === 0
+            ? html`<p class="empty">${t(s, "action_test.no_actions")}</p>`
+            : html`<div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>${t(s, "action_test.col.action")}</th>
+                      <th>${t(s, "action_test.col.what")}</th>
+                      <th>${t(s, "action_test.col.last")}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${actions.map((action) =>
+                      this._renderActionRow(s, profile, action),
+                    )}
+                  </tbody>
+                </table>
+              </div>`}
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderActionRow(s: Strings, profile: ProfileConfig, action: ActionConfig) {
+    const key = `${profile.id}:${action.id}`;
+    const last = this._tested[key];
+    const name = action.name || t(s, `action_kind.${action.kind}`);
+    return html`
+      <tr>
+        <td><strong>${name}</strong></td>
+        <td class="hint">${t(s, `action_test.what.${action.kind}`)}</td>
+        <td>
+          ${!last
+            ? html`<span class="muted">${t(s, "action_test.never")}</span>`
+            : last.ok
+              ? html`<span class="state closed">${t(s, "action_test.ok")}</span>`
+              : html`<span class="state fault" title=${last.error ?? ""}
+                  >${t(s, "action_test.failed")}</span
+                >`}
+        </td>
+        <td>
+          <button
+            class="btn small"
+            ?disabled=${this._busy}
+            @click=${() =>
+              (this._confirming = {
+                profile_id: profile.id ?? "",
+                action_id: action.id ?? "",
+                name,
+              })}
+          >
+            ${t(s, "action_test.test")}
+          </button>
+        </td>
+      </tr>
+    `;
+  }
+
+  /** §11.4: "it really executes, so it requires explicit confirmation". */
+  private _renderConfirm(s: Strings) {
+    const asking = this._confirming!;
+    return html`
+      <div class="problems" role="alertdialog">
+        <p>${t(s, "action_test.confirm", { action: asking.name })}</p>
+        <div class="actions">
+          <button
+            class="btn primary"
+            ?disabled=${this._busy}
+            @click=${() => void this._runTest(asking)}
+          >
+            ${t(s, "action_test.confirm_yes")}
+          </button>
+          <button class="btn" @click=${() => (this._confirming = undefined)}>
+            ${t(s, "common.cancel")}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  private async _runTest(asking: {
+    profile_id: string;
+    action_id: string;
+    name: string;
+  }): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    this._busy = true;
+    this._confirming = undefined;
+    this._error = undefined;
+    try {
+      const result = await ctx.testAction({
+        profile_id: asking.profile_id,
+        action_id: asking.action_id,
+      });
+      this._tested = {
+        ...this._tested,
+        [`${asking.profile_id}:${asking.action_id}`]: {
+          ok: result.success,
+          at: Date.now(),
+          error: result.error ?? result.reason ?? undefined,
+        },
+      };
+      if (!result.success) {
+        this._error = t(ctx.strings, "action_test.failed_detail", {
+          action: asking.name,
+          detail: result.error ?? result.reason ?? "",
+        });
+      }
+    } finally {
+      this._busy = false;
+    }
+  }
+
   static override styles = [
     stateStyles,
     formStyles,
@@ -866,6 +1205,19 @@ class FoyerPageTest extends LitElement {
       .notice.info {
         border-left-color: var(--info-color, #0277bd);
         margin: 0 0 16px;
+      }
+      /* The two tabs that write say so in the colour of what they do: the
+         walk test holds the whole response back, the action test really
+         sounds the siren. */
+      .notice.danger {
+        border-left-color: var(--error-color, #d32f2f);
+        margin: 0 0 16px;
+      }
+      .notice.warn {
+        margin: 0 0 16px;
+      }
+      .card-hd .btn.danger {
+        margin-left: auto;
       }
       .split {
         display: grid;

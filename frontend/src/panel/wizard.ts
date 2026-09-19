@@ -486,25 +486,36 @@ class FoyerWizard extends LitElement {
     `;
   }
 
+  /** Prove a notification arrives — through the real action test (§11.4).
+   *
+   * It used to call the notify service straight from the browser, which
+   * worked and proved almost nothing: it tested the browser's session
+   * rather than Foyer's path, and it left no trace. Now it goes where every
+   * other test goes, so it is verified server-side, gated by the
+   * `test_actions` permission and recorded in the log as a test.
+   */
   private async _sendTest(): Promise<void> {
     const ctx = this.ctx;
     if (!ctx || !this._notifyTarget) return;
     this._busy = true;
     this._sent = false;
     try {
-      const message = t(ctx.strings, "wizard.test_message");
-      const target = this._notifyTarget;
-      if (target.startsWith("notify.") && ctx.hass.states[target]) {
-        // A notify *entity*: one service for all of them.
-        await ctx.hass.callService("notify", "send_message", {
-          entity_id: target,
-          message,
-        });
-      } else {
-        const [domain, service] = target.split(".");
-        await ctx.hass.callService(domain, service, { message });
+      const result = await ctx.testAction({
+        service: this._notifyTarget,
+        message: t(ctx.strings, "wizard.test_message"),
+      });
+      this._sent = result.success;
+      if (!result.success) {
+        this._problems = [
+          {
+            code: "request_failed",
+            kind: "notify",
+            ref: null,
+            field: null,
+            detail: result.error ?? result.reason ?? "",
+          },
+        ];
       }
-      this._sent = true;
     } catch (err) {
       this._problems = [
         {

@@ -804,15 +804,24 @@ var V = o`
   }
 `;
 //#endregion
+//#region src/shared/time.ts
+function Le(e) {
+	let t = Math.max(0, Math.round(e));
+	return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+}
+function Re(e, t = 0) {
+	return Math.max(0, Math.round((Date.parse(e) - (Date.now() + t)) / 1e3));
+}
+//#endregion
 //#region src/panel/context.ts
-function Le(e, t, n) {
+function ze(e, t, n) {
 	let r = URL.createObjectURL(new Blob([t], { type: n })), i = document.createElement("a");
 	i.href = r, i.download = e, i.click(), setTimeout(() => URL.revokeObjectURL(r), 1e3);
 }
-function Re(e, t) {
+function Be(e, t) {
 	return Math.max(0, Math.round((Date.parse(t) - e.now()) / 1e3));
 }
-function ze(e, t) {
+function Ve(e, t) {
 	let n = t.blocking_zones.map((e) => e.name).join(", ");
 	return B(e, `reason.${t.reason ?? "unknown"}`, { zones: n });
 }
@@ -831,13 +840,13 @@ function W(e) {
 }
 //#endregion
 //#region src/panel/pages/overview.ts
-function Be(e, t) {
+function He(e, t) {
 	let n = B(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
 	let r = B(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-var Ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), He = class extends I {
+var Ue = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), We = class extends I {
 	constructor(...e) {
 		super(...e), this._busy = !1, this._recent = [];
 	}
@@ -867,8 +876,8 @@ var Ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), He = class extend
 					} : void 0;
 				} else this._feedback = {
 					ok: !1,
-					text: ze(n.strings, r),
-					retry: t && Ve.has(r.reason ?? "") ? t : void 0
+					text: Ve(n.strings, r),
+					retry: t && Ue.has(r.reason ?? "") ? t : void 0
 				};
 			} catch (e) {
 				this._feedback = {
@@ -986,7 +995,7 @@ var Ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), He = class extend
 		})}</span
                 >
                 <span class="state ${n.severity === "alarm" ? "triggered" : n.severity === "warning" ? "arming" : "disarmed"}"
-                  >${Be(e, n.event_type)}</span
+                  >${He(e, n.event_type)}</span
                 >
                 <span class="where">
                   ${[r.get(n.area_id ?? ""), i.get(n.zone_id ?? "")].filter(Boolean).join(" · ")}
@@ -1146,7 +1155,7 @@ var Ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), He = class extend
             ${t.memory ? D`<span class="state memory">${B(e, "overview.memory")}</span>` : k}
           </div>
           ${t.timer && t.timer.kind !== "siren" ? D`<div class="countdown">
-                ${B(e, `timer.${t.timer.kind}`, { seconds: Re(n, t.timer.due) })}
+                ${B(e, `timer.${t.timer.kind}`, { seconds: Be(n, t.timer.due) })}
               </div>` : k}
           <div class="hint">
             ${t.state === "disarmed" ? k : r ? B(e, "overview.by_scenario", { scenario: r.name }) : B(e, "overview.on_its_own")}
@@ -1413,10 +1422,10 @@ var Ve = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), He = class extend
 		];
 	}
 };
-customElements.get("foyer-page-overview") || customElements.define("foyer-page-overview", He);
+customElements.get("foyer-page-overview") || customElements.define("foyer-page-overview", We);
 //#endregion
 //#region src/panel/code-fields.ts
-function Ue(e, t, n, r) {
+function Ge(e, t, n, r) {
 	return D`<label class="field">
     <span class="lbl">${B(e, t)}</span>
     <select
@@ -1431,10 +1440,10 @@ function Ue(e, t, n, r) {
     </select>
   </label>`;
 }
-function We(e, t, n, r) {
+function Ke(e, t, n, r) {
 	return D`
-    ${Ue(e, "field.require_code_to_arm", t.require_code_to_arm, (e) => n("require_code_to_arm", e))}
-    ${Ue(e, "field.require_code_to_disarm", t.require_code_to_disarm, (e) => n("require_code_to_disarm", e))}
+    ${Ge(e, "field.require_code_to_arm", t.require_code_to_arm, (e) => n("require_code_to_arm", e))}
+    ${Ge(e, "field.require_code_to_disarm", t.require_code_to_disarm, (e) => n("require_code_to_disarm", e))}
     <p class="hint span">
       ${B(e, "code_policy.strictest")}
       ${r ? k : D` ${B(e, "code_policy.inert")}`}
@@ -1443,7 +1452,7 @@ function We(e, t, n, r) {
 }
 //#endregion
 //#region src/panel/profile-picker.ts
-function Ge(e, t) {
+function qe(e, t) {
 	let n = e.areas.find((e) => e.id === t), r = e.scenarios.find((e) => n?.id && e.areas.includes(n.id) && e.response_profile_id), i = (t) => e.profiles?.find((e) => e.id === t), a = i(n?.response_profile_id);
 	if (a) return {
 		name: a.name,
@@ -1476,9 +1485,9 @@ function G(e, t, n, r) {
     ${r ? D`<span class="hint">${r}</span>` : k}
   </label>`;
 }
-function Ke(e, t) {
+function Je(e, t) {
 	if (!e.config) return k;
-	let { name: n, source: r } = Ge(e.config, t), i = e.strings;
+	let { name: n, source: r } = qe(e.config, t), i = e.strings;
 	return r === "none" ? D`<p class="hint">${B(i, "profiles.inherited_none")}</p>` : D`<p class="hint">
     ${B(i, "profiles.effective", { profile: n })} —
     ${B(i, `profiles.inherited_from_${r}`)}
@@ -1486,7 +1495,7 @@ function Ke(e, t) {
 }
 //#endregion
 //#region src/panel/pages/areas.ts
-var qe = {
+var Ye = {
 	name: "",
 	ha_state_when_armed: "armed_away",
 	default_entry_delay: 30,
@@ -1494,7 +1503,7 @@ var qe = {
 	response_profile_id: null,
 	require_code_to_arm: null,
 	require_code_to_disarm: null
-}, Je = class extends I {
+}, Xe = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -1507,7 +1516,7 @@ var qe = {
 		};
 	}
 	_edit(e) {
-		this._draft = e ? { ...e } : { ...qe }, this._problems = [];
+		this._draft = e ? { ...e } : { ...Ye }, this._problems = [];
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -1634,9 +1643,9 @@ var qe = {
               <span class="hint">${B(e, "areas.exit_hint")}</span>
             </label>
             ${G(this.ctx, t.response_profile_id, (e) => this._set("response_profile_id", e))}
-            ${We(e, t, (e, t) => this._set(e, t), this.ctx.status.security.enforced)}
+            ${Ke(e, t, (e, t) => this._set(e, t), this.ctx.status.security.enforced)}
           </div>
-          ${Ke(this.ctx, t.id ?? null)}
+          ${Je(this.ctx, t.id ?? null)}
           ${this._problems.length ? D`<div class="problems" role="alert">
                 <ul>
                   ${this._problems.map((t) => D`<li>${U(e, t)}</li>`)}
@@ -1661,10 +1670,10 @@ var qe = {
 		this.styles = [V, H];
 	}
 };
-customElements.get("foyer-page-areas") || customElements.define("foyer-page-areas", Je);
+customElements.get("foyer-page-areas") || customElements.define("foyer-page-areas", Xe);
 //#endregion
 //#region src/panel/ha-targets.ts
-function Ye(e, t) {
+function Ze(e, t) {
 	let n = e.states[t];
 	return String(n?.attributes?.friendly_name ?? t);
 }
@@ -1676,7 +1685,7 @@ function K(e) {
 function q(e, t) {
 	return K(Object.values(e.states).filter((e) => t.includes(e.entity_id.split(".")[0])).map((t) => ({
 		id: t.entity_id,
-		name: Ye(e, t.entity_id)
+		name: Ze(e, t.entity_id)
 	})));
 }
 function J(e) {
@@ -1686,23 +1695,23 @@ function J(e) {
 	}));
 	return K([...q(e, ["notify"]), ...t]);
 }
-function Xe(e, t) {
+function Qe(e, t) {
 	return K([...q(e, t.filter((e) => e !== "notify")), ...t.includes("notify") ? J(e) : []]);
 }
-function Ze(e) {
+function $e(e) {
 	let t = q(e, ["sensor", "binary_sensor"]), n = (t) => e.states[t.id]?.attributes.device_class === "battery";
 	return [...t.filter(n), ...t.filter((e) => !n(e))];
 }
-function Qe(e) {
+function et(e) {
 	return Object.keys(e.services ?? {}).sort();
 }
-function $e(e, t) {
+function tt(e, t) {
 	return Object.keys(e.services?.[t] ?? {}).sort();
 }
 //#endregion
 //#region src/panel/pages/zones.ts
-var et = /* @__PURE__ */ new Set(["event", "tag"]), tt = /* @__PURE__ */ new Set(["unavailable", "unknown"]);
-function nt(e) {
+var nt = /* @__PURE__ */ new Set(["event", "tag"]), rt = /* @__PURE__ */ new Set(["unavailable", "unknown"]);
+function it(e) {
 	return {
 		name: "",
 		entity_id: "",
@@ -1735,7 +1744,7 @@ function nt(e) {
 		trigger_window: 60
 	};
 }
-function rt(e) {
+function at(e) {
 	return e.channel === "intrusion" ? e : {
 		...e,
 		chime: !1,
@@ -1744,7 +1753,7 @@ function rt(e) {
 		silent: !1
 	};
 }
-var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I {
+var ot = (e, t) => JSON.stringify(e) === JSON.stringify(t), st = class extends I {
 	constructor(...e) {
 		super(...e), this._confirmed = !1, this._problems = [], this._busy = !1, this._filter = "", this._customState = "";
 	}
@@ -1763,7 +1772,7 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
 	}
 	_edit(e) {
 		let t = this.ctx?.config?.areas[0]?.id ?? "";
-		this._draft = e ? structuredClone(e) : nt(t), this._saved = e, this._proposal = void 0, this._confirmed = !1, this._problems = [], e && this._propose(e.entity_id, !1);
+		this._draft = e ? structuredClone(e) : it(t), this._saved = e, this._proposal = void 0, this._confirmed = !1, this._problems = [], e && this._propose(e.entity_id, !1);
 	}
 	_set(e, t) {
 		this._draft && (this._draft = {
@@ -1783,7 +1792,7 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
 			on_activate: "toggle",
 			scenario_id: null,
 			on_deactivate: "none"
-		}), n.channel !== "key" && (n.key = null), n.arm_policy !== "arm_after_closing" && (n.arm_hold_timeout = null), n.entry_mode !== "follower" && (n.follows = []), n.always_on && (n.chime = !1), this._draft = rt(n);
+		}), n.channel !== "key" && (n.key = null), n.arm_policy !== "arm_after_closing" && (n.arm_hold_timeout = null), n.entry_mode !== "follower" && (n.follows = []), n.always_on && (n.chime = !1), this._draft = at(n);
 	}
 	async _propose(e, t) {
 		let n = this.ctx;
@@ -1816,7 +1825,7 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
 		return this.ctx?.meta?.zone_types.find((t) => t.type === e)?.available ?? !1;
 	}
 	_triggerChanged() {
-		return !this._saved || !it(this._saved.trigger, this._draft?.trigger);
+		return !this._saved || !ot(this._saved.trigger, this._draft?.trigger);
 	}
 	async _save() {
 		if (this.ctx && this._draft) {
@@ -1978,7 +1987,7 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
 		})}
           ${this._proposal?.device_class ? B(e, "zones.device_class", { device_class: this._proposal.device_class }) : k}
         </p>
-        ${et.has(i) ? this._renderEventTrigger(e, i, a) : D`
+        ${nt.has(i) ? this._renderEventTrigger(e, i, a) : D`
               <label class="field">
                 <span class="lbl">${B(e, "zones.trigger_kind")}</span>
                 <select
@@ -2023,7 +2032,7 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
 	}
 	_renderStateTrigger(e, t, n) {
 		let r = /* @__PURE__ */ new Set([...this._proposal?.options ?? [], ...t]);
-		tt.has(n) || r.add(n);
+		rt.has(n) || r.add(n);
 		let i = (e, n) => {
 			let r = n ? [...t, e] : t.filter((t) => t !== e);
 			this._set("trigger", {
@@ -2189,7 +2198,7 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
             <select
               @change=${(e) => {
 			let n = e.target.value;
-			this._draft = rt({
+			this._draft = at({
 				...t,
 				channel: n,
 				key: n === "key" ? t.key ?? {
@@ -2310,7 +2319,7 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
               <option value="" ?selected=${!t.battery_entity_id}>
                 ${B(e, "zones.no_battery")}
               </option>
-              ${Ze(n.hass).map((e) => D`<option
+              ${$e(n.hass).map((e) => D`<option
                   .value=${e.id}
                   ?selected=${e.id === t.battery_entity_id}
                 >
@@ -2517,10 +2526,10 @@ var it = (e, t) => JSON.stringify(e) === JSON.stringify(t), at = class extends I
 		];
 	}
 };
-customElements.get("foyer-page-zones") || customElements.define("foyer-page-zones", at);
+customElements.get("foyer-page-zones") || customElements.define("foyer-page-zones", st);
 //#endregion
 //#region src/panel/pages/scenarios.ts
-var ot = {
+var ct = {
 	name: "",
 	areas: [],
 	ha_master_state: "armed_away",
@@ -2531,7 +2540,7 @@ var ot = {
 	require_code_to_arm: null,
 	require_code_to_disarm: null,
 	allowed_user_ids: null
-}, st = class extends I {
+}, lt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -2545,7 +2554,7 @@ var ot = {
 	}
 	_edit(e) {
 		this._draft = e ? structuredClone(e) : {
-			...ot,
+			...ct,
 			areas: []
 		}, this._problems = [];
 	}
@@ -2728,10 +2737,10 @@ var ot = {
 		];
 	}
 };
-customElements.get("foyer-page-scenarios") || customElements.define("foyer-page-scenarios", st);
+customElements.get("foyer-page-scenarios") || customElements.define("foyer-page-scenarios", lt);
 //#endregion
 //#region src/panel/pages/profiles.ts
-var ct = {
+var ut = {
 	alarm: [
 		"entry_started",
 		"triggered",
@@ -2767,16 +2776,16 @@ var ct = {
 		"escalation_exhausted",
 		"chime"
 	]
-}, lt = ["companion", "telegram"], ut = [
+}, dt = ["companion", "telegram"], ft = [
 	"siren",
 	"light",
 	"switch"
-], dt = [
+], pt = [
 	"camera",
 	"scene",
 	"tts"
 ];
-function ft(e) {
+function mt(e) {
 	let t = {};
 	return e === "switch" && (t.state = "on"), e === "camera" && (t.mode = "snapshot"), e === "delay" && (t.seconds = 30), (e === "notify" || e === "tts") && (t.message = "{{ zone }}"), e === "notify" && (t.attachment = "companion"), {
 		kind: e,
@@ -2788,9 +2797,9 @@ function ft(e) {
 		enabled: !0
 	};
 }
-var pt = class extends I {
+var ht = class extends I {
 	constructor(...e) {
-		super(...e), this._open = -1, this._filters = {}, this._problems = [], this._busy = !1;
+		super(...e), this._open = -1, this._filters = {}, this._problems = [], this._busy = !1, this._tested = {};
 	}
 	static {
 		this.properties = {
@@ -2799,7 +2808,9 @@ var pt = class extends I {
 			_open: { state: !0 },
 			_filters: { state: !0 },
 			_problems: { state: !0 },
-			_busy: { state: !0 }
+			_busy: { state: !0 },
+			_tested: { state: !0 },
+			_confirming: { state: !0 }
 		};
 	}
 	_edit(e) {
@@ -2835,7 +2846,7 @@ var pt = class extends I {
 	_addAction(e) {
 		this._draft && (this._draft = {
 			...this._draft,
-			actions: [...this._draft.actions, ft(e)]
+			actions: [...this._draft.actions, mt(e)]
 		}, this._open = this._draft.actions.length - 1);
 	}
 	_removeAction(e) {
@@ -3017,6 +3028,7 @@ var pt = class extends I {
                 <div class="actions">
                   <button class="btn" @click=${() => this._moveAction(n, -1)}>&uarr;</button>
                   <button class="btn" @click=${() => this._moveAction(n, 1)}>&darr;</button>
+                  ${this._renderTestButton(e, t)}
                   <button class="btn danger" @click=${() => this._removeAction(n)}>
                     ${B(e, "profiles.delete_action")}
                   </button>
@@ -3024,6 +3036,50 @@ var pt = class extends I {
               </div>` : k}
       </div>
     `;
+	}
+	_renderTestButton(e, t) {
+		if (t.kind === "delay" || !t.id || !this._draft?.id) return k;
+		let n = t.id, r = this._tested[n];
+		return this._confirming === n ? D`
+        <button
+          class="btn primary"
+          ?disabled=${this._busy}
+          @click=${() => void this._testAction(t)}
+        >
+          ${B(e, "action_test.confirm_short")}
+        </button>
+        <button class="btn" @click=${() => this._confirming = void 0}>
+          ${B(e, "common.cancel")}
+        </button>
+      ` : D`
+      <button class="btn" ?disabled=${this._busy} @click=${() => this._confirming = n}>
+        ${B(e, "action_test.test")}
+      </button>
+      ${r ? D`<span class="state ${r.ok ? "closed" : "fault"}" title=${r.error ?? ""}>
+            ${B(e, r.ok ? "action_test.ok" : "action_test.failed")}
+          </span>` : k}
+    `;
+	}
+	async _testAction(e) {
+		let t = this.ctx;
+		if (t && e.id && this._draft?.id) {
+			this._busy = !0, this._confirming = void 0;
+			try {
+				let n = await t.testAction({
+					profile_id: this._draft.id,
+					action_id: e.id
+				});
+				this._tested = {
+					...this._tested,
+					[e.id]: {
+						ok: n.success,
+						error: n.error ?? n.reason ?? void 0
+					}
+				};
+			} finally {
+				this._busy = !1;
+			}
+		}
 	}
 	_momentSummary(e, t) {
 		let n = t.moments.map((t) => B(e, `moment.${t}`));
@@ -3137,9 +3193,9 @@ var pt = class extends I {
 	}
 	_renderParams(e, t, n) {
 		let r = this.ctx?.meta?.action_domains[t.kind] ?? [], i = B(e, "profiles.message_hint", { variables: (this.ctx?.meta?.template_variables ?? []).map((e) => `{{ ${e} }}`).join(" ") }), a = [];
-		switch (ut.includes(t.kind) && a.push(this._picker(e, t, n, "entity_ids", r, !0)), dt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_id", r, !1)), t.kind) {
+		switch (ft.includes(t.kind) && a.push(this._picker(e, t, n, "entity_ids", r, !0)), pt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_id", r, !1)), t.kind) {
 			case "notify":
-				a.push(this._suggested(e, t, n, "service", J(this.ctx.hass), B(e, "profiles.notify_hint"))), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i)), a.push(this._picker(e, t, n, "camera_entity_id", ["camera"], !1)), t.params.camera_entity_id && (a.push(this._select(e, t, n, "attachment", lt, (t) => B(e, `attachment.${t}`))), a.push(D`<span class="hint"
+				a.push(this._suggested(e, t, n, "service", J(this.ctx.hass), B(e, "profiles.notify_hint"))), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i)), a.push(this._picker(e, t, n, "camera_entity_id", ["camera"], !1)), t.params.camera_entity_id && (a.push(this._select(e, t, n, "attachment", dt, (t) => B(e, `attachment.${t}`))), a.push(D`<span class="hint"
               >${B(e, t.params.attachment === "telegram" ? "profiles.attach_hint_telegram" : "profiles.attach_hint")}</span
             >`));
 				break;
@@ -3167,10 +3223,10 @@ var pt = class extends I {
 				break;
 			case "call_service": {
 				let r = String(t.params.domain ?? "");
-				a.push(this._suggested(e, t, n, "domain", Qe(this.ctx.hass).map((e) => ({
+				a.push(this._suggested(e, t, n, "domain", et(this.ctx.hass).map((e) => ({
 					id: e,
 					name: e
-				})))), a.push(this._suggested(e, t, n, "service", $e(this.ctx.hass, r).map((e) => ({
+				})))), a.push(this._suggested(e, t, n, "service", tt(this.ctx.hass, r).map((e) => ({
 					id: e,
 					name: e
 				})))), a.push(this._json(e, t, n));
@@ -3225,7 +3281,7 @@ var pt = class extends I {
 	_renderMoments(e, t, n) {
 		let r = new Set(this.ctx?.meta?.future_moments ?? []), i = new Set(this.ctx?.meta?.moments ?? []);
 		return D`<div class="moments-grid">
-      ${Object.entries(ct).map(([a, o]) => D`<fieldset>
+      ${Object.entries(ut).map(([a, o]) => D`<fieldset>
             <legend>${B(e, `moment_group.${a}`)}</legend>
             ${o.filter((e) => i.has(e)).map((i) => D`<label class="check">
                     <input
@@ -3445,10 +3501,10 @@ var pt = class extends I {
 		];
 	}
 };
-customElements.get("foyer-page-profiles") || customElements.define("foyer-page-profiles", pt);
+customElements.get("foyer-page-profiles") || customElements.define("foyer-page-profiles", ht);
 //#endregion
 //#region src/panel/pages/groups.ts
-var mt = class extends I {
+var gt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -3701,10 +3757,10 @@ var mt = class extends I {
 		];
 	}
 };
-customElements.get("foyer-page-groups") || customElements.define("foyer-page-groups", mt);
+customElements.get("foyer-page-groups") || customElements.define("foyer-page-groups", gt);
 //#endregion
 //#region src/panel/pages/users.ts
-var ht = {
+var _t = {
 	name: "",
 	has_code: !1,
 	has_duress_code: !1,
@@ -3723,17 +3779,17 @@ var ht = {
 	code_exempt_when_identified: !1,
 	enabled: !0
 };
-function gt(e) {
+function vt(e) {
 	if (!e) return "";
 	let t = new Date(e), n = (e) => String(e).padStart(2, "0");
 	return `${t.getFullYear()}-${n(t.getMonth() + 1)}-${n(t.getDate())}T${n(t.getHours())}:${n(t.getMinutes())}`;
 }
-function _t(e) {
+function yt(e) {
 	if (!e) return null;
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
-var vt = class extends I {
+var bt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -3747,7 +3803,7 @@ var vt = class extends I {
 		};
 	}
 	_edit(e) {
-		this._draft = e ? { ...structuredClone(e) } : structuredClone(ht), this._problems = [];
+		this._draft = e ? { ...structuredClone(e) } : structuredClone(_t), this._problems = [];
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -3918,16 +3974,16 @@ var vt = class extends I {
               <span class="lbl">${B(e, "field.valid_from")}</span>
               <input
                 type="datetime-local"
-                .value=${gt(t.valid_from)}
-                @input=${(e) => this._set("valid_from", _t(e.target.value))}
+                .value=${vt(t.valid_from)}
+                @input=${(e) => this._set("valid_from", yt(e.target.value))}
               />
             </label>
             <label class="field">
               <span class="lbl">${B(e, "field.valid_until")}</span>
               <input
                 type="datetime-local"
-                .value=${gt(t.valid_until)}
-                @input=${(e) => this._set("valid_until", _t(e.target.value))}
+                .value=${vt(t.valid_until)}
+                @input=${(e) => this._set("valid_until", yt(e.target.value))}
               />
               <span class="hint">${B(e, "users.validity_hint")}</span>
             </label>
@@ -4183,10 +4239,10 @@ var vt = class extends I {
 		];
 	}
 };
-customElements.define("foyer-page-users", vt);
+customElements.define("foyer-page-users", bt);
 //#endregion
 //#region src/panel/pages/devices.ts
-var yt = {
+var xt = {
 	name: "",
 	kind: "keypad",
 	ref: "",
@@ -4196,7 +4252,7 @@ var yt = {
 	command: "toggle",
 	scenario_id: null,
 	enabled: !0
-}, bt = ["tag.", "event."], xt = class extends I {
+}, St = ["tag.", "event."], Ct = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._mqttProblems = [];
 	}
@@ -4211,7 +4267,7 @@ var yt = {
 		};
 	}
 	_edit(e) {
-		this._draft = e ? structuredClone(e) : structuredClone(yt), this._problems = [];
+		this._draft = e ? structuredClone(e) : structuredClone(xt), this._problems = [];
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -4325,7 +4381,7 @@ var yt = {
     </tr>`;
 	}
 	_renderEditor(e, t) {
-		let n = this.ctx, r = n.config?.users ?? [], i = n.config?.scenarios ?? [], a = Object.keys(n.hass.states).filter((e) => bt.some((t) => e.startsWith(t))).sort();
+		let n = this.ctx, r = n.config?.users ?? [], i = n.config?.scenarios ?? [], a = Object.keys(n.hass.states).filter((e) => St.some((t) => e.startsWith(t))).sort();
 		return D`
       <div class="card">
         <div class="card-hd">
@@ -4554,11 +4610,11 @@ var yt = {
           <div class="grid-form">
             <div class="field">
               <span class="lbl">${B(e, "devices.inbound")}</span>
-              <pre class="sample">${St}</pre>
+              <pre class="sample">${wt}</pre>
             </div>
             <div class="field">
               <span class="lbl">${B(e, "devices.outbound")}</span>
-              <pre class="sample">${Ct[t.detail]}</pre>
+              <pre class="sample">${Tt[t.detail]}</pre>
               <span class="hint">${B(e, "devices.last_result_hint")}</span>
             </div>
           </div>
@@ -4615,25 +4671,30 @@ var yt = {
     `
 		];
 	}
-}, St = "{\n  \"action\": \"arm\",\n  \"scenario\": \"Night\",\n  \"code\": \"123456\",\n  \"device_id\": \"keypad_hall\"\n}", Ct = {
+}, wt = "{\n  \"action\": \"arm\",\n  \"scenario\": \"Night\",\n  \"code\": \"123456\",\n  \"device_id\": \"keypad_hall\"\n}", Tt = {
 	minimal: "{\n  \"master\": \"armed_night\",\n  \"countdown\": { \"kind\": \"exit\", \"remaining\": 22 },\n  \"ready_to_arm\": false,\n  \"blocking_zones\": 1,\n  \"fault\": false,\n  \"last_result\": \"ok\"\n}",
 	standard: "{\n  \"master\": \"armed_night\",\n  \"countdown\": null,\n  \"ready_to_arm\": true,\n  \"blocking_zones\": 0,\n  \"fault\": false,\n  \"last_result\": \"ok\",\n  \"scenario\": \"Night\",\n  \"areas\": { \"Ground floor\": \"armed\" }\n}",
 	full: "{\n  \"master\": \"armed_night\",\n  \"countdown\": null,\n  \"ready_to_arm\": false,\n  \"blocking_zones\": 1,\n  \"fault\": false,\n  \"last_result\": \"blocked\",\n  \"scenario\": \"Night\",\n  \"areas\": { \"Ground floor\": \"armed\" },\n  \"open_zones\": [\"Bathroom window\"]\n}"
 };
-customElements.define("foyer-page-devices", xt);
+customElements.define("foyer-page-devices", Ct);
 //#endregion
 //#region src/panel/pages/test.ts
-var wt = ["diagnostics", "simulator"], Tt = /* @__PURE__ */ new Set([
+var Et = [
+	"diagnostics",
+	"simulator",
+	"walktest",
+	"actiontest"
+], Dt = /* @__PURE__ */ new Set([
 	"triggered",
 	"entry_started",
 	"verification_satisfied",
 	"technical_raised"
 ]);
-function Et(e, t) {
+function Ot(e, t) {
 	let n = e.config?.zones.find((e) => e.id === t);
 	return n && n.trigger.kind === "state" ? n.trigger.states : [];
 }
-function Dt(e) {
+function kt(e) {
 	let t = /* @__PURE__ */ new Set();
 	for (let n of e.config?.profiles ?? []) for (let e of n.actions) for (let n of e.conditions) n.kind === "state" && t.add(n.entity_id);
 	return [...t].sort();
@@ -4645,9 +4706,9 @@ function Y(e) {
 		second: "2-digit"
 	});
 }
-var Ot = class extends I {
+var At = class extends I {
 	constructor(...e) {
-		super(...e), this._tab = "diagnostics", this._busy = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set();
+		super(...e), this._tab = "diagnostics", this._busy = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set(), this._walkDuration = "", this._tested = {};
 	}
 	static {
 		this.properties = {
@@ -4662,7 +4723,10 @@ var Ot = class extends I {
 			_overrides: { state: !0 },
 			_entities: { state: !0 },
 			_code: { state: !0 },
-			_codeWanted: { state: !0 }
+			_codeWanted: { state: !0 },
+			_walkDuration: { state: !0 },
+			_tested: { state: !0 },
+			_confirming: { state: !0 }
 		};
 	}
 	updated() {
@@ -4705,7 +4769,7 @@ var Ot = class extends I {
 		let t = e.strings;
 		return D`
       <nav class="subtabs" role="tablist">
-        ${wt.map((e) => D`
+        ${Et.map((e) => D`
             <button
               role="tab"
               aria-selected=${e === this._tab ? "true" : "false"}
@@ -4716,7 +4780,7 @@ var Ot = class extends I {
           `)}
       </nav>
       ${this._error ? D`<div class="problems" role="alert">${this._error}</div>` : k}
-      ${this._tab === "diagnostics" ? this._renderDiagnostics(t) : this._renderSimulator(t)}
+      ${this._tab === "diagnostics" ? this._renderDiagnostics(t) : this._tab === "simulator" ? this._renderSimulator(t) : this._tab === "walktest" ? this._renderWalkTest(t) : this._renderActionTest(t)}
     `;
 	}
 	_renderDiagnostics(e) {
@@ -4931,7 +4995,7 @@ var Ot = class extends I {
               <select
                 @change=${(e) => this._setOverride(r, {
 			zone_id: e.target.value,
-			state: Et(t, e.target.value)[0] ?? n.state
+			state: Ot(t, e.target.value)[0] ?? n.state
 		})}
               >
                 <option value="">${B(e, "test.simulator.pick_zone")}</option>
@@ -4950,7 +5014,7 @@ var Ot = class extends I {
                 @change=${(e) => this._setOverride(r, { state: e.target.value })}
               />
               <datalist id="foyer-sim-states-${r}">
-                ${Et(t, n.zone_id).map((e) => D`<option .value=${e}></option>`)}
+                ${Ot(t, n.zone_id).map((e) => D`<option .value=${e}></option>`)}
               </datalist>
               <input
                 class="at-input"
@@ -4983,7 +5047,7 @@ var Ot = class extends I {
     `;
 	}
 	_renderEntityOverrides(e) {
-		let t = Dt(this.ctx);
+		let t = kt(this.ctx);
 		return t.length ? D`
       <fieldset>
         <legend>${B(e, "test.simulator.entities")}</legend>
@@ -5131,7 +5195,7 @@ var Ot = class extends I {
       </div>` : D`<div class="key">${B(e, `moment.${t.moment}`)}</div>`;
 	}
 	_renderBatches(e, t) {
-		return D`${t.batches.filter((e) => e.actions.length > 0 || Tt.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
+		return D`${t.batches.filter((e) => e.actions.length > 0 || Dt.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
 	}
 	_renderBatch(e, t) {
 		return t.profile_id ? D`
@@ -5160,6 +5224,250 @@ var Ot = class extends I {
 			why: r
 		})}
     </div>`;
+	}
+	_renderWalkTest(e) {
+		let t = this.ctx.status.walk_test;
+		return D`
+      <div class="notice ${t ? "danger" : "warn"}">
+        <strong>${B(e, t ? "walk.active_title" : "walk.idle_title")}</strong>
+        ${B(e, t ? "walk.active" : "walk.idle")}
+        <div class="hint">${B(e, "walk.always_on_live")}</div>
+      </div>
+      ${t ? this._renderWalkRunning(e, t) : this._renderWalkStart(e)}
+    `;
+	}
+	_renderWalkStart(e) {
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "walk.start_title")}</h2>
+          <span class="hint">${B(e, "walk.start_sub")}</span>
+        </div>
+        <div class="card-bd">
+          <p>${B(e, "walk.explainer")}</p>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "walk.duration")}</span>
+              <input
+                type="number"
+                min="1"
+                .value=${this._walkDuration}
+                placeholder=${B(e, "walk.duration_default")}
+                @change=${(e) => this._walkDuration = e.target.value}
+              />
+              <span class="hint">${B(e, "walk.duration_hint")}</span>
+            </label>
+          </div>
+          <div class="actions">
+            <button
+              class="btn primary"
+              ?disabled=${this._busy}
+              @click=${() => void this._startWalkTest()}
+            >
+              ${B(e, "walk.start")}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+	}
+	_renderWalkRunning(e, t) {
+		let n = this.ctx, r = new Map(n.status.zones.map((e) => [e.id, e])), i = new Map(n.status.areas.map((e) => [e.id, e.name])), a = t.expected_zones.filter((e) => !t.detections[e]), o = t.expected_zones.filter((e) => t.detections[e]), s = (n) => {
+			let a = r.get(n), o = t.detections[n];
+			return D`
+        <tr>
+          <td><strong>${a?.name ?? n}</strong></td>
+          <td>${i.get(a?.area_id ?? "") ?? ""}</td>
+          <td>
+            <span class="state ${o ? "closed" : "fault"}">
+              ${B(e, o ? "walk.detected" : "walk.never")}
+            </span>
+          </td>
+          <td class="mono">${o ? Y(o.first) : "—"}</td>
+          <td class="mono">${o ? o.count : 0}</td>
+          <td>
+            ${a?.fault ? D`<span class="state fault">${B(e, `fault.${a.fault}`)}</span>` : k}
+          </td>
+        </tr>
+      `;
+		};
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "walk.table_title")}</h2>
+          <span class="hint">
+            ${B(e, "walk.started_by", {
+			who: t.user_name ?? B(e, "walk.somebody"),
+			at: Y(t.started_at),
+			time: Le((Date.parse(t.deadline) - n.now()) / 1e3)
+		})}
+          </span>
+          <button
+            class="btn danger"
+            ?disabled=${this._busy}
+            @click=${() => void this._endWalkTest()}
+          >
+            ${B(e, "walk.end")}
+          </button>
+        </div>
+        <div class="card-bd">
+          ${a.length ? D`<div class="problems" role="alert">
+                ${B(e, "walk.never_reacted", { n: a.length })}
+              </div>` : D`<div class="notice">${B(e, "walk.all_reacted")}</div>`}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>${B(e, "test.col.zone")}</th>
+                  <th>${B(e, "walk.col.area")}</th>
+                  <th>${B(e, "walk.col.result")}</th>
+                  <th>${B(e, "walk.col.first")}</th>
+                  <th>${B(e, "walk.col.count")}</th>
+                  <th>${B(e, "test.col.health")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${a.map(s)}${o.map(s)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+	}
+	async _startWalkTest() {
+		let e = this.ctx;
+		if (e) {
+			this._busy = !0, this._error = void 0;
+			try {
+				let t = Number(this._walkDuration) || 0, n = await e.walkTest(!0, { duration: t > 0 ? t * 60 : void 0 });
+				n.success ? n.blocking_zones.length && (this._error = B(e.strings, "walk.partly_armed", { zones: n.blocking_zones.map((e) => e.name).join(", ") })) : this._error = Ve(e.strings, n);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _endWalkTest() {
+		let e = this.ctx;
+		if (e) {
+			this._busy = !0;
+			try {
+				await e.walkTest(!1);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	_renderActionTest(e) {
+		let t = this.ctx.config?.profiles ?? [];
+		return D`
+      <div class="notice danger">
+        <strong>${B(e, "action_test.warn_title")}</strong>
+        ${B(e, "action_test.warn")}
+      </div>
+      ${this._confirming ? this._renderConfirm(e) : k}
+      ${t.length === 0 ? D`<p class="empty">${B(e, "action_test.no_profiles")}</p>` : t.map((t) => this._renderProfileTests(e, t))}
+    `;
+	}
+	_renderProfileTests(e, t) {
+		let n = t.actions.filter((e) => e.kind !== "delay");
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t.name}</h2>
+          <span class="hint">${B(e, "action_test.subtitle")}</span>
+        </div>
+        <div class="card-bd">
+          ${n.length === 0 ? D`<p class="empty">${B(e, "action_test.no_actions")}</p>` : D`<div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>${B(e, "action_test.col.action")}</th>
+                      <th>${B(e, "action_test.col.what")}</th>
+                      <th>${B(e, "action_test.col.last")}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${n.map((n) => this._renderActionRow(e, t, n))}
+                  </tbody>
+                </table>
+              </div>`}
+        </div>
+      </div>
+    `;
+	}
+	_renderActionRow(e, t, n) {
+		let r = `${t.id}:${n.id}`, i = this._tested[r], a = n.name || B(e, `action_kind.${n.kind}`);
+		return D`
+      <tr>
+        <td><strong>${a}</strong></td>
+        <td class="hint">${B(e, `action_test.what.${n.kind}`)}</td>
+        <td>
+          ${i ? i.ok ? D`<span class="state closed">${B(e, "action_test.ok")}</span>` : D`<span class="state fault" title=${i.error ?? ""}
+                  >${B(e, "action_test.failed")}</span
+                >` : D`<span class="muted">${B(e, "action_test.never")}</span>`}
+        </td>
+        <td>
+          <button
+            class="btn small"
+            ?disabled=${this._busy}
+            @click=${() => this._confirming = {
+			profile_id: t.id ?? "",
+			action_id: n.id ?? "",
+			name: a
+		}}
+          >
+            ${B(e, "action_test.test")}
+          </button>
+        </td>
+      </tr>
+    `;
+	}
+	_renderConfirm(e) {
+		let t = this._confirming;
+		return D`
+      <div class="problems" role="alertdialog">
+        <p>${B(e, "action_test.confirm", { action: t.name })}</p>
+        <div class="actions">
+          <button
+            class="btn primary"
+            ?disabled=${this._busy}
+            @click=${() => void this._runTest(t)}
+          >
+            ${B(e, "action_test.confirm_yes")}
+          </button>
+          <button class="btn" @click=${() => this._confirming = void 0}>
+            ${B(e, "common.cancel")}
+          </button>
+        </div>
+      </div>
+    `;
+	}
+	async _runTest(e) {
+		let t = this.ctx;
+		if (t) {
+			this._busy = !0, this._confirming = void 0, this._error = void 0;
+			try {
+				let n = await t.testAction({
+					profile_id: e.profile_id,
+					action_id: e.action_id
+				});
+				this._tested = {
+					...this._tested,
+					[`${e.profile_id}:${e.action_id}`]: {
+						ok: n.success,
+						at: Date.now(),
+						error: n.error ?? n.reason ?? void 0
+					}
+				}, n.success || (this._error = B(t.strings, "action_test.failed_detail", {
+					action: e.name,
+					detail: n.error ?? n.reason ?? ""
+				}));
+			} finally {
+				this._busy = !1;
+			}
+		}
 	}
 	static {
 		this.styles = [
@@ -5194,6 +5502,19 @@ var Ot = class extends I {
       .notice.info {
         border-left-color: var(--info-color, #0277bd);
         margin: 0 0 16px;
+      }
+      /* The two tabs that write say so in the colour of what they do: the
+         walk test holds the whole response back, the action test really
+         sounds the siren. */
+      .notice.danger {
+        border-left-color: var(--error-color, #d32f2f);
+        margin: 0 0 16px;
+      }
+      .notice.warn {
+        margin: 0 0 16px;
+      }
+      .card-hd .btn.danger {
+        margin-left: auto;
       }
       .split {
         display: grid;
@@ -5270,10 +5591,10 @@ var Ot = class extends I {
 		];
 	}
 };
-customElements.get("foyer-page-test") || customElements.define("foyer-page-test", Ot);
+customElements.get("foyer-page-test") || customElements.define("foyer-page-test", At);
 //#endregion
 //#region src/panel/pages/log.ts
-var X = 50, kt = class extends I {
+var X = 50, jt = class extends I {
 	constructor(...e) {
 		super(...e), this._rows = [], this._total = 0, this._offset = 0, this._filters = {}, this._busy = !1, this._confirmClear = !1, this._loaded = !1;
 	}
@@ -5321,7 +5642,7 @@ var X = 50, kt = class extends I {
 			this._busy = !0;
 			try {
 				let t = await this.ctx.exportLog(this._filters, e);
-				Le(t.filename, t.content, e === "csv" ? "text/csv" : "application/json"), t.truncated && (this._error = B(this.ctx.strings, "log.truncated", {
+				ze(t.filename, t.content, e === "csv" ? "text/csv" : "application/json"), t.truncated && (this._error = B(this.ctx.strings, "log.truncated", {
 					rows: t.rows,
 					total: t.total
 				}));
@@ -5533,14 +5854,14 @@ var X = 50, kt = class extends I {
       <tr class="clickable" aria-selected=${a ? "true" : "false"} @click=${() => this._open = a ? void 0 : t.id}>
         <td class="mono">${new Date(t.ts).toLocaleString(n.hass.language)}</td>
         <td>
-          <span class="state ${Mt(t.severity)}">
-            ${At(e, t.event_type)}
+          <span class="state ${Pt(t.severity)}">
+            ${Mt(e, t.event_type)}
           </span>
         </td>
         <td><span class="tag">${B(e, `category.${t.category}`)}</span></td>
         <td>${o}</td>
         <td>
-          ${t.user_name ?? (t.channel ? jt(e, t.channel) : "")}
+          ${t.user_name ?? (t.channel ? Nt(e, t.channel) : "")}
           ${t.detail?.attributed === "claimed" ? D`<span class="claimed">${B(e, "log.claimed")}</span>` : k}
         </td>
         <td class="detail">${this._summary(e, t)}</td>
@@ -5562,7 +5883,7 @@ var X = 50, kt = class extends I {
                 ${t.outcome ? D`<dt>${B(e, "log.outcome")}</dt>
                       <dd>${B(e, `outcome.${t.outcome}`)}</dd>` : k}
                 ${t.channel ? D`<dt>${B(e, "log.channel")}</dt>
-                      <dd>${jt(e, t.channel)}</dd>` : k}
+                      <dd>${Nt(e, t.channel)}</dd>` : k}
                 ${this._changeLines(e, t).map((t, n) => D`<dt>${n ? "" : B(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
                 ${this._plainDetail(t).map(([t, n]) => D`<dt>${B(e, `detail.${t}`)}</dt>
@@ -5691,23 +6012,23 @@ var X = 50, kt = class extends I {
 		];
 	}
 };
-function At(e, t) {
+function Mt(e, t) {
 	let n = B(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
 	let r = B(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-function jt(e, t) {
+function Nt(e, t) {
 	let n = B(e, `log_channel.${t}`);
 	return n.startsWith("log_channel.") ? t : n;
 }
-function Mt(e) {
+function Pt(e) {
 	return e === "alarm" ? "triggered" : e === "warning" ? "arming" : "disarmed";
 }
-customElements.get("foyer-page-log") || customElements.define("foyer-page-log", kt);
+customElements.get("foyer-page-log") || customElements.define("foyer-page-log", jt);
 //#endregion
 //#region src/panel/pages/settings.ts
-var Nt = ["en", "it"], Pt = {
+var Ft = ["en", "it"], It = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -5716,7 +6037,7 @@ var Nt = ["en", "it"], Pt = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, Ft = class extends I {
+}, Lt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1;
 	}
@@ -5732,7 +6053,7 @@ var Nt = ["en", "it"], Pt = {
 		};
 	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Pt);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? It);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -5903,7 +6224,7 @@ var Nt = ["en", "it"], Pt = {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.exportConfig();
-				Le(e.filename, JSON.stringify(e.document, null, 2), "application/json");
+				ze(e.filename, JSON.stringify(e.document, null, 2), "application/json");
 			} finally {
 				this._busy = !1;
 			}
@@ -5942,7 +6263,7 @@ var Nt = ["en", "it"], Pt = {
               <option value="" ?selected=${!n.language}>
                 ${B(e, "settings.language_system")}
               </option>
-              ${Nt.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
+              ${Ft.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
                     ${B(e, `language.${t}`)}
                   </option>`)}
             </select>
@@ -6009,7 +6330,7 @@ var Nt = ["en", "it"], Pt = {
     `;
 	}
 	_renderChime(e, t) {
-		let n = this.ctx, r = Xe(n.hass, n.meta?.chime_domains ?? [
+		let n = this.ctx, r = Qe(n.hass, n.meta?.chime_domains ?? [
 			"media_player",
 			"siren",
 			"notify"
@@ -6200,7 +6521,7 @@ var Nt = ["en", "it"], Pt = {
     `];
 	}
 };
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Ft);
+customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Lt);
 //#endregion
 //#region src/panel/wizard.ts
 var Z = [
@@ -6209,7 +6530,7 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], It = 3, Lt = class extends I {
+], Rt = 3, zt = class extends I {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -6367,7 +6688,7 @@ var Z = [
 		return D`
       <p>${B(e, "wizard.zones_text", {
 			have: n.length,
-			want: It
+			want: Rt
 		})}</p>
       <ul class="zones">
         ${n.map((t) => D`<li>
@@ -6587,16 +6908,17 @@ var Z = [
 		if (e && this._notifyTarget) {
 			this._busy = !0, this._sent = !1;
 			try {
-				let t = B(e.strings, "wizard.test_message"), n = this._notifyTarget;
-				if (n.startsWith("notify.") && e.hass.states[n]) await e.hass.callService("notify", "send_message", {
-					entity_id: n,
-					message: t
+				let t = await e.testAction({
+					service: this._notifyTarget,
+					message: B(e.strings, "wizard.test_message")
 				});
-				else {
-					let [r, i] = n.split(".");
-					await e.hass.callService(r, i, { message: t });
-				}
-				this._sent = !0;
+				this._sent = t.success, t.success || (this._problems = [{
+					code: "request_failed",
+					kind: "notify",
+					ref: null,
+					field: null,
+					detail: t.error ?? t.reason ?? ""
+				}]);
 			} catch (e) {
 				this._problems = [{
 					code: "request_failed",
@@ -6703,10 +7025,10 @@ var Z = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", Lt);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", zt);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var Rt = [
+var Bt = [
 	"overview",
 	"areas",
 	"zones",
@@ -6718,7 +7040,7 @@ var Rt = [
 	"test",
 	"log",
 	"settings"
-], zt = [
+], Vt = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -6727,7 +7049,7 @@ var Rt = [
 	"users",
 	"devices",
 	"settings"
-], Bt = {
+], Ht = {
 	overview: [
 		"area",
 		"master",
@@ -6822,7 +7144,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var Vt = class extends I {
+var Ut = class extends I {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._offset = 0;
 	}
@@ -6843,7 +7165,7 @@ var Vt = class extends I {
 	}
 	connectedCallback() {
 		super.connectedCallback(), this.hass && this._start(), this._timer = window.setInterval(() => {
-			this._status?.areas.some((e) => e.timer) && (this._tick += 1);
+			(this._status?.areas.some((e) => e.timer) || this._status?.walk_test) && (this._tick += 1);
 		}, 1e3);
 	}
 	disconnectedCallback() {
@@ -6946,6 +7268,17 @@ var Vt = class extends I {
 				type: "foyer/simulate",
 				...$(t)
 			}),
+			walkTest: (t, n) => this._coded((r) => e.callWS({
+				type: "foyer/walk_test",
+				enable: t,
+				...n?.duration ? { duration: n.duration } : {},
+				...Q(n?.code ?? r)
+			})),
+			testAction: (t) => this._coded((n) => e.callWS({
+				type: "foyer/test_action",
+				...$(t),
+				...Q(t.code ?? n)
+			})),
 			exportConfig: () => e.callWS({ type: "foyer/config/export" }),
 			importConfig: (e) => this._edit("config", {
 				type: "foyer/config/import",
@@ -7047,10 +7380,36 @@ var Vt = class extends I {
           <ha-icon icon="mdi:help-circle-outline"></ha-icon>
         </button>
       </div>
+      ${e ? this._renderWalkTestBanner(e) : k}
       ${e ? this._renderTabs(e) : k}
       <main>${e ? this._renderBody(e) : k}</main>
       ${this._asking && e ? this._renderCodeDialog(e) : k}
     `;
+	}
+	_renderWalkTestBanner(e) {
+		let t = this._status?.walk_test;
+		if (!t) return k;
+		this._tick;
+		let n = Re(t.deadline, this._offset);
+		return D`
+      <div class="walk-banner" role="alert">
+        <ha-icon icon="mdi:shield-off-outline"></ha-icon>
+        <div>
+          <strong>${B(e, "walk.banner_title")}</strong>
+          ${B(e, "walk.banner", {
+			time: Le(n),
+			who: t.user_name ?? B(e, "walk.somebody")
+		})}
+          <div class="live-note">${B(e, "walk.always_on_live")}</div>
+        </div>
+        <button class="btn danger" @click=${() => void this._endWalkTest()}>
+          ${B(e, "walk.end")}
+        </button>
+      </div>
+    `;
+	}
+	async _endWalkTest() {
+		await this._context()?.walkTest(!1);
 	}
 	_renderCodeDialog(e) {
 		let t = this._status?.security.code_length ?? 6;
@@ -7081,7 +7440,7 @@ var Vt = class extends I {
     `;
 	}
 	_renderTabs(e) {
-		let t = this._canConfigure ? Rt : Rt.filter((e) => !zt.includes(e));
+		let t = this._canConfigure ? Bt : Bt.filter((e) => !Vt.includes(e));
 		return t.length < 2 ? k : D`
       <nav class="tabs" role="tablist">
         ${t.map((t) => D`
@@ -7141,7 +7500,7 @@ var Vt = class extends I {
         ${r ? D`<div class="help-body">
               <p>${B(e, `${n}.intro`)}</p>
               <dl>
-                ${Bt[t].map((t) => D`
+                ${Ht[t].map((t) => D`
                     <dt>${B(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${B(e, `${n}.items.${t}.text`)}</dd>
                   `)}
@@ -7347,5 +7706,5 @@ var Vt = class extends I {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", Vt);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", Ut);
 //#endregion

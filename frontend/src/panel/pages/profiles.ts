@@ -98,6 +98,8 @@ class FoyerPageProfiles extends LitElement {
     _filters: { state: true },
     _problems: { state: true },
     _busy: { state: true },
+    _tested: { state: true },
+    _confirming: { state: true },
   };
 
   ctx?: PanelContext;
@@ -108,6 +110,10 @@ class FoyerPageProfiles extends LitElement {
   private _filters: Record<string, string> = {};
   private _problems: Problem[] = [];
   private _busy = false;
+  // What the last real action test did, per action, and which action is
+  // waiting for its confirmation (§11.4: it really executes, so it asks).
+  private _tested: Record<string, { ok: boolean; error?: string }> = {};
+  private _confirming?: string;
 
   private _edit(profile?: ProfileConfig): void {
     this._draft = profile ? structuredClone(profile) : { name: "", severity: 1, actions: [] };
@@ -369,6 +375,7 @@ class FoyerPageProfiles extends LitElement {
                 <div class="actions">
                   <button class="btn" @click=${() => this._moveAction(index, -1)}>&uarr;</button>
                   <button class="btn" @click=${() => this._moveAction(index, 1)}>&darr;</button>
+                  ${this._renderTestButton(s, action)}
                   <button class="btn danger" @click=${() => this._removeAction(index)}>
                     ${t(s, "profiles.delete_action")}
                   </button>
@@ -378,6 +385,71 @@ class FoyerPageProfiles extends LitElement {
         }
       </div>
     `;
+  }
+
+  /** §11.4's test button, beside the action it tests.
+   *
+   * Beside it rather than only on page 9, because this is where somebody has
+   * just finished configuring a notification and is wondering whether it
+   * arrives — and the answer to that is worth having before the emergency
+   * rather than during it.
+   *
+   * It really executes, so it asks first, and it is offered only for an
+   * action that has been saved: a draft has no id for the backend to look
+   * up, and a test that silently ran the *previous* version of the action
+   * would be worse than no button. A `delay` has nothing to test, being the
+   * waiting itself.
+   */
+  private _renderTestButton(s: Strings, action: ActionConfig) {
+    if (action.kind === "delay" || !action.id || !this._draft?.id) return nothing;
+    const key = action.id;
+    const last = this._tested[key];
+    if (this._confirming === key) {
+      return html`
+        <button
+          class="btn primary"
+          ?disabled=${this._busy}
+          @click=${() => void this._testAction(action)}
+        >
+          ${t(s, "action_test.confirm_short")}
+        </button>
+        <button class="btn" @click=${() => (this._confirming = undefined)}>
+          ${t(s, "common.cancel")}
+        </button>
+      `;
+    }
+    return html`
+      <button class="btn" ?disabled=${this._busy} @click=${() => (this._confirming = key)}>
+        ${t(s, "action_test.test")}
+      </button>
+      ${last
+        ? html`<span class="state ${last.ok ? "closed" : "fault"}" title=${last.error ?? ""}>
+            ${t(s, last.ok ? "action_test.ok" : "action_test.failed")}
+          </span>`
+        : nothing}
+    `;
+  }
+
+  private async _testAction(action: ActionConfig): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx || !action.id || !this._draft?.id) return;
+    this._busy = true;
+    this._confirming = undefined;
+    try {
+      const result = await ctx.testAction({
+        profile_id: this._draft.id,
+        action_id: action.id,
+      });
+      this._tested = {
+        ...this._tested,
+        [action.id]: {
+          ok: result.success,
+          error: result.error ?? result.reason ?? undefined,
+        },
+      };
+    } finally {
+      this._busy = false;
+    }
   }
 
   /** The moments, short enough to read at a glance: a profile action that

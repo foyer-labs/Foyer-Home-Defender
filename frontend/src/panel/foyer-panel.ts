@@ -8,8 +8,10 @@ import { unsafeSVG } from "lit/directives/unsafe-svg.js";
 import { brandSymbol } from "../shared/brand";
 import { loadStrings, t, type Strings } from "../shared/i18n";
 import { formStyles, stateStyles } from "../shared/styles";
+import { mmss, secondsUntil } from "../shared/time";
 import type {
   CommandResult,
+  TestActionResult,
   ConfigMeta,
   EditResult,
   FoyerConfig,
@@ -145,7 +147,9 @@ class FoyerPanel extends LitElement {
     if (this.hass) this._start();
     // Countdowns move once a second; nothing else needs a clock.
     this._timer = window.setInterval(() => {
-      if (this._status?.areas.some((a) => a.timer)) this._tick += 1;
+      if (this._status?.areas.some((a) => a.timer) || this._status?.walk_test) {
+        this._tick += 1;
+      }
     }, 1000);
   }
 
@@ -315,6 +319,23 @@ class FoyerPanel extends LitElement {
       },
       diagnostics: () => hass.callWS({ type: "foyer/diagnostics" }),
       simulate: (query) => hass.callWS({ type: "foyer/simulate", ...prune(query) }),
+      walkTest: (enable, options) =>
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/walk_test",
+            enable,
+            ...(options?.duration ? { duration: options.duration } : {}),
+            ...withCode(options?.code ?? code),
+          }),
+        ),
+      testAction: (query) =>
+        this._coded((code) =>
+          hass.callWS<TestActionResult>({
+            type: "foyer/test_action",
+            ...prune(query),
+            ...withCode(query.code ?? code),
+          }),
+        ),
       exportConfig: () => hass.callWS({ type: "foyer/config/export" }),
       importConfig: (document) =>
         this._edit("config", { type: "foyer/config/import", document }),
@@ -425,10 +446,52 @@ class FoyerPanel extends LitElement {
           <ha-icon icon="mdi:help-circle-outline"></ha-icon>
         </button>
       </div>
+      ${s ? this._renderWalkTestBanner(s) : nothing}
       ${s ? this._renderTabs(s) : nothing}
       <main>${s ? this._renderBody(s) : nothing}</main>
       ${this._asking && s ? this._renderCodeDialog(s) : nothing}
     `;
+  }
+
+  /** The banner of §11.3, above everything and on every page.
+   *
+   * "Permanent and unmissable" is the requirement, and the reason is the
+   * one the safeguards exist for: a real intrusion during a walk test
+   * produces nothing at all, by construction. So it sits above the tabs
+   * rather than inside a page, it says when it ends, and it carries the one
+   * button that matters.
+   *
+   * It also says what stays live, because the first question anybody asks
+   * is whether they have just switched the smoke detector off. They have
+   * not, and the banner is where that is answered. */
+  private _renderWalkTestBanner(s: Strings) {
+    const walk = this._status?.walk_test;
+    if (!walk) return nothing;
+    void this._tick; // the banner counts down, so it re-renders every second
+    const left = secondsUntil(walk.deadline, this._offset);
+    return html`
+      <div class="walk-banner" role="alert">
+        <ha-icon icon="mdi:shield-off-outline"></ha-icon>
+        <div>
+          <strong>${t(s, "walk.banner_title")}</strong>
+          ${t(s, "walk.banner", {
+            time: mmss(left),
+            who: walk.user_name ?? t(s, "walk.somebody"),
+          })}
+          <div class="live-note">${t(s, "walk.always_on_live")}</div>
+        </div>
+        <button class="btn danger" @click=${() => void this._endWalkTest()}>
+          ${t(s, "walk.end")}
+        </button>
+      </div>
+    `;
+  }
+
+  private async _endWalkTest(): Promise<void> {
+    // The status arrives by subscription, so nothing has to be reloaded: the
+    // banner disappears when the house is answering again, which is the one
+    // moment it should.
+    await this._context()?.walkTest(false);
   }
 
   private _renderCodeDialog(s: Strings) {
