@@ -133,7 +133,8 @@ class FoyerPageSettings extends LitElement {
         | "arm_hold_timeout"
         | "default_entry_delay"
         | "default_exit_delay"
-        | "low_battery_threshold",
+        | "low_battery_threshold"
+        | "walk_test_timeout",
       range: [number, number] | undefined,
       hint?: string,
     ) => html`<label class="field">
@@ -164,6 +165,11 @@ class FoyerPageSettings extends LitElement {
               "low_battery_threshold",
               bounds.low_battery_threshold,
               t(s, "settings.low_battery_hint"),
+            )}
+            ${number(
+              "walk_test_timeout",
+              bounds.walk_test_timeout,
+              t(s, "settings.walk_test_hint"),
             )}
           </div>
         </div>

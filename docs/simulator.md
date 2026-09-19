@@ -217,7 +217,57 @@ answer that includes the run that justified the change.
   quiet.
 - **It rehearses the decision, not the transport.** It tells you a notification
   would be sent to a given target; it does not tell you the target works. That
-  is what the real action test is for, and it does not exist yet.
+  is what the real action test is for — the tab beside this one.
 - **It does not replace a walk test.** Forcing a zone into a state proves what
   the engine does about it. It proves nothing about whether the PIR in the
-  hallway is aimed at the hallway.
+  hallway is aimed at the hallway. That is the next tab along.
+
+## The two tabs that act
+
+The simulator and the diagnostics table only look. The other two tabs on page
+9 do something, and they are how you answer the two questions a rehearsal
+cannot.
+
+### Walk test — which zones never saw you
+
+Every area that can arm is armed for real, every sensor is read for real, and
+the response is held back. Walk the house; the table fills in.
+
+Read it from the top. The zones listed first are the ones that have **not**
+reacted, and they are the finding: a door nobody opened and a PIR pointing at
+the wrong wall look identical there, so walk the ones you expected to trip
+again before you conclude anything. A zone in fault is marked as such in the
+same row, because it could not have reacted.
+
+Four things worth knowing before you start one:
+
+- **24h, tamper, technical and panic zones stay fully live**, alarm included.
+  A walk test never silences a smoke detector. They are also left out of the
+  table: they are live rather than under test, and nobody sets off the smoke
+  detector to prove it works.
+- **A detection moves nothing.** No alarm, no incident, no alarm memory, and
+  nothing tells HomeKit, Google or Alexa that somebody has broken in. Forty
+  zones walked would otherwise leave forty alarms in the log.
+- **It ends itself, and you cannot stop it ending.** The timeout runs from the
+  last detection, so a large house can be walked in one pass, and an absolute
+  cap ends it whatever happens. While it runs, a real intrusion produces
+  nothing — which is why the banner is on every screen and why entry and exit
+  are both in the log with your name.
+- **An area that cannot arm stays out**, and the page names the zones that
+  kept it out. Those zones were never armed, so they cannot have detected
+  anything: close the window and run it again rather than reading the row as
+  a dead sensor.
+
+### Action test — press the button before the night you need it
+
+A test button beside every action, and it really executes: the siren really
+sounds, for three seconds whatever its configured duration, and the
+notification really sends. It asks first, it needs the `test_actions`
+permission and a code, and every run leaves a row in the log marked as a test.
+
+It is worth the noise for one reason. The worst way to discover that a
+notification service was renamed, or that the phone that was going to be
+called has left the household, is at the moment the alarm is trying to use it.
+
+The same button sits beside each action on page 5, where you have just
+finished configuring it and are wondering whether it arrives.

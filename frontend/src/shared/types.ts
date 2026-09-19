@@ -414,6 +414,9 @@ export interface SettingsConfig {
   mqtt: MqttConfig;
   /** Below what percentage a numeric battery entity counts as low (§4.2). */
   low_battery_threshold: number;
+  /** How long a walk test runs without a detection before it ends itself
+   * (§5.3, §11.3). Bounded in code: the auto-exit cannot be switched off. */
+  walk_test_timeout: number;
 }
 
 export interface FoyerConfig {

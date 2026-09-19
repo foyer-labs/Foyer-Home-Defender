@@ -6138,6 +6138,7 @@ var Ft = ["en", "it"], It = {
             ${i("default_entry_delay", r.entry_delay, B(e, "settings.area_defaults_hint"))}
             ${i("default_exit_delay", r.exit_delay, B(e, "settings.area_defaults_hint"))}
             ${i("low_battery_threshold", r.low_battery_threshold, B(e, "settings.low_battery_hint"))}
+            ${i("walk_test_timeout", r.walk_test_timeout, B(e, "settings.walk_test_hint"))}
           </div>
         </div>
       </div>

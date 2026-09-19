@@ -1077,7 +1077,8 @@
     "language_title": "Language of messages",
     "language_system": "As Home Assistant",
     "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: notifications, and the zone name the chime speaks.",
-    "low_battery_hint": "Per cent. Below this a numeric battery counts as low. A battery binary sensor is read by its own “on” instead."
+    "low_battery_hint": "Per cent. Below this a numeric battery counts as low. A battery binary sensor is read by its own “on” instead.",
+    "walk_test_hint": "Seconds a walk test runs without a detection before it ends itself. Each detection pushes it back, and an absolute cap ends it whatever happens: §5.3 makes the auto-exit mandatory, so there is no value here that switches it off."
   },
   "action_kind": {
     "notify": "Notification",

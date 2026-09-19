@@ -5,6 +5,89 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [Unreleased] — walk the house, and press the button before the night you need it
+
+Phase 3, part two. The other half of the verification story: you can now find
+out which zones never saw you without a siren sounding, and prove your
+emergency notification works by pressing a button rather than by waiting for
+an emergency.
+
+### Added
+- **The walk test** (panel page 9, *Test & diagnostics* → *Walk test*). Every
+  area that can arm is armed for real and every sensor is read for real; what
+  is held back is the response. Walk the house and the page fills in live with
+  the zones that detected you — and, the point of the whole feature, lists
+  first the ones that never did. A door nobody opened and a PIR pointing at
+  the wrong wall look identical in that list, and only you can tell them
+  apart; a dead battery shows up beside it.
+
+  **`always_on` zones stay fully live.** 24h, tamper, technical and panic
+  zones respond in full, alarm included. A walk test never silences a smoke
+  detector, and that is the sentence the test suite is written against.
+
+  A detection is recorded and moves nothing else: no `triggered`, no incident,
+  no alarm memory, and `alarm_control_panel.foyer_master` never tells HomeKit,
+  Google or Alexa that somebody has broken in. Forty zones walked would
+  otherwise leave forty alarms in the log and alarm memory on every one.
+
+  Leaving it disarms exactly the areas it armed, and never one that was
+  already armed before it started.
+- **The safeguards, none of them optional.** An automatic exit that cannot be
+  switched off — fifteen minutes without a detection by default, each
+  detection pushing it back so a large house can be walked in one pass, and an
+  absolute cap that ends it whatever happens. A permanent banner in the panel
+  and on **every** card layout, `badge` included, saying when it ends and what
+  is still live. Entry and exit in the log with the person who started it. A
+  notification on start and on end. The reason all four exist is the same: for
+  as long as a walk test runs, a real intrusion produces nothing at all.
+- **The real action test** (page 9 → *Action test*, and a *Test* button beside
+  every action on page 5). It **really executes** — the siren really sounds,
+  the notification really sends — because the failure it prevents is
+  discovering during the emergency that the emergency channel was
+  misconfigured. So it asks for explicit confirmation, requires the
+  `test_actions` permission and a code, and leaves a row in the log marked as
+  a **test** rather than as the alarm it imitates. A siren under test sounds
+  for three seconds whatever its configured duration.
+- **`foyer.walk_test` and `foyer.test_action`** are registered at last
+  (decision 86 held them back until the phase that builds them). Both answer
+  in the structured shape of §9.1, like every other service.
+- **`switch.foyer_walk_test`** (§13), reflecting the timeout: `ends_at`,
+  the two deadlines behind it, who started it and which zones have detected
+  so far. Like `button.foyer_acknowledge`, it cannot carry a code, so it
+  honours the policy and refuses visibly when an installation asks for one.
+- **The walk test timeout is a setting** (page 11), bounded in code: there is
+  no value that switches the auto-exit off.
+
+### Changed
+- **The wizard's test notification goes through the real action test.** It
+  used to call the `notify` service straight from the browser, which tested
+  the browser's session rather than Foyer's path and left no trace. It is now
+  verified server-side and recorded as a test like every other one.
+- **A blocked area does not stop a walk test.** It arms what it can, names the
+  zones that kept an area out, and says plainly that those zones cannot have
+  detected anything. A window left open must not stop somebody finding out
+  that the garage PIR is dead.
+
+### Permissions
+- `foyer/walk_test` and `foyer.walk_test` need the `walk_test` permission and,
+  by default, a code (§8.2). They are state-changing requests, so the engine
+  resolves both, and the permission bites in full — administrator or not.
+- `foyer/test_action` and `foyer.test_action` need `test_actions` and a code.
+  They change no alarm state and press a button a Home Assistant
+  administrator could press from Developer Tools anyway, so they are gated
+  where the configuration commands are gated.
+
+### Not in this release, on purpose
+- **A test button beside every *contact channel*.** §11.4 asks for both; the
+  contact book is Phase 4's, so that half arrives with page 6. What exists
+  today is a test for every configured action, and a direct test of any
+  `notify` service or entity — which is what the wizard now uses.
+
+Configuration schema **5.4**, a minor step: the walk test's timeout is one
+number in the settings, and the two moments the default profile gains announce
+a walk test a 5.3 build cannot enter at all. Foyer is not a certified alarm
+system and is not a fire alarm system.
+
 ## [0.1.0-beta.4] — ask what would happen, without anything happening
 
 Phase 3, part one. The feature this project exists for: you can now rehearse a

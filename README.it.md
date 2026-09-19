@@ -28,17 +28,22 @@
 > con il contratto dei servizi `foyer.*` e MQTT nelle due direzioni. Un
 > tastiera riceve una risposta vera: distingue «codice sbagliato» da
 > «bloccato dalla finestra della cucina», invece di fallire in silenzio.
-> Accanto c'è il simulatore: chiedi cosa succederebbe, e te lo dice senza che
-> succeda. Fuori restano la prova di percorso e la scalata delle notifiche.
+> Accanto c'è tutta la storia della verifica: il simulatore, che prova la
+> decisione senza che succeda nulla; la **prova di percorso**, che inserisce
+> l'impianto per davvero trattenendo ogni risposta e ti dice quali zone non ti
+> hanno mai visto passare; e la **prova delle azioni**, che fa suonare la
+> sirena sul serio, così lo scopri adesso e non durante l'emergenza. Una prova
+> di percorso non silenzia mai un rivelatore di fumo: le zone 24h, tamper,
+> tecniche e panico restano completamente attive. Fuori resta la scalata delle
+> notifiche.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
 cartella di automazioni, e vuoi inserire e disinserire da una tastiera, un tag
 o un badge con un registro che dice chi è stato.
 
-**Non ancora, se** ti serve camminare per casa a impianto inserito per sapere
-quali zone ti rilevano davvero, se ti serve che una notifica senza risposta
-salga da push a SMS a telefonata, o se non vuoi far girare su casa tua una beta con
+**Non ancora, se** ti serve che una notifica senza risposta salga da push a
+SMS a telefonata, o se non vuoi far girare su casa tua una beta con
 pochi mesi di vita: [Alarmo](https://github.com/nielsfaber/alarmo) ha anni di
 installazioni alle spalle, e per un impianto che deve semplicemente funzionare
 oggi è la scelta prudente.
@@ -89,6 +94,16 @@ oggi è la scelta prudente.
   minuto dopo, e leggi tutta la decisione, comprese le azioni che *non*
   sarebbero partite e perché. [Qui sotto](#chiedere-cosa-succederebbe-senza-che-succeda-niente),
   con un esempio.
+- **Una prova di percorso che ti dice quali zone non ti hanno mai visto.**
+  L'impianto è inserito per davvero e ogni risposta è trattenuta — tranne
+  quelle delle zone 24h, tamper, tecniche e panico, che restano completamente
+  attive, perché una prova di percorso non deve mai silenziare un rivelatore
+  di fumo. Si chiude da sola, e finché è attiva lo dice su ogni schermo.
+  [Qui sotto](#camminare-per-casa-e-premere-il-pulsante).
+- **Un pulsante di prova accanto a ogni azione, e si esegue davvero.** Fa
+  suonare la sirena per tre secondi, manda la notifica sul serio. L'errore che
+  evita è scoprire durante l'emergenza che il canale d'emergenza era
+  configurato male. Con conferma, con permesso, e a registro come prova.
 - **Test e diagnostica: una tabella in tempo reale di ogni zona**, con
   l'unica colonna che le pagine di configurazione non possono mostrarti — se
   Foyer considererebbe quel sensore *scattato adesso*, letto attraverso il
@@ -205,10 +220,49 @@ averne uno. Prova la **decisione**, non il trasporto: ti dice che una notifica
 partirebbe verso un certo destinatario, non che quel destinatario funzioni. E
 non sostituisce una prova di percorso — forzare lo stato di una zona dimostra
 cosa ne fa il motore, e non dimostra niente su dove sia puntato il rivelatore
-del corridoio.
+del corridoio. Di quello si occupa la sezione qui sotto.
 
 Come si legge una traccia, e cosa vale la pena provare prima di fidarsi di una
 configurazione: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md) (in inglese).
+
+## Camminare per casa, e premere il pulsante
+
+Il simulatore risponde a *cosa farebbe l'allarme*. Due cose non può dirtele:
+se quel rivelatore è puntato davvero sul corridoio, e se la tua notifica
+arriva davvero. Per quelle servono la casa e il canale in persona.
+
+**La prova di percorso** inserisce ogni area per davvero e legge ogni sensore
+per davvero — e trattiene tutta la risposta. Cammina di stanza in stanza e la
+pagina si riempie in diretta. Quel che conta non sono le zone che ti hanno
+rilevato, ma quelle che non l'hanno mai fatto, che stanno in cima all'elenco:
+una porta che nessuno ha aperto e un rivelatore puntato sulla parete sbagliata
+sono identici lì, e una batteria scarica si vede accanto.
+
+Tre cose non sono facoltative, perché finché la prova è attiva un'intrusione
+vera non produce nulla:
+
+- **Le zone 24h, tamper, tecniche e panico restano completamente attive.** Una
+  prova di percorso non silenzia mai un rivelatore di fumo.
+- **Si chiude da sola.** Quindici minuti senza rilevazioni per impostazione
+  predefinita, con ogni rilevazione che li rimanda — così una casa grande si
+  cammina in un giro solo — e un tetto assoluto che la chiude comunque. Non
+  c'è un'impostazione che disattivi l'uscita automatica.
+- **Lo dice ovunque.** Un banner nel pannello e su ogni layout della scheda,
+  `badge` compreso, che non ha nulla da premere e lo mostra lo stesso; più una
+  notifica all'inizio e alla fine, ed entrambe nel registro con la persona che
+  l'ha avviata.
+
+Una rilevazione durante la prova viene registrata e non muove nient'altro:
+niente allarme, niente incidente, nessuna memoria d'allarme, e nessuno dice a
+HomeKit o ad Alexa che qualcuno è entrato. Uscendo vengono disinserite
+esattamente le aree che la prova aveva inserito.
+
+**La prova delle azioni** è un pulsante accanto a ogni azione, e si esegue
+davvero. È il punto: l'errore che evita è scoprire durante l'emergenza che il
+canale d'emergenza era configurato male. Chiede conferma, richiede il permesso
+`test_actions` e un codice, fa suonare una sirena per tre secondi qualunque
+durata abbia configurata, e lascia nel registro una riga marcata come prova —
+mai come l'allarme che imita.
 
 ## Tastiere, tag e telecomandi
 
@@ -280,12 +334,10 @@ card.
 
 ## Cosa manca ancora, e conta
 
-- **Nessuna prova di percorso e nessuna prova delle azioni.** Non puoi ancora
-  inserire davvero l'impianto con tutte le risposte inibite e camminare per
-  casa per vedere quali zone ti rilevano, né premere un pulsante che faccia
-  suonare la sirena per tre secondi sul serio. `foyer.walk_test` e
-  `foyer.test_action` non sono registrati di proposito, invece di esserlo e
-  restare muti. *Prossima versione.*
+- **Nessuna rubrica, e nessun pulsante di prova accanto a un canale.** La
+  prova delle azioni copre ogni azione configurata e qualunque servizio
+  `notify` direttamente; un pulsante accanto ai canali di ciascun contatto
+  arriva con la rubrica. *Prossima versione.*
 - **Nessuna regola automatica.** Inserire a orario, sulla presenza o su una
   condizione tua è ancora un'automazione che scrivi tu, che chiama
   `foyer.arm`. Il conto alla rovescia annullabile che serve qui è lo stesso
@@ -309,6 +361,8 @@ copia il codice. Dove differiscono oggi:
 | | Foyer | Alarmo |
 |---|---|---|
 | **Simulatore** | Sì: lo stesso motore, un mondo e un orologio inventati, e una traccia che dice perché ogni azione sarebbe partita o no | — |
+| **Prova di percorso** | Sì: inserito per davvero, ogni risposta trattenuta, e in cima le zone che non hanno mai reagito. Le zone 24h, tamper, tecniche e panico restano attive | — |
+| **Prova delle azioni** | Sì: fa suonare la sirena o parte il messaggio sul serio, con conferma, e nel registro come prova | — |
 | **Scenari di inserimento** | Quanti ne vuoi, ciascuno inserisce un insieme di aree scelto | Le quattro modalità fisse di Home Assistant |
 | **Aree con stato indipendente** | Sì: un `alarm_control_panel` ciascuna, più una centrale | Una centrale sola, sensori raggruppati per modalità |
 | **Fumo, gas, acqua** | Un canale separato, attivo a impianto disinserito, mai `triggered` su un'entità d'allarme | Sensori ordinari |

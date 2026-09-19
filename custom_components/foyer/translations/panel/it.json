@@ -1077,7 +1077,8 @@
     "language_title": "Lingua dei messaggi",
     "language_system": "Come Home Assistant",
     "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le notifiche, e il nome della zona pronunciato dal campanello.",
-    "low_battery_hint": "Per cento. Sotto questo valore una batteria numerica è considerata scarica. Un sensore binario di batteria è invece letto dal suo «on»."
+    "low_battery_hint": "Per cento. Sotto questo valore una batteria numerica è considerata scarica. Un sensore binario di batteria è invece letto dal suo «on».",
+    "walk_test_hint": "Secondi per cui un walk test resta attivo senza rilevazioni prima di chiudersi da solo. Ogni rilevazione lo rimanda, e un tetto assoluto lo chiude comunque: §5.3 rende obbligatoria l'uscita automatica, quindi qui non c'è un valore che la disattivi."
   },
   "action_kind": {
     "notify": "Notifica",

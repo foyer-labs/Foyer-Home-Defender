@@ -22,15 +22,16 @@
 
 > ### Status: beta. The alarm core works, and you can ask it what it would do before you trust it.
 >
-> It can protect a house, and it is protecting the author's. **The simulator
-> has landed**: pick a scenario and an hour, force a window open a minute in,
-> and read the whole decision — which area changed state, which delay started,
-> which profile answered, and which actions would have run and which would not,
-> with the reason. It calls the same engine the alarm calls and never hands the
-> answer to the part that runs sirens. Before it came physical arming —
-> keypads, NFC tags, badges, the `foyer.*` service contract and MQTT in both
-> directions — and before that, codes, users and permissions. Still missing:
-> the walk test, and escalation until somebody acknowledges.
+> It can protect a house, and it is protecting the author's. **The whole
+> verification story has landed**: the simulator, which rehearses a decision
+> without anything happening; the **walk test**, which arms the house for real,
+> holds every response back and tells you which zones never saw you walk past
+> them; and the **action test**, which really sounds the siren so you find out
+> now rather than during the emergency. A walk test never silences a smoke
+> detector — 24h, tamper, technical and panic zones stay fully live. Before
+> these came physical arming — keypads, NFC tags, badges, the `foyer.*` service
+> contract and MQTT in both directions — and before that, codes, users and
+> permissions. Still missing: escalation until somebody acknowledges.
 
 **Try it if** you already have door, window or motion sensors in Home
 Assistant, you want one panel with arming scenarios of your own instead of a
@@ -38,7 +39,7 @@ folder of automations, you would rather check a configuration than hope it is
 right, and you are willing to run a beta on a house that has other locks on it.
 
 **Not yet, if** you want something finished, or you need escalation across
-channels, or a walk test to prove which zones really see you — [Alarmo](https://github.com/nielsfaber/alarmo)
+channels and contacts — [Alarmo](https://github.com/nielsfaber/alarmo)
 has years of use behind it, and a large installed base is a kind of testing this
 project has not had yet.
 
@@ -87,6 +88,15 @@ project has not had yet.
   and read the whole decision, including the actions that would *not* have run
   and why. [Below](#asking-what-would-happen-without-anything-happening), with
   an example.
+- **A walk test that tells you which zones never saw you.** The house is armed
+  for real and every response is held back — except 24h, tamper, technical and
+  panic zones, which stay fully live, because a walk test must never silence a
+  smoke detector. It ends itself, and it says so on every screen while it
+  runs. [Below](#walking-the-house-and-pressing-the-button).
+- **A test button beside every action, and it really executes.** Sound the
+  siren for three seconds, actually send the notification. The failure this
+  prevents is discovering during the emergency that the emergency channel was
+  misconfigured. Confirmed, permissioned, and logged as a test.
 - **Test & diagnostics: a live table of every zone**, with the one column the
   configuration pages cannot show you — whether Foyer would count that sensor
   as *triggered right now*, read through that zone's own trigger. Plus whether
@@ -184,10 +194,47 @@ sense of one. It rehearses the **decision**, not the transport: it will tell you
 a notification would be sent to a given target, not that the target works. And
 it does not replace a walk test — forcing a zone into a state proves what the
 engine does about it, and proves nothing about whether the hallway PIR is aimed
-at the hallway.
+at the hallway. That is the next section's job.
 
 How to read a trace, and what is worth rehearsing before you trust a
 configuration: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
+
+## Walking the house, and pressing the button
+
+The simulator answers *what would the alarm do*. Two things it cannot answer:
+whether that PIR is aimed at the hallway, and whether your notification
+actually arrives. Those need the house and the channel themselves.
+
+**The walk test** arms every area for real and reads every sensor for real —
+and holds the whole response back. Walk from room to room and the page fills
+in live. What matters is not the zones that detected you but the ones that
+never did, which are listed first: a door nobody opened and a PIR pointing at
+the wrong wall look identical there, and a flat battery shows up beside them.
+
+Three things about it that are not optional, because for as long as it runs a
+real intrusion produces nothing:
+
+- **24h, tamper, technical and panic zones stay fully live.** A walk test
+  never silences a smoke detector.
+- **It ends itself.** Fifteen minutes without a detection by default, each
+  detection pushing that back so a large house can be walked in one pass, and
+  an absolute cap that ends it whatever happens. There is no setting that
+  switches the auto-exit off.
+- **It says so everywhere.** A banner in the panel and on every card layout —
+  including `badge`, which has nothing to press and shows it anyway — plus a
+  notification when it starts and when it ends, and both in the log with the
+  person who started it.
+
+A detection during a walk test is recorded and moves nothing else: no alarm,
+no incident, no alarm memory, and nothing tells HomeKit or Alexa that somebody
+has broken in. Leaving disarms exactly the areas the walk test armed.
+
+**The action test** is a button beside every action, and it really executes.
+That is the point: the failure it prevents is discovering during the emergency
+that the emergency channel was misconfigured. It asks first, needs the
+`test_actions` permission and a code, sounds a siren for three seconds
+whatever its configured duration, and leaves a row in the log marked as a
+test — never as the alarm it imitates.
 
 ## Arming from the wall
 
@@ -266,11 +313,10 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No walk test and no real action test.** You cannot yet arm the house for
-  real with every response inhibited and walk it to see which zones detect you,
-  and you cannot press a button to actually sound the siren for three seconds.
-  `foyer.walk_test` and `foyer.test_action` are deliberately not registered
-  rather than registered and silent. *Next release.*
+- **No contact list, and no test button beside a channel.** The action test
+  covers every configured action and any `notify` service directly; a test
+  button beside each contact's channels arrives with the address book.
+  *Next release.*
 - **No escalation, and no contact list.** Notifications go to a `notify`
   service directly; they do not climb from push to SMS to a phone call until
   somebody acknowledges. *After that.*
@@ -292,6 +338,8 @@ its code. Where they differ today:
 | | Foyer | Alarmo |
 |---|---|---|
 | **Simulator** | Yes: the same engine, a made-up world and a made-up clock, and a trace saying why each action would or would not have run | — |
+| **Walk test** | Yes: really armed, every response held back, and the zones that never reacted listed first. 24h, tamper, technical and panic zones stay live | — |
+| **Action test** | Yes: really sounds the siren or sends the message, with confirmation, and logged as a test | — |
 | **Arming scenarios** | Any number, each arming a chosen set of areas | Home Assistant's four fixed modes |
 | **Areas with independent state** | Yes: one `alarm_control_panel` each, plus a master | One panel, sensors grouped per mode |
 | **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Ordinary sensors |
