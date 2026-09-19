@@ -49,7 +49,8 @@
   "fault": {
     "unavailable": "Fault: not reachable",
     "not_numeric": "Fault: not a number",
-    "supervision": "Fault: silent too long"
+    "supervision": "Fault: silent too long",
+    "battery_unavailable": "Battery entity unreadable"
   },
   "bypass": {
     "auto_bypass": "Excluded at arming",
@@ -191,7 +192,10 @@
     "qos_out_of_range": "{field}: 0, 1 or 2.",
     "device_not_registered": "That device is not registered here.",
     "user_holds_a_tag": "This person owns a tag or a remote. Change the device first.",
-    "unknown_attachment": "This attachment is not one Foyer knows how to send."
+    "unknown_attachment": "This attachment is not one Foyer knows how to send.",
+    "unsupported_battery_domain": "A battery must be a sensor reporting a percentage, or a battery binary sensor where “on” means low.",
+    "battery_is_zone_entity": "That is the zone’s own entity, not its battery.",
+    "battery_out_of_range": "{field}: between 1 and 100 per cent."
   },
   "field": {
     "name": "Name",
@@ -297,7 +301,9 @@
     "detail": "What the state message says",
     "retain": "Retained",
     "qos": "Quality of service",
-    "attachment": "How to attach it"
+    "attachment": "How to attach it",
+    "battery_entity_id": "Battery entity",
+    "low_battery_threshold": "Low battery below"
   },
   "ha_state": {
     "armed_home": "Armed home",

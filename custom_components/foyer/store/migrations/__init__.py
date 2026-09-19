@@ -312,6 +312,28 @@ def _v5_1_to_v5_2(data: Document) -> Document:
     return out
 
 
+def _v5_2_to_v5_3(data: Document) -> Document:
+    """Phase 2 part 2 -> Phase 3 part 1: a zone may name its battery.
+
+    A minor step, and truthfully so: an installation upgrading gains one
+    empty field on each zone and one number in its settings. A 5.2 build
+    reading this document ignores both and never warns about a battery —
+    which is exactly what it did the day before, because there was nothing
+    to warn about.
+
+    Nothing changes behaviour: no zone names a battery until somebody picks
+    one, and a low battery blocks no arming even then (part 1 decision 2).
+    The threshold is the documented default rather than something derived
+    from the document, because there is nothing in a 5.2 document to derive
+    it from.
+    """
+    out = copy.deepcopy(data)
+    for zone in out["zones"]:
+        zone.setdefault("battery_entity_id", None)
+    out["settings"]["low_battery_threshold"] = 20
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -335,6 +357,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (4, 1): (_v4_1_to_v4_2, (4, 2)),
     (4, 2): (_v4_2_to_v5_1, (5, 1)),
     (5, 1): (_v5_1_to_v5_2, (5, 2)),
+    (5, 2): (_v5_2_to_v5_3, (5, 3)),
 }
 
 

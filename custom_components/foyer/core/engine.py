@@ -85,6 +85,7 @@ from .response import (
     without,
 )
 from .triggers import (
+    battery_low,
     fault_cause,
     fires_momentarily,
     is_active,
@@ -185,6 +186,7 @@ def decide(
     run.rejoin_closed_bypasses()
     if not snapshot.settling or isinstance(event, Startup):
         run.reconcile_faults()
+        run.reconcile_batteries()
     run.close_incident_if_settled()
     return run.decision(outcome)
 
@@ -207,7 +209,12 @@ def arm_blockers(
 def zone_fault(
     snapshot: SystemSnapshot, config: FoyerConfig, zone: Zone, now: datetime
 ) -> str | None:
-    return fault_cause(zone, snapshot.entity(zone.entity_id), now)
+    return fault_cause(
+        zone,
+        snapshot.entity(zone.entity_id),
+        now,
+        snapshot.entity(zone.battery_entity_id or ""),
+    )
 
 
 def master_state(
@@ -302,10 +309,14 @@ class _Run:
         self.seen = set(state.seen_zones & zone_ids)
         self.seen_devices = set(state.seen_devices & {d.id for d in config.devices})
         self.faults = frozenset(state.faults & zone_ids)
+        self.low_batteries = frozenset(state.low_batteries & zone_ids)
         self.entities: dict[str, EntityState] = dict(snapshot.entities)
         self.timezone = snapshot.timezone
         self.occurrences: list[Occurrence] = []
         self.new_bypasses: list[str] = []
+        # Filled by check_arming, and empty for every event that is not an
+        # arming attempt: the warning belongs to the attempt (part 1 decision 2).
+        self.low_battery_zones: tuple[str, ...] = ()
         # Who is asking. decide() fills it from the event; a timer or a zone
         # opening has no actor, and the default one identifies nobody.
         self.actor = Actor()
@@ -351,8 +362,16 @@ class _Run:
     def entity_state(self, entity_id: str) -> EntityState:
         return self.entities.get(entity_id) or EntityState(state=None)
 
+    def battery(self, zone: Zone) -> EntityState:
+        return self.entity_state(zone.battery_entity_id or "")
+
     def fault(self, zone: Zone) -> str | None:
-        return fault_cause(zone, self.entity(zone), self.now)
+        return fault_cause(zone, self.entity(zone), self.now, self.battery(zone))
+
+    def low_battery(self, zone: Zone) -> bool:
+        return battery_low(
+            zone, self.battery(zone), self.config.settings.low_battery_threshold
+        )
 
     def is_open(self, zone: Zone) -> bool:
         return zone.channel is Channel.INTRUSION and zone.id in self.active
@@ -1008,6 +1027,31 @@ class _Run:
                 )
         self.faults = frozenset(current)
 
+    def reconcile_batteries(self) -> None:
+        """Announce each battery once on the way down (§4.2, §6.1).
+
+        The same shape as a fault and deliberately not the same thing: this
+        one does not enter ``faults``, does not block arming and does not stop
+        the zone being watched. A cell that has been replaced simply leaves
+        the set, with no occurrence: "the battery is fine again" is not news,
+        and a profile written against low_battery would fire on it.
+        """
+        current = {z.id for z in self.config.zones if z.enabled and self.low_battery(z)}
+        for zone_id in sorted(current - self.low_batteries):
+            zone = self.config.zone(zone_id)
+            assert zone is not None
+            self.occur(
+                Moment.LOW_BATTERY,
+                area_id=zone.area_id,
+                zone_id=zone_id,
+                detail={
+                    "entity_id": zone.battery_entity_id or "",
+                    "state": self.battery(zone).state or "",
+                    "threshold": str(self.config.settings.low_battery_threshold),
+                },
+            )
+        self.low_batteries = frozenset(current)
+
     # --- alarm transitions ------------------------------------------------------
 
     def trigger(
@@ -1370,7 +1414,19 @@ class _Run:
     def check_arming(
         self, area_ids: tuple[str, ...], force: bool
     ) -> tuple[_Outcome, list[Zone]]:
-        """Preconditions (§5.4). Returns the zones a forced arm will bypass."""
+        """Preconditions (§5.4). Returns the zones a forced arm will bypass.
+
+        A low battery is not a precondition and never appears in the blocking
+        list — it does not stop this arming and must not read as if it did.
+        It is recorded here because this is the one place both arming paths
+        pass through, so the answer carries it whether the arming went ahead
+        or was refused for something else (part 1 decision 2).
+        """
+        self.low_battery_zones = tuple(
+            z.id
+            for z in self.config.zones_in(area_ids)
+            if z.id not in self.bypassed and self.low_battery(z)
+        )
         faulted, open_ = self.blockers(area_ids)
         if not faulted and not open_:
             return _ACCEPTED, []
@@ -1468,6 +1524,16 @@ class _Run:
             BypassReason.AUTO,
         )
         rt = self.set_area(area_id, state=AreaState.ARMED, timer=None, forced=False)
+        # Which zones went under guard on a battery that is running out. The
+        # row is written at the moment the area actually arms, not when the
+        # button was pressed, because that is when it became true of the
+        # house — and it is the row "why did the garage never fire?" is read
+        # against six weeks later (part 1 decision 2).
+        low = tuple(
+            z.id
+            for z in self.config.zones_in((area_id,))
+            if z.id not in self.bypassed and self.low_battery(z)
+        )
         self.occur(
             Moment.ARMED,
             area_id=area_id,
@@ -1475,8 +1541,10 @@ class _Run:
             channel=rt.channel,
             user_id=rt.user_id,
             device_id=rt.device_id,
+            zone_ids=low,
             detail={
                 **({"skip_exit_delay": "1"} if rt.skipped_exit else {}),
+                **({"low_battery": ",".join(low)} if low else {}),
                 **(_CLAIMED if rt.claimed else {}),
             },
         )
@@ -1714,6 +1782,7 @@ class _Run:
             seen_zones=frozenset(self.seen),
             seen_devices=frozenset(self.seen_devices),
             faults=self.faults,
+            low_batteries=self.low_batteries,
             technical=self.technical,
             incident=self.incident,
             incident_seq=self.incident_seq,
@@ -1732,6 +1801,7 @@ class _Run:
             reason=outcome.reason,
             blocking_zones=outcome.blocking,
             bypassed_zones=tuple(self.new_bypasses),
+            low_battery_zones=self.low_battery_zones,
             occurrences=occurrences,
             actions=(
                 *self.extra,

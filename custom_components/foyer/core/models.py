@@ -303,6 +303,11 @@ class Moment(StrEnum):
     CHIME = "chime"
     CHIME_SWITCHED = "chime_switched"
 
+    # A zone's battery has fallen below the threshold (§4.2, §6.1). Raised
+    # once on the way down, like a fault, and cleared silently when the
+    # battery is replaced: "the cell is fine again" is not news.
+    LOW_BATTERY = "low_battery"
+
     # A disarm with a duress code (§8.1). Silent by definition: the house
     # behaves exactly as it does on an ordinary disarm, and this is the only
     # trace, for the log and for a profile that alerts somebody quietly.
@@ -313,7 +318,6 @@ class Moment(StrEnum):
     # the editor says which phase each one waits for.
     CODE_REJECTED = "code_rejected"
     LOCKOUT = "lockout"
-    LOW_BATTERY = "low_battery"  # Phase 3
     WALK_TEST_STARTED = "walk_test_started"  # Phase 3
     WALK_TEST_ENDED = "walk_test_ended"  # Phase 3
     ESCALATION_EXHAUSTED = "escalation_exhausted"  # Phase 4
@@ -381,6 +385,14 @@ DEFAULT_VERIFICATION_WINDOW = 60
 MIN_VERIFICATION_WINDOW = 1
 MAX_VERIFICATION_WINDOW = 3600
 MAX_TRIGGER_COUNT = 10
+
+# What a numeric battery entity has to fall below to count as low (§4.2).
+# 20 % is where alkaline and lithium cells in door contacts start reporting
+# unreliably rather than where they die: the point of the warning is to be
+# early enough to act on before a walk test finds the zone dead.
+DEFAULT_LOW_BATTERY_THRESHOLD = 20
+MIN_LOW_BATTERY_THRESHOLD = 1
+MAX_LOW_BATTERY_THRESHOLD = 100
 
 # Log retention (SPEC §10.3): per category, thirty days by default. Zero is
 # not a value: "keep nothing" is what disabling the category is for.
@@ -655,6 +667,15 @@ class Zone:
     # The response runs without the action kinds the global silent list names
     # (§4.2, part 3 decision 6).
     silent: bool = False
+    # The entity reporting this zone's battery, for diagnostics and the
+    # low_battery moment (§4.2, §11.1). A `binary_sensor` is low when it is
+    # on; a numeric `sensor` is low below the global threshold. It is read
+    # separately from the zone's own entity on purpose: a contact that is
+    # answering is not blind because its battery is at 15 %, so a low battery
+    # warns and never blocks (Phase 3 part 1 decision 2). A battery entity
+    # that cannot be read at all is a different matter and is a fault: it is
+    # the sensor saying nothing about itself, which is INV-4 exactly.
+    battery_entity_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -951,6 +972,11 @@ class Settings:
     # Installation state, not a preference: it belongs to the house, not to
     # whoever happens to open the panel.
     wizard_done: bool = False
+    # Below what percentage a numeric battery entity counts as low (§4.2).
+    # One setting for the installation rather than one field on each of forty
+    # zones: the number is a property of the batteries a household buys, not
+    # of the door they are behind (Phase 3 part 1 decision 1).
+    low_battery_threshold: int = DEFAULT_LOW_BATTERY_THRESHOLD
 
 
 @dataclass(frozen=True, slots=True)
@@ -1249,6 +1275,11 @@ class RuntimeState:
     # the timestamp of a scan from last week is not somebody at the door.
     seen_devices: frozenset[str] = frozenset()
     faults: frozenset[str] = frozenset()
+    # The zones already announced as running low (§4.2, §6.1), so the moment
+    # is raised once on the way down rather than on every report. Additive
+    # state, read with a default: an older file restores as "none known yet",
+    # and the first reconcile after the restart announces what is low.
+    low_batteries: frozenset[str] = frozenset()
     technical: Mapping[str, TechnicalAlarm] = field(default_factory=dict)
     incident: Incident | None = None
     incident_seq: int = 0
@@ -1576,6 +1607,13 @@ class Decision:
     reason: Reason | None = None
     blocking_zones: tuple[str, ...] = ()
     bypassed_zones: tuple[str, ...] = ()
+    # Zones in the areas this request would arm whose battery is running low
+    # (§4.2). They do not block and they are not faults, so they never reach
+    # ``blocking_zones`` — but every arming attempt carries them, on every
+    # channel, because a warning that is shown once is a warning nobody sees
+    # the morning it matters (Phase 3 part 1 decision 2). What to do about
+    # them is the caller's: excluding one is an ordinary manual bypass.
+    low_battery_zones: tuple[str, ...] = ()
     occurrences: tuple[Occurrence, ...] = ()
     actions: tuple[ActionIntent, ...] = ()
 

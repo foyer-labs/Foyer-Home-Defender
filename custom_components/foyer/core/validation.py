@@ -22,6 +22,7 @@ from .models import (
     MAX_EXIT_DELAY,
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
+    MAX_LOW_BATTERY_THRESHOLD,
     MAX_MQTT_QOS,
     MAX_MQTT_TOPIC,
     MAX_SIREN_DURATION,
@@ -32,6 +33,7 @@ from .models import (
     MIN_CODE_LENGTH,
     MIN_LOCKOUT_FAILURES,
     MIN_LOCKOUT_SECONDS,
+    MIN_LOW_BATTERY_THRESHOLD,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
     MQTT_TOPIC_FORBIDDEN,
@@ -97,6 +99,12 @@ ZONE_DOMAINS: tuple[str, ...] = (
     "tag",
 )
 EVENT_DOMAINS: frozenset[str] = frozenset({"event", "tag"})
+
+# What a zone's battery entity may be (§4.2): a percentage, or Home
+# Assistant's battery binary_sensor where ``on`` means low. Nothing else can
+# be read as a battery without guessing, and guessing here produces a warning
+# that never arrives or one that never stops.
+BATTERY_DOMAINS: frozenset[str] = frozenset({"sensor", "binary_sensor"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,6 +212,12 @@ def validate(config: FoyerConfig) -> list[Problem]:
         settings.arm_hold_timeout, MIN_ARM_HOLD_TIMEOUT, MAX_ARM_HOLD_TIMEOUT
     ):
         add(Problem("hold_out_of_range", "settings", None, "arm_hold_timeout"))
+    if not _in_range(
+        settings.low_battery_threshold,
+        MIN_LOW_BATTERY_THRESHOLD,
+        MAX_LOW_BATTERY_THRESHOLD,
+    ):
+        add(Problem("battery_out_of_range", "settings", None, "low_battery_threshold"))
 
     zones = {z.id: z for z in config.zones}
     for zone in config.zones:
@@ -794,6 +808,14 @@ def _zone_problems(
         zone.supervision_timeout, MIN_SUPERVISION_TIMEOUT, MAX_SUPERVISION_TIMEOUT
     ):
         add("supervision_out_of_range", "supervision_timeout")
+    if zone.battery_entity_id is not None:
+        battery_domain = zone.battery_entity_id.split(".", 1)[0]
+        if "." not in zone.battery_entity_id or battery_domain not in BATTERY_DOMAINS:
+            add("unsupported_battery_domain", "battery_entity_id")
+        elif zone.battery_entity_id == zone.entity_id:
+            # The zone's own entity is not its battery: reading it as one
+            # would make every open door a flat cell.
+            add("battery_is_zone_entity", "battery_entity_id")
     return problems
 
 

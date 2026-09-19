@@ -51,7 +51,7 @@ from ..core.models import (
     User,
     ZoneStateChanged,
 )
-from ..core.triggers import fault_cause
+from ..core.triggers import battery_level, battery_low, fault_cause
 from ..store.log_store import LogStore
 from ..store.state_store import StateStore, StoredState
 from .executor import ActionResult, Executor
@@ -361,6 +361,14 @@ class FoyerSystem:
         reads (§6.3): the engine is given the world, it never looks anything
         up (INV-1)."""
         entities = {z.entity_id for z in self.config.zones}
+        # A zone's battery entity is watched like the zone itself: it is read
+        # on every decision — a battery that cannot be read is a fault, and
+        # one that falls below the threshold raises a moment — so an entity
+        # nobody subscribed to is a battery Foyer notices only at the next
+        # restart (§4.2, part 1 decision 2).
+        entities.update(
+            z.battery_entity_id for z in self.config.zones if z.battery_entity_id
+        )
         entities.update(d.entity_id for d in self.config.devices if d.entity_id)
         for profile in self.config.profiles:
             for action in profile.actions:
@@ -429,6 +437,12 @@ class FoyerSystem:
             "bypassed_zones": [
                 {"id": z, "name": names.get(z, z)} for z in decision.bypassed_zones
             ],
+            # Not a blocker and never presented as one: an arming that went
+            # ahead with a zone on a dying cell says so, every time, on every
+            # channel (part 1 decision 2).
+            "low_battery_zones": [
+                {"id": z, "name": names.get(z, z)} for z in decision.low_battery_zones
+            ],
             "state": self.status(ha_user),
         }
 
@@ -444,6 +458,7 @@ class FoyerSystem:
             "reason": reason.value,
             "blocking_zones": [],
             "bypassed_zones": [],
+            "low_battery_zones": [],
             "state": self.status(ha_user),
         }
 
@@ -485,8 +500,10 @@ class FoyerSystem:
                 }
             )
         zones = []
+        threshold = self.config.settings.low_battery_threshold
         for zone in self.config.zones:
             entity = snapshot.entity(zone.entity_id)
+            battery = snapshot.entity(zone.battery_entity_id or "")
             zones.append(
                 {
                     "id": zone.id,
@@ -497,7 +514,15 @@ class FoyerSystem:
                     "channel": zone.channel.value,
                     "enabled": zone.enabled,
                     "state": entity.state,
-                    "fault": fault_cause(zone, entity, now) if zone.enabled else None,
+                    "fault": (
+                        fault_cause(zone, entity, now, battery)
+                        if zone.enabled
+                        else None
+                    ),
+                    "battery": (
+                        battery_level(battery) if zone.battery_entity_id else None
+                    ),
+                    "low_battery": battery_low(zone, battery, threshold),
                     "open": zone.id in self.state.active_zones,
                     "bypassed": (
                         self.state.bypassed[zone.id].value

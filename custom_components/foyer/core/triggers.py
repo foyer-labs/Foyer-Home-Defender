@@ -58,8 +58,64 @@ def supervision_due(zone: Zone, entity: EntityState) -> datetime | None:
     return entity.last_reported + timedelta(seconds=zone.supervision_timeout)
 
 
-def fault_cause(zone: Zone, entity: EntityState, now: datetime) -> str | None:
-    """Why this zone is in fault right now, or None when it is healthy."""
+def battery_level(entity: EntityState) -> float | None:
+    """The battery percentage an entity reports, or None when it is not one.
+
+    A numeric `sensor` carries the percentage in its state. A `binary_sensor`
+    carries no number at all — it says low or not low — so it has no level to
+    show and the diagnostics table shows the flag instead.
+    """
+    raw = entity.state
+    if raw is None or raw in FAULT_STATES:
+        return None
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) else None
+
+
+def battery_low(zone: Zone, entity: EntityState, threshold: int) -> bool:
+    """Whether this zone's battery counts as low (§4.2, part 1 decision 1).
+
+    Home Assistant's own convention for a battery `binary_sensor` is that
+    ``on`` means low, so that is read as it stands. A numeric sensor is low
+    below the installation's threshold. An entity that cannot be read is
+    neither: it is a fault, reported as one, and calling it low as well would
+    put the same problem in two places under two names.
+    """
+    if zone.battery_entity_id is None or is_unavailable(entity):
+        return False
+    level = battery_level(entity)
+    if level is None:
+        return entity.state == "on"
+    return level < threshold
+
+
+def battery_fault(zone: Zone, entity: EntityState) -> str | None:
+    """A declared battery entity that cannot be read is a fault (INV-4).
+
+    Chosen deliberately, and it is the half of the battery question that is
+    not a warning: a battery sensor that has gone silent is a radio that has
+    gone silent, and the contact beside it is the thing that stops reporting
+    next. A level of 15 % says the sensor is working and will need a cell; no
+    level at all says nothing about the door, which is what INV-4 is for.
+    """
+    if zone.battery_entity_id is None:
+        return None
+    return "battery_unavailable" if is_unavailable(entity) else None
+
+
+def fault_cause(
+    zone: Zone, entity: EntityState, now: datetime, battery: EntityState
+) -> str | None:
+    """Why this zone is in fault right now, or None when it is healthy.
+
+    ``battery`` is the state of ``zone.battery_entity_id``, and it has no
+    default on purpose: a caller that forgot it would silently stop seeing
+    one of the two faults this function reports. It is passed in rather than
+    looked up, like everything else the engine reads (INV-1).
+    """
     if is_unavailable(entity):
         return "unavailable"
     trigger = zone.trigger
@@ -67,7 +123,7 @@ def fault_cause(zone: Zone, entity: EntityState, now: datetime) -> str | None:
         return "not_numeric"
     if supervision_lapsed(zone, entity, now):
         return "supervision"
-    return None
+    return battery_fault(zone, battery)
 
 
 def is_active(zone: Zone, entity: EntityState, was_active: bool) -> bool:

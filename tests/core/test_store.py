@@ -675,3 +675,39 @@ def test_the_defaults_for_new_areas_follow_an_installation_that_agreed_on_one():
     config = config_from_dict(migrate((4, 1), CURRENT, released))
     assert config.settings.default_entry_delay == 45
     assert config.settings.default_exit_delay == 45
+
+
+def test_a_5_2_document_migrates_to_part_1_of_phase_3_changing_nothing():
+    """5.2 -> 5.3: a zone may name a battery, and none does yet.
+
+    The 5.2 document is not hand-written: it is what the released steps
+    produce from the alpha.4 document, which is what an installation running
+    0.1.0-beta.3 has on disk today.
+    """
+    released = migrate((3, 1), (5, 2), ALPHA_4_DOCUMENT)
+    before = json.dumps(released, sort_keys=True)
+    config = config_from_dict(migrate((5, 2), CURRENT, released))
+    assert json.dumps(released, sort_keys=True) == before  # input untouched
+
+    from custom_components.foyer.core.validation import validate
+
+    assert validate(config) == []
+    # Nothing names a battery, so nothing can warn about one and nothing
+    # behaves differently: the step adds a capability, not a change.
+    assert all(z.battery_entity_id is None for z in config.zones)
+    assert config.settings.low_battery_threshold == 20
+    assert config_from_dict(config_to_dict(config)) == config
+
+
+def test_a_zone_battery_round_trips():
+    from dataclasses import replace
+
+    config = config_from_dict(migrate((3, 1), CURRENT, ALPHA_4_DOCUMENT))
+    richer = replace(
+        config,
+        zones=tuple(
+            replace(z, battery_entity_id=f"sensor.{z.id}_battery") for z in config.zones
+        ),
+        settings=replace(config.settings, low_battery_threshold=35),
+    )
+    assert config_from_dict(config_to_dict(richer)) == richer

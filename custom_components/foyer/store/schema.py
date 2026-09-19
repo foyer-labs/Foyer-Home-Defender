@@ -97,8 +97,14 @@ from ..core.models import (
 # a 5.1 build ignoring them is a build that neither listens on a broker nor
 # reads a tag — it simply has no physical channels, exactly as it had none
 # yesterday. Nothing it would have protected goes unprotected.
+#
+# 5.3 is a *minor* step for the same reason: a zone's battery entity and the
+# threshold it is read against are additive, and a 5.2 build ignoring both is
+# a build that never warns about a battery — which is precisely what it did
+# yesterday. A low battery blocks nothing, so nothing it would have protected
+# goes unprotected (Phase 3 part 1 decisions 1 and 2).
 STORAGE_VERSION = 5
-STORAGE_MINOR_VERSION = 2
+STORAGE_MINOR_VERSION = 3
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -166,6 +172,7 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         default_exit_delay=int(s["default_exit_delay"]),
         language=s.get("language") or None,
         wizard_done=bool(s["wizard_done"]),
+        low_battery_threshold=int(s["low_battery_threshold"]),
         security=security_from_dict(s["security"]),
         mqtt=mqtt_from_dict(s["mqtt"]),
     )
@@ -184,6 +191,7 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "default_exit_delay": s.default_exit_delay,
         "language": s.language,
         "wizard_done": s.wizard_done,
+        "low_battery_threshold": s.low_battery_threshold,
         "security": security_to_dict(s.security),
         "mqtt": mqtt_to_dict(s.mqtt),
     }
@@ -583,6 +591,7 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
         trigger_window=int(z["trigger_window"]),
         response_profile_id=z.get("response_profile_id") or None,
         silent=bool(z["silent"]),
+        battery_entity_id=z.get("battery_entity_id") or None,
     )
 
 
@@ -621,6 +630,7 @@ def zone_to_dict(z: Zone) -> dict[str, Any]:
         "trigger_window": z.trigger_window,
         "response_profile_id": z.response_profile_id,
         "silent": z.silent,
+        "battery_entity_id": z.battery_entity_id,
     }
 
 
