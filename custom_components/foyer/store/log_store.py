@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterable, Mapping, Sequence
+import contextlib
 from datetime import datetime, timedelta
 import json
 import logging
@@ -197,8 +198,16 @@ class LogStore:
         """Stop writing, then flush what is queued: a row already decided on
         belongs in the log even if Home Assistant is going down."""
         if self._worker is not None:
-            self._worker.cancel()
-            self._worker = None
+            worker, self._worker = self._worker, None
+            worker.cancel()
+            # Waited for, not merely asked to stop. `cancel()` only schedules
+            # the cancellation, so without this the writer is still running
+            # when the entry finishes unloading — and it may still be holding
+            # `_writing`, which the flush below is about to want. Every
+            # configuration save reloads the entry, so "usually collected a
+            # moment later" is a race that runs several times an evening.
+            with contextlib.suppress(asyncio.CancelledError):
+                await worker
         async with self._writing:
             await self._flush_locked()
         await self.hass.async_add_executor_job(self._close)
