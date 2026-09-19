@@ -115,7 +115,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .api import services
-    from .panel import async_unregister_panel
 
     system = entry.runtime_data
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
@@ -123,7 +122,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await system.async_stop()
         if system.log is not None:
             await system.log.async_close()
-        async_unregister_panel(hass)
+        # The sidebar panel is not removed here. Every configuration save
+        # reloads the entry, a reload unloads it first, and a panel that
+        # disappears from `hass.panels` for even a moment sends whoever is
+        # looking at it back to the default dashboard. It goes when the
+        # integration goes, in async_remove_entry.
         services.async_unregister(hass)
         hass.data.pop(DOMAIN, None)
     return unloaded
@@ -137,9 +140,11 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     to the clean uninstall of Phase 5 (SPEC §16); deleting thirty days of
     history without a word would be the wrong default to guess.
     """
+    from .panel import async_unregister_panel
     from .store.config_store import ConfigStore
     from .store.state_store import StateStore
 
+    async_unregister_panel(hass)
     await ConfigStore(hass).async_remove()
     await StateStore(hass).async_remove()
 

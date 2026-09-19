@@ -253,10 +253,31 @@ async def test_panel_is_registered_with_the_foyer_icon(hass, loaded):
     assert panels[PANEL_URL_PATH].sidebar_icon == PANEL_ICON
 
 
-async def test_unload_removes_the_panel(hass, loaded):
+async def test_unload_leaves_the_panel_where_it_is(hass, loaded):
+    """A reload must not move the user.
+
+    Saving anything in the panel reloads the config entry, and a reload
+    unloads it first. Removing the sidebar panel there takes the page the
+    user is standing on out of `hass.panels`, and the frontend answers that
+    by sending them to the default dashboard — so pressing Save on a new
+    person dropped you on the Lovelace home page.
+    """
     assert await hass.config_entries.async_unload(loaded.entry_id)
-    assert PANEL_URL_PATH not in hass.data["frontend_panels"]
+    assert PANEL_URL_PATH in hass.data["frontend_panels"]
     assert DOMAIN not in hass.data
+
+
+async def test_a_reload_keeps_the_panel_registered_exactly_once(hass, loaded):
+    await hass.config_entries.async_reload(loaded.entry_id)
+    await hass.async_block_till_done()
+    assert hass.data["frontend_panels"][PANEL_URL_PATH].sidebar_icon == PANEL_ICON
+
+
+async def test_removing_the_integration_removes_the_panel(hass, loaded):
+    """It goes when Foyer goes, and not before."""
+    await hass.config_entries.async_remove(loaded.entry_id)
+    await hass.async_block_till_done()
+    assert PANEL_URL_PATH not in hass.data["frontend_panels"]
 
 
 # --- WebSocket ------------------------------------------------------------------------
