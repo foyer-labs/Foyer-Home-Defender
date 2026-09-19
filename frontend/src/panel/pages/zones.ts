@@ -16,6 +16,7 @@ import type {
   ZoneProposal,
 } from "../../shared/types";
 import { optionalNumber, problemText, type PanelContext } from "../context";
+import { batteryTargets } from "../ha-targets";
 import { profileField } from "../profile-picker";
 
 const EVENT_DOMAINS = new Set(["event", "tag"]);
@@ -39,6 +40,7 @@ function blankZone(areaId: string): ZoneConfig {
     allow_arm_when_faulted: false,
     bypassable: true,
     supervision_timeout: null,
+    battery_entity_id: null,
     enabled: true,
     key: null,
     chime: false,
@@ -740,6 +742,29 @@ class FoyerPageZones extends LitElement {
                 )}
             />
             <span class="hint">${t(s, "zones.supervision_hint")}</span>
+          </label>
+          <label class="field">
+            <span class="lbl">${t(s, "field.battery_entity_id")}</span>
+            <select
+              @change=${(e: Event) =>
+                this._set(
+                  "battery_entity_id",
+                  (e.target as HTMLSelectElement).value || null,
+                )}
+            >
+              <option value="" ?selected=${!draft.battery_entity_id}>
+                ${t(s, "zones.no_battery")}
+              </option>
+              ${batteryTargets(ctx.hass).map(
+                (target) => html`<option
+                  .value=${target.id}
+                  ?selected=${target.id === draft.battery_entity_id}
+                >
+                  ${target.name}
+                </option>`,
+              )}
+            </select>
+            <span class="hint">${t(s, "zones.battery_hint")}</span>
           </label>
         </div>
         <div class="checks">

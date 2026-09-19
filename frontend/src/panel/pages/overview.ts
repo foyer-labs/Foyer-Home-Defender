@@ -24,6 +24,11 @@ interface Feedback {
   ok: boolean;
   text: string;
   retry?: Record<string, unknown>; // the command to repeat with force
+  /** Zones this arming put under guard on a battery that is running out
+   * (§4.2). Not a failure and never presented as one — but the warning has
+   * to arrive on every arming, and it has to be actionable, so the zones it
+   * names can be excluded from this arming in one press. */
+  lowBattery?: { id: string; name: string }[];
 }
 
 class FoyerPageOverview extends LitElement {
@@ -52,9 +57,18 @@ class FoyerPageOverview extends LitElement {
       const result = await command();
       if (result.success) {
         const bypassed = result.bypassed_zones.map((z) => z.name).join(", ");
-        this._feedback = bypassed
-          ? { ok: true, text: t(ctx.strings, "overview.bypassed", { zones: bypassed }) }
-          : undefined;
+        const low = result.low_battery_zones;
+        this._feedback = low.length
+          ? {
+              ok: true,
+              text: t(ctx.strings, "overview.low_battery", {
+                zones: low.map((z) => z.name).join(", "),
+              }),
+              lowBattery: low,
+            }
+          : bypassed
+            ? { ok: true, text: t(ctx.strings, "overview.bypassed", { zones: bypassed }) }
+            : undefined;
       } else {
         this._feedback = {
           ok: false,
@@ -77,6 +91,23 @@ class FoyerPageOverview extends LitElement {
   private _force(target: Record<string, unknown>): void {
     const ctx = this.ctx;
     if (ctx) this._run(() => ctx.arm({ ...target, force: true }));
+  }
+
+  /** Take the zones a warning named out of this arming (§5.4): an ordinary
+   * manual bypass, which ends when the area is disarmed. A zone that may not
+   * be excluded is left alone and the backend says so. */
+  private async _excludeLowBattery(zones: { id: string }[]): Promise<void> {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    this._busy = true;
+    try {
+      for (const zone of zones) await ctx.bypass(zone.id, true);
+      this._feedback = undefined;
+    } catch (err) {
+      this._feedback = { ok: false, text: String((err as Error)?.message ?? err) };
+    } finally {
+      this._busy = false;
+    }
   }
 
   private _disarm(areaIds?: string[]): void {
@@ -344,6 +375,17 @@ class FoyerPageOverview extends LitElement {
     return html`
       <div class=${feedback.ok ? "notice" : "problems"} role="alert">
         ${feedback.text}
+        ${feedback.lowBattery?.length
+          ? html`<div class="actions">
+              <button
+                class="btn"
+                ?disabled=${this._busy}
+                @click=${() => void this._excludeLowBattery(feedback.lowBattery!)}
+              >
+                ${t(s, "overview.exclude_low_battery")}
+              </button>
+            </div>`
+          : nothing}
         ${feedback.retry
           ? html`<div class="actions">
               <button

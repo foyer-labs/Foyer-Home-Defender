@@ -128,7 +128,12 @@ class FoyerPageSettings extends LitElement {
     const settings = this._settings ?? ctx.config!.settings;
     const bounds = ctx.meta?.bounds ?? {};
     const number = (
-      key: "siren_duration" | "arm_hold_timeout" | "default_entry_delay" | "default_exit_delay",
+      key:
+        | "siren_duration"
+        | "arm_hold_timeout"
+        | "default_entry_delay"
+        | "default_exit_delay"
+        | "low_battery_threshold",
       range: [number, number] | undefined,
       hint?: string,
     ) => html`<label class="field">
@@ -155,6 +160,11 @@ class FoyerPageSettings extends LitElement {
             ${number("arm_hold_timeout", bounds.arm_hold_timeout, t(s, "settings.arm_hold_hint"))}
             ${number("default_entry_delay", bounds.entry_delay, t(s, "settings.area_defaults_hint"))}
             ${number("default_exit_delay", bounds.exit_delay, t(s, "settings.area_defaults_hint"))}
+            ${number(
+              "low_battery_threshold",
+              bounds.low_battery_threshold,
+              t(s, "settings.low_battery_hint"),
+            )}
           </div>
         </div>
       </div>

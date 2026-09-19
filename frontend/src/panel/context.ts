@@ -4,6 +4,7 @@
 import { t, type Strings } from "../shared/i18n";
 import type {
   ChimeConfig,
+  Diagnostics,
   CodePolicyConfig,
   CommandResult,
   ConfigBackup,
@@ -19,6 +20,8 @@ import type {
   Problem,
   SecurityConfig,
   SettingsConfig,
+  Simulation,
+  SimulationQuery,
   UserConfig,
 } from "../shared/types";
 
@@ -56,6 +59,11 @@ export interface PanelContext {
   queryLog(query: LogQuery): Promise<LogPage>;
   exportLog(query: LogQuery, format: "csv" | "json"): Promise<LogExport>;
   clearLog(): Promise<{ success: boolean; removed: number }>;
+  /** Page 9 (§11): both only read, and both are gated as reads — view_log,
+   * no code. Nothing here executes anything; the simulator calls the same
+   * decide() the runtime calls and never hands the result to the executor. */
+  diagnostics(): Promise<Diagnostics>;
+  simulate(query: SimulationQuery): Promise<Simulation>;
   /** Configuration backup and restore (§15.1). */
   exportConfig(): Promise<{ filename: string; document: ConfigBackup }>;
   importConfig(document: unknown): Promise<EditResult>;

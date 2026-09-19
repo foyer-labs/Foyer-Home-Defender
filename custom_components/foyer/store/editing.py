@@ -79,6 +79,7 @@ _ZONE_DEFAULTS: dict[str, Any] = {
     "trigger_window": 60,
     "response_profile_id": None,
     "silent": False,
+    "battery_entity_id": None,
 }
 _GROUP_DEFAULTS: dict[str, Any] = {
     "window_seconds": 60,
@@ -305,6 +306,9 @@ def update_settings(
                 ),
                 language=settings.get("language", current.language) or None,
                 wizard_done=bool(settings.get("wizard_done", current.wizard_done)),
+                low_battery_threshold=int(
+                    settings.get("low_battery_threshold", current.low_battery_threshold)
+                ),
                 mqtt=_mqtt_from(settings.get("mqtt"), current.mqtt),
                 # Page 11 does not own these — page 7 does, through
                 # update_security — so a settings save must carry them through

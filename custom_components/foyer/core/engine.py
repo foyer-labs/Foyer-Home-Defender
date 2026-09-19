@@ -200,8 +200,15 @@ def arm_blockers(
     area_ids: tuple[str, ...] | frozenset[str],
     now: datetime,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """(faulted, open) zones that would block arming these areas right now."""
+    """(faulted, open) zones that would block arming these areas right now.
+
+    The world is read first, exactly as a decision reads it: the stored set
+    of active zones is what the last decision saw, and this question is about
+    now. Page 9's "blocks arming" column and the refusal a real arm request
+    would give must never be able to disagree (§11.1).
+    """
     run = _Run(snapshot, config, now)
+    run.refresh_active()
     faulted, open_ = run.blockers(area_ids)
     return tuple(z.id for z in faulted), tuple(z.id for z in open_)
 
@@ -583,6 +590,22 @@ class _Run:
 
     # --- zones ----------------------------------------------------------------
 
+    def refresh_active(self) -> set[str]:
+        """Read every zone's trigger from the world, and return what it was.
+
+        Side-effect free on purpose: it is the first thing a decision does,
+        and it is also what the read models of §11.1 need — a table that
+        said "does not block" from a stale set while an arming refused would
+        be worse than no table at all.
+        """
+        previous = set(self.active)
+        self.active = {
+            z.id
+            for z in self.config.zones
+            if z.enabled and is_active(z, self.entity(z), z.id in previous)
+        }
+        return previous
+
     def process_zone_changes(
         self, before: SystemSnapshot, changed_entity: str | None
     ) -> None:
@@ -596,12 +619,7 @@ class _Run:
         value is not a change. Without this, saving a new key zone whose switch
         is already on would arm the house.
         """
-        previous = set(self.active)
-        self.active = {
-            z.id
-            for z in self.config.zones
-            if z.enabled and is_active(z, self.entity(z), z.id in previous)
-        }
+        previous = self.refresh_active()
         for zone in self.config.zones:
             if not zone.enabled:
                 continue

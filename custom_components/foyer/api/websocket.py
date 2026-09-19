@@ -32,6 +32,7 @@ from ..core.models import (
     MAX_EXIT_DELAY,
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
+    MAX_LOW_BATTERY_THRESHOLD,
     MAX_RETENTION_DAYS,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
@@ -41,6 +42,7 @@ from ..core.models import (
     MIN_CODE_LENGTH,
     MIN_LOCKOUT_FAILURES,
     MIN_LOCKOUT_SECONDS,
+    MIN_LOW_BATTERY_THRESHOLD,
     MIN_RETENTION_DAYS,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
@@ -528,6 +530,10 @@ def _meta() -> dict[str, Any]:
             "code_length": [MIN_CODE_LENGTH, MAX_CODE_LENGTH],
             "lockout_failures": [MIN_LOCKOUT_FAILURES, MAX_LOCKOUT_FAILURES],
             "lockout_seconds": [MIN_LOCKOUT_SECONDS, MAX_LOCKOUT_SECONDS],
+            "low_battery_threshold": [
+                MIN_LOW_BATTERY_THRESHOLD,
+                MAX_LOW_BATTERY_THRESHOLD,
+            ],
         },
         # What page 5 needs to build an action editor without knowing the
         # engine: the catalogue, where each kind may point, and the moments.

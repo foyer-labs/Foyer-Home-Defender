@@ -261,6 +261,24 @@ def _queue(
     return events
 
 
+def _unfinished(state: RuntimeState, pending: Sequence[object]) -> bool:
+    """Whether the run stopped with its own story unfinished.
+
+    Read off what the run itself left running — an area counting down, a
+    sequence a delay is holding, a siren with a cutoff still to come, an
+    override never reached — and deliberately **not** off next_wakeup. A
+    supervision window that lapses in an hour is always scheduled, on any
+    house that configures supervision, and reporting that as "the trace was
+    cut short" would put the warning on every run until nobody read it.
+    """
+    return (
+        bool(pending)
+        or any(rt.timer is not None for rt in state.areas.values())
+        or bool(state.pending_runs)
+        or any(r.until is not None for r in state.running)
+    )
+
+
 def run(
     config: FoyerConfig,
     request: SimulationRequest,
@@ -325,9 +343,6 @@ def run(
             break
         at = min(candidates)
         if at > deadline:
-            # Something is still scheduled beyond the horizon: the trace says
-            # so rather than ending as if the house had gone quiet.
-            truncated = True
             break
         if due is not None and at == due:
             _, event = pending.pop(0)
@@ -336,14 +351,7 @@ def run(
         else:
             send(Tick(), at, STEP_TICK)
         now = at
-    else:
-        truncated = (
-            bool(pending)
-            or next_wakeup(
-                SystemSnapshot(state, entities, False, request.timezone), config, now
-            )
-            is not None
-        )
+    truncated = _unfinished(state, pending)
 
     return Simulation(
         request=request, steps=tuple(steps), final=state, truncated=truncated

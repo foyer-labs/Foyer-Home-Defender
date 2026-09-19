@@ -50,9 +50,7 @@ async def test_the_table_carries_the_live_state_of_every_mapped_zone(
     assert row["last_changed"] is not None
 
 
-async def test_the_trigger_evaluation_follows_the_entity(
-    hass, hass_ws_client, loaded
-):
+async def test_the_trigger_evaluation_follows_the_entity(hass, hass_ws_client, loaded):
     client = await hass_ws_client(hass)
     await _set(hass, ZONE, "on")
     row = await _zone_row(client, _the_zone(hass))
@@ -146,9 +144,7 @@ async def test_a_run_answers_with_a_trace_and_changes_nothing_in_the_house(
     )
     await hass.async_block_till_done()
 
-    moments = [
-        o["moment"] for step in result["steps"] for o in step["occurrences"]
-    ]
+    moments = [o["moment"] for step in result["steps"] for o in step["occurrences"]]
     assert "armed" in moments
     assert "triggered" in moments
     assert _state(hass, PANEL_ENTITY) == before == AlarmControlPanelState.DISARMED
@@ -232,9 +228,7 @@ async def test_a_run_on_a_house_that_would_refuse_to_arm_says_so(
     client = await hass_ws_client(hass)
     await _set(hass, ZONE, "on")
     scenario = hass.data[DOMAIN].config.scenarios[0]
-    result = await _ws(
-        client, {"type": "foyer/simulate", "scenario_id": scenario.id}
-    )
+    result = await _ws(client, {"type": "foyer/simulate", "scenario_id": scenario.id})
     refused = next(s for s in result["steps"] if not s["accepted"])
     assert refused["reason"] == "zone_open"
     assert refused["blocking_zones"] == [_the_zone(hass)]

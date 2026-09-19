@@ -85,6 +85,10 @@ export interface StatusZone {
   bypassable: boolean;
   /** When a timed manual bypass ends (SPEC §16), ISO, or null. */
   bypass_until: string | null;
+  /** The percentage the zone's battery entity reports, when it reports one.
+   * A battery binary_sensor has no level to show, only the flag beside it. */
+  battery: number | null;
+  low_battery: boolean;
 }
 
 export interface StatusScenario {
@@ -152,6 +156,11 @@ export interface CommandResult {
   reason: string | null;
   blocking_zones: { id: string; name: string }[];
   bypassed_zones: { id: string; name: string }[];
+  /** Zones this arming would put under guard on a battery that is running
+   * out (§4.2). They never block — a contact at 15 % still sees — but every
+   * attempt carries them, so the warning arrives each time rather than once
+   * (Phase 3 part 1 decision 2). Excluding one is an ordinary bypass. */
+  low_battery_zones: { id: string; name: string }[];
   state: FoyerStatus;
 }
 
@@ -250,6 +259,9 @@ export interface ZoneConfig {
   trigger_window: number;
   response_profile_id: string | null;
   silent: boolean;
+  /** The entity reporting this zone's battery (§4.2), for diagnostics and
+   * the low_battery moment. Never the zone's own entity. */
+  battery_entity_id: string | null;
 }
 
 export interface GroupConfig {
@@ -376,6 +388,8 @@ export interface SettingsConfig {
   wizard_done: boolean;
   security: SecurityConfig;
   mqtt: MqttConfig;
+  /** Below what percentage a numeric battery entity counts as low (§4.2). */
+  low_battery_threshold: number;
 }
 
 export interface FoyerConfig {
@@ -501,6 +515,146 @@ export interface ZoneProposal {
   zone_type: string | null;
 }
 
+// --- page 9: diagnostics and the simulator (core/diagnostics.py, core/simulate.py)
+
+export interface DiagnosticsZone {
+  zone_id: string;
+  name: string;
+  area_id: string;
+  entity_id: string;
+  enabled: boolean;
+  /** The entity's raw state. null means the entity does not exist at all,
+   * which is not the same as unavailable and is usually a rename. */
+  state: string | null;
+  /** Would Foyer count this as triggered right now? Resolved through the
+   * zone's own trigger, which is why the column exists at all (INV-5). */
+  triggered: boolean;
+  /** An event or tag zone is never "open": it has scans, not a state. */
+  momentary: boolean;
+  available: boolean;
+  last_changed: string | null;
+  last_reported: string | null;
+  fault: string | null;
+  supervision_timeout: number | null;
+  supervision_due: string | null;
+  battery_entity_id: string | null;
+  battery_level: number | null;
+  battery_low: boolean;
+  signal: { value: number; unit: string } | null;
+  bypassed: string | null;
+  blocks_arming: boolean;
+  /** "fault" or "open": which of §5.4's two reasons, so the row says what to
+   * do about it rather than only that something is wrong. */
+  blocks_because: string | null;
+}
+
+export interface DiagnosticsDevice {
+  device_id: string;
+  name: string;
+  kind: string;
+  enabled: boolean;
+  entity_id: string | null;
+  state: string | null;
+  available: boolean;
+  last_changed: string | null;
+  /** A keypad speaks over MQTT and has no entity, so there is nothing to be
+   * available: the table says so rather than claiming it is healthy. */
+  watchable: boolean;
+}
+
+export interface Diagnostics {
+  at: string;
+  zones: DiagnosticsZone[];
+  devices: DiagnosticsDevice[];
+  missing_entities: string[];
+}
+
+export interface TraceAction {
+  action_id: string;
+  kind: string;
+  name: string;
+  moment: string;
+  profile_id: string | null;
+  ran: boolean;
+  /** "silent" | "already_running" | "condition" | "held_by_delay", or null
+   * when it ran. Translated in the panel, never sent as a sentence. */
+  skipped: string | null;
+  /** For "condition": which ones failed, well enough to act on (§11.2). */
+  conditions: string[];
+}
+
+export interface TraceBatch {
+  moment: string;
+  profile_id: string | null;
+  profile_name: string;
+  /** Where the profile was inherited from: zone, group, area, scenario,
+   * technical, default or none (§6 requires the UI to show this). */
+  source: string;
+  area_id: string | null;
+  zone_id: string | null;
+  group_id: string | null;
+  actions: TraceAction[];
+}
+
+export interface TraceOccurrence {
+  moment: string;
+  area_id: string | null;
+  zone_id: string | null;
+  zone_ids: string[];
+  group_id: string | null;
+  incident_id: string | null;
+  scenario_id: string | null;
+  detail: Record<string, string>;
+}
+
+export interface TraceStep {
+  at: string;
+  kind: "setup" | "request" | "zone" | "tick";
+  zone_id: string | null;
+  zone_state: string | null;
+  scenario_id: string | null;
+  accepted: boolean;
+  reason: string | null;
+  blocking_zones: string[];
+  low_battery_zones: string[];
+  areas: {
+    area_id: string;
+    was: string;
+    now: string;
+    timer_kind: string | null;
+    timer_due: string | null;
+  }[];
+  occurrences: TraceOccurrence[];
+  batches: TraceBatch[];
+  loose_actions: TraceAction[];
+  scheduled: {
+    at: string;
+    kind: string;
+    profile_id: string | null;
+    moment: string | null;
+    area_id: string | null;
+  }[];
+}
+
+export interface Simulation {
+  at: string;
+  scenario_id: string | null;
+  area_ids: string[];
+  /** The run stopped because it ran out of room, not because the house went
+   * quiet. Said plainly: a trace that simply ends reads as "it was over". */
+  truncated: boolean;
+  steps: TraceStep[];
+}
+
+export interface SimulationQuery {
+  scenario_id?: string | null;
+  area_ids?: string[];
+  start?: string | null;
+  zones?: { zone_id: string; state: string; at: number }[];
+  entities?: Record<string, string>;
+  horizon?: number;
+}
+
 export type PageId =
   | "overview"
   | "areas"
@@ -511,4 +665,5 @@ export type PageId =
   | "users"
   | "devices"
   | "log"
-  | "settings";
+  | "settings"
+  | "test";

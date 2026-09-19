@@ -53,6 +53,21 @@ export function chimeTargets(hass: HomeAssistant, domains: string[]): Target[] {
   ]);
 }
 
+/** What a zone may name as its battery (§4.2): a sensor reporting a
+ * percentage, or a battery binary_sensor where `on` means low. Narrowed by
+ * device_class where the integration sets one, because an installation has
+ * hundreds of sensors and four of them are batteries — but anything the
+ * backend accepts is still offered, since plenty of templates set no class. */
+export function batteryTargets(hass: HomeAssistant): Target[] {
+  const all = entityTargets(hass, ["sensor", "binary_sensor"]);
+  const isBattery = (target: Target) =>
+    hass.states[target.id]?.attributes.device_class === "battery";
+  // The likely ones first, in one flat list rather than two: an installation
+  // has hundreds of sensors and four of them are batteries, but plenty of
+  // template sensors set no device_class and would otherwise be unreachable.
+  return [...all.filter(isBattery), ...all.filter((t) => !isBattery(t))];
+}
+
 /** Domains that have at least one service, for the call_service action. */
 export function serviceDomains(hass: HomeAssistant): string[] {
   return Object.keys(hass.services ?? {}).sort();

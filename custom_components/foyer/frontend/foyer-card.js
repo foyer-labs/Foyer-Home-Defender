@@ -828,7 +828,10 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 				...e,
 				...t ? { code: t } : {}
 			});
-			this._pending = void 0, n.success || (ye.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
+			this._pending = void 0, n.success && n.low_battery_zones.length && (this._feedback = {
+				text: Z(this._strings, "card.low_battery", { zones: n.low_battery_zones.map((e) => e.name).join(", ") }),
+				warning: !0
+			}), n.success || (ye.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
 				text: Z(this._strings, `reason.${n.reason ?? "unknown"}`, { zones: n.blocking_zones.map((e) => e.name).join(", ") }),
 				retry: e.type === "foyer/arm" && !e.force && ve.has(n.reason ?? "") ? {
 					...e,
@@ -1227,7 +1230,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		let e = this._feedback;
 		if (!e) return z;
 		let t = this._strings;
-		return L`<div class="feedback" role="alert">
+		return L`<div class="feedback ${e.warning ? "warning" : ""}" role="alert">
       <div>${e.text}</div>
       ${e.retry ? L`<button
               class="force"
@@ -1436,6 +1439,9 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
+      }
+      .feedback.warning {
+        color: var(--warning-color, #c77700);
       }
       .feedback .force {
         color: var(--error-color);

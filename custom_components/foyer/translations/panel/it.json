@@ -25,7 +25,8 @@
     "profiles": "Profili di risposta",
     "log": "Registro",
     "users": "Utenti",
-    "devices": "Dispositivi di inserimento"
+    "devices": "Dispositivi di inserimento",
+    "test": "Test e diagnostica"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -399,7 +400,9 @@
     "incident_hint": "Un incidente raccoglie tutte le zone di un allarme. Anche il disinserimento lo riconosce.",
     "recent": "Eventi recenti",
     "full_log": "Registro completo",
-    "memory_banner_plain": "Memoria d'allarme in {area}. Disinserisci l'area per azzerarla."
+    "memory_banner_plain": "Memoria d'allarme in {area}. Disinserisci l'area per azzerarla.",
+    "low_battery": "Inserito, ma queste zone hanno la batteria scarica: {zones}. Escludine una da questo inserimento, o cambia la pila.",
+    "exclude_low_battery": "Escludile da questo inserimento"
   },
   "areas": {
     "title": "Aree",
@@ -479,7 +482,9 @@
     "silent_hint": "La risposta gira senza i sonori elencati nelle impostazioni.",
     "profile_hint": "Letto solo quando questa zona allarma. Vuoto: il profilo dell'area.",
     "bypass_minutes": "Minuti",
-    "bypass_minutes_placeholder": "es. 20"
+    "bypass_minutes_placeholder": "es. 20",
+    "no_battery": "Nessuna entità batteria",
+    "battery_hint": "Per la diagnostica e l’avviso di batteria scarica. Una batteria scarica avvisa e non blocca mai l’inserimento; un’entità che non si riesce a leggere è invece un guasto, e blocca."
   },
   "scenarios": {
     "title": "Scenari",
@@ -520,7 +525,8 @@
     "code_confirm": "Conferma",
     "code_entered": "Codice inserito",
     "code_show": "Inserisci un codice",
-    "code_hide": "Nascondi il tastierino"
+    "code_hide": "Nascondi il tastierino",
+    "low_battery": "Batteria scarica: {zones}"
   },
   "help": {
     "toggle": "Informazioni su questa sezione",
@@ -816,6 +822,40 @@
           "text": "Permette a un tastierino di distinguere un codice sbagliato da un inserimento bloccato da una finestra aperta, invece di fallire in silenzio."
         }
       }
+    },
+    "test": {
+      "title": "Cosa dimostra questa pagina",
+      "intro": "Il senso di un allarme configurato da sé è poterlo verificare prima di fidarsene. La tabella dice cosa sta facendo ogni zona adesso; il simulatore dice cosa ne farebbe la casa, senza farne nulla.",
+      "items": {
+        "trigger_column": {
+          "term": "Valutazione del trigger",
+          "text": "Se Foyer consideri la zona scattata adesso, letto attraverso il trigger di quella zona. Un contatto normalmente chiuso allarma su «off», quindi lo stato grezzo accanto non è la risposta."
+        },
+        "blocks": {
+          "term": "Inserimento",
+          "text": "Se questa zona impedirebbe l’inserimento della sua area, e per quale dei due motivi: un guasto da riparare o una finestra da chiudere."
+        },
+        "battery": {
+          "term": "Batteria",
+          "text": "Una batteria scarica avvisa e non blocca mai: un contatto al 15 % vede ancora. Un’entità batteria che non si riesce a leggere è invece un guasto, e quella blocca."
+        },
+        "nothing_runs": {
+          "term": "Non viene eseguito nulla",
+          "text": "Il simulatore esegue lo stesso motore dell’allarme e butta via il risultato. Nessuna sirena, nessuna notifica, nessun cambiamento a ciò che è inserito."
+        },
+        "clock": {
+          "term": "L’orologio ipotetico",
+          "text": "Un’azione limitata alle 22:00–07:00 parte o non parte a seconda di questo campo. Impostalo sull’ora che vuoi davvero verificare."
+        },
+        "skipped": {
+          "term": "Perché un’azione non è partita",
+          "text": "Ogni azione del profilo è elencata, comprese quelle saltate, con il motivo: una condizione, una zona silenziosa, una sirena già in funzione o un ritardo che trattiene ancora il resto della sequenza."
+        },
+        "inherited": {
+          "term": "Da dove viene il profilo",
+          "text": "Zona, gruppo, area, scenario o il profilo predefinito. Se una risposta sembra arbitraria, di solito il motivo è questa riga."
+        }
+      }
     }
   },
   "notification": {
@@ -1014,7 +1054,8 @@
     "backup_restored": "Configurazione ripristinata.",
     "language_title": "Lingua dei messaggi",
     "language_system": "Come Home Assistant",
-    "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le notifiche, e il nome della zona pronunciato dal campanello."
+    "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le notifiche, e il nome della zona pronunciato dal campanello.",
+    "low_battery_hint": "Per cento. Sotto questo valore una batteria numerica è considerata scarica. Un sensore binario di batteria è invece letto dal suo «on»."
   },
   "action_kind": {
     "notify": "Notifica",
@@ -1438,5 +1479,120 @@
   "attachment": {
     "companion": "App Companion — immagine dal vivo, nessun file",
     "telegram": "Telegram — foto come file"
+  },
+  "test": {
+    "tab": {
+      "diagnostics": "Diagnostica",
+      "simulator": "Simulatore"
+    },
+    "refresh": "Aggiorna",
+    "ok": "OK",
+    "disabled": "Disabilitata",
+    "diagnostics": {
+      "title": "Stato delle zone in tempo reale",
+      "subtitle": "Qui non viene eseguito nulla",
+      "empty": "Nessuna zona è ancora mappata.",
+      "missing": "Home Assistant non ha queste entità. Una zona che punta a un’entità rinominata è una zona che non potrà mai scattare."
+    },
+    "col": {
+      "zone": "Zona",
+      "entity": "Entità",
+      "state": "Stato",
+      "evaluation": "Valutazione del trigger",
+      "last_change": "Ultima variazione",
+      "health": "Salute",
+      "battery": "Batteria",
+      "signal": "Segnale",
+      "supervision": "Supervisione",
+      "arming": "Inserimento",
+      "device": "Dispositivo",
+      "kind": "Tipo"
+    },
+    "would_trigger": "Scatterebbe",
+    "would_not": "Non scatterebbe",
+    "momentary": "Solo alla lettura",
+    "no_entity": "Entità inesistente",
+    "no_entity_kind": "Nessuna entità da seguire",
+    "supervision_off": "Spenta",
+    "supervision_on": "{n} s",
+    "blocks": {
+      "fault": "Blocca: guasto",
+      "open": "Blocca: aperta"
+    },
+    "battery_low": "Scarica",
+    "battery_ok": "OK",
+    "unit": {
+      "lqi": "LQI",
+      "dbm": "dBm"
+    },
+    "devices": {
+      "title": "Dispositivi di inserimento",
+      "subtitle": "Una tastiera non può bloccare l’inserimento, quindi ha una tabella sua"
+    },
+    "simulator": {
+      "safe_title": "Qui non viene eseguito nulla.",
+      "safe": "Il simulatore chiama lo stesso motore decisionale che chiama l’allarme, con un mondo e un orologio inventati, e poi semplicemente non consegna mai il risultato a chi farebbe suonare le sirene.",
+      "conditions": "Condizioni ipotetiche",
+      "scenario": "Scenario",
+      "scenario_hint": "La casa viene inserita con questo prima che accada altro.",
+      "disarmed": "Nessuno — casa disinserita",
+      "clock": "Data e ora",
+      "clock_hint": "È l’ora su cui si legge una condizione oraria. Vuoto vuol dire adesso.",
+      "zones": "Forza lo stato delle zone",
+      "zones_hint": "Ognuna avviene dopo questi secondi dall’inizio, così si vede davvero un gruppo che si riempie o una seconda zona che si unisce a un allarme.",
+      "pick_zone": "Scegli una zona",
+      "state": "Stato",
+      "at": "Secondi dall’inizio",
+      "seconds": "s",
+      "add_zone": "Aggiungi una zona",
+      "entities": "Entità usate nelle condizioni",
+      "entities_hint": "Solo le entità lette dalle condizioni delle azioni. Lasciane una vuota per usare ciò che dice davvero adesso.",
+      "as_now": "Com’è adesso",
+      "run": "Esegui la simulazione",
+      "reset": "Azzera"
+    },
+    "trace": {
+      "title": "Traccia della decisione",
+      "subtitle": "Cosa succederebbe",
+      "empty": "Scegli uno scenario e forza una zona, poi esegui la simulazione.",
+      "truncated": "Qualcosa era ancora programmato oltre la fine della corsa. Nulla dopo questo punto è stato calcolato.",
+      "zone": "Zona «{zone}» →",
+      "area": "Area «{area}»: {was} → {now}",
+      "timer": "· {kind} fino alle {at}",
+      "low_battery": "Inserita con batteria scarica su: {zones}",
+      "group": "Gruppo «{group}»: {count} su {n} entro {window} s → non soddisfatto",
+      "group_satisfied": "Gruppo «{group}»: {count} su {n} entro {window} s → SODDISFATTO",
+      "cross_zone": "Coppia di conferma incrociata",
+      "profile": "Profilo «{profile}», ereditato {source}",
+      "ran": "✓ {action}",
+      "skipped": "✗ {action} — {why}",
+      "no_profile": "✗ nessun profilo risponde a questo — non verrebbe eseguito nulla",
+      "later": {
+        "delay": "⏱ il resto di questa sequenza alle {at}",
+        "siren": "⏱ taglio della sirena alle {at}"
+      },
+      "nothing_configured": "✗ non è configurato nulla per questo momento"
+    },
+    "source": {
+      "zone": "dalla zona",
+      "group": "dal gruppo",
+      "area": "dall’area",
+      "scenario": "dallo scenario",
+      "technical": "dal canale tecnico",
+      "default": "dal profilo predefinito",
+      "none": "da nulla"
+    },
+    "skip": {
+      "condition": "condizione non soddisfatta: {conditions}",
+      "silent": "questa zona è silenziosa e la sopprime",
+      "already_running": "già in corso per questo incidente, non riavviata",
+      "held_by_delay": "trattenuta da un ritardo precedente nella sequenza"
+    },
+    "timer": {
+      "exit": "ritardo d'uscita",
+      "entry": "ritardo d'ingresso",
+      "siren": "sirena",
+      "hold": "attesa della chiusura"
+    }
   }
 }

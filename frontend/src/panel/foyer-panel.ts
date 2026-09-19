@@ -26,6 +26,7 @@ import "./pages/profiles";
 import "./pages/groups";
 import "./pages/users";
 import "./pages/devices";
+import "./pages/test";
 import "./pages/log";
 import "./pages/settings";
 import "./wizard";
@@ -40,6 +41,7 @@ const PAGES: PageId[] = [
   "groups",
   "users",
   "devices",
+  "test",
   "log",
   "settings",
 ];
@@ -73,6 +75,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   groups: ["threshold", "members", "suppress", "derived"],
   users: ["own_code", "policy", "identified", "duress", "lockout", "scope"],
   devices: ["declared", "device_id", "identifies", "topics", "detail", "last_result"],
+  test: ["trigger_column", "blocks", "battery", "nothing_runs", "clock", "skipped", "inherited"],
   log: ["category", "zone_disarmed", "incident", "user", "export"],
   settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
 };
@@ -310,6 +313,8 @@ class FoyerPanel extends LitElement {
         });
         return result;
       },
+      diagnostics: () => hass.callWS({ type: "foyer/diagnostics" }),
+      simulate: (query) => hass.callWS({ type: "foyer/simulate", ...prune(query) }),
       exportConfig: () => hass.callWS({ type: "foyer/config/export" }),
       importConfig: (document) =>
         this._edit("config", { type: "foyer/config/import", document }),
@@ -518,6 +523,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-users .ctx=${ctx}></foyer-page-users>`;
       case "devices":
         return html`<foyer-page-devices .ctx=${ctx}></foyer-page-devices>`;
+      case "test":
+        return html`<foyer-page-test .ctx=${ctx}></foyer-page-test>`;
       case "log":
         return html`<foyer-page-log .ctx=${ctx}></foyer-page-log>`;
       case "settings":

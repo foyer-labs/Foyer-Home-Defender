@@ -25,7 +25,8 @@
     "profiles": "Response profiles",
     "log": "Log",
     "users": "Users",
-    "devices": "Arming devices"
+    "devices": "Arming devices",
+    "test": "Test & diagnostics"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -399,7 +400,9 @@
     "incident_hint": "One incident gathers every zone of one alarm. Disarming also acknowledges it.",
     "recent": "Recent events",
     "full_log": "Full log",
-    "memory_banner_plain": "Alarm memory in {area}. Disarm the area to clear it."
+    "memory_banner_plain": "Alarm memory in {area}. Disarm the area to clear it.",
+    "low_battery": "Armed, but these zones are on a low battery: {zones}. Exclude one from this arming, or replace the cell.",
+    "exclude_low_battery": "Exclude them from this arming"
   },
   "areas": {
     "title": "Areas",
@@ -479,7 +482,9 @@
     "silent_hint": "The response runs without the sounders the settings list.",
     "profile_hint": "Read only when this zone alarms. Empty: the area's profile.",
     "bypass_minutes": "Minutes",
-    "bypass_minutes_placeholder": "e.g. 20"
+    "bypass_minutes_placeholder": "e.g. 20",
+    "no_battery": "No battery entity",
+    "battery_hint": "For diagnostics and the low-battery warning. A low battery warns and never blocks arming; an entity that cannot be read at all is a fault and does block."
   },
   "scenarios": {
     "title": "Scenarios",
@@ -520,7 +525,8 @@
     "code_confirm": "Confirm",
     "code_entered": "Code entered",
     "code_show": "Enter a code",
-    "code_hide": "Hide the keypad"
+    "code_hide": "Hide the keypad",
+    "low_battery": "Low battery: {zones}"
   },
   "help": {
     "toggle": "About this section",
@@ -816,6 +822,40 @@
           "text": "Lets a keypad distinguish a wrong code from arming blocked by an open window, instead of failing silently."
         }
       }
+    },
+    "test": {
+      "title": "What this page proves",
+      "intro": "The point of an alarm you configured yourself is that you can check it before trusting it. The table says what every zone is doing right now; the simulator says what the house would do about it, without doing any of it.",
+      "items": {
+        "trigger_column": {
+          "term": "Trigger evaluation",
+          "text": "Whether Foyer counts the zone as triggered right now, read through that zone's own trigger. A normally-closed contact alarms on “off”, so the raw state beside it is not the answer."
+        },
+        "blocks": {
+          "term": "Arming",
+          "text": "Whether this zone would stop its area arming, and which of the two reasons: a fault to fix, or a window to close."
+        },
+        "battery": {
+          "term": "Battery",
+          "text": "A low battery warns and never blocks: a contact at 15 % still sees. A battery entity that cannot be read at all is a fault, and that one does block."
+        },
+        "nothing_runs": {
+          "term": "Nothing is executed",
+          "text": "The simulator runs the same engine the alarm runs and throws the result away. No siren, no notification, no change to what is armed."
+        },
+        "clock": {
+          "term": "The hypothetical clock",
+          "text": "An action limited to 22:00–07:00 runs or does not run depending on this field. Set it to the hour you actually want to check."
+        },
+        "skipped": {
+          "term": "Why an action did not run",
+          "text": "Every action of the profile is listed, including the ones that were skipped, with the reason: a condition, a silent zone, a siren already sounding, or a delay still holding the rest of the sequence."
+        },
+        "inherited": {
+          "term": "Where the profile came from",
+          "text": "Zone, group, area, scenario or the global default. If a response looks arbitrary, this line is usually why."
+        }
+      }
     }
   },
   "notification": {
@@ -1014,7 +1054,8 @@
     "backup_restored": "Configuration restored.",
     "language_title": "Language of messages",
     "language_system": "As Home Assistant",
-    "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: notifications, and the zone name the chime speaks."
+    "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: notifications, and the zone name the chime speaks.",
+    "low_battery_hint": "Per cent. Below this a numeric battery counts as low. A battery binary sensor is read by its own “on” instead."
   },
   "action_kind": {
     "notify": "Notification",
@@ -1438,5 +1479,120 @@
   "attachment": {
     "companion": "Companion app — live picture, no file",
     "telegram": "Telegram — a photo file"
+  },
+  "test": {
+    "tab": {
+      "diagnostics": "Diagnostics",
+      "simulator": "Simulator"
+    },
+    "refresh": "Refresh",
+    "ok": "OK",
+    "disabled": "Disabled",
+    "diagnostics": {
+      "title": "Live zone state",
+      "subtitle": "Nothing here is executed",
+      "empty": "No zones are mapped yet.",
+      "missing": "Home Assistant does not have these entities. A zone pointing at an entity that was renamed is a zone that can never fire."
+    },
+    "col": {
+      "zone": "Zone",
+      "entity": "Entity",
+      "state": "State",
+      "evaluation": "Trigger evaluation",
+      "last_change": "Last change",
+      "health": "Health",
+      "battery": "Battery",
+      "signal": "Signal",
+      "supervision": "Supervision",
+      "arming": "Arming",
+      "device": "Device",
+      "kind": "Kind"
+    },
+    "would_trigger": "Would trigger",
+    "would_not": "Would not",
+    "momentary": "On scan only",
+    "no_entity": "No such entity",
+    "no_entity_kind": "No entity to watch",
+    "supervision_off": "Off",
+    "supervision_on": "{n} s",
+    "blocks": {
+      "fault": "Blocks: fault",
+      "open": "Blocks: open"
+    },
+    "battery_low": "Low",
+    "battery_ok": "OK",
+    "unit": {
+      "lqi": "LQI",
+      "dbm": "dBm"
+    },
+    "devices": {
+      "title": "Arming devices",
+      "subtitle": "A keypad cannot block arming, so it has a table of its own"
+    },
+    "simulator": {
+      "safe_title": "Nothing here is executed.",
+      "safe": "The simulator calls the same decision engine the alarm calls, with a made-up world and a made-up clock, and then simply never hands the result to whatever would run the sirens.",
+      "conditions": "Hypothetical conditions",
+      "scenario": "Scenario",
+      "scenario_hint": "The house is armed with this before anything else happens.",
+      "disarmed": "None — a disarmed house",
+      "clock": "Date and time",
+      "clock_hint": "What a time condition is read against. Empty means now.",
+      "zones": "Force zone states",
+      "zones_hint": "Each one happens this many seconds after the start, so a group filling up or a second zone joining an alarm can actually be seen.",
+      "pick_zone": "Choose a zone",
+      "state": "State",
+      "at": "Seconds after the start",
+      "seconds": "s",
+      "add_zone": "Add a zone",
+      "entities": "Entities used in conditions",
+      "entities_hint": "Only the entities an action's conditions read. Leave one empty to use what it really says right now.",
+      "as_now": "As now",
+      "run": "Run simulation",
+      "reset": "Reset"
+    },
+    "trace": {
+      "title": "Decision trace",
+      "subtitle": "What would happen",
+      "empty": "Choose a scenario and force a zone, then run the simulation.",
+      "truncated": "Something was still scheduled beyond the end of the run. Nothing after this point was worked out.",
+      "zone": "Zone “{zone}” →",
+      "area": "Area “{area}”: {was} → {now}",
+      "timer": "· {kind} until {at}",
+      "low_battery": "Armed with a low battery on: {zones}",
+      "group": "Group “{group}”: {count} of {n} within {window} s → not satisfied",
+      "group_satisfied": "Group “{group}”: {count} of {n} within {window} s → SATISFIED",
+      "cross_zone": "Cross-zone pair",
+      "profile": "Profile “{profile}”, inherited from the {source}",
+      "ran": "✓ {action}",
+      "skipped": "✗ {action} — {why}",
+      "no_profile": "✗ no profile answers this — nothing would run",
+      "later": {
+        "delay": "⏱ the rest of this sequence at {at}",
+        "siren": "⏱ siren cutoff at {at}"
+      },
+      "nothing_configured": "✗ nothing is configured for this moment"
+    },
+    "source": {
+      "zone": "zone",
+      "group": "group",
+      "area": "area",
+      "scenario": "scenario",
+      "technical": "technical channel",
+      "default": "global default",
+      "none": "nothing"
+    },
+    "skip": {
+      "condition": "condition not met: {conditions}",
+      "silent": "this zone is silent and suppresses it",
+      "already_running": "already running for this incident, not restarted",
+      "held_by_delay": "held back by a delay earlier in the sequence"
+    },
+    "timer": {
+      "exit": "exit delay",
+      "entry": "entry delay",
+      "siren": "siren",
+      "hold": "waiting for it to close"
+    }
   }
 }

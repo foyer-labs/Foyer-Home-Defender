@@ -345,3 +345,25 @@ def test_arm_policy_ignore_never_blocks_however_open_it_is():
     world = World(entities={"binary_sensor.hall_pir": "on"})
     assert world.config.zone("hall").arm_policy is ArmPolicy.IGNORE
     assert rows(world)["hall"].blocks_arming is False
+
+
+def test_the_column_reads_the_world_rather_than_the_last_decision():
+    """A stale "does not block" is the one thing this table may not say.
+
+    The engine refreshes every zone's trigger before deciding, so a request
+    to arm would refuse; a read model trusting the stored set would show the
+    zone as fine. The two are the same question and must give one answer.
+    """
+    world = World()
+    # The entity moves without a decision running — a snapshot taken between
+    # the state change and the decision it causes.
+    world.entities[WINDOW] = EntityState("on", last_reported=NOW, last_changed=NOW)
+    assert "window" not in world.state.active_zones
+
+    row = rows(world)["window"]
+    assert row.triggered is True
+    assert row.blocks_arming is True
+    # And the engine agrees, because it reads the world the same way.
+    refused = world.arm("night")
+    assert not refused.accepted
+    assert refused.blocking_zones == ("window",)

@@ -49,6 +49,10 @@ interface Feedback {
   text: string;
   /** The command to repeat with force, when forcing could get past it. */
   retry?: Record<string, unknown>;
+  /** Something worth knowing rather than something that went wrong: a low
+   * battery warns and never blocks. Excluding the zone is done from the
+   * panel, where the list of zones is. */
+  warning?: boolean;
 }
 
 class FoyerCard extends LitElement {
@@ -183,6 +187,17 @@ class FoyerCard extends LitElement {
         ...(typed ? { code: typed } : {}),
       });
       this._pending = undefined;
+      if (result.success && result.low_battery_zones.length) {
+        // Not a failure, and never shown as one — but the warning belongs on
+        // every arming, on every channel, so it reaches whoever arms from
+        // the wall tablet as well as the panel (§4.2, part 1 decision 2).
+        this._feedback = {
+          text: t(this._strings, "card.low_battery", {
+            zones: result.low_battery_zones.map((z) => z.name).join(", "),
+          }),
+          warning: true,
+        };
+      }
       if (!result.success) {
         // A code was wanted, or the one typed was wrong: open the pad, leave
         // it open, and keep the command so the pad's confirm key can repeat
@@ -742,7 +757,7 @@ class FoyerCard extends LitElement {
     const feedback = this._feedback;
     if (!feedback) return nothing;
     const s = this._strings;
-    return html`<div class="feedback" role="alert">
+    return html`<div class="feedback ${feedback.warning ? "warning" : ""}" role="alert">
       <div>${feedback.text}</div>
       ${feedback.retry
         ? html`<button
@@ -956,6 +971,9 @@ class FoyerCard extends LitElement {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
+      }
+      .feedback.warning {
+        color: var(--warning-color, #c77700);
       }
       .feedback .force {
         color: var(--error-color);
