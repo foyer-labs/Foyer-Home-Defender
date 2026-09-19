@@ -18,7 +18,7 @@
 
 > ### Stato: beta. Si inserisce dal muro, e il registro dice chi è stato.
 >
-> Può proteggere una casa, e lo sta facendo. Questa è **la prima beta**: agli
+> Può proteggere una casa, e lo sta facendo. Siamo alle **prime beta**: agli
 > utenti, ai codici per persona e ai permessi si aggiungono i dispositivi di
 > inserimento fisici — tastierini Ring e Zigbee, tag NFC, badge e telecomandi —
 > con il contratto dei servizi `foyer.*` e MQTT nelle due direzioni. Un
@@ -252,6 +252,11 @@ usa Alarmo.
 - **Ogni azione dice se ha funzionato.** Una sirena che non ha suonato e una
   notifica che non è partita sono righe nel registro, marcate come non
   riuscite. Non silenzio.
+- **Un nome che nessuno ha verificato è marcato come tale.** Una chiamata di
+  servizio può dichiarare chi ha agito, e inserire non chiede un codice: quel
+  nome resta nel registro, ma accanto compare *(dichiarato)*. Una riga nata da
+  un codice o da un tag NFC non porta quel marcatore. Una risposta sbagliata a
+  «chi ha disinserito alle 03:14?» è peggio di nessuna risposta.
 - **Il changelog dice cosa è cambiato nel comportamento**, non «varie
   correzioni», perché è quello che serve per decidere se prendere un
   aggiornamento.

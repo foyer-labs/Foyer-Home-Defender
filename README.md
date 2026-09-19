@@ -238,6 +238,12 @@ columns above is time.
 - **A gap in coverage is written down.** If Home Assistant was down for two
   hours, the log says so, with the duration. It never implies you were
   protected when you were not.
+- **A name nothing verified is marked as such.** Arming needs no code, and a
+  service call may simply state who is acting — so a row could otherwise credit
+  a person on nothing but the caller's word. The name is kept, because
+  attribution is worth having, and the row is marked *claimed* beside it. A
+  code or a tag produces an unmarked row. A wrong answer to "who disarmed at
+  03:14?" is worse than no answer.
 - **Every action reports whether it worked.** A siren that did not sound and a
   notification that did not send are rows in the log, marked failed — not
   silence.
