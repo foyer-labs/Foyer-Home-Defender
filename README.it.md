@@ -16,6 +16,10 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
 </p>
 
+<p align="center">
+  <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
+</p>
+
 > ### Stato: beta. Il nucleo dell'allarme funziona, e puoi chiedergli cosa farebbe prima di fidartene.
 >
 > Può proteggere una casa, e lo sta facendo. Siamo alle **prime beta**: agli
@@ -586,17 +590,6 @@ Il progetto completo, comprese le ragioni dietro le decisioni che sembrano
 arbitrarie finché non si sa perché, è in
 [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md)
 (in inglese, come tutto il codice e la documentazione tecnica).
-
-## Se ti ha risparmiato una serata
-
-Foyer è Apache-2.0 e lo resterà, qualunque cosa succeda a questo bottone. Ma se
-ti ha risparmiato la serata che avresti passato a scrivere le automazioni — o
-la mattina che avresti passato a scoprire quale zona non è mai scattata — puoi
-offrire un caffè a chi lo sviluppa.
-
-<p align="center">
-  <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
-</p>
 
 ## Licenza
 
