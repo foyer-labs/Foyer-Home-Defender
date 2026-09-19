@@ -1323,6 +1323,12 @@ class EntityState:
     state: str | None
     attributes: Mapping[str, Any] = field(default_factory=dict)
     last_reported: datetime | None = None
+    # When the state itself last moved, which is not the same question as
+    # when the entity last spoke: a door shut for a week that checks in every
+    # hour has a recent ``last_reported`` and a week-old ``last_changed``.
+    # §11.1 asks for this one, because "last change" is what tells somebody
+    # they are looking at the wrong sensor.
+    last_changed: datetime | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "attributes", _frozen(self.attributes))

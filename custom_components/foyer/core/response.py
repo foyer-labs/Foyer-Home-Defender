@@ -115,20 +115,83 @@ class Plan:
 # --- profile resolution ------------------------------------------------------------
 
 
+# Where an effective profile came from. §6 says the UI must always show it —
+# "otherwise the behaviour looks arbitrary" — and the simulator's trace says
+# it on every step (§11.2).
+FROM_ZONE = "zone"
+FROM_GROUP = "group"
+FROM_AREA = "area"
+FROM_SCENARIO = "scenario"
+FROM_TECHNICAL = "technical"
+FROM_DEFAULT = "default"
+FROM_NONE = "none"
+
+
+def _area_chain(
+    config: FoyerConfig, area_id: str | None, scenario_id: str | None
+) -> tuple[ResponseProfile | None, str]:
+    area = config.area(area_id)
+    scenario = config.scenario(scenario_id)
+    for candidate, source in (
+        (area.response_profile_id if area else None, FROM_AREA),
+        (scenario.response_profile_id if scenario else None, FROM_SCENARIO),
+        (config.settings.default_profile_id, FROM_DEFAULT),
+    ):
+        if (profile := config.profile(candidate)) is not None:
+            return profile, source
+    return None, FROM_NONE
+
+
 def area_profile(
     config: FoyerConfig, area_id: str | None, scenario_id: str | None
 ) -> ResponseProfile | None:
     """area → scenario → global default (SPEC §6)."""
-    area = config.area(area_id)
-    scenario = config.scenario(scenario_id)
-    for candidate in (
-        area.response_profile_id if area else None,
-        scenario.response_profile_id if scenario else None,
-        config.settings.default_profile_id,
+    return _area_chain(config, area_id, scenario_id)[0]
+
+
+def resolve_profile(
+    config: FoyerConfig,
+    *,
+    area_id: str | None = None,
+    zone_id: str | None = None,
+    group_id: str | None = None,
+    scenario_id: str | None = None,
+    moment: Moment | None = None,
+) -> tuple[ResponseProfile | None, str]:
+    """The profile that answers, **and where it was inherited from** (§6).
+
+    The two are resolved together, in one function, because they are the same
+    walk down the same chain: a separate "where did it come from" would be a
+    second implementation of the inheritance rule, free to disagree with the
+    first, and the trace would then explain a decision the engine did not
+    make (part 3 decision 1, §11.2).
+    """
+    zone = config.zone(zone_id)
+    if moment in TECHNICAL_MOMENTS:
+        for candidate, source in (
+            (zone.response_profile_id if zone else None, FROM_ZONE),
+            (config.settings.technical_profile_id, FROM_TECHNICAL),
+            (config.settings.default_profile_id, FROM_DEFAULT),
+        ):
+            if (profile := config.profile(candidate)) is not None:
+                return profile, source
+        return None, FROM_NONE
+    if moment is Moment.VERIFICATION_SATISFIED and (
+        (group := config.group(group_id)) is not None
     ):
-        if (profile := config.profile(candidate)) is not None:
-            return profile
-    return None
+        # Only the satisfied group answers with the group's profile: its
+        # members keep their own when they alarm on their own (§4.8). That is
+        # what makes the response graduated instead of uniform.
+        if (profile := config.profile(group.response_profile_id)) is not None:
+            return profile, FROM_GROUP
+        return _area_chain(config, group.area_id, scenario_id)
+    if (
+        moment in ZONE_MOMENTS
+        and zone is not None
+        and (profile := config.profile(zone.response_profile_id)) is not None
+    ):
+        return profile, FROM_ZONE
+    return _area_chain(config, area_id, scenario_id)
 
 
 def effective_profile(
@@ -140,52 +203,15 @@ def effective_profile(
     scenario_id: str | None = None,
     moment: Moment | None = None,
 ) -> ResponseProfile | None:
-    """The profile that answers, and why — the one rule of part 3 decision 1."""
-    zone = config.zone(zone_id)
-    if moment in TECHNICAL_MOMENTS:
-        for candidate in (
-            zone.response_profile_id if zone else None,
-            config.settings.technical_profile_id,
-            config.settings.default_profile_id,
-        ):
-            if (profile := config.profile(candidate)) is not None:
-                return profile
-        return None
-    if moment is Moment.VERIFICATION_SATISFIED and (
-        (group := config.group(group_id)) is not None
-    ):
-        # Only the satisfied group answers with the group's profile: its
-        # members keep their own when they alarm on their own (§4.8). That is
-        # what makes the response graduated instead of uniform.
-        if (profile := config.profile(group.response_profile_id)) is not None:
-            return profile
-        return area_profile(config, group.area_id, scenario_id)
-    if (
-        moment in ZONE_MOMENTS
-        and zone is not None
-        and (profile := config.profile(zone.response_profile_id)) is not None
-    ):
-        return profile
-    return area_profile(config, area_id, scenario_id)
-
-
-def profile_source(
-    config: FoyerConfig,
-    *,
-    area_id: str | None = None,
-    zone_id: str | None = None,
-    scenario_id: str | None = None,
-) -> str:
-    """Where an area's effective profile comes from, for the UI to show (§6)."""
-    area = config.area(area_id)
-    scenario = config.scenario(scenario_id)
-    if area is not None and config.profile(area.response_profile_id):
-        return "area"
-    if scenario is not None and config.profile(scenario.response_profile_id):
-        return "scenario"
-    if config.profile(config.settings.default_profile_id):
-        return "default"
-    return "none"
+    """The profile that answers — the one rule of part 3 decision 1."""
+    return resolve_profile(
+        config,
+        area_id=area_id,
+        zone_id=zone_id,
+        group_id=group_id,
+        scenario_id=scenario_id,
+        moment=moment,
+    )[0]
 
 
 # --- the actions of one moment -----------------------------------------------------
@@ -198,6 +224,41 @@ def sequence(profile: ResponseProfile, moment: Moment) -> tuple[ProfileAction, .
     comes after it *in this sequence*.
     """
     return tuple(a for a in profile.actions if a.enabled and moment in a.moments)
+
+
+# Why an action in a profile's sequence did not run. The simulator shows
+# these words (§11.2: "which were skipped AND WHY"), and it shows them
+# because skip_reason below is the one place that decides — a second copy of
+# the rule would let the trace explain a skip that never happened.
+SKIP_SILENT = "silent"
+SKIP_ALREADY_RUNNING = "already_running"
+SKIP_CONDITION = "condition"
+SKIP_HELD_BY_DELAY = "held_by_delay"
+
+
+def skip_reason(
+    action: ProfileAction,
+    ctx: PlanContext,
+    *,
+    moment: Moment,
+    suppressed: frozenset[str],
+    already_started: frozenset[str],
+) -> str | None:
+    """Why this action does not run now, or None when it does.
+
+    The order is the order of the reasons, not of the checks: a silent zone
+    suppresses before anything is evaluated, a siren already sounding is not
+    restarted before its conditions are asked again, and only what survives
+    both is put to its conditions. Changing the order changes what the trace
+    says happened, so there is one of it.
+    """
+    if action.kind.value in suppressed:
+        return SKIP_SILENT
+    if action.id in already_started and moment in UNION_MOMENTS:
+        return SKIP_ALREADY_RUNNING
+    if not evaluate(action, ctx.snapshot, ctx.now, ctx.tz):
+        return SKIP_CONDITION
+    return None
 
 
 def _names(ids: Sequence[str | None], lookup: Mapping[str, str]) -> str:
@@ -334,11 +395,16 @@ def run_sequence(
                 )
                 return plan
             continue
-        if action.kind.value in suppressed:
-            continue
-        if action.id in already_started and moment in UNION_MOMENTS:
-            continue
-        if not evaluate(action, ctx.snapshot, ctx.now, ctx.tz):
+        if (
+            skip_reason(
+                action,
+                ctx,
+                moment=moment,
+                suppressed=suppressed,
+                already_started=already_started,
+            )
+            is not None
+        ):
             continue
         params = _params(action, values, ctx, area_id)
         plan.intents.append(
@@ -417,6 +483,51 @@ def revert_intent(running: RunningAction, moment: Moment) -> ActionIntent:
 # --- the batch ---------------------------------------------------------------------
 
 
+@dataclass(frozen=True, slots=True)
+class Answer:
+    """Who answers one occurrence, and under what run it is grouped.
+
+    ``key`` is what decides that three areas arming together send one
+    notification naming all three (see plan_occurrences). The simulator
+    groups its trace by the same key, from this same function, so the trace
+    shows one line where the house sends one message (§11.2).
+    """
+
+    profile: ResponseProfile
+    source: str
+    silent: bool
+    incident_id: str | None
+    moment: Moment
+
+    @property
+    def key(self) -> tuple[str, Moment, bool, str | None]:
+        return (self.profile.id, self.moment, self.silent, self.incident_id)
+
+
+def answer_for(ctx: PlanContext, occurrence: Occurrence) -> Answer | None:
+    """The profile that answers this occurrence, or None when none does."""
+    zone = ctx.config.zone(occurrence.zone_id)
+    area = ctx.areas.get(occurrence.area_id or "")
+    scenario_id = occurrence.scenario_id or (area.scenario_id if area else None)
+    profile, source = resolve_profile(
+        ctx.config,
+        area_id=occurrence.area_id,
+        zone_id=occurrence.zone_id,
+        group_id=occurrence.group_id,
+        scenario_id=scenario_id,
+        moment=occurrence.moment,
+    )
+    if profile is None:
+        return None
+    return Answer(
+        profile=profile,
+        source=source,
+        silent=bool(zone and zone.silent and occurrence.moment in ZONE_MOMENTS),
+        incident_id=occurrence.incident_id,
+        moment=occurrence.moment,
+    )
+
+
 def plan_occurrences(
     ctx: PlanContext, occurrences: Sequence[Occurrence], run_seq: int
 ) -> tuple[Plan, int]:
@@ -426,23 +537,8 @@ def plan_occurrences(
     started = set(ctx.incident.actions_started if ctx.incident else ())
     batches: dict[tuple[str, Moment, bool, str | None], list[Occurrence]] = {}
     for occurrence in occurrences:
-        zone = ctx.config.zone(occurrence.zone_id)
-        area = ctx.areas.get(occurrence.area_id or "")
-        scenario_id = occurrence.scenario_id or (area.scenario_id if area else None)
-        profile = effective_profile(
-            ctx.config,
-            area_id=occurrence.area_id,
-            zone_id=occurrence.zone_id,
-            group_id=occurrence.group_id,
-            scenario_id=scenario_id,
-            moment=occurrence.moment,
-        )
-        if profile is None:
-            continue
-        silent = bool(zone and zone.silent and occurrence.moment in ZONE_MOMENTS)
-        batches.setdefault(
-            (profile.id, occurrence.moment, silent, occurrence.incident_id), []
-        ).append(occurrence)
+        if (answer := answer_for(ctx, occurrence)) is not None:
+            batches.setdefault(answer.key, []).append(occurrence)
     for (profile_id, moment, silent, incident_id), group in batches.items():
         profile = ctx.config.profile(profile_id)
         assert profile is not None

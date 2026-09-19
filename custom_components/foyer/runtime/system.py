@@ -123,6 +123,7 @@ def entity_state(state: State | None) -> EntityState:
         state=state.state,
         attributes=dict(state.attributes),
         last_reported=state.last_reported,
+        last_changed=state.last_changed,
     )
 
 
