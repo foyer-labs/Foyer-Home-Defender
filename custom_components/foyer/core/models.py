@@ -148,6 +148,22 @@ SILENCEABLE: frozenset[str] = frozenset({*(k.value for k in ActionKind), "chime"
 # directory. Never ``www``: that is served without authentication (§10.4).
 DEFAULT_CAMERA_DIR = "media/foyer"
 
+# How a notification carries the camera picture. There is no single answer:
+# each transport reads its own key out of `data`, and a key it does not know
+# is discarded in silence — which is what "I attached a camera and nothing
+# arrived" looks like from the outside.
+#
+# `companion`  Home Assistant's own app: `image`, a link to the authenticated
+#              camera proxy. The app is signed in, so it fetches the live
+#              picture itself and nothing is written to disk.
+# `telegram`   telegram_bot: `photo`, and it must be a FILE. Telegram's server
+#              does the fetching, from outside the house, with no session —
+#              so a relative proxy path is unreachable to it by construction.
+#              Foyer takes the snapshot at the moment of the notification.
+ATTACH_COMPANION = "companion"
+ATTACH_TELEGRAM = "telegram"
+NOTIFY_ATTACHMENTS: tuple[str, ...] = (ATTACH_COMPANION, ATTACH_TELEGRAM)
+
 
 class ConditionMode(StrEnum):
     """How an action's two conditions combine (part 3 decision 4)."""

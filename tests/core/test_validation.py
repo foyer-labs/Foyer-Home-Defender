@@ -297,3 +297,45 @@ def test_editing_a_cross_zone_partner_in_an_armed_area_is_refused():
     assert [p.code for p in edit_conflicts(world.config, paired, world.state)] == [
         "area_not_disarmed"
     ]
+
+
+def test_an_attachment_nobody_implements_is_refused(config):
+    """§6.2: each transport reads its own key and ignores the rest in silence.
+
+    A value Foyer does not turn into a payload is a picture that never
+    arrives and never explains why — so it is refused where it is typed.
+    """
+    from custom_components.foyer.core.models import (
+        ActionKind,
+        Moment,
+        ProfileAction,
+        ResponseProfile,
+    )
+
+    def profile_with(attachment: str) -> object:
+        return replace(
+            config,
+            profiles=(
+                ResponseProfile(
+                    id="p",
+                    name="Tell",
+                    actions=(
+                        ProfileAction(
+                            id="a",
+                            kind=ActionKind.NOTIFY,
+                            moments=frozenset({Moment.TRIGGERED}),
+                            params={
+                                "service": "notify.telegram",
+                                "message": "x",
+                                "camera_entity_id": "camera.front",
+                                "attachment": attachment,
+                            },
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+    assert "unknown_attachment" in codes(profile_with("signal"))
+    assert "unknown_attachment" not in codes(profile_with("telegram"))
+    assert "unknown_attachment" not in codes(profile_with("companion"))

@@ -7,6 +7,9 @@ notifications, and that a bypass round-trips over the WebSocket API.
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from homeassistant.components.alarm_control_panel import AlarmControlPanelState
 from pytest_homeassistant_custom_component.common import async_mock_service
 
@@ -30,6 +33,21 @@ async def _profile(client, actions: list[dict], name: str = "Full") -> dict:
     )
     assert result["success"], result
     return result
+
+
+def _allow_media(hass) -> None:
+    """Let Foyer write under <config>/media, as a real installation must."""
+    hass.config.allowlist_external_dirs = {
+        str(Path(hass.config.path("media")).resolve())
+    }
+
+
+def _usable(folder: str) -> tuple[bool, str]:
+    path = Path(folder)
+    return (
+        path.is_dir() and os.access(path, os.R_OK | os.W_OK | os.X_OK),
+        oct(path.stat().st_mode) if path.exists() else "missing",
+    )
 
 
 def _siren_action(**params) -> dict:
@@ -249,3 +267,137 @@ async def test_a_notification_can_carry_the_camera_picture(
     assert len(calls) == 1
     assert calls[0].data["message"] == "Front door in Casa"
     assert calls[0].data["data"]["image"] == "/api/camera_proxy/camera.front"
+
+
+async def test_telegram_gets_a_photo_file_and_not_the_proxy_link(
+    hass, loaded, hass_ws_client, freezer
+):
+    """The same field, the other transport (§6.2).
+
+    Telegram's server fetches the picture itself, from outside the house and
+    with no Home Assistant session, so `/api/camera_proxy/...` is unreachable
+    to it by construction — and telegram_bot reads `photo`, never `image`. A
+    key it does not know is dropped without a word, which is what "I attached
+    a camera and nothing arrived" looks like from the outside.
+    """
+    _allow_media(hass)
+    snapshots = async_mock_service(hass, "camera", "snapshot")
+    calls = async_mock_service(hass, "notify", "telegram")
+    client = await hass_ws_client(hass)
+    await _profile(
+        client,
+        [
+            {
+                "kind": "notify",
+                "moments": ["triggered"],
+                "name": "Tell the group",
+                "params": {
+                    "service": "notify.telegram",
+                    "message": "{{ zone }} in {{ area }}",
+                    "camera_entity_id": "camera.front",
+                    "attachment": "telegram",
+                },
+                "conditions": [],
+                "condition_mode": "all",
+                "enabled": True,
+            }
+        ],
+        name="Telegram",
+    )
+    await hass.async_block_till_done()
+    await _use_profile(hass, client, hass.data[DOMAIN].config.profiles[-1].id)
+
+    await _arm_away(hass, freezer)
+    await _set(hass, ZONE, "on", friendly_name="Front door")
+
+    # The still is written first, under the configured camera folder.
+    assert len(snapshots) == 1
+    filename = snapshots[0].data["filename"]
+    assert snapshots[0].data["entity_id"] == "camera.front"
+    assert "media/foyer" in filename.replace("\\", "/")
+
+    assert len(calls) == 1
+    photo = calls[0].data["data"]["photo"]
+    assert photo == [{"file": filename, "caption": "Front door in Casa"}]
+    # And never the Companion app's key, which Telegram would discard.
+    assert "image" not in calls[0].data["data"]
+
+
+async def test_the_camera_action_makes_a_folder_that_can_be_written_to(
+    hass, loaded, hass_ws_client, freezer
+):
+    """The folder was created with mode 1 — `--------x`.
+
+    `os.makedirs(name, mode, exist_ok)` takes exist_ok third, and it was being
+    passed True as the *mode*, which is 0o001. The directory came out with no
+    read and no write for anybody, so every snapshot after the first run of a
+    new installation failed at the moment of the alarm. Nothing caught it
+    because nothing ever ran this action kind.
+    """
+    _allow_media(hass)
+    snapshots = async_mock_service(hass, "camera", "snapshot")
+    client = await hass_ws_client(hass)
+    await _profile(
+        client,
+        [
+            {
+                "kind": "camera",
+                "moments": ["triggered"],
+                "name": "Front door still",
+                "params": {"entity_id": "camera.front", "mode": "snapshot"},
+                "conditions": [],
+                "condition_mode": "all",
+                "enabled": True,
+            }
+        ],
+        name="Camera",
+    )
+    await hass.async_block_till_done()
+    await _use_profile(hass, client, hass.data[DOMAIN].config.profiles[-1].id)
+
+    await _arm_away(hass, freezer)
+    await _set(hass, ZONE, "on", friendly_name="Front door")
+
+    assert len(snapshots) == 1
+    usable, mode = _usable(os.path.dirname(snapshots[0].data["filename"]))
+    assert usable, mode
+
+
+async def test_a_camera_that_does_not_answer_still_lets_the_alarm_speak(
+    hass, loaded, hass_ws_client, freezer
+):
+    """Losing the picture is a disappointment; losing the message is not
+    something a camera gets to decide."""
+    # No allowlisted folder, so the snapshot cannot be written at all.
+    hass.config.allowlist_external_dirs = set()
+    calls = async_mock_service(hass, "notify", "telegram")
+    client = await hass_ws_client(hass)
+    await _profile(
+        client,
+        [
+            {
+                "kind": "notify",
+                "moments": ["triggered"],
+                "name": "Tell the group",
+                "params": {
+                    "service": "notify.telegram",
+                    "message": "{{ zone }}",
+                    "camera_entity_id": "camera.front",
+                    "attachment": "telegram",
+                },
+                "conditions": [],
+                "condition_mode": "all",
+                "enabled": True,
+            }
+        ],
+        name="Telegram",
+    )
+    await hass.async_block_till_done()
+    await _use_profile(hass, client, hass.data[DOMAIN].config.profiles[-1].id)
+
+    await _arm_away(hass, freezer)
+    await _set(hass, ZONE, "on", friendly_name="Front door")
+
+    assert len(calls) == 1
+    assert calls[0].data["message"] == "Front door"
+    assert "photo" not in (calls[0].data.get("data") or {})

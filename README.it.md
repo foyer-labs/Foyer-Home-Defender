@@ -103,6 +103,14 @@ oggi è la scelta prudente.
   scena, interruttore, messaggio vocale, chiamata a qualunque servizio di Home
   Assistant, attesa — ciascuna con al massimo due condizioni, ereditate
   dall'area, poi dallo scenario, poi dal profilo predefinito.
+- **L'immagine insieme all'allarme**, e sei tu a dire per quale app. All'app
+  Companion arriva un collegamento alla telecamera dal vivo attraverso il proxy
+  autenticato di Home Assistant, senza scrivere nessun file; a Telegram arriva
+  uno scatto, perché è il suo server a scaricarlo da fuori casa e quel
+  collegamento non può seguirlo. Foyer te lo chiede invece di indovinarlo dal
+  nome del servizio, perché ogni destinazione scarta in silenzio le chiavi che
+  non conosce — e «ho allegato una telecamera e non è arrivato niente» è il
+  modo in cui lo scopri, mesi dopo.
 - **Campanello** quando una zona si apre mentre la sua area non la sorveglia, su
   un altoparlante, una sirena o il telefono, con ore di silenzio per singolo
   destinatario.

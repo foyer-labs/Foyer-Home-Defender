@@ -551,3 +551,53 @@ def test_a_sequence_is_abandoned_when_its_area_is_disarmed():
 
     assert world.state.pending_runs == ()
     assert kinds(world.advance(120)) == []
+
+
+def test_a_notification_with_a_camera_is_told_where_files_go():
+    """§6.2: the folder is the configuration's, decided in the pure layer.
+
+    The executor must be left with nothing to choose — an attachment that
+    writes a still has to put it where every other camera file goes, and
+    `media/foyer` appearing as a literal in the executor is how the setting
+    quietly stops meaning anything.
+    """
+    config = house(
+        profile(
+            "p",
+            action(
+                "tell",
+                ActionKind.NOTIFY,
+                Moment.TRIGGERED,
+                service="notify.telegram",
+                message="{{ zone }}",
+                camera_entity_id="camera.front",
+                attachment="telegram",
+            ),
+        )
+    )
+    config = replace(config, settings=replace(config.settings, camera_dir="media/cam"))
+    world = armed(config)
+    decision = world.set(WINDOW, "on")
+
+    notify = next(a for a in decision.actions if a.kind == "notify")
+    assert notify.params["directory"] == "media/cam"
+
+
+def test_a_notification_without_a_camera_is_told_nothing_about_folders():
+    config = house(
+        profile(
+            "p",
+            action(
+                "tell",
+                ActionKind.NOTIFY,
+                Moment.TRIGGERED,
+                service="notify.telegram",
+                message="{{ zone }}",
+            ),
+        )
+    )
+    world = armed(config)
+    decision = world.set(WINDOW, "on")
+
+    notify = next(a for a in decision.actions if a.kind == "notify")
+    assert "directory" not in notify.params

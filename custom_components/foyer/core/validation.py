@@ -35,6 +35,7 @@ from .models import (
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
     MQTT_TOPIC_FORBIDDEN,
+    NOTIFY_ATTACHMENTS,
     SILENCEABLE,
     ActionKind,
     AreaState,
@@ -547,6 +548,12 @@ def _params_problems(action: ProfileAction, add) -> list[Problem]:
         camera = params.get("camera_entity_id")
         if camera is not None and not str(camera).startswith("camera."):
             add("entity_domain", "camera_entity_id")
+        attachment = params.get("attachment")
+        if attachment is not None and str(attachment) not in NOTIFY_ATTACHMENTS:
+            # Each transport reads its own key and discards the rest without a
+            # word, so a value nobody implements is a picture that never
+            # arrives and never explains itself.
+            add("unknown_attachment", "attachment")
     elif kind is ActionKind.DELAY:
         if not _in_range(_int_or_none(params.get("seconds")), 1, MAX_ACTION_DELAY):
             add("delay_out_of_range", "seconds")

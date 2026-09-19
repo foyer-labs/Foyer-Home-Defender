@@ -62,6 +62,11 @@ const MOMENT_GROUPS: Record<string, string[]> = {
   ],
 };
 
+// How a notification carries the camera picture. The transport is named
+// because there is no shared key: the Companion app reads `image`, Telegram
+// reads `photo`, and neither complains about the other's.
+const ATTACHMENTS = ["companion", "telegram"];
+
 const MULTI_ENTITY: ActionKind[] = ["siren", "light", "switch"];
 const SINGLE_ENTITY: ActionKind[] = ["camera", "scene", "tts"];
 
@@ -71,6 +76,9 @@ function blankAction(kind: ActionKind): ActionConfig {
   if (kind === "camera") params.mode = "snapshot";
   if (kind === "delay") params.seconds = 30;
   if (kind === "notify" || kind === "tts") params.message = "{{ zone }}";
+  // Stated, not assumed: each transport reads its own key for an attached
+  // picture and ignores the others in silence.
+  if (kind === "notify") params.attachment = "companion";
   return {
     kind,
     moments: [],
@@ -564,7 +572,25 @@ class FoyerPageProfiles extends LitElement {
         parts.push(
           this._picker(s, action, index, "camera_entity_id", ["camera"], false),
         );
-        parts.push(html`<span class="hint">${t(s, "profiles.attach_hint")}</span>`);
+        // Only once there is a picture to attach: an empty choice above an
+        // empty camera field is two questions where the user asked none.
+        if (action.params.camera_entity_id) {
+          parts.push(
+            this._select(s, action, index, "attachment", ATTACHMENTS, (v) =>
+              t(s, `attachment.${v}`),
+            ),
+          );
+          parts.push(
+            html`<span class="hint"
+              >${t(
+                s,
+                action.params.attachment === "telegram"
+                  ? "profiles.attach_hint_telegram"
+                  : "profiles.attach_hint",
+              )}</span
+            >`,
+          );
+        }
         break;
       case "persistent_notification":
         parts.push(this._text(s, action, index, "title"));

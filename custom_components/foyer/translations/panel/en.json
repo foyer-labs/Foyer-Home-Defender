@@ -190,7 +190,8 @@
     "topics_identical": "The command and state topics must differ, or Foyer would answer its own messages.",
     "qos_out_of_range": "{field}: 0, 1 or 2.",
     "device_not_registered": "That device is not registered here.",
-    "user_holds_a_tag": "This person owns a tag or a remote. Change the device first."
+    "user_holds_a_tag": "This person owns a tag or a remote. Change the device first.",
+    "unknown_attachment": "This attachment is not one Foyer knows how to send."
   },
   "field": {
     "name": "Name",
@@ -295,7 +296,8 @@
     "state_topic": "State topic",
     "detail": "What the state message says",
     "retain": "Retained",
-    "qos": "Quality of service"
+    "qos": "Quality of service",
+    "attachment": "How to attach it"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -1102,6 +1104,7 @@
     "escalation_later": "Escalation across contacts arrives in Phase 4.",
     "future_moment": "Raised from a later phase on.",
     "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written.",
+    "attach_hint_telegram": "Telegram fetches the picture from outside the house, so a still is written to the camera folder and sent with the message. That folder must be in allowlist_external_dirs.",
     "pick_or_type": "Pick one, or type it: an integration that is not loaded right now is not in the list.",
     "notify_hint": "A notify service (the Companion app, Telegram) or a notify entity. Both work.",
     "filter": "Search…",
@@ -1425,5 +1428,9 @@
     "last_result_hint": "last_result is what lets a keypad tell a wrong code from arming blocked by an open window, instead of failing silently.",
     "topic_command_example": "foyer/<install id>/command",
     "topic_state_example": "foyer/<install id>/state"
+  },
+  "attachment": {
+    "companion": "Companion app — live picture, no file",
+    "telegram": "Telegram — a photo file"
   }
 }

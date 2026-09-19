@@ -690,9 +690,21 @@ Four rules the catalogue depends on:
   cutoff stops what it started.
 - A `camera` writes its file under a **configurable folder, `media/foyer` by
   default, and never under `www`**, which Home Assistant serves without
-  authentication. A notification that wants the picture attaches
-  `/api/camera_proxy/<entity>`, which is authenticated and needs no file at all
-  (decision 67).
+  authentication. That folder must be in `allowlist_external_dirs`: Home
+  Assistant refuses to write outside it, and so does every transport that
+  sends a file.
+- **A notification names the transport it is attaching a picture for**
+  (decision 90). There is no shared key: the Companion app reads `image` and
+  is happy with a link to `/api/camera_proxy/<entity>`, because it is signed
+  in and fetches the live picture itself, and nothing is written to disk.
+  Telegram reads `photo` and needs a **file**, because its own server does the
+  fetching, from outside the house and with no session — a relative proxy path
+  is unreachable to it by construction. A transport discards a key it does not
+  know without a word, so guessing is indistinguishable from working until the
+  night it matters. For the file transports Foyer takes the snapshot at the
+  moment of the notification, bounded, and sends the message without the
+  picture if the camera does not answer: losing the attachment is a
+  disappointment, losing the notification is not something a camera decides.
 - A `silent` zone (§4.2) runs its response without the action kinds a **global
   list** names — `siren`, `tts` and the chime by default (decision 66). Silence
   belongs to the zone: another zone contributing to the same incident still
@@ -1952,3 +1964,4 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 87 | `last_result` is four words for ever, and `last_reason` carries the precise why | An adapter written today must never meet a word it does not know: a keypad that goes quiet when something new happens is worse than one that says "blocked" — and the detail is still there for whoever wants it |
 | 88 | A `user_id` nothing established marks its log row `attributed: claimed` | Arming needs no code, so a caller could otherwise write a name the log had no reason to believe; a wrong answer to "who disarmed at 03:14?" is worse than no answer, and the capability is worth keeping |
 | 89 | P-1: outward, every channel starts at the least that works | The watchdog and the MQTT message reached that conclusion separately, and §9.2 reached the opposite one first; a principle written once is what stops the next channel rediscovering it by accident |
+| 90 | A notification with a camera names the transport the attachment is for, rather than Foyer guessing from the service | The service name is not the transport: a Telegram bot may be called anything, and the guess fails silently because every transport ignores the keys it does not know. The user picked the app; asking which one is one field, and the alternative is a picture that never arrives and never says why |

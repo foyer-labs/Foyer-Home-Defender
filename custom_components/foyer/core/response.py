@@ -273,6 +273,11 @@ def _params(
         params["duration"] = cutoff if not duration else min(int(duration), cutoff)
     if action.kind is ActionKind.CAMERA:
         params.setdefault("directory", ctx.config.settings.camera_dir)
+    if action.kind is ActionKind.NOTIFY and params.get("camera_entity_id"):
+        # A notification that has to write the picture to a file writes it
+        # where every other camera file goes, and the choice is made here so
+        # the executor is left with nothing to decide (INV-1).
+        params.setdefault("directory", ctx.config.settings.camera_dir)
     return params
 
 

@@ -12,6 +12,7 @@ turns those reports into the ``action`` log category.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 import logging
@@ -22,15 +23,25 @@ from homeassistant.components import persistent_notification
 from homeassistant.components.siren import SirenEntityFeature
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util, slugify
 
 from .. import i18n
-from ..core.models import ActionIntent, ActionKind, Decision
+from ..core.models import (
+    ATTACH_TELEGRAM,
+    DEFAULT_CAMERA_DIR,
+    ActionIntent,
+    ActionKind,
+    Decision,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 # How long a siren sounds as a chime: a blip, not an alarm.
 CHIME_SIREN_SECONDS = 1
+
+# How long a snapshot may take before the notification leaves without it.
+SNAPSHOT_TIMEOUT = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,10 +139,36 @@ class Executor:
             data["title"] = title
         extra = dict(intent.params.get("data") or {})
         if camera := intent.params.get("camera_entity_id"):
-            # The live picture, through Home Assistant's authenticated proxy:
-            # no file on disk, and nothing published to anyone who guesses a
-            # URL (§6.2, part 3 decision 7).
-            extra.setdefault("image", f"/api/camera_proxy/{camera}")
+            if intent.params.get("attachment") == ATTACH_TELEGRAM:
+                # Telegram's server fetches the picture itself, from outside
+                # the house and with no session, so the proxy path below is
+                # unreachable to it. The snapshot is taken here, now, because
+                # a picture of the alarm is worth only the moment it shows.
+                try:
+                    path = await self._async_snapshot(
+                        camera,
+                        str(intent.params.get("directory") or DEFAULT_CAMERA_DIR),
+                    )
+                except (TimeoutError, HomeAssistantError, ValueError, OSError):
+                    # The message goes without the picture. Losing the
+                    # attachment is a disappointment; losing the notification
+                    # that the house was broken into is not something a
+                    # camera gets to decide.
+                    _LOGGER.warning(
+                        "Foyer could not snapshot %s for the notification; "
+                        "sending the message without it",
+                        camera,
+                        exc_info=True,
+                    )
+                else:
+                    extra.setdefault(
+                        "photo", [{"file": path, "caption": data.get("message", "")}]
+                    )
+            else:
+                # The live picture, through Home Assistant's authenticated
+                # proxy: no file on disk, and nothing published to anyone who
+                # guesses a URL (§6.2, part 3 decision 7).
+                extra.setdefault("image", f"/api/camera_proxy/{camera}")
         if extra:
             data["data"] = extra
         await self._async_notify_call(service, data)
@@ -231,20 +268,58 @@ class Executor:
         authenticated and needs no file at all.
         """
         entity_id = str(intent.params.get("entity_id") or "")
-        directory = str(intent.params.get("directory") or "media/foyer")
+        directory = str(intent.params.get("directory") or DEFAULT_CAMERA_DIR)
         record = intent.params.get("mode") == "record"
-        stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
-        name = f"{slugify(entity_id)}-{stamp}.{'mp4' if record else 'jpg'}"
-        path = self.hass.config.path(directory, name)
-        await self.hass.async_add_executor_job(os.makedirs, os.path.dirname(path), True)
-        if not self.hass.config.is_allowed_path(path):
-            raise ValueError(
-                f"{directory} is not an allowed path; add it to allowlist_external_dirs"
-            )
+        path = await self._async_camera_path(
+            entity_id, directory, "mp4" if record else "jpg"
+        )
         data: dict[str, Any] = {ATTR_ENTITY_ID: entity_id, "filename": path}
         if record and (duration := intent.params.get("duration")):
             data["duration"] = int(duration)
         await self._call("camera", "record" if record else "snapshot", data)
+
+    async def _async_camera_path(
+        self, entity_id: str, directory: str, suffix: str
+    ) -> str:
+        """Where a camera file goes, with the folder made and checked.
+
+        The check is not a formality: ``camera.snapshot`` and telegram_bot
+        both refuse a path outside ``allowlist_external_dirs``, and they say
+        so at the moment of the alarm. Failing here names the setting.
+        """
+        stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
+        name = f"{slugify(entity_id)}-{stamp}.{suffix}"
+        path = self.hass.config.path(directory, name)
+
+        def _prepare() -> bool:
+            # Both of these touch the filesystem, and `is_allowed_path` needs
+            # the parent to exist to resolve it — so they belong together, off
+            # the event loop.
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            return self.hass.config.is_allowed_path(path)
+
+        if not await self.hass.async_add_executor_job(_prepare):
+            raise ValueError(
+                f"{directory} is not an allowed path; add it to allowlist_external_dirs"
+            )
+        return path
+
+    async def _async_snapshot(self, entity_id: str, directory: str) -> str:
+        """One still, written and waited for, so it exists before it is sent."""
+        path = await self._async_camera_path(entity_id, directory, "jpg")
+        # Blocking, and the only blocking call in this file: whoever sends the
+        # picture opens the file straight afterwards, and a still that is not
+        # written yet is an attachment that silently does not arrive. Bounded,
+        # because a camera that has stopped answering must not hold up the
+        # rest of the alarm while it decides.
+        async with asyncio.timeout(SNAPSHOT_TIMEOUT):
+            await self._call(
+                "camera",
+                "snapshot",
+                {ATTR_ENTITY_ID: entity_id, "filename": path},
+                blocking=True,
+            )
+        return path
 
     # --- chime (§6.6) ---------------------------------------------------------
 
@@ -308,8 +383,10 @@ class Executor:
         state = self.hass.states.get(entity_id)
         return int(state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)) if state else 0
 
-    async def _call(self, domain: str, service: str, data: dict[str, Any]) -> None:
-        await self.hass.services.async_call(domain, service, data, blocking=False)
+    async def _call(
+        self, domain: str, service: str, data: dict[str, Any], *, blocking: bool = False
+    ) -> None:
+        await self.hass.services.async_call(domain, service, data, blocking=blocking)
 
 
 def _entities(intent: ActionIntent) -> list[str]:

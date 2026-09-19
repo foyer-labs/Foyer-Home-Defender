@@ -190,7 +190,8 @@
     "topics_identical": "Il topic dei comandi e quello dello stato devono essere diversi, altrimenti Foyer risponderebbe ai propri messaggi.",
     "qos_out_of_range": "{field}: 0, 1 o 2.",
     "device_not_registered": "Quel dispositivo non è registrato qui.",
-    "user_holds_a_tag": "Questa persona possiede un tag o un telecomando. Cambia prima il dispositivo."
+    "user_holds_a_tag": "Questa persona possiede un tag o un telecomando. Cambia prima il dispositivo.",
+    "unknown_attachment": "Questo tipo di allegato non è fra quelli che Foyer sa spedire."
   },
   "field": {
     "name": "Nome",
@@ -295,7 +296,8 @@
     "state_topic": "Topic dello stato",
     "detail": "Cosa dice il messaggio di stato",
     "retain": "Ritenuto",
-    "qos": "Qualità del servizio"
+    "qos": "Qualità del servizio",
+    "attachment": "Come allegarla"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -1102,6 +1104,7 @@
     "escalation_later": "L'escalation fra contatti arriva nella Fase 4.",
     "future_moment": "Prodotto da una fase successiva.",
     "attach_hint": "L'immagine dal vivo accompagna la notifica, attraverso il proxy autenticato di Home Assistant. Nessun file viene scritto.",
+    "attach_hint_telegram": "Telegram scarica l'immagine da fuori casa, quindi uno scatto viene salvato nella cartella telecamere e spedito con il messaggio. Quella cartella deve essere in allowlist_external_dirs.",
     "pick_or_type": "Scegline uno, oppure scrivilo: un'integrazione non caricata adesso non compare nell'elenco.",
     "notify_hint": "Un servizio notify (app Companion, Telegram) o un'entità notify. Vanno bene entrambi.",
     "filter": "Cerca…",
@@ -1425,5 +1428,9 @@
     "last_result_hint": "last_result è ciò che permette a un tastierino di distinguere un codice sbagliato da un inserimento bloccato da una finestra aperta, invece di fallire in silenzio.",
     "topic_command_example": "foyer/<id impianto>/command",
     "topic_state_example": "foyer/<id impianto>/state"
+  },
+  "attachment": {
+    "companion": "App Companion — immagine dal vivo, nessun file",
+    "telegram": "Telegram — foto come file"
   }
 }

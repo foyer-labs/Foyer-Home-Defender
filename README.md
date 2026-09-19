@@ -94,6 +94,13 @@ project has not had yet.
 - **Response profiles**: ten actions — notification, siren, light, camera,
   scene, switch, spoken message, call any Home Assistant service, wait — each
   with up to two conditions, inherited area, then scenario, then default.
+- **A picture with the alarm**, and you say which app it is for. The Companion
+  app gets a link to the live camera through Home Assistant's authenticated
+  proxy, with no file written; Telegram gets a still, because its server does
+  the fetching from outside your house and cannot follow that link. Foyer asks
+  which one rather than guessing from the service name, because a transport
+  drops a key it does not recognise in silence — and "I attached a camera and
+  nothing arrived" is how you find out, months later.
 - **Chime** when a zone opens while its area is not watching it, to a speaker,
   a siren or a phone, with quiet hours per target.
 - **State that survives a restart**, including a delay half-run and a siren
