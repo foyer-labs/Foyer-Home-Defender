@@ -765,6 +765,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 			_feedback: { state: !0 },
 			_code: { state: !0 },
 			_padOpen: { state: !0 },
+			_pending: { state: !0 },
 			_tick: { state: !0 }
 		};
 	}
@@ -827,7 +828,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 				...e,
 				...t ? { code: t } : {}
 			});
-			n.success || (ye.has(n.reason ?? "") && (this._padOpen = !0), this._feedback = {
+			this._pending = void 0, n.success || (ye.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
 				text: Z(this._strings, `reason.${n.reason ?? "unknown"}`, { zones: n.blocking_zones.map((e) => e.name).join(", ") }),
 				retry: e.type === "foyer/arm" && !e.force && ve.has(n.reason ?? "") ? {
 					...e,
@@ -1113,6 +1114,10 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
 		}) : i}
     </div>`;
 	}
+	_pendingLabel(e) {
+		let t = this._pending;
+		return t ? t.type === "foyer/disarm" ? Z(e, "card.disarm") : t.type === "foyer/bypass" ? Z(e, "zones.bypass") : t.type === "foyer/arm" ? t.force ? Z(e, "overview.force_arm") : Z(e, "card.arm") : Z(e, "card.code_confirm") : Z(e, "card.code_confirm");
+	}
 	_renderPad(e) {
 		return L`
       <div class="pad">
@@ -1149,6 +1154,13 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
           <button class="key" ?disabled=${this._busy} @click=${() => this._press("0")}>
             0
           </button>
+          ${this._pending ? L`<button
+                class="key wide confirm"
+                ?disabled=${this._busy || !this._code}
+                @click=${() => this._run(this._pending)}
+              >
+                ${this._pendingLabel(e)}
+              </button>` : z}
         </div>
       </div>
     `;
@@ -1203,7 +1215,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
       <button
         class="link pad-toggle"
         @click=${() => {
-			this._padOpen = !1, this._code = "";
+			this._padOpen = !1, this._code = "", this._pending = void 0;
 		}}
       >
         ${Z(e, "card.code_hide")}
@@ -1274,6 +1286,11 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ve
       }
       .key.wide {
         font-size: 14px;
+      }
+      .key.confirm {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        font-weight: 500;
       }
       .pad-toggle {
         align-self: flex-start;

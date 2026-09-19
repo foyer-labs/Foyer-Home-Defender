@@ -504,11 +504,12 @@
     "editor_layout": "Disposizione",
     "layout_full": "Completa: aree, scenari, conto alla rovescia e cosa blocca l'inserimento",
     "layout_compact": "Compatta: stato e un'azione",
-    "editor_hint": "Le disposizioni con tastierino arrivano con codici e utenti, nella fase successiva.",
+    "editor_hint": "Le disposizioni tastierino e pastiglia hanno senso con i codici; il tastierino compare da quando qualcuno ne ha uno.",
     "layout_badge": "Pastiglia — solo lo stato, per una dashboard tua",
     "layout_keypad": "Tastierino",
     "code_hint": "{n} cifre",
     "code_clear": "Cancella",
+    "code_confirm": "Conferma",
     "code_entered": "Codice inserito",
     "code_show": "Inserisci un codice",
     "code_hide": "Nascondi il tastierino"

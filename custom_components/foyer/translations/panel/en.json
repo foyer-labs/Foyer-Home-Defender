@@ -504,11 +504,12 @@
     "editor_layout": "Layout",
     "layout_full": "Full — areas, scenarios, countdown and what blocks arming",
     "layout_compact": "Compact — state and one action",
-    "editor_hint": "The keypad layouts arrive with codes and users, in the next phase.",
+    "editor_hint": "The keypad and badge layouts need a code to be useful; the keypad appears once somebody holds one.",
     "layout_badge": "Badge — state only, for a dashboard of your own",
     "layout_keypad": "Keypad",
     "code_hint": "{n} digits",
     "code_clear": "Clear",
+    "code_confirm": "Confirm",
     "code_entered": "Code entered",
     "code_show": "Enter a code",
     "code_hide": "Hide the keypad"

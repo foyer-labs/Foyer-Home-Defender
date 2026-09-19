@@ -61,6 +61,7 @@ class FoyerCard extends LitElement {
     _feedback: { state: true },
     _code: { state: true },
     _padOpen: { state: true },
+    _pending: { state: true },
     _tick: { state: true },
   };
 
@@ -74,6 +75,10 @@ class FoyerCard extends LitElement {
   // never stored anywhere, and cleared the moment the backend answers.
   private _code = "";
   private _padOpen = false;
+  // The command the backend refused for want of a code. The pad's confirm key
+  // repeats exactly this one, so typing a code has something to act on: a pad
+  // that only collects digits is a pad that does nothing.
+  private _pending?: Record<string, unknown>;
   private _tick = 0;
   private _offset = 0;
   private _language?: string;
@@ -177,10 +182,15 @@ class FoyerCard extends LitElement {
         ...command,
         ...(typed ? { code: typed } : {}),
       });
+      this._pending = undefined;
       if (!result.success) {
-        // A code was wanted, or the one typed was wrong: open the pad and
-        // leave it open. The card never decides that — the backend did.
-        if (WANTS_CODE.has(result.reason ?? "")) this._padOpen = true;
+        // A code was wanted, or the one typed was wrong: open the pad, leave
+        // it open, and keep the command so the pad's confirm key can repeat
+        // it. The card never decides that a code is needed — the backend did.
+        if (WANTS_CODE.has(result.reason ?? "")) {
+          this._padOpen = true;
+          this._pending = command;
+        }
         this._feedback = {
           text: t(this._strings, `reason.${result.reason ?? "unknown"}`, {
             zones: result.blocking_zones.map((z) => z.name).join(", "),
@@ -585,8 +595,23 @@ class FoyerCard extends LitElement {
 
   // --- the keypad (§15.3) ---------------------------------------------------------
 
-  /** The pad: a display, ten digits, clear. No action buttons — those belong
-   * to the layout around it, because what is armable differs per card. */
+  /** What the pad's confirm key will do, in the words the card already uses
+   * for that action. A key labelled "OK" leaves the one question a keypad
+   * must answer — what am I about to do — to the user's memory. */
+  private _pendingLabel(s: Strings): string {
+    const pending = this._pending;
+    if (!pending) return t(s, "card.code_confirm");
+    if (pending.type === "foyer/disarm") return t(s, "card.disarm");
+    if (pending.type === "foyer/bypass") return t(s, "zones.bypass");
+    if (pending.type === "foyer/arm") {
+      return pending.force ? t(s, "overview.force_arm") : t(s, "card.arm");
+    }
+    return t(s, "card.code_confirm");
+  }
+
+  /** The pad: a display, ten digits, clear, and — once something is waiting
+   * for a code — the key that sends it. The action buttons stay with the
+   * layout around it, because what is armable differs per card. */
   private _renderPad(s: Strings) {
     const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
     return html`
@@ -618,6 +643,15 @@ class FoyerCard extends LitElement {
           <button class="key" ?disabled=${this._busy} @click=${() => this._press("0")}>
             0
           </button>
+          ${this._pending
+            ? html`<button
+                class="key wide confirm"
+                ?disabled=${this._busy || !this._code}
+                @click=${() => this._run(this._pending!)}
+              >
+                ${this._pendingLabel(s)}
+              </button>`
+            : nothing}
         </div>
       </div>
     `;
@@ -697,6 +731,7 @@ class FoyerCard extends LitElement {
         @click=${() => {
           this._padOpen = false;
           this._code = "";
+          this._pending = undefined;
         }}
       >
         ${t(s, "card.code_hide")}
@@ -771,6 +806,11 @@ class FoyerCard extends LitElement {
       }
       .key.wide {
         font-size: 14px;
+      }
+      .key.confirm {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        font-weight: 500;
       }
       .pad-toggle {
         align-self: flex-start;
