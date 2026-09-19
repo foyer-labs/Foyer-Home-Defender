@@ -197,7 +197,16 @@
     "unsupported_battery_domain": "A battery must be a sensor reporting a percentage, or a battery binary sensor where “on” means low.",
     "battery_is_zone_entity": "That is the zone’s own entity, not its battery.",
     "battery_out_of_range": "{field}: between 1 and 100 per cent.",
-    "walk_test_out_of_range": "The walk test timeout must be between 1 and 60 minutes. It cannot be switched off."
+    "walk_test_out_of_range": "The walk test timeout must be between 1 and 60 minutes. It cannot be switched off.",
+    "contact_in_use": "An action still notifies this contact. Edit the profile first.",
+    "contact_without_channels": "Give this contact at least one channel: a contact nobody can reach is a step that reaches nobody.",
+    "escalation_kind_invalid": "Only a notification can be an escalation step.",
+    "escalation_moment_invalid": "An escalation step answers an alarm or a technical alarm: those are the two that can be acknowledged.",
+    "escalation_offset_out_of_range": "Put this step between 0 and 3600 seconds from the start.",
+    "notify_target_ambiguous": "Choose contacts or a service, not both.",
+    "notify_target_required": "Say who this notification reaches: contacts, or a notification service.",
+    "unknown_channel": "That contact no longer has this channel.",
+    "unknown_contact": "This contact no longer exists."
   },
   "field": {
     "name": "Name",
@@ -306,7 +315,11 @@
     "attachment": "How to attach it",
     "battery_entity_id": "Battery entity",
     "low_battery_threshold": "Low battery below",
-    "walk_test_timeout": "Walk test timeout"
+    "walk_test_timeout": "Walk test timeout",
+    "channels": "Channels",
+    "contacts": "Contacts",
+    "escalation_offset": "Step time",
+    "linked_user_id": "Linked user"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -1008,6 +1021,10 @@
     "action_tested": {
       "title": "Foyer: action test",
       "message": "This is a test. Nothing has happened in the house."
+    },
+    "escalation_skipped": {
+      "title": "Foyer: notifications were not sent",
+      "message": "Home Assistant was down when these escalation steps fell due, so they were not sent."
     }
   },
   "chime_mode": {

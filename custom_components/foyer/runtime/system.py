@@ -60,7 +60,12 @@ from ..core.models import (
     User,
     ZoneStateChanged,
 )
-from ..core.response import PlanContext, notify_test_intent, test_intent
+from ..core.response import (
+    PlanContext,
+    contact_test_intent,
+    notify_test_intent,
+    test_intent,
+)
 from ..core.simulate import (
     SimulationRequest,
     as_dict as simulation_dict,
@@ -457,6 +462,8 @@ class FoyerSystem:
         profile_id: str | None = None,
         action_id: str | None = None,
         service: str | None = None,
+        contact_id: str | None = None,
+        channel_id: str | None = None,
         message: str = "",
         actor: Actor | None = None,
     ) -> dict[str, Any]:
@@ -473,18 +480,27 @@ class FoyerSystem:
         stored, and the row it leaves is filed as a test rather than as the
         alarm it imitates.
         """
-        if service:
+        if contact_id:
+            # The other half of §11.4: the button beside a contact's channel.
+            # It is the same call the real thing makes, through the same
+            # path, with the same permission and the same code — so what is
+            # proved is the channel and not a simplified version of it.
+            contact = self.config.contact(contact_id)
+            channel = contact.channel(channel_id) if contact else None
+            if contact is None or channel is None:
+                return {"success": False, "reason": "unknown_contact"}
+            intent = contact_test_intent(
+                contact, channel, message or await self._async_test_message()
+            )
+        elif service:
             # A test of a channel with nothing to say is a message of one
             # empty line, which several transports refuse outright — and a
             # test that fails for that reason teaches nothing about the
             # channel. The words are the runtime's to choose, in the
             # language Foyer speaks (§15.1), because ``core`` writes none.
-            if not message:
-                strings = await self.hass.async_add_executor_job(
-                    i18n.load_strings, self.language
-                )
-                message = i18n.translate(strings, "notification.action_tested.message")
-            intent = notify_test_intent(service, message)
+            intent = notify_test_intent(
+                service, message or await self._async_test_message()
+            )
         else:
             profile = self.config.profile(profile_id)
             if profile is None:
@@ -529,6 +545,14 @@ class FoyerSystem:
             "kind": intent.kind,
             "error": result.error,
         }
+
+    async def _async_test_message(self) -> str:
+        """What a test notification says, in the language Foyer speaks
+        (§15.1). The words are the runtime's: ``core`` writes none."""
+        strings = await self.hass.async_add_executor_job(
+            i18n.load_strings, self.language
+        )
+        return i18n.translate(strings, "notification.action_tested.message")
 
     def walk_test_status(self) -> dict[str, Any] | None:
         """What page 9 and the banner need while a walk test runs (§11.3).

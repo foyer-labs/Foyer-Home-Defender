@@ -197,7 +197,16 @@
     "unsupported_battery_domain": "La batteria dev’essere un sensore che riporta una percentuale, o un sensore binario di tipo batteria in cui “on” vuol dire scarica.",
     "battery_is_zone_entity": "Quella è l’entità della zona stessa, non la sua batteria.",
     "battery_out_of_range": "{field}: fra 1 e 100 per cento.",
-    "walk_test_out_of_range": "Il timeout del walk test deve stare fra 1 e 60 minuti. Non si può disattivare."
+    "walk_test_out_of_range": "Il timeout del walk test deve stare fra 1 e 60 minuti. Non si può disattivare.",
+    "contact_in_use": "Un'azione avvisa ancora questo contatto. Modifica prima il profilo.",
+    "contact_without_channels": "Dai a questo contatto almeno un canale: un contatto irraggiungibile è un passo che non raggiunge nessuno.",
+    "escalation_kind_invalid": "Solo una notifica può essere un passo di escalation.",
+    "escalation_moment_invalid": "Un passo di escalation risponde a un allarme o a un allarme tecnico: sono i due di cui si può prendere atto.",
+    "escalation_offset_out_of_range": "Metti questo passo fra 0 e 3600 secondi dall'inizio.",
+    "notify_target_ambiguous": "Scegli i contatti oppure un servizio, non entrambi.",
+    "notify_target_required": "Indica chi raggiunge questa notifica: dei contatti o un servizio di notifica.",
+    "unknown_channel": "Quel contatto non ha più questo canale.",
+    "unknown_contact": "Questo contatto non esiste più."
   },
   "field": {
     "name": "Nome",
@@ -306,7 +315,11 @@
     "attachment": "Come allegarla",
     "battery_entity_id": "Entità della batteria",
     "low_battery_threshold": "Batteria scarica sotto",
-    "walk_test_timeout": "Timeout del walk test"
+    "walk_test_timeout": "Timeout del walk test",
+    "channels": "Canali",
+    "contacts": "Contatti",
+    "escalation_offset": "Momento del passo",
+    "linked_user_id": "Utente collegato"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -1008,6 +1021,10 @@
     "action_tested": {
       "title": "Foyer: prova azione",
       "message": "Questa è una prova. In casa non è successo nulla."
+    },
+    "escalation_skipped": {
+      "title": "Foyer: notifiche non inviate",
+      "message": "Home Assistant era spento quando questi passi di escalation sono scaduti, quindi non sono partiti."
     }
   },
   "chime_mode": {

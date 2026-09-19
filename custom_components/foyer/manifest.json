@@ -10,6 +10,7 @@
     "frontend",
     "http",
     "panel_custom",
+    "webhook",
     "websocket_api"
   ],
   "documentation": "https://github.com/foyer-labs/Foyer-Home-Defender",

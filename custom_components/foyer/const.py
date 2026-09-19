@@ -38,3 +38,22 @@ CHANNEL_AUTOMATION: Final = "automation"
 CHANNEL_API: Final = "api"
 CHANNEL_MQTT: Final = "mqtt"
 CHANNEL_KEYPAD: Final = "keypad"
+
+
+# The action a button in an actionable notification sends back when somebody
+# acknowledges the alarm from their phone (§7.2). One name, so the blueprint
+# in docs/notification-channels.md and the listener agree on it.
+ACK_ACTION = "FOYER_ACKNOWLEDGE"
+
+# The four paths an acknowledgement arrives by (§7.2). Every one records who
+# and through which channel; the word itself grants nothing.
+ACK_VIA_COMMAND = "acknowledge"
+ACK_VIA_DISARM = "disarm"
+ACK_VIA_PUSH = "push"
+ACK_VIA_DTMF = "dtmf"
+ACK_PATHS: Final = (ACK_VIA_COMMAND, ACK_VIA_DISARM, ACK_VIA_PUSH, ACK_VIA_DTMF)
+
+# The event Home Assistant's own Companion app fires when a notification
+# action is pressed. Foyer listens for it and calls the same acknowledgement
+# everything else calls; it invents no fourth authorisation.
+MOBILE_APP_ACTION_EVENT = "mobile_app_notification_action"

@@ -47,7 +47,7 @@ from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
 from .. import i18n
-from ..const import CHANNEL_API, DOMAIN
+from ..const import ACK_PATHS, CHANNEL_API, DOMAIN
 from ..core.journal import security_row
 from ..core.models import (
     ARMED_HA_STATES,
@@ -120,6 +120,12 @@ UNBYPASS_SCHEMA = vol.Schema({vol.Required("zone_id"): cv.string, **_IDENTITY})
 ACKNOWLEDGE_SCHEMA = vol.Schema(
     {
         vol.Optional("target", default="incident"): vol.In(["incident", "technical"]),
+        # Which of the four paths of §7.2 this is, and who the notification
+        # had gone to. Both are recorded, neither grants anything: a caller
+        # that says "push" gets the authorisation of the channel it is
+        # actually on, exactly as a claimed ``user_id`` does (decision 88).
+        vol.Optional("via", default="acknowledge"): vol.In(ACK_PATHS),
+        vol.Optional("contact_id"): vol.Any(cv.string, None),
         **_IDENTITY,
     }
 )
@@ -159,6 +165,9 @@ TEST_ACTION_SCHEMA = vol.Schema(
     {
         vol.Exclusive("action_id", "target"): cv.string,
         vol.Exclusive("service", "target"): cv.string,
+        # The other half of §11.4: the button beside a contact's channel.
+        vol.Exclusive("contact_id", "target"): cv.string,
+        vol.Optional("channel_id"): cv.string,
         vol.Optional("profile_id"): cv.string,
         vol.Optional("message", default=""): cv.string,
         **_IDENTITY,
@@ -317,10 +326,13 @@ def async_register(hass: HomeAssistant) -> None:
         system = _system(hass)
         requester = await _requester(hass, system, call)
         actor = requester.actor or Actor()
-        event: Any = (
-            AcknowledgeIncident(actor)
+        kind = (
+            AcknowledgeIncident
             if call.data["target"] == "incident"
-            else AcknowledgeTechnical(actor)
+            else AcknowledgeTechnical
+        )
+        event: Any = kind(
+            actor, via=call.data["via"], contact_id=call.data.get("contact_id")
         )
         return await _answer(hass, system, call, requester, event)
 
@@ -358,6 +370,8 @@ def async_register(hass: HomeAssistant) -> None:
             profile_id=call.data.get("profile_id"),
             action_id=call.data.get("action_id"),
             service=call.data.get("service"),
+            contact_id=call.data.get("contact_id"),
+            channel_id=call.data.get("channel_id"),
             message=call.data["message"],
             actor=requester.actor,
         )

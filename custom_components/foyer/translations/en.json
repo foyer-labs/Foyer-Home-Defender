@@ -321,6 +321,14 @@
         "device_id": {
           "name": "Device",
           "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        },
+        "via": {
+          "name": "Path",
+          "description": "Which of the four paths this acknowledgement came by. It is recorded, never trusted: the authorisation is the channel's, not the word's."
+        },
+        "contact_id": {
+          "name": "Contact",
+          "description": "Who the notification had gone to, when it came back from one. The log says the contact and the channel even where no person is named."
         }
       }
     },
@@ -389,6 +397,14 @@
         "device_id": {
           "name": "Device",
           "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        },
+        "contact_id": {
+          "name": "Contact",
+          "description": "Test one channel of one contact: the same call the real notification makes, with the same target and the same extra data."
+        },
+        "channel_id": {
+          "name": "Channel",
+          "description": "Which channel of that contact. Left out, the highest-priority one is used."
         }
       }
     },

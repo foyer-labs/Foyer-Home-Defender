@@ -1762,9 +1762,17 @@ class Startup:
 
 @dataclass(frozen=True, slots=True)
 class AcknowledgeIncident:
-    """Acknowledge the open intrusion incident (SPEC §5.6)."""
+    """Acknowledge the open intrusion incident (SPEC §5.6).
+
+    ``via`` is which of the four paths of §7.2 this came from — an explicit
+    command, a disarm, a button in an actionable push, a DTMF keypress — and
+    ``contact_id`` is who the notification had gone to, which is the whole of
+    the answer when that contact names no Foyer user (part 1 decision 7).
+    """
 
     actor: Actor = field(default_factory=Actor)
+    via: str = "acknowledge"
+    contact_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1776,6 +1784,8 @@ class AcknowledgeTechnical:
     """
 
     actor: Actor = field(default_factory=Actor)
+    via: str = "acknowledge"
+    contact_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

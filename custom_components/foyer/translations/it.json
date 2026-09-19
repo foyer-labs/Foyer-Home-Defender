@@ -321,6 +321,14 @@
         "device_id": {
           "name": "Dispositivo",
           "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        },
+        "via": {
+          "name": "Percorso",
+          "description": "Da quale dei quattro percorsi arriva la presa d'atto. Viene registrato, mai creduto: l'autorizzazione è quella del canale, non della parola."
+        },
+        "contact_id": {
+          "name": "Contatto",
+          "description": "A chi era andata la notifica, quando la risposta arriva da una. Il registro indica contatto e canale anche dove non c'è una persona."
         }
       }
     },
@@ -389,6 +397,14 @@
         "device_id": {
           "name": "Dispositivo",
           "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi. Un nome che questa installazione non ha viene rifiutato."
+        },
+        "contact_id": {
+          "name": "Contatto",
+          "description": "Prova un canale di un contatto: la stessa chiamata che fa la notifica vera, con lo stesso destinatario e gli stessi dati aggiuntivi."
+        },
+        "channel_id": {
+          "name": "Canale",
+          "description": "Quale canale di quel contatto. Se non indicato si usa quello di priorità più alta."
         }
       }
     },

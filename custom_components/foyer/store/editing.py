@@ -357,6 +357,14 @@ def update_settings(
                 walk_test_timeout=int(
                     settings.get("walk_test_timeout", current.walk_test_timeout)
                 ),
+                # The DTMF webhook's id, when this installation has switched
+                # it on (§7.2). The id is never the caller's to choose: the
+                # API generates it, because the whole of what protects an
+                # unauthenticated URL is that nobody can guess it.
+                ack_webhook_id=settings.get(
+                    "ack_webhook_id", current.ack_webhook_id
+                )
+                or None,
                 mqtt=_mqtt_from(settings.get("mqtt"), current.mqtt),
                 # Page 11 does not own these — page 7 does, through
                 # update_security — so a settings save must carry them through

@@ -13,7 +13,7 @@ turns those reports into the ``action`` log category.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import logging
 import os
@@ -27,12 +27,14 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util, slugify
 
 from .. import i18n
+from ..const import ACK_ACTION
 from ..core.models import (
     ATTACH_TELEGRAM,
     DEFAULT_CAMERA_DIR,
     ActionIntent,
     ActionKind,
     Decision,
+    Moment,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,6 +44,12 @@ CHIME_SIREN_SECONDS = 1
 
 # How long a snapshot may take before the notification leaves without it.
 SNAPSHOT_TIMEOUT = 10
+
+# How long to wait before the one retry a failed send gets (part 1 decision
+# 4). Short, because an escalation step is worth seconds and not minutes: it
+# exists for the transport that is not ready a second after a restart, not
+# for the channel that has been dead for a week.
+NOTIFY_RETRY_SECONDS = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,8 +139,14 @@ class Executor:
         )
 
     async def _async_notify(self, intent: ActionIntent) -> None:
-        """A `notify.*` service or notify entity, directly: no contact book and
-        no escalation before Phase 4 (Phase 1 prompt)."""
+        """A notification, to a `notify.*` service or to the address book.
+
+        Both forms exist and both keep existing (part 1 decision 8): the
+        service an action names directly, and the contacts §7.1 gives an
+        order of priority to. Which contacts, through which channel and with
+        what that channel needs was all decided in ``core`` and arrives in
+        ``recipients`` — this layer looks nothing up (INV-1).
+        """
         service = str(intent.params.get("service") or "")
         data: dict[str, Any] = {"message": intent.params.get("message", "")}
         if title := intent.params.get("title"):
@@ -171,7 +185,83 @@ class Executor:
                 extra.setdefault("image", f"/api/camera_proxy/{camera}")
         if extra:
             data["data"] = extra
-        await self._async_notify_call(service, data)
+        recipients = intent.params.get("recipients")
+        if not recipients:
+            await self._async_notify_call(service, data)
+            return
+        errors: list[str] = []
+        # Which alarm the button would acknowledge. The technical channel is
+        # never the intrusion one (§5.5), so a button on a smoke alarm must
+        # not close an incident.
+        kind = (
+            "technical"
+            if intent.moment is Moment.TECHNICAL_RAISED
+            else "incident"
+        )
+        for recipient in recipients:
+            try:
+                await self._async_reach(recipient, dict(data), kind)
+            except Exception as err:  # one dead channel must not stop the rest
+                _LOGGER.exception(
+                    "Foyer could not reach %s through %s",
+                    recipient.get("contact_name"),
+                    recipient.get("service"),
+                )
+                errors.append(f"{recipient.get('contact_name')}: {err}")
+        if errors:
+            raise HomeAssistantError("; ".join(errors))
+
+    async def _async_reach(
+        self, recipient: Mapping[str, Any], data: dict[str, Any], kind: str = "incident"
+    ) -> None:
+        """One contact, through one channel, with one retry (part 1 decision 4).
+
+        The retry is here and not in the engine because it is an I/O
+        failure, not a decision: a transport that is not ready a second
+        after a restart is the case it exists for. Beyond that the
+        escalation carries on at its own times — a channel that is dead
+        stays dead, and the next step is what reaches somebody.
+        """
+        payload = dict(data)
+        extra = {**dict(payload.get("data") or {}), **dict(recipient.get("data") or {})}
+        if recipient.get("ack"):
+            # The button that stops the escalation (§7.2). Only a channel
+            # declared actionable carries it: a transport discards a key it
+            # does not know without a word, and a button nobody can press is
+            # worse than none.
+            strings = await self.hass.async_add_executor_job(
+                i18n.load_strings, self.language
+            )
+            extra.setdefault(
+                "actions",
+                [
+                    {
+                        "action": ACK_ACTION,
+                        "title": i18n.translate(strings, "notification.acknowledge"),
+                        # Who the button was offered to, so the log can say
+                        # which channel answered even when the contact names
+                        # no Foyer user (part 1 decision 7).
+                        "foyer_contact": recipient.get("contact_id", ""),
+                        "foyer_channel": recipient.get("channel_id", ""),
+                        "foyer_kind": kind,
+                    }
+                ],
+            )
+        if extra:
+            payload["data"] = extra
+        if target := recipient.get("target"):
+            payload["target"] = target
+        service = str(recipient.get("service") or "")
+        try:
+            await self._async_notify_call(service, payload)
+        except Exception:
+            _LOGGER.warning(
+                "Foyer: %s did not accept the notification; one retry in %s s",
+                service,
+                NOTIFY_RETRY_SECONDS,
+            )
+            await asyncio.sleep(NOTIFY_RETRY_SECONDS)
+            await self._async_notify_call(service, payload)
 
     async def _async_notify_call(self, service: str, data: dict[str, Any]) -> None:
         if self.hass.states.get(service) is not None:

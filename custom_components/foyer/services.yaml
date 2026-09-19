@@ -178,6 +178,20 @@ acknowledge:
           options:
             - incident
             - technical
+    via:
+      required: false
+      default: acknowledge
+      selector:
+        select:
+          options:
+            - acknowledge
+            - disarm
+            - push
+            - dtmf
+    contact_id:
+      required: false
+      selector:
+        text:
     code:
       required: false
       example: "123456"
@@ -251,6 +265,14 @@ test_action:
     service:
       required: false
       example: notify.mobile_app_luca
+      selector:
+        text:
+    contact_id:
+      required: false
+      selector:
+        text:
+    channel_id:
+      required: false
       selector:
         text:
     message:

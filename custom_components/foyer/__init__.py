@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     from .api import services, websocket
     from .panel import async_register_frontend
-    from .runtime import mqtt
+    from .runtime import acknowledge, mqtt
     from .runtime.system import FoyerSystem
     from .runtime.watcher import async_watch_zones
     from .store.config_store import ConfigStore
@@ -109,6 +109,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # it is the entry's, shortened, because a topic is something a person
     # types into a keypad's configuration.
     entry.async_on_unload(mqtt.async_start(hass, entry, system, entry.entry_id[:8]))
+    # The two acknowledgement paths that arrive from outside (§7.2): the
+    # button in an actionable push, and the DTMF webhook — which exists only
+    # if this installation switched it on, because an unauthenticated URL
+    # that stops an alarm is a decision the household makes knowingly.
+    entry.async_on_unload(acknowledge.async_listen_push(hass, system))
+    entry.async_on_unload(acknowledge.async_register_webhook(hass, system))
     await async_register_frontend(hass)
     return True
 

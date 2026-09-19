@@ -174,9 +174,9 @@ def decide(
     elif isinstance(event, DisarmRequest):
         outcome = run.disarm(event.area_ids)
     elif isinstance(event, AcknowledgeIncident):
-        outcome = run.acknowledge_incident()
+        outcome = run.acknowledge_incident(event)
     elif isinstance(event, AcknowledgeTechnical):
-        outcome = run.acknowledge_technical()
+        outcome = run.acknowledge_technical(event)
     elif isinstance(event, BypassZone):
         outcome = run.bypass_zone(event)
     elif isinstance(event, SetChime):
@@ -1023,7 +1023,7 @@ class _Run:
             zone_id=zone_id,
         )
 
-    def acknowledge_technical(self) -> _Outcome:
+    def acknowledge_technical(self, event: AcknowledgeTechnical) -> _Outcome:
         """One acknowledgement for every technical alarm pending now (part 2
         decision 11). Disarming has no authority here: only this clears it."""
         pending = [z for z, alarm in self.technical.items() if not alarm.acknowledged]
@@ -1039,7 +1039,10 @@ class _Run:
             )
         self.stop_escalation(EscalationKind.TECHNICAL)
         self.occur(
-            Moment.TECHNICAL_ACKNOWLEDGED, zone_ids=tuple(pending), channel=self.channel
+            Moment.TECHNICAL_ACKNOWLEDGED,
+            zone_ids=tuple(pending),
+            channel=self.channel,
+            detail={"via": event.via, "contact_id": event.contact_id or ""},
         )
         for zone_id in pending:
             if zone_id not in self.active:
@@ -1473,15 +1476,25 @@ class _Run:
                 detail={"incident_zones": ",".join(incident.zone_ids)},
             )
 
-    def acknowledge(self, channel: str | None, via: str) -> None:
+    def acknowledge(
+        self, channel: str | None, via: str, contact_id: str | None = None
+    ) -> None:
         incident = self.incident
         assert incident is not None
+        named = self.config.user(self.actor.user_id)
         self.incident = replace(
             incident,
             acknowledged=True,
             acknowledgements=(
                 *incident.acknowledgements,
-                Acknowledgement(at=self.now, channel=channel, via=via),
+                Acknowledgement(
+                    at=self.now,
+                    channel=channel,
+                    via=via,
+                    user_id=self.actor.user_id,
+                    user_name=named.name if named else None,
+                    contact_id=contact_id,
+                ),
             ),
         )
         # The policy stops immediately (§7.2). This is the one path: a
@@ -1492,16 +1505,21 @@ class _Run:
             Moment.INCIDENT_ACKNOWLEDGED,
             zone_ids=incident.zone_ids,
             channel=channel,
-            detail={"via": via},
+            detail={"via": via, "contact_id": contact_id or ""},
         )
 
-    def acknowledge_incident(self) -> _Outcome:
-        """One acknowledgement acknowledges the whole incident (§5.6)."""
+    def acknowledge_incident(self, event: AcknowledgeIncident) -> _Outcome:
+        """One acknowledgement acknowledges the whole incident (§5.6).
+
+        Four paths arrive here and none of them invents an authorisation of
+        its own: the button, the push, the keypress and the disarm all go
+        through the same ``authorize`` as everything else (§8.2).
+        """
         if self.incident is None or self.incident.acknowledged:
             return _reject(Reason.NOTHING_TO_ACKNOWLEDGE)
         if (reason := self.authorize(Operation.ACKNOWLEDGE)) is not None:
             return _reject(reason)
-        self.acknowledge(self.channel, "acknowledge")
+        self.acknowledge(self.channel, event.via, event.contact_id)
         return _ACCEPTED
 
     # --- escalation (§7.2) ------------------------------------------------------

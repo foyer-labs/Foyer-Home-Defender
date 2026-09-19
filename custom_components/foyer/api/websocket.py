@@ -11,7 +11,7 @@ from dataclasses import asdict
 from functools import partial
 from typing import Any
 
-from homeassistant.components import websocket_api
+from homeassistant.components import webhook, websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.storage import Store
@@ -19,7 +19,7 @@ from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
 from .. import i18n
-from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
+from ..const import ACK_PATHS, CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
 from ..core import authz
 from ..core.journal import config_row, system_row
 from ..core.models import (
@@ -109,6 +109,7 @@ from ..store.log_store import export_csv, export_json
 from ..store.schema import (
     STORAGE_MINOR_VERSION,
     STORAGE_VERSION,
+    settings_to_dict,
 )
 from .backup import (
     async_write,
@@ -289,6 +290,7 @@ def async_register(hass: HomeAssistant) -> None:
         ws_config_delete,
         ws_settings_save,
         ws_chime_save,
+        ws_ack_webhook,
         ws_security_save,
         ws_user_save,
         ws_propose_zone,
@@ -453,6 +455,8 @@ async def ws_disarm(
         vol.Required("type"): "foyer/acknowledge",
         # Two channels, two acknowledgements (§5.5): the caller says which.
         vol.Required("target"): vol.In(["incident", "technical"]),
+        vol.Optional("via", default="acknowledge"): vol.In(list(ACK_PATHS)),
+        vol.Optional("contact_id"): vol.Any(str, None),
         vol.Optional("code"): vol.Any(str, None),
     }
 )
@@ -471,11 +475,10 @@ async def ws_acknowledge(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     actor = await _actor(hass, system, connection, msg)
-    event: Any = (
-        AcknowledgeIncident(actor)
-        if msg["target"] == "incident"
-        else AcknowledgeTechnical(actor)
+    kind = (
+        AcknowledgeIncident if msg["target"] == "incident" else AcknowledgeTechnical
     )
+    event: Any = kind(actor, via=msg["via"], contact_id=msg.get("contact_id"))
     decision = await system.async_handle(event)
     connection.send_result(msg["id"], _result(system, decision, connection.user))
 
@@ -762,6 +765,57 @@ async def ws_settings_save(
     ) is None:
         return
     result = update_settings(system.config, system.state, msg["settings"])
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="save", kind="settings"
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/ack_webhook",
+        vol.Required("enabled"): bool,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_ack_webhook(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Switch the DTMF acknowledgement webhook on or off (§7.2).
+
+    The id is generated here and never accepted from the caller: an
+    unauthenticated URL is protected by nothing except the fact that nobody
+    can guess it, and a client that chose its own would eventually choose
+    "foyer". Switching it off forgets the id, so switching it on again hands
+    out a new one rather than reviving a URL somebody may still hold.
+
+    An ordinary configuration edit, with the permission and the code §8.2
+    asks for — and the panel says, beside the switch, what the URL can do.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
+        )
+    ) is None:
+        return
+    webhook_id = webhook.async_generate_id() if msg["enabled"] else None
+    # The whole settings block, with this one field replaced: update_settings
+    # takes a complete block, and a partial one would quietly reset a number
+    # nobody touched.
+    result = update_settings(
+        system.config,
+        system.state,
+        {**settings_to_dict(system.config.settings), "ack_webhook_id": webhook_id},
+    )
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="settings"
     )
@@ -1470,11 +1524,14 @@ async def ws_walk_test(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "foyer/test_action",
-        # One configured action of one profile (page 5), or a notification
-        # channel on its own — which is the half of §11.4's "every contact
-        # channel" that exists before the contact book of Phase 4.
+        # One configured action of one profile (page 5), a contact's channel
+        # (page 6) — the other half of §11.4's "a test button next to every
+        # action and every contact channel" — or a bare notification service,
+        # which is what the first-run wizard tests.
         vol.Exclusive("action_id", "target"): str,
         vol.Exclusive("service", "target"): str,
+        vol.Exclusive("contact_id", "target"): str,
+        vol.Optional("channel_id"): str,
         vol.Optional("profile_id"): str,
         vol.Optional("message"): str,
         vol.Optional("code"): vol.Any(str, None),
@@ -1512,6 +1569,8 @@ async def ws_test_action(
         profile_id=msg.get("profile_id"),
         action_id=msg.get("action_id"),
         service=msg.get("service"),
+        contact_id=msg.get("contact_id"),
+        channel_id=msg.get("channel_id"),
         message=msg.get("message", ""),
         actor=actor,
     )
