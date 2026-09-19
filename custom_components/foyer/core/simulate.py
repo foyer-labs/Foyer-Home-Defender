@@ -516,6 +516,12 @@ def _batch(
                     moment=moment,
                     suppressed=suppressed,
                     already_started=started,
+                    # The same answer the engine gave. A run never enters a
+                    # walk test today, because it starts from a fresh state
+                    # — but the trace asks the engine's own question rather
+                    # than a narrower one, or the day a run could, it would
+                    # explain a skip the engine did not make.
+                    inhibited=answer.inhibited,
                 )
                 if why == SKIP_CONDITION:
                     conditions = condition_summary(action, ctx)

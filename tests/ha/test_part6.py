@@ -315,3 +315,31 @@ async def test_a_shorter_duration_is_honoured(hass, loaded, seconds):
     await _walk_test(hass, duration=seconds)
     walk = _system(hass).state.walk_test
     assert (walk.until - walk.started_at) == timedelta(seconds=seconds)
+
+
+async def test_the_switch_is_idempotent(hass, loaded):
+    """An automation calling turn_off on a house that is not in a walk test
+    has not made a mistake worth raising an error over."""
+    await hass.services.async_call(
+        "switch", "turn_off", {"entity_id": "switch.foyer_walk_test"}, blocking=True
+    )
+    assert _system(hass).state.walk_test is None
+
+
+async def test_a_channel_test_with_nothing_to_say_still_says_something(
+    hass, hass_ws_client, loaded
+):
+    """Several transports refuse an empty message outright, and a test that
+    failed for that reason would teach nothing about the channel."""
+    calls = []
+
+    async def record(call):
+        calls.append(call.data)
+
+    hass.services.async_register("notify", "silent_test", record)
+    client = await hass_ws_client(hass)
+    result = await _ws(
+        client, {"type": "foyer/test_action", "service": "notify.silent_test"}
+    )
+    assert result["success"] is True
+    assert calls[0]["message"]

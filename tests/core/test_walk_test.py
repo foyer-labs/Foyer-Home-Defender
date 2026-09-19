@@ -464,3 +464,53 @@ def test_a_person_without_the_permission_is_refused():
     decision = world.walk_test(user_id="luca", channel="ha_ui", code=CodeResult.VALID)
     assert not decision.accepted
     assert decision.reason is Reason.NOT_PERMITTED
+
+
+# --- what ending it must never do --------------------------------------------------
+
+
+def test_ending_a_walk_test_never_silences_an_alarm_it_did_not_start():
+    """A tamper zone fires during the walk test and the area goes to
+    `triggered`, as §11.3 requires. When the auto-exit falls due, the areas
+    the walk test armed are disarmed — and a disarm stops the sirens and
+    acknowledges the incident (§7.2).
+
+    So the safeguard that keeps `always_on` zones live would end up silencing
+    the very alarm it kept live, with nobody having seen it. An area in alarm,
+    or holding its memory, is left exactly as it is.
+    """
+    world = World(answering(make_house(), Moment.TRIGGERED))
+    world.walk_test()
+    world.advance(10)
+    world.set(TAMPER, "on")
+    assert world.area("ground").state is AreaState.TRIGGERED
+    assert world.state.incident is not None
+
+    world.advance(901)  # the siren cutoff, then the auto-exit
+
+    assert world.state.walk_test is None
+    # Back to armed at the cutoff (§5.2), with the memory still set — and
+    # not disarmed by the walk test on its way out.
+    assert world.area("ground").state is AreaState.ARMED
+    assert world.area("ground").memory is True
+    assert not world.state.incident.acknowledged
+    # The areas that stayed quiet are given back as usual.
+    assert world.area("upstairs").state is AreaState.DISARMED
+    assert world.area("garage").state is AreaState.DISARMED
+
+
+def test_ending_it_by_hand_does_not_silence_a_sounding_alarm_either():
+    """The same rule §4.6.1 makes for a scenario switch: an alarm ends with
+    a disarm, by a person who has seen it."""
+    world = World(answering(make_house(), Moment.TRIGGERED))
+    world.walk_test()
+    world.advance(10)
+    world.set(TAMPER, "on")
+
+    decision = world.walk_test(False)
+
+    assert world.state.walk_test is None
+    assert world.area("ground").state is AreaState.TRIGGERED
+    assert not world.state.incident.acknowledged
+    ended = next(o for o in decision.occurrences if o.moment is Moment.WALK_TEST_ENDED)
+    assert ended.detail["left_in_alarm"] == "ground"

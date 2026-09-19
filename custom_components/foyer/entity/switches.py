@@ -108,6 +108,12 @@ class FoyerWalkTestSwitch(FoyerEntity, SwitchEntity):
         }
 
     async def _set(self, enable: bool) -> None:
+        # Already there: a switch is idempotent, and an automation calling
+        # turn_off on a house that is not in a walk test has not made a
+        # mistake worth raising an error over. The engine would refuse it as
+        # `invalid_state`, which is true and unhelpful.
+        if enable == self.is_on:
+            return
         actor = await actor_of(self.hass, self._system, self._context)
         decision = await self._system.async_handle(WalkTestRequest(enable, actor))
         raise_if_rejected(self._system, decision)

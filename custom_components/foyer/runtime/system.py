@@ -27,6 +27,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
+from .. import i18n
 from ..const import CHANNEL_HA_UI, SIGNAL_UPDATE
 from ..core import authz
 from ..core.conditions import condition_entities
@@ -473,6 +474,16 @@ class FoyerSystem:
         alarm it imitates.
         """
         if service:
+            # A test of a channel with nothing to say is a message of one
+            # empty line, which several transports refuse outright — and a
+            # test that fails for that reason teaches nothing about the
+            # channel. The words are the runtime's to choose, in the
+            # language Foyer speaks (§15.1), because ``core`` writes none.
+            if not message:
+                strings = await self.hass.async_add_executor_job(
+                    i18n.load_strings, self.language
+                )
+                message = i18n.translate(strings, "notification.action_tested.message")
             intent = notify_test_intent(service, message)
         else:
             profile = self.config.profile(profile_id)

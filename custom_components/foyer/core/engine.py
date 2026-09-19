@@ -886,6 +886,14 @@ class _Run:
         Only the areas this walk test armed are disarmed. One that was
         already armed when it started is left exactly as it was
         (part 2 decision 2): the walk test borrowed nothing from it.
+
+        **And never an area in alarm.** A disarm stops the sirens and
+        acknowledges the incident (§7.2), so disarming here would let the
+        walk test silence the one alarm it was built to keep live: an
+        `always_on` zone fires, stays fully live as §11.3 demands, and then
+        the auto-exit falls due fifteen minutes later and switches it off
+        with nobody having seen it. It is the same rule §4.6.1 already makes
+        for a scenario switch — an alarm ends with a disarm, by a person.
         """
         walk = self.walk_test
         if walk is None:
@@ -893,10 +901,15 @@ class _Run:
         expected = walk_test_zones(self.config, self.bypassed)
         missed = tuple(z for z in expected if z not in walk.detections)
         self.walk_test = None
+        in_alarm: list[str] = []
         for area_id in walk.armed_areas:
             rt = self.areas.get(area_id)
-            if rt is not None and rt.state is not AreaState.DISARMED:
-                self.disarm_area(area_id, walk.channel)
+            if rt is None or rt.state is AreaState.DISARMED:
+                continue
+            if rt.state in (AreaState.ENTRY, AreaState.TRIGGERED) or rt.memory:
+                in_alarm.append(area_id)
+                continue
+            self.disarm_area(area_id, walk.channel)
         self.occur(
             Moment.WALK_TEST_ENDED,
             channel=walk.channel,
@@ -911,6 +924,9 @@ class _Run:
                 # The finding, not the tally: a zone that never reacted is
                 # what §11.3 exists to surface, and it belongs on the row.
                 "never_detected": ",".join(missed),
+                # Left armed because they are in alarm, or hold its memory.
+                # Written down: "why is the hall still armed?" has an answer.
+                "left_in_alarm": ",".join(in_alarm),
             },
         )
 
