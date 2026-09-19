@@ -39,6 +39,11 @@ SEED_MOMENTS = frozenset(
         Moment.ZONE_BYPASSED,
         Moment.TECHNICAL_RAISED,
         Moment.TRIGGERED,
+        # §11.3 requires a notification on the start and the end of a walk
+        # test, among the safeguards it calls mandatory. A safeguard that
+        # only reaches whoever configured it is not one.
+        Moment.WALK_TEST_STARTED,
+        Moment.WALK_TEST_ENDED,
     }
 )
 

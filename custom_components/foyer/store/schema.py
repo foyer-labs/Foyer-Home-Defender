@@ -31,6 +31,7 @@ from ..core.models import (
     Condition,
     ConditionMode,
     Contributor,
+    Detection,
     DeviceKind,
     EntryMode,
     EventTrigger,
@@ -65,6 +66,7 @@ from ..core.models import (
     TimerKind,
     TriggerSpec,
     User,
+    WalkTest,
     Zone,
     ZoneType,
 )
@@ -98,13 +100,18 @@ from ..core.models import (
 # reads a tag — it simply has no physical channels, exactly as it had none
 # yesterday. Nothing it would have protected goes unprotected.
 #
+# 5.4 is a *minor* step: the walk test's timeout is one number in the
+# settings, and the two moments the default profile gains announce a walk
+# test a 5.3 build cannot enter at all. A 5.3 build reading this document is
+# a build with no walk test, exactly as it was yesterday.
+#
 # 5.3 is a *minor* step for the same reason: a zone's battery entity and the
 # threshold it is read against are additive, and a 5.2 build ignoring both is
 # a build that never warns about a battery — which is precisely what it did
 # yesterday. A low battery blocks nothing, so nothing it would have protected
 # goes unprotected (Phase 3 part 1 decisions 1 and 2).
 STORAGE_VERSION = 5
-STORAGE_MINOR_VERSION = 3
+STORAGE_MINOR_VERSION = 4
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -173,6 +180,7 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         language=s.get("language") or None,
         wizard_done=bool(s["wizard_done"]),
         low_battery_threshold=int(s["low_battery_threshold"]),
+        walk_test_timeout=int(s["walk_test_timeout"]),
         security=security_from_dict(s["security"]),
         mqtt=mqtt_from_dict(s["mqtt"]),
     )
@@ -192,6 +200,7 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "language": s.language,
         "wizard_done": s.wizard_done,
         "low_battery_threshold": s.low_battery_threshold,
+        "walk_test_timeout": s.walk_test_timeout,
         "security": security_to_dict(s.security),
         "mqtt": mqtt_to_dict(s.mqtt),
     }
@@ -769,6 +778,10 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
             for r in state.running
         ],
         "run_seq": state.run_seq,
+        # The walk test, timeout and all: §5.3 lists the auto-exit among the
+        # timers, and INV-3 persists pending timers. A restart that lost it
+        # would leave a house inhibited with nothing due to end it.
+        "walk_test": _walk_test_to(state.walk_test),
         "lockouts": {
             key: {
                 "failures": [at.isoformat() for at in lock.failures],
@@ -779,6 +792,57 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
             for key, lock in state.lockouts.items()
         },
     }
+
+
+def _walk_test_to(walk: WalkTest | None) -> dict[str, Any] | None:
+    if walk is None:
+        return None
+    return {
+        "started_at": walk.started_at.isoformat(),
+        "until": walk.until.isoformat(),
+        "hard_until": walk.hard_until.isoformat(),
+        "window": walk.window,
+        "armed_areas": list(walk.armed_areas),
+        "detections": {
+            zone_id: {
+                "first": d.first.isoformat(),
+                "last": d.last.isoformat(),
+                "count": d.count,
+            }
+            for zone_id, d in walk.detections.items()
+        },
+        "user_id": walk.user_id,
+        "user_name": walk.user_name,
+        "channel": walk.channel,
+        "device_id": walk.device_id,
+    }
+
+
+def _walk_test_from(
+    data: dict[str, Any] | None, area_ids: set[str], zone_ids: set[str]
+) -> WalkTest | None:
+    if not data:
+        return None
+    return WalkTest(
+        started_at=_required_dt(data["started_at"]),
+        until=_required_dt(data["until"]),
+        hard_until=_required_dt(data["hard_until"]),
+        window=int(data["window"]),
+        armed_areas=tuple(a for a in data.get("armed_areas", ()) if a in area_ids),
+        detections={
+            zone_id: Detection(
+                first=_required_dt(d["first"]),
+                last=_required_dt(d["last"]),
+                count=int(d.get("count", 1)),
+            )
+            for zone_id, d in (data.get("detections") or {}).items()
+            if zone_id in zone_ids
+        },
+        user_id=data.get("user_id"),
+        user_name=data.get("user_name"),
+        channel=data.get("channel"),
+        device_id=data.get("device_id"),
+    )
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -961,6 +1025,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 for r in data.get("running", ())
             ),
             run_seq=int(data.get("run_seq", 0)),
+            walk_test=_walk_test_from(data.get("walk_test"), area_ids, zone_ids),
             # A lockout that a restart clears is an invitation to restart
             # Home Assistant, so it is written down like everything else.
             lockouts={

@@ -90,6 +90,10 @@ class PlanContext:
     areas: Mapping[str, AreaRuntime]
     incident: Incident | None = None
     active_zones: frozenset[str] = frozenset()
+    # A walk test is running (§11.3). Not a switch the executor flips: what
+    # it inhibits is decided here, per occurrence, because `always_on` zones
+    # stay fully live and a walk test must never silence a smoke detector.
+    walk_test: bool = False
 
     @property
     def tz(self) -> tzinfo:
@@ -104,12 +108,17 @@ class Plan:
     pending: list[PendingRun] = field(default_factory=list)
     running: list[RunningAction] = field(default_factory=list)
     started: list[str] = field(default_factory=list)
+    # Actions a walk test held back: built like the others and deliberately
+    # not in ``intents``, so they cannot reach the executor by accident
+    # (part 2 decision 1).
+    inhibited: list[ActionIntent] = field(default_factory=list)
 
     def extend(self, other: Plan) -> None:
         self.intents.extend(other.intents)
         self.pending.extend(other.pending)
         self.running.extend(other.running)
         self.started.extend(other.started)
+        self.inhibited.extend(other.inhibited)
 
 
 # --- profile resolution ------------------------------------------------------------
@@ -234,6 +243,7 @@ SKIP_SILENT = "silent"
 SKIP_ALREADY_RUNNING = "already_running"
 SKIP_CONDITION = "condition"
 SKIP_HELD_BY_DELAY = "held_by_delay"
+SKIP_WALK_TEST = "walk_test"
 
 
 def skip_reason(
@@ -243,15 +253,22 @@ def skip_reason(
     moment: Moment,
     suppressed: frozenset[str],
     already_started: frozenset[str],
+    inhibited: bool = False,
 ) -> str | None:
     """Why this action does not run now, or None when it does.
 
-    The order is the order of the reasons, not of the checks: a silent zone
-    suppresses before anything is evaluated, a siren already sounding is not
-    restarted before its conditions are asked again, and only what survives
-    both is put to its conditions. Changing the order changes what the trace
-    says happened, so there is one of it.
+    The order is the order of the reasons, not of the checks: a walk test
+    answers before anything else is asked, a silent zone suppresses before
+    anything is evaluated, a siren already sounding is not restarted before
+    its conditions are asked again, and only what survives all three is put
+    to its conditions. Changing the order changes what the trace says
+    happened, so there is one of it.
     """
+    if inhibited:
+        # §11.3: during a walk test the response is held back and nothing
+        # else about this action matters. Whether it *would* have run is a
+        # different question, and the simulator is the page that answers it.
+        return SKIP_WALK_TEST
     if action.kind.value in suppressed:
         return SKIP_SILENT
     if action.id in already_started and moment in UNION_MOMENTS:
@@ -362,12 +379,20 @@ def run_sequence(
     silent: bool = False,
     already_started: frozenset[str] = frozenset(),
     run_id: str = "",
+    inhibited: bool = False,
 ) -> Plan:
     """Walk a profile's actions for one moment, from ``start``.
 
     Stops at a ``delay``, leaving a PendingRun that resumes at the same index
     in the same sequence. Skips actions whose conditions are not met, actions a
     silent zone suppresses, and actions this incident has already started.
+
+    ``inhibited`` is a walk test (§11.3): every action of the sequence is
+    built and diverted to ``plan.inhibited`` instead of ``plan.intents``, so
+    nothing is executed and the record of what would have been survives. A
+    ``delay`` is simply walked past — there is no sequence to hold back when
+    none of it is going to run, and a PendingRun left behind would fire after
+    the walk test ended.
     """
     plan = Plan()
     actions = sequence(profile, moment)
@@ -377,6 +402,8 @@ def run_sequence(
     for index in range(start, len(actions)):
         action = actions[index]
         if action.kind is ActionKind.DELAY:
+            if inhibited:
+                continue
             seconds = max(0, int(action.params.get("seconds", 0)))
             if seconds and index + 1 < len(actions):
                 plan.pending.append(
@@ -395,31 +422,35 @@ def run_sequence(
                 )
                 return plan
             continue
-        if (
-            skip_reason(
-                action,
-                ctx,
-                moment=moment,
-                suppressed=suppressed,
-                already_started=already_started,
-            )
-            is not None
-        ):
+        why = skip_reason(
+            action,
+            ctx,
+            moment=moment,
+            suppressed=suppressed,
+            already_started=already_started,
+            inhibited=inhibited,
+        )
+        if why is not None and why != SKIP_WALK_TEST:
             continue
         params = _params(action, values, ctx, area_id)
-        plan.intents.append(
-            ActionIntent(
-                action_id=action.id,
-                kind=action.kind.value,
-                moment=moment,
-                profile_id=profile.id,
-                placeholders=dict(values),
-                variant="area"
-                if moment is Moment.ARMED and not values.get("scenario")
-                else None,
-                params=params,
-            )
+        intent = ActionIntent(
+            action_id=action.id,
+            kind=action.kind.value,
+            moment=moment,
+            profile_id=profile.id,
+            placeholders=dict(values),
+            variant="area"
+            if moment is Moment.ARMED and not values.get("scenario")
+            else None,
+            params=params,
         )
+        if why == SKIP_WALK_TEST:
+            # Nothing is switched on, so nothing is recorded as running and
+            # the incident has started nothing: a siren that did not sound
+            # must not be remembered as already sounding.
+            plan.inhibited.append(intent)
+            continue
+        plan.intents.append(intent)
         if incident_id is not None and moment in UNION_MOMENTS:
             plan.started.append(action.id)
         if action.kind.value in REVERTIBLE:
@@ -483,6 +514,42 @@ def revert_intent(running: RunningAction, moment: Moment) -> ActionIntent:
 # --- the batch ---------------------------------------------------------------------
 
 
+# The walk test's own two moments (§6.1). They are never inhibited: §11.3
+# requires a notification on start and on end, and a walk test that silenced
+# the one message announcing it would be the safeguard defeating itself.
+WALK_TEST_MOMENTS: frozenset[Moment] = frozenset(
+    {Moment.WALK_TEST_STARTED, Moment.WALK_TEST_ENDED}
+)
+
+
+def inhibits(ctx: PlanContext, occurrence: Occurrence) -> bool:
+    """Whether a walk test holds back the response to this occurrence (§11.3).
+
+    Inhibition is per occurrence, not a state the executor reads, because the
+    rule has exceptions and every one of them matters:
+
+    - an ``always_on`` zone — 24h, tamper, technical, panic — is **fully
+      live**. A walk test must never silence a smoke detector, and that is
+      the sentence this function is written against;
+    - so is everything belonging to an open incident, which during a walk
+      test can only have been opened by one of those zones (part 2 decision
+      3: an ordinary detection does not drive the state machine);
+    - and so are the walk test's own start and end, which §11.3 requires to
+      be announced.
+
+    Everything else — the arming the walk test performs, a chime, a fault —
+    is held back, because §11.3 says all actions are inhibited and means it.
+    """
+    if not ctx.walk_test:
+        return False
+    if occurrence.moment in WALK_TEST_MOMENTS:
+        return False
+    if occurrence.moment in TECHNICAL_MOMENTS or occurrence.incident_id is not None:
+        return False
+    zone = ctx.config.zone(occurrence.zone_id)
+    return not (zone is not None and zone.always_on)
+
+
 @dataclass(frozen=True, slots=True)
 class Answer:
     """Who answers one occurrence, and under what run it is grouped.
@@ -498,10 +565,21 @@ class Answer:
     silent: bool
     incident_id: str | None
     moment: Moment
+    # Held back by a walk test (§11.3). Part of the key as well as the
+    # answer: two occurrences of one moment that a walk test treats
+    # differently — a 24h zone and an ordinary one — are two different
+    # things the house does, and one run cannot be both.
+    inhibited: bool = False
 
     @property
-    def key(self) -> tuple[str, Moment, bool, str | None]:
-        return (self.profile.id, self.moment, self.silent, self.incident_id)
+    def key(self) -> tuple[str, Moment, bool, str | None, bool]:
+        return (
+            self.profile.id,
+            self.moment,
+            self.silent,
+            self.incident_id,
+            self.inhibited,
+        )
 
 
 def answer_for(ctx: PlanContext, occurrence: Occurrence) -> Answer | None:
@@ -525,6 +603,7 @@ def answer_for(ctx: PlanContext, occurrence: Occurrence) -> Answer | None:
         silent=bool(zone and zone.silent and occurrence.moment in ZONE_MOMENTS),
         incident_id=occurrence.incident_id,
         moment=occurrence.moment,
+        inhibited=inhibits(ctx, occurrence),
     )
 
 
@@ -535,11 +614,11 @@ def plan_occurrences(
     send one notification naming all three, not three notifications."""
     plan = Plan()
     started = set(ctx.incident.actions_started if ctx.incident else ())
-    batches: dict[tuple[str, Moment, bool, str | None], list[Occurrence]] = {}
+    batches: dict[tuple[Any, ...], list[Occurrence]] = {}
     for occurrence in occurrences:
         if (answer := answer_for(ctx, occurrence)) is not None:
             batches.setdefault(answer.key, []).append(occurrence)
-    for (profile_id, moment, silent, incident_id), group in batches.items():
+    for (profile_id, moment, silent, incident_id, inhibited), group in batches.items():
         profile = ctx.config.profile(profile_id)
         assert profile is not None
         run_seq += 1
@@ -554,6 +633,7 @@ def plan_occurrences(
             silent=silent,
             already_started=frozenset(started),
             run_id=f"run-{run_seq}",
+            inhibited=inhibited,
         )
         started.update(batch.started)
         plan.extend(batch)
@@ -565,6 +645,18 @@ def resume(ctx: PlanContext, run: PendingRun) -> Plan:
     profile = ctx.config.profile(run.profile_id)
     if profile is None:
         return Plan()
+    # A sequence started before the walk test and falling due inside it is
+    # held back like everything else: it is the same rule read through the
+    # occurrence the run was planned from.
+    inhibited = inhibits(
+        ctx,
+        Occurrence(
+            moment=run.moment,
+            area_id=run.area_id,
+            zone_id=run.zone_id,
+            incident_id=run.incident_id,
+        ),
+    )
     return run_sequence(
         ctx,
         profile,
@@ -577,6 +669,7 @@ def resume(ctx: PlanContext, run: PendingRun) -> Plan:
         silent=run.silent,
         already_started=frozenset(ctx.incident.actions_started if ctx.incident else ()),
         run_id=run.id,
+        inhibited=inhibited,
     )
 
 

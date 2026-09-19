@@ -334,6 +334,40 @@ def _v5_2_to_v5_3(data: Document) -> Document:
     return out
 
 
+def _v5_3_to_v5_4(data: Document) -> Document:
+    """Phase 3 part 1 -> part 2: the walk test.
+
+    A minor step: one number in the settings, and two moments added to the
+    default profile's notifications. A 5.3 build reading this document
+    ignores both and has no walk test at all, which is what it had.
+
+    The two moments are not decoration. §11.3 lists "a notification on start
+    and on end" among the safeguards that are *not optional*, next to the
+    banner and the non-disableable timeout — and a safeguard that only
+    reaches an installation which happened to configure it is not a
+    safeguard. They are added exactly where the 3.1 -> 4.1 step added
+    ``triggered`` for the same reason, and only to ``persistent_notification``
+    actions of the default profile: a moment added to a siren would make a
+    walk test sound one.
+    """
+    out = copy.deepcopy(data)
+    # §5.3: 15 minutes, mandatory, non-disableable. The documented default
+    # rather than something derived, because a 5.3 document has nothing to
+    # derive it from.
+    out["settings"]["walk_test_timeout"] = 900
+    default_id = out["settings"].get("default_profile_id")
+    for profile in out.get("profiles", []):
+        if profile["id"] != default_id:
+            continue
+        for action in profile.get("actions", []):
+            if action.get("kind") != "persistent_notification":
+                continue
+            action["moments"] = sorted(
+                {*action.get("moments", []), "walk_test_started", "walk_test_ended"}
+            )
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -358,6 +392,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (4, 2): (_v4_2_to_v5_1, (5, 1)),
     (5, 1): (_v5_1_to_v5_2, (5, 2)),
     (5, 2): (_v5_2_to_v5_3, (5, 3)),
+    (5, 3): (_v5_3_to_v5_4, (5, 4)),
 }
 
 

@@ -194,6 +194,10 @@ def test_migration_moves_the_code_policy_to_the_documented_defaults():
         Moment.ZONE_BYPASSED,
         Moment.TECHNICAL_RAISED,  # added by 2.2 -> 3.1 (part 2 decision 10)
         Moment.TRIGGERED,  # added by 3.1 -> 4.1 (part 3 decision 3)
+        # added by 5.3 -> 5.4: §11.3 calls the notification on the start and
+        # the end of a walk test one of the safeguards that are not optional
+        Moment.WALK_TEST_STARTED,
+        Moment.WALK_TEST_ENDED,
     }
 
 
@@ -407,8 +411,9 @@ def test_alpha_3_document_migrates_to_part_2_changing_nothing_that_works():
     for zone in config.zones:
         assert (zone.chime, zone.cross_zone_id, zone.trigger_count) == (False, None, 1)
     assert config.zone("hall").follows == ("door",)
-    # The additions on purpose: a technical alarm is announced (decision 10)
-    # and so is an alarm itself (part 3 decision 3).
+    # The additions on purpose: a technical alarm is announced (decision 10),
+    # an alarm itself (part 3 decision 3), and the start and end of a walk
+    # test, which §11.3 lists among the safeguards that are not optional.
     assert config.profiles[0].actions[0].moments == {
         Moment.ARMED,
         Moment.DISARMED,
@@ -417,6 +422,8 @@ def test_alpha_3_document_migrates_to_part_2_changing_nothing_that_works():
         Moment.ZONE_BYPASSED,
         Moment.TECHNICAL_RAISED,
         Moment.TRIGGERED,
+        Moment.WALK_TEST_STARTED,
+        Moment.WALK_TEST_ENDED,
     }
     assert config_from_dict(config_to_dict(config)) == config
 

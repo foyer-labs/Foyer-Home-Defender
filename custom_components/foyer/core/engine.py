@@ -30,6 +30,9 @@ from datetime import datetime, timedelta
 from . import authz
 from .models import (
     CUSTOM_BYPASS,
+    MAX_WALK_TEST_TIMEOUT,
+    MAX_WALK_TEST_TOTAL,
+    MIN_WALK_TEST_TIMEOUT,
     AcknowledgeIncident,
     Acknowledgement,
     AcknowledgeTechnical,
@@ -49,6 +52,7 @@ from .models import (
     CodeResult,
     Contributor,
     Decision,
+    Detection,
     DisarmRequest,
     EntityState,
     EntryMode,
@@ -71,6 +75,8 @@ from .models import (
     Tick,
     Timer,
     TimerKind,
+    WalkTest,
+    WalkTestRequest,
     Zone,
     ZoneStateChanged,
 )
@@ -135,6 +141,10 @@ def decide(
     run.expire_bypasses()
     run.expire_running()
     run.process_due_timers()
+    # Before the zones are read, so a walk test whose time is up does not
+    # swallow the detection that arrives in the same call: the house is
+    # answering again from the instant the auto-exit falls due (§5.3).
+    run.expire_walk_test()
 
     changed: str | None = None
     if isinstance(event, ZoneStateChanged):
@@ -164,6 +174,8 @@ def decide(
         outcome = run.bypass_zone(event)
     elif isinstance(event, SetChime):
         run.set_chime(event.enabled)
+    elif isinstance(event, WalkTestRequest):
+        outcome = run.walk_test_request(event)
     elif isinstance(event, Startup):
         # How long the gap was, measured rather than described: the log grades
         # a configuration reload and an hour with the integration disabled
@@ -260,6 +272,11 @@ def next_wakeup(
     # Timed bypasses, sequences held by a delay, and auto-reverts are timers
     # like any other: data in the state, one wake-up (part 3 decision 5).
     dues.extend(state.bypass_until.values())
+    if state.walk_test is not None:
+        # The auto-exit is a timer like any other (§5.3), which is why it is
+        # in the state and not in memory: a restart must not leave a house
+        # inhibited with nothing due to end it (INV-3).
+        dues.append(state.walk_test.deadline())
     dues.extend(run.due for run in state.pending_runs)
     dues.extend(r.until for r in state.running if r.until is not None)
     windows = all_windows(config)
@@ -331,6 +348,13 @@ class _Run:
         # everything else, because a lockout a restart clears is an invitation
         # to restart Home Assistant.
         self.lockouts: dict[str, Lockout] = dict(state.lockouts)
+        # The walk test (§11.3). ``inhibiting`` is separate from it on
+        # purpose: a decision that *begins* inside a walk test holds its
+        # response back all the way through, so ending one does not let the
+        # disarm it performs announce itself while the arming it performed
+        # never did.
+        self.walk_test: WalkTest | None = state.walk_test
+        self.inhibiting = state.walk_test is not None
         # The technical channel: never read or written by the area machine.
         self.technical: dict[str, TechnicalAlarm] = {
             z: a for z, a in state.technical.items() if z in zone_ids
@@ -650,6 +674,22 @@ class _Run:
         if rt is None:
             return
         effect = self.effect(zone, rt)
+        if self.walk_test is not None and not zone.always_on:
+            # It saw somebody, and that is the whole of what a walk test
+            # asks of it (§11.3, part 2 decision 3). Recorded whatever the
+            # area is doing: a zone in an area that failed to arm still
+            # reacted, and "it detected me but nothing was watching" is a
+            # more useful answer than a missing row.
+            #
+            # The chime is still *decided* here, and then held back with
+            # every other action: §6.6 expects an armed area and no chime,
+            # but an area that could not arm would chime through the whole
+            # walk, and the trace should say it was held rather than that it
+            # was never considered.
+            if effect is None:
+                self.chime(zone, rt)
+            self.walk_test_detection(zone)
+            return
         if effect is None:
             self.chime(zone, rt)
         elif effect is _TRIGGER:
@@ -724,6 +764,192 @@ class _Run:
                 channel=self.channel,
                 detail={"enabled": "true" if enabled else "false"},
             )
+
+    # --- walk test (§11.3) ---------------------------------------------------------
+
+    def walk_test_request(self, event: WalkTestRequest) -> _Outcome:
+        """Enter or leave the walk test. One operation, §8.2 like any other."""
+        if event.enable == (self.walk_test is not None):
+            return _reject(Reason.INVALID_STATE)
+        if (reason := self.authorize(Operation.WALK_TEST)) is not None:
+            return _reject(reason)
+        if event.enable:
+            return self.start_walk_test(event.duration)
+        self.end_walk_test("manual")
+        return _ACCEPTED
+
+    def walk_test_window(self, duration: int | None) -> int:
+        """How long the test runs without a detection (§5.3, part 2 decision 5).
+
+        The installation's setting is the ceiling and ``duration`` may only
+        ask for less: §5.3 calls the auto-exit mandatory and non-disableable,
+        so there is no number a caller can send that lengthens it.
+        """
+        configured = min(
+            max(self.config.settings.walk_test_timeout, MIN_WALK_TEST_TIMEOUT),
+            MAX_WALK_TEST_TIMEOUT,
+        )
+        if duration is None:
+            return configured
+        return max(MIN_WALK_TEST_TIMEOUT, min(int(duration), configured))
+
+    def start_walk_test(self, duration: int | None) -> _Outcome:
+        """Arm every area, then hold the response back (part 2 decisions 2, 7).
+
+        Every area, because a walk test is walked through the whole house and
+        §9.1's signature has no scenario in it. An area that cannot arm — an
+        open window, a zone in fault — simply does not, and the §9.1 answer
+        names the zones: a window left open must not stop somebody finding
+        out that the garage PIR is dead.
+
+        There is no exit delay. The person is inside the house and about to
+        walk it; a test that spent its first thirty seconds not watching
+        anything would report those zones as never having reacted.
+        """
+        window = self.walk_test_window(duration)
+        blocking: list[str] = []
+        armed: list[str] = []
+        low: list[str] = []
+        for area_id in self.areas:
+            if self.areas[area_id].state is not AreaState.DISARMED:
+                continue
+            outcome, _ = self.check_arming((area_id,), False)
+            # check_arming answers one area at a time and records that area's
+            # dying batteries; the answer is about the whole request, so they
+            # are collected rather than overwritten (part 1 decision 2).
+            low.extend(self.low_battery_zones)
+            if not outcome.accepted:
+                blocking.extend(outcome.blocking)
+                continue
+            armed.append(area_id)
+        self.low_battery_zones = tuple(dict.fromkeys(low))
+        user = self.config.user(self.actor.user_id)
+        self.walk_test = WalkTest(
+            started_at=self.now,
+            until=self.now + timedelta(seconds=window),
+            hard_until=self.now + timedelta(seconds=MAX_WALK_TEST_TOTAL),
+            window=window,
+            armed_areas=tuple(armed),
+            user_id=self.actor.user_id,
+            user_name=user.name if user else None,
+            channel=self.actor.channel,
+            device_id=self.actor.device_id,
+        )
+        self.inhibiting = True
+        # Armed after the walk test exists, so the arming this performs is
+        # already inhibited: §11.3 inhibits every action, and "the house has
+        # armed" is an action like the rest.
+        self.begin_arming(tuple(armed), None, False, [], skip_exit_delay=True)
+        self.occur(
+            Moment.WALK_TEST_STARTED,
+            channel=self.actor.channel,
+            detail={
+                "window": str(window),
+                "until": self.walk_test.until.isoformat(),
+                "hard_until": self.walk_test.hard_until.isoformat(),
+                "armed_areas": ",".join(armed),
+                "blocked_zones": ",".join(dict.fromkeys(blocking)),
+            },
+        )
+        # Not a refusal: the test is running. The zones that kept an area out
+        # travel on the answer so the caller can say which (§9.1).
+        return _Outcome(accepted=True, blocking=tuple(dict.fromkeys(blocking)))
+
+    def end_walk_test(self, cause: str) -> None:
+        """Leave the walk test: the house answers again, and says what it saw.
+
+        Only the areas this walk test armed are disarmed. One that was
+        already armed when it started is left exactly as it was
+        (part 2 decision 2): the walk test borrowed nothing from it.
+        """
+        walk = self.walk_test
+        if walk is None:
+            return
+        expected = self.expected_zones(walk)
+        missed = tuple(z for z in expected if z not in walk.detections)
+        self.walk_test = None
+        for area_id in walk.armed_areas:
+            if area_id in self.areas and self.areas[area_id].state is not (
+                AreaState.DISARMED
+            ):
+                self.disarm_area(area_id, walk.channel)
+        self.occur(
+            Moment.WALK_TEST_ENDED,
+            channel=walk.channel,
+            user_id=walk.user_id,
+            zone_ids=missed,
+            detail={
+                "cause": cause,
+                "started_at": walk.started_at.isoformat(),
+                "seconds": str(int((self.now - walk.started_at).total_seconds())),
+                "detected": str(len(walk.detections)),
+                "expected": str(len(expected)),
+                # The finding, not the tally: a zone that never reacted is
+                # what §11.3 exists to surface, and it belongs on the row.
+                "never_detected": ",".join(missed),
+            },
+        )
+
+    def expire_walk_test(self) -> None:
+        """The auto-exit of §5.3: not disableable, and measured two ways.
+
+        ``until`` moves with every detection so a forty-zone house can be
+        walked in one pass; ``hard_until`` never moves, so a walk test
+        somebody forgot about — with a cat in front of a PIR keeping it
+        alive — still ends (part 2 decision 4).
+        """
+        walk = self.walk_test
+        if walk is None:
+            return
+        if self.now >= walk.hard_until:
+            self.end_walk_test("hard_timeout")
+        elif self.now >= walk.until:
+            self.end_walk_test("timeout")
+
+    def expected_zones(self, walk: WalkTest) -> tuple[str, ...]:
+        """The zones a walk should have reached, so silence can be a finding.
+
+        Intrusion zones that are enabled and not excluded. An `always_on`
+        zone is left out: it is live rather than under test, and nobody sets
+        off the smoke detector to prove it works.
+        """
+        return tuple(
+            z.id
+            for z in self.config.zones
+            if z.enabled
+            and z.channel is Channel.INTRUSION
+            and not z.always_on
+            and z.id not in self.bypassed
+        )
+
+    def walk_test_detection(self, zone: Zone) -> None:
+        """A zone saw somebody during the walk test. That is all it does.
+
+        It does not go to ``triggered``, it opens no incident and it leaves
+        no alarm memory (part 2 decision 3): forty zones walked would
+        otherwise leave forty alarms in the log, and
+        ``alarm_control_panel.foyer_master`` would be telling HomeKit,
+        Google and Alexa that somebody had broken in for the whole walk.
+
+        Every detection pushes the auto-exit back, under the cap that never
+        moves.
+        """
+        walk = self.walk_test
+        assert walk is not None
+        previous = walk.detections.get(zone.id)
+        detection = (
+            Detection(first=self.now, last=self.now)
+            if previous is None
+            else replace(previous, last=self.now, count=previous.count + 1)
+        )
+        self.walk_test = replace(
+            walk,
+            detections={**walk.detections, zone.id: detection},
+            until=min(
+                self.now + timedelta(seconds=walk.window),
+                walk.hard_until,
+            ),
+        )
 
     # --- technical channel (§5.5) ------------------------------------------------
 
@@ -1780,6 +2006,7 @@ class _Run:
             areas=self.areas,
             incident=self.incident,
             active_zones=frozenset(self.active),
+            walk_test=self.inhibiting,
         )
         plan, self.run_seq = plan_occurrences(ctx, occurrences, self.run_seq)
         # Sequences a delay held back and whose time has come (decision 5).
@@ -1811,7 +2038,9 @@ class _Run:
             running=tuple(self.running),
             run_seq=self.run_seq,
             lockouts=self.lockouts,
+            walk_test=self.walk_test,
         )
+        chime, chime_inhibited = self.chime_intents(occurrences)
         return Decision(
             at=self.now,
             accepted=outcome.accepted,
@@ -1821,18 +2050,22 @@ class _Run:
             bypassed_zones=tuple(self.new_bypasses),
             low_battery_zones=self.low_battery_zones,
             occurrences=occurrences,
-            actions=(
-                *self.extra,
-                *plan.intents,
-                *self.chime_intents(occurrences),
-            ),
+            actions=(*self.extra, *plan.intents, *chime),
+            inhibited=(*plan.inhibited, *chime_inhibited),
         )
 
     def chime_intents(
         self, occurrences: tuple[Occurrence, ...]
-    ) -> tuple[ActionIntent, ...]:
+    ) -> tuple[tuple[ActionIntent, ...], tuple[ActionIntent, ...]]:
         """The chime is a setting, not a profile (§6.6). The Decision carries
-        everything the executor needs: it never reads the configuration."""
+        everything the executor needs: it never reads the configuration.
+
+        Returns what sounds and what a walk test held back. §6.6 says the
+        chime needs no special case for a walk test, because the area is
+        armed and its zones are monitored — but an area that failed to arm
+        would chime through the whole walk, and "all actions are inhibited"
+        (§11.3) is the rule that covers it.
+        """
         chime = self.config.chime
         names = {z.id: z.name for z in self.config.zones}
         intents = []
@@ -1858,7 +2091,9 @@ class _Run:
                     },
                 )
             )
-        return tuple(intents)
+        if self.inhibiting:
+            return (), tuple(intents)
+        return tuple(intents), ()
 
 
 def _window_detail(

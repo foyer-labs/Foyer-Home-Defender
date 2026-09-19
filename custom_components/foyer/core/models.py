@@ -380,6 +380,17 @@ MIN_ARM_HOLD_TIMEOUT = 60
 MAX_ARM_HOLD_TIMEOUT = 1800
 MIN_SUPERVISION_TIMEOUT = 60
 MAX_SUPERVISION_TIMEOUT = 7 * 24 * 3600
+
+# Walk test auto-exit (§5.3: global, 15 min, "mandatory, non-disableable").
+# The window is pushed back by every detection, so a forty-zone house can be
+# walked in one pass; MAX_WALK_TEST_TOTAL is the cap on the whole test,
+# measured from the start and reachable by nothing (part 2 decision 4).
+# `foyer.walk_test`'s `duration` may only ask for less than the configured
+# window, never more (part 2 decision 5).
+DEFAULT_WALK_TEST_TIMEOUT = 900
+MIN_WALK_TEST_TIMEOUT = 60
+MAX_WALK_TEST_TIMEOUT = 3600
+MAX_WALK_TEST_TOTAL = 3 * 3600
 # Verification windows: groups, cross-zone and trigger counting (§4.2, §4.8).
 DEFAULT_VERIFICATION_WINDOW = 60
 MIN_VERIFICATION_WINDOW = 1
@@ -977,6 +988,12 @@ class Settings:
     # zones: the number is a property of the batteries a household buys, not
     # of the door they are behind (Phase 3 part 1 decision 1).
     low_battery_threshold: int = DEFAULT_LOW_BATTERY_THRESHOLD
+    # How long a walk test runs without a detection before it ends itself
+    # (§5.3, §11.3). Configurable because a bungalow and a farmhouse are not
+    # the same walk, and capped in code because §5.3 calls the auto-exit
+    # mandatory and non-disableable: there is no value here that switches it
+    # off, and MAX_WALK_TEST_TOTAL bounds the whole test whatever this says.
+    walk_test_timeout: int = DEFAULT_WALK_TEST_TIMEOUT
 
 
 @dataclass(frozen=True, slots=True)
@@ -1235,6 +1252,61 @@ class RunningAction:
 
 
 @dataclass(frozen=True, slots=True)
+class Detection:
+    """One zone seen during a walk test (SPEC §11.3).
+
+    The point of the feature is not the count but its absence: a zone with no
+    Detection at the end of the walk is a zone that never reacted, which is
+    either a door nobody opened or a PIR pointing at the wrong wall.
+    """
+
+    first: datetime
+    last: datetime
+    count: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class WalkTest:
+    """A walk test in progress (SPEC §11.3). State, so it survives a restart.
+
+    It is in ``RuntimeState`` and not in memory because §5.3 lists the
+    auto-exit among the timers, and INV-3 says pending timers are persisted:
+    a walk test that a restart turned into "inhibited for ever, silently" is
+    the worst thing this feature could do.
+
+    ``until`` is pushed back by every detection and ``hard_until`` never
+    moves (part 2 decision 4): a forty-zone house takes longer than fifteen
+    minutes to walk, and a walk test somebody forgot about with a cat in
+    front of a PIR must still end.
+
+    ``armed_areas`` are the areas this walk test armed and will disarm when
+    it ends — never one that was already armed before it started
+    (part 2 decision 2).
+    """
+
+    started_at: datetime
+    until: datetime
+    hard_until: datetime
+    window: int
+    armed_areas: tuple[str, ...] = ()
+    detections: Mapping[str, Detection] = field(default_factory=dict)
+    # Who started it (§11.3: "entry and exit logged with the user"). Kept
+    # here for the same reason AreaRuntime keeps it: the exit row is written
+    # by a timer, long after the person pressed anything.
+    user_id: str | None = None
+    user_name: str | None = None
+    channel: str | None = None
+    device_id: str | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "detections", _frozen(self.detections))
+
+    def deadline(self) -> datetime:
+        """When it ends if nothing else happens: the nearer of the two."""
+        return min(self.until, self.hard_until)
+
+
+@dataclass(frozen=True, slots=True)
 class Lockout:
     """One channel's failed attempts, and how long it stays shut (§8.4).
 
@@ -1295,6 +1367,10 @@ class RuntimeState:
     # rather than in memory because a lockout that a restart clears is an
     # invitation to restart Home Assistant (INV-3).
     lockouts: Mapping[str, Lockout] = field(default_factory=dict)
+    # The walk test in progress, or None (§11.3). Additive state, read with a
+    # default: an older file restores as "no walk test", which is the safe
+    # direction — a house that is answering rather than one that is not.
+    walk_test: WalkTest | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "areas", _frozen(self.areas))
@@ -1525,6 +1601,21 @@ class SetChime:
     actor: Actor = field(default_factory=Actor)
 
 
+@dataclass(frozen=True, slots=True)
+class WalkTestRequest:
+    """Enter or leave the walk test (§11.3, §9.1 ``foyer.walk_test``).
+
+    ``duration`` may only ask for **less** than the installation's configured
+    maximum (part 2 decision 5): the timeout of §5.3 is "mandatory,
+    non-disableable", so a request for an hour gets the maximum and the §9.1
+    answer says what it got.
+    """
+
+    enable: bool
+    actor: Actor = field(default_factory=Actor)
+    duration: int | None = None
+
+
 Event = (
     ArmRequest
     | ArmModeRequest
@@ -1537,6 +1628,7 @@ Event = (
     | AcknowledgeTechnical
     | BypassZone
     | SetChime
+    | WalkTestRequest
 )
 
 
@@ -1622,6 +1714,14 @@ class Decision:
     low_battery_zones: tuple[str, ...] = ()
     occurrences: tuple[Occurrence, ...] = ()
     actions: tuple[ActionIntent, ...] = ()
+    # What the walk test held back (§11.3, part 2 decision 1). These intents
+    # are built exactly as the ones above and then **not** given to the
+    # executor: they are here so the panel and the log can say what would
+    # have happened, and they are kept out of ``actions`` so that nothing
+    # downstream has to remember not to run them. An executor with one more
+    # condition to honour is an executor whose only possible mistake is
+    # sounding the siren during a walk test.
+    inhibited: tuple[ActionIntent, ...] = ()
 
     @property
     def active_scenario_id(self) -> str | None:

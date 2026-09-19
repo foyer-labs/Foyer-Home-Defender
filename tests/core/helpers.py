@@ -35,6 +35,7 @@ from custom_components.foyer.core.models import (
     SystemSnapshot,
     Tick,
     User,
+    WalkTestRequest,
     Zone,
     ZoneStateChanged,
     ZoneType,
@@ -283,6 +284,10 @@ class World:
 
     def bypass(self, zone_id: str, **kwargs) -> Decision:
         return self.send(BypassZone(zone_id, **_actor(kwargs)))
+
+    def walk_test(self, enable: bool = True, **kwargs) -> Decision:
+        duration = kwargs.pop("duration", None)
+        return self.send(WalkTestRequest(enable, duration=duration, **_actor(kwargs)))
 
     # --- reading -----------------------------------------------------------------
 
