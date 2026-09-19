@@ -158,6 +158,9 @@
     "switch": {
       "chime": {
         "name": "Chime"
+      },
+      "walk_test": {
+        "name": "Walk test"
       }
     },
     "button": {
@@ -302,6 +305,74 @@
         "target": {
           "name": "What",
           "description": "The intrusion incident, or the technical channel. They are separate alarms with separate acknowledgements."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "walk_test": {
+      "name": "Walk test",
+      "description": "Arm the house, hold every response back, and record which zones detect you. Ends by itself and never silences a 24h, tamper, technical or panic zone.",
+      "fields": {
+        "enable": {
+          "name": "Enable",
+          "description": "Enter the walk test, or leave it."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long to run without a detection, in seconds. It may only be shorter than the configured maximum, never longer: the auto-exit cannot be switched off."
+        },
+        "code": {
+          "name": "Code",
+          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+        },
+        "user_id": {
+          "name": "User",
+          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+        },
+        "channel": {
+          "name": "Channel",
+          "description": "How the request arrived. Only api and automation may be claimed; keypad and nfc belong to a registered device."
+        },
+        "device_id": {
+          "name": "Device",
+          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+        }
+      }
+    },
+    "test_action": {
+      "name": "Test an action",
+      "description": "Really execute one action, so a misconfigured emergency channel is discovered now rather than during the emergency. It is recorded as a test.",
+      "fields": {
+        "profile_id": {
+          "name": "Profile",
+          "description": "The response profile the action belongs to."
+        },
+        "action_id": {
+          "name": "Action",
+          "description": "Which action of that profile to run. A siren sounds for three seconds, whatever its configured duration."
+        },
+        "service": {
+          "name": "Notification service",
+          "description": "Test a notification channel on its own, with no action behind it: a notify service or a notify entity."
+        },
+        "message": {
+          "name": "Message",
+          "description": "What the test notification says."
         },
         "code": {
           "name": "Code",

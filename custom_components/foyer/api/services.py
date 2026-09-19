@@ -21,10 +21,11 @@ engine, exactly as the panel does (INV-2). The code is compared in
 somebody set up with the wrong name is a visible problem rather than a silent
 one.
 
-**``walk_test`` and ``test_action`` are not here.** §14.1 lists them and Phase
-3 builds them. A service that exists and does nothing answers a caller with
-silence, and in an alarm system silence is the answer that gets mistaken for
-success.
+**``walk_test`` and ``test_action`` are here now.** They were deliberately
+absent until Phase 3 built them (decision 86), because a service that exists
+and does nothing answers a caller with silence, and in an alarm system silence
+is the answer that gets mistaken for success. Both are ``code required`` in
+§8.2 and carry the permissions ``walk_test`` and ``test_actions`` of §8.3.
 """
 
 from __future__ import annotations
@@ -50,6 +51,8 @@ from ..const import CHANNEL_API, DOMAIN
 from ..core.journal import security_row
 from ..core.models import (
     ARMED_HA_STATES,
+    MAX_WALK_TEST_TIMEOUT,
+    MIN_WALK_TEST_TIMEOUT,
     AcknowledgeIncident,
     AcknowledgeTechnical,
     Actor,
@@ -62,6 +65,7 @@ from ..core.models import (
     Operation,
     Permission,
     Reason,
+    WalkTestRequest,
 )
 from ..runtime.system import FoyerSystem
 from ..security.devices import Requester, async_requester
@@ -75,6 +79,8 @@ SERVICE_ACKNOWLEDGE = "acknowledge"
 SERVICE_EXPORT_LOG = "export_log"
 SERVICE_EXPORT_CONFIG = "export_config"
 SERVICE_IMPORT_CONFIG = "import_config"
+SERVICE_WALK_TEST = "walk_test"
+SERVICE_TEST_ACTION = "test_action"
 
 # One export carries what a caller can reasonably hold in one response.
 MAX_EXPORT_ROWS = 10000
@@ -132,6 +138,29 @@ EXPORT_LOG_SCHEMA = vol.Schema(
         vol.Optional("zone_id"): vol.Any(cv.string, None),
         vol.Optional("incident_id"): vol.Any(cv.string, None),
         vol.Optional("outcome"): vol.Any(cv.string, None),
+        **_IDENTITY,
+    }
+)
+WALK_TEST_SCHEMA = vol.Schema(
+    {
+        vol.Required("enable"): cv.boolean,
+        # Shorter than the installation's maximum, never longer: §5.3 calls
+        # the auto-exit mandatory and non-disableable (part 2 decision 5).
+        vol.Optional("duration"): vol.Any(
+            vol.All(
+                int, vol.Range(min=MIN_WALK_TEST_TIMEOUT, max=MAX_WALK_TEST_TIMEOUT)
+            ),
+            None,
+        ),
+        **_IDENTITY,
+    }
+)
+TEST_ACTION_SCHEMA = vol.Schema(
+    {
+        vol.Exclusive("action_id", "target"): cv.string,
+        vol.Exclusive("service", "target"): cv.string,
+        vol.Optional("profile_id"): cv.string,
+        vol.Optional("message", default=""): cv.string,
         **_IDENTITY,
     }
 )
@@ -295,6 +324,44 @@ def async_register(hass: HomeAssistant) -> None:
         )
         return await _answer(hass, system, call, requester, event)
 
+    async def walk_test(call: ServiceCall) -> ServiceResponse:
+        """Enter or leave the walk test (§9.1, §11.3).
+
+        A state-changing request, so it goes through the engine like arming:
+        §8.2's "enter walk test" and §8.3's ``walk_test`` permission are
+        resolved there and nowhere else (INV-2).
+        """
+        system = _system(hass)
+        requester = await _requester(hass, system, call)
+        event = WalkTestRequest(
+            call.data["enable"],
+            requester.actor or Actor(),
+            duration=call.data.get("duration"),
+        )
+        return await _answer(hass, system, call, requester, event)
+
+    async def test_action(call: ServiceCall) -> ServiceResponse:
+        """Really execute one action, and record it as a test (§11.4).
+
+        Gated here rather than by the engine because it changes no alarm
+        state — the same place the configuration services are gated, and for
+        the same reason. It really runs: that is the point.
+        """
+        system = _system(hass)
+        requester = await _requester(hass, system, call)
+        refused = _refused(
+            system, requester, Operation.TEST_ACTION, Permission.TEST_ACTIONS
+        )
+        if refused is not None:
+            return refused
+        return await system.async_test_action(
+            profile_id=call.data.get("profile_id"),
+            action_id=call.data.get("action_id"),
+            service=call.data.get("service"),
+            message=call.data["message"],
+            actor=requester.actor,
+        )
+
     async def export_log(call: ServiceCall) -> ServiceResponse:
         from ..store.log_store import export_csv, export_json
 
@@ -422,6 +489,8 @@ def async_register(hass: HomeAssistant) -> None:
         (SERVICE_BYPASS_ZONE, bypass_zone, BYPASS_SCHEMA),
         (SERVICE_UNBYPASS_ZONE, unbypass_zone, UNBYPASS_SCHEMA),
         (SERVICE_ACKNOWLEDGE, acknowledge, ACKNOWLEDGE_SCHEMA),
+        (SERVICE_WALK_TEST, walk_test, WALK_TEST_SCHEMA),
+        (SERVICE_TEST_ACTION, test_action, TEST_ACTION_SCHEMA),
         (SERVICE_EXPORT_LOG, export_log, EXPORT_LOG_SCHEMA),
         (SERVICE_EXPORT_CONFIG, export_config, EXPORT_CONFIG_SCHEMA),
         (SERVICE_IMPORT_CONFIG, import_config, IMPORT_CONFIG_SCHEMA),
@@ -465,6 +534,8 @@ def async_unregister(hass: HomeAssistant) -> None:
         SERVICE_BYPASS_ZONE,
         SERVICE_UNBYPASS_ZONE,
         SERVICE_ACKNOWLEDGE,
+        SERVICE_WALK_TEST,
+        SERVICE_TEST_ACTION,
         SERVICE_EXPORT_LOG,
         SERVICE_EXPORT_CONFIG,
         SERVICE_IMPORT_CONFIG,

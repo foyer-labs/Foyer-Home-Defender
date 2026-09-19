@@ -303,6 +303,13 @@ class Moment(StrEnum):
     CHIME = "chime"
     CHIME_SWITCHED = "chime_switched"
 
+    # Somebody pressed the test button beside an action (§11.4). Not a
+    # profile moment and never offered as one: nothing happened in the
+    # house, and a profile answering a test by sounding the siren would be a
+    # loop. It exists so the row the test leaves is filed as a test rather
+    # than as the alarm it imitates.
+    ACTION_TESTED = "action_tested"
+
     # A zone's battery has fallen below the threshold (§4.2, §6.1). Raised
     # once on the way down, like a fault, and cleared silently when the
     # battery is replaced: "the cell is fine again" is not news.

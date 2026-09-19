@@ -158,6 +158,9 @@
     "switch": {
       "chime": {
         "name": "Campanello"
+      },
+      "walk_test": {
+        "name": "Walk test"
       }
     },
     "button": {
@@ -318,6 +321,74 @@
         "device_id": {
           "name": "Dispositivo",
           "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    },
+    "walk_test": {
+      "name": "Walk test",
+      "description": "Inserisce la casa, trattiene ogni risposta e registra quali zone ti rilevano. Termina da solo e non silenzia mai una zona 24h, tamper, tecnica o panico.",
+      "fields": {
+        "enable": {
+          "name": "Attiva",
+          "description": "Entra nel walk test, o ne esce."
+        },
+        "duration": {
+          "name": "Durata",
+          "description": "Per quanto resta attivo senza rilevazioni, in secondi. Può solo essere più breve del massimo configurato, mai più lunga: l'uscita automatica non si disattiva."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi sta chiedendo. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta le sue restrizioni, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Da dove arriva la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi. Un nome che questa installazione non ha viene rifiutato."
+        }
+      }
+    },
+    "test_action": {
+      "name": "Prova un'azione",
+      "description": "Esegue davvero un'azione, così un canale d'emergenza configurato male si scopre adesso e non durante l'emergenza. Viene registrata come prova.",
+      "fields": {
+        "profile_id": {
+          "name": "Profilo",
+          "description": "Il profilo di risposta a cui appartiene l'azione."
+        },
+        "action_id": {
+          "name": "Azione",
+          "description": "Quale azione del profilo eseguire. Una sirena suona per tre secondi, qualunque durata abbia configurata."
+        },
+        "service": {
+          "name": "Servizio di notifica",
+          "description": "Prova un canale di notifica da solo, senza un'azione dietro: un servizio notify o un'entità notify."
+        },
+        "message": {
+          "name": "Messaggio",
+          "description": "Che cosa dice la notifica di prova."
+        },
+        "code": {
+          "name": "Codice",
+          "description": "Il codice di chi sta chiedendo. Verificato sempre nel backend (INV-2)."
+        },
+        "user_id": {
+          "name": "Utente",
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta le sue restrizioni, mai le sue esenzioni."
+        },
+        "channel": {
+          "name": "Canale",
+          "description": "Da dove arriva la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+        },
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi. Un nome che questa installazione non ha viene rifiutato."
         }
       }
     },

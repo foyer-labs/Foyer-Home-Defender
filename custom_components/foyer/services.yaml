@@ -11,8 +11,8 @@
 # is a property of a registered device, never a claim a message makes, or an
 # automation could buy the per-user code exemption of §8.2 by typing a word.
 #
-# foyer.walk_test and foyer.test_action are in §14.1 and are deliberately not
-# here: Phase 3 builds them, and a service that exists and does nothing answers
+# foyer.walk_test and foyer.test_action arrived with Phase 3, which is what
+# decision 86 was waiting for: a service that exists and does nothing answers
 # its caller with silence.
 
 arm:
@@ -200,6 +200,86 @@ acknowledge:
       example: keypad_hall
       selector:
         text:
+
+walk_test:
+  fields:
+    enable:
+      required: true
+      selector:
+        boolean:
+    duration:
+      required: false
+      example: 600
+      selector:
+        number:
+          min: 60
+          max: 3600
+          unit_of_measurement: seconds
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
+test_action:
+  fields:
+    profile_id:
+      required: false
+      selector:
+        text:
+    action_id:
+      required: false
+      selector:
+        text:
+    service:
+      required: false
+      example: notify.mobile_app_luca
+      selector:
+        text:
+    message:
+      required: false
+      selector:
+        text:
+    code:
+      required: false
+      example: "123456"
+      selector:
+        text:
+          type: password
+    user_id:
+      required: false
+      selector:
+        text:
+    channel:
+      required: false
+      selector:
+        select:
+          options:
+            - api
+            - automation
+    device_id:
+      required: false
+      example: keypad_hall
+      selector:
+        text:
+
 
 export_log:
   fields:

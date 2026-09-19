@@ -349,6 +349,8 @@ def test_the_declared_fields_and_the_accepted_fields_are_the_same():
         services.SERVICE_BYPASS_ZONE: services.BYPASS_SCHEMA,
         services.SERVICE_UNBYPASS_ZONE: services.UNBYPASS_SCHEMA,
         services.SERVICE_ACKNOWLEDGE: services.ACKNOWLEDGE_SCHEMA,
+        services.SERVICE_WALK_TEST: services.WALK_TEST_SCHEMA,
+        services.SERVICE_TEST_ACTION: services.TEST_ACTION_SCHEMA,
         services.SERVICE_EXPORT_LOG: services.EXPORT_LOG_SCHEMA,
         services.SERVICE_EXPORT_CONFIG: services.EXPORT_CONFIG_SCHEMA,
         services.SERVICE_IMPORT_CONFIG: services.IMPORT_CONFIG_SCHEMA,
@@ -361,9 +363,9 @@ def test_the_declared_fields_and_the_accepted_fields_are_the_same():
         assert offered == accepted, name
 
 
-async def test_walk_test_and_action_test_are_not_registered_yet(hass, loaded):
-    """Phase 3 builds them (§11.3, §11.4). A service that exists and does
-    nothing answers its caller with silence, which is the answer that gets
-    mistaken for success."""
-    assert not hass.services.has_service(DOMAIN, "walk_test")
-    assert not hass.services.has_service(DOMAIN, "test_action")
+async def test_walk_test_and_action_test_are_registered_now(hass, loaded):
+    """Phase 3 part 2 built them (§11.3, §11.4), which is what decision 86
+    was waiting for: a service that exists and does nothing answers its
+    caller with silence, and that is the answer mistaken for success."""
+    assert hass.services.has_service(DOMAIN, "walk_test")
+    assert hass.services.has_service(DOMAIN, "test_action")

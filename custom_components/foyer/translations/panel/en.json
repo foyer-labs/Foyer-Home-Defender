@@ -196,7 +196,8 @@
     "unknown_attachment": "This attachment is not one Foyer knows how to send.",
     "unsupported_battery_domain": "A battery must be a sensor reporting a percentage, or a battery binary sensor where “on” means low.",
     "battery_is_zone_entity": "That is the zone’s own entity, not its battery.",
-    "battery_out_of_range": "{field}: between 1 and 100 per cent."
+    "battery_out_of_range": "{field}: between 1 and 100 per cent.",
+    "walk_test_out_of_range": "The walk test timeout must be between 1 and 60 minutes. It cannot be switched off."
   },
   "field": {
     "name": "Name",
@@ -304,7 +305,8 @@
     "qos": "Quality of service",
     "attachment": "How to attach it",
     "battery_entity_id": "Battery entity",
-    "low_battery_threshold": "Low battery below"
+    "low_battery_threshold": "Low battery below",
+    "walk_test_timeout": "Walk test timeout"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -986,6 +988,10 @@
     "duress": {
       "title": "Duress code used",
       "message": "{user} disarmed {area} with a duress code at {time}."
+    },
+    "action_tested": {
+      "title": "Foyer: action test",
+      "message": "This is a test. Nothing has happened in the house."
     }
   },
   "chime_mode": {

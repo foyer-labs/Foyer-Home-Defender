@@ -726,6 +726,68 @@ def condition_summary(
     return tuple(out)
 
 
+# --- the real action test (§11.4) --------------------------------------------------
+
+# How long a siren sounds when it is being tested: long enough to hear, short
+# enough that nobody in the street reaches for a phone. The prototype's
+# "sounds for 3 s", and it overrides whatever duration the action carries —
+# a test that sounded for the configured three minutes is a test nobody runs
+# twice.
+TEST_SIREN_SECONDS = 3
+
+
+def test_intent(
+    ctx: PlanContext, profile: ResponseProfile, action_id: str
+) -> ActionIntent | None:
+    """One configured action, built to be really executed (§11.4).
+
+    It **really executes**, which is the entire point: the failure this
+    prevents is discovering during the emergency that the emergency channel
+    was misconfigured. So the action's conditions are not asked — "only
+    between 22:00 and 07:00" is a rule about alarms, not about whether the
+    light works — and a silent zone suppresses nothing, because no zone is
+    involved.
+
+    Built here rather than in the runtime for the same reason every other
+    intent is: the executor interprets nothing, and a second place that
+    turned an action into an instruction would be a second place free to
+    turn it into a different one.
+    """
+    action = next((a for a in profile.actions if a.id == action_id), None)
+    if action is None or action.kind is ActionKind.DELAY:
+        # A delay has nothing to test: it is the waiting itself.
+        return None
+    values = variables(ctx, ())
+    params = dict(_params(action, values, ctx, None))
+    if action.kind is ActionKind.SIREN:
+        params["duration"] = TEST_SIREN_SECONDS
+    return ActionIntent(
+        action_id=action.id,
+        kind=action.kind.value,
+        moment=Moment.ACTION_TESTED,
+        profile_id=profile.id,
+        placeholders=dict(values),
+        params=params,
+    )
+
+
+def notify_test_intent(service: str, message: str) -> ActionIntent:
+    """A notification channel tested on its own, with no action behind it.
+
+    §11.4 asks for a test button beside every action *and every contact
+    channel*. The contact book is Phase 4's, so this is the half that exists
+    today: the wizard's "prove a notification arrives", moved off the browser
+    and onto the one path that verifies server-side and records the attempt.
+    """
+    return ActionIntent(
+        action_id=f"notify:{service}",
+        kind=ActionKind.NOTIFY.value,
+        moment=Moment.ACTION_TESTED,
+        profile_id=None,
+        params={"service": service, "message": message},
+    )
+
+
 def without(
     running: Sequence[RunningAction], stopped: Sequence[RunningAction]
 ) -> tuple[RunningAction, ...]:

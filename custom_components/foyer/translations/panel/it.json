@@ -196,7 +196,8 @@
     "unknown_attachment": "Questo tipo di allegato non è fra quelli che Foyer sa spedire.",
     "unsupported_battery_domain": "La batteria dev’essere un sensore che riporta una percentuale, o un sensore binario di tipo batteria in cui “on” vuol dire scarica.",
     "battery_is_zone_entity": "Quella è l’entità della zona stessa, non la sua batteria.",
-    "battery_out_of_range": "{field}: fra 1 e 100 per cento."
+    "battery_out_of_range": "{field}: fra 1 e 100 per cento.",
+    "walk_test_out_of_range": "Il timeout del walk test deve stare fra 1 e 60 minuti. Non si può disattivare."
   },
   "field": {
     "name": "Nome",
@@ -304,7 +305,8 @@
     "qos": "Qualità del servizio",
     "attachment": "Come allegarla",
     "battery_entity_id": "Entità della batteria",
-    "low_battery_threshold": "Batteria scarica sotto"
+    "low_battery_threshold": "Batteria scarica sotto",
+    "walk_test_timeout": "Timeout del walk test"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -986,6 +988,10 @@
     "duress": {
       "title": "Codice di coercizione usato",
       "message": "{user} ha disinserito {area} con un codice di coercizione alle {time}."
+    },
+    "action_tested": {
+      "title": "Foyer: prova azione",
+      "message": "Questa è una prova. In casa non è successo nulla."
     }
   },
   "chime_mode": {

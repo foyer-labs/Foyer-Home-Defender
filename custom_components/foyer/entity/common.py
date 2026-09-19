@@ -48,6 +48,7 @@ def expected_unique_ids(entry_id: str, config: FoyerConfig) -> set[str]:
             "incident",
             "last_event",
             "chime",
+            "walk_test",
             "acknowledge",
         )
     }

@@ -38,6 +38,7 @@ from ..core.models import (
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_VERIFICATION_WINDOW,
+    MAX_WALK_TEST_TIMEOUT,
     MIN_ARM_HOLD_TIMEOUT,
     MIN_CODE_LENGTH,
     MIN_LOCKOUT_FAILURES,
@@ -46,6 +47,7 @@ from ..core.models import (
     MIN_RETENTION_DAYS,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
+    MIN_WALK_TEST_TIMEOUT,
     SILENCEABLE,
     AcknowledgeIncident,
     AcknowledgeTechnical,
@@ -66,6 +68,7 @@ from ..core.models import (
     Permission,
     Reason,
     User,
+    WalkTestRequest,
     ZoneType,
 )
 from ..core.presets import UNAVAILABLE_TYPES, preset
@@ -120,8 +123,8 @@ FUTURE_MOMENTS: tuple[Moment, ...] = (
     Moment.CODE_REJECTED,
     Moment.LOCKOUT,
     Moment.LOW_BATTERY,
-    Moment.WALK_TEST_STARTED,
-    Moment.WALK_TEST_ENDED,
+    # The walk test's two moments left this list in Phase 3 part 2, which is
+    # the phase that raises them.
     Moment.ESCALATION_EXHAUSTED,
 )
 
@@ -296,6 +299,8 @@ def async_register(hass: HomeAssistant) -> None:
         ws_config_import,
         ws_diagnostics,
         ws_simulate,
+        ws_walk_test,
+        ws_test_action,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -534,13 +539,17 @@ def _meta() -> dict[str, Any]:
                 MIN_LOW_BATTERY_THRESHOLD,
                 MAX_LOW_BATTERY_THRESHOLD,
             ],
+            "walk_test_timeout": [MIN_WALK_TEST_TIMEOUT, MAX_WALK_TEST_TIMEOUT],
         },
         # What page 5 needs to build an action editor without knowing the
         # engine: the catalogue, where each kind may point, and the moments.
         "action_kinds": [k.value for k in ActionKind],
         "action_domains": {k: list(v) for k, v in ACTION_DOMAINS.items()},
         "silenceable": sorted(SILENCEABLE),
-        "moments": [m.value for m in Moment],
+        # Every moment a profile may answer. ACTION_TESTED is not one: it is
+        # somebody pressing the test button of §11.4, and a profile that
+        # answered a test by sounding the siren would be a loop.
+        "moments": [m.value for m in Moment if m is not Moment.ACTION_TESTED],
         # Moments no phase raises yet: selectable, and labelled as such.
         "future_moments": [m.value for m in FUTURE_MOMENTS],
         "template_variables": list(TEMPLATE_VARIABLES),
@@ -557,7 +566,8 @@ def _meta() -> dict[str, Any]:
         "operations": [o.value for o in Operation],
         # The operations no phase raises yet: the policy is complete, the
         # features are not, and the page says which is which.
-        "future_operations": [Operation.WALK_TEST.value, Operation.TEST_ACTION.value],
+        # Every operation of §8.2 has a caller now: part 2 built the last two.
+        "future_operations": [],
         "identifying_channels": sorted(IDENTIFYING_CHANNELS),
         "schema_version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
     }
@@ -1401,3 +1411,92 @@ async def ws_simulate(
         )
     )
     connection.send_result(msg["id"], system.simulate(request))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/walk_test",
+        vol.Required("enable"): bool,
+        # Shorter than the installation's maximum, never longer (§5.3).
+        vol.Optional("duration"): vol.Any(
+            vol.All(
+                int, vol.Range(min=MIN_WALK_TEST_TIMEOUT, max=MAX_WALK_TEST_TIMEOUT)
+            ),
+            None,
+        ),
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_walk_test(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Page 9, tab 3: enter or leave the walk test (§11.3).
+
+    A state-changing request like any other, so it goes to the engine and the
+    engine resolves §8.2 and §8.3 — "enter walk test" is code required by
+    default, and a rehearsal buys no exemption (INV-2).
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    decision = await system.async_handle(
+        WalkTestRequest(
+            msg["enable"],
+            await _actor(hass, system, connection, msg),
+            duration=msg.get("duration"),
+        )
+    )
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/test_action",
+        # One configured action of one profile (page 5), or a notification
+        # channel on its own — which is the half of §11.4's "every contact
+        # channel" that exists before the contact book of Phase 4.
+        vol.Exclusive("action_id", "target"): str,
+        vol.Exclusive("service", "target"): str,
+        vol.Optional("profile_id"): str,
+        vol.Optional("message"): str,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_test_action(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Page 9, tab 4: really execute one action (§11.4).
+
+    Gated like a configuration command rather than through the engine,
+    because it changes no alarm state: it presses a button an administrator
+    could press from Developer Tools anyway, which is exactly the case INV-6
+    describes. The `test_actions` permission and the code of §8.2 both
+    apply; what does not is refusing an administrator for a permission they
+    can grant themselves in two clicks.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        actor := await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.TEST_ACTION,
+            permission=Permission.TEST_ACTIONS,
+        )
+    ) is None:
+        return
+    result = await system.async_test_action(
+        profile_id=msg.get("profile_id"),
+        action_id=msg.get("action_id"),
+        service=msg.get("service"),
+        message=msg.get("message", ""),
+        actor=actor,
+    )
+    connection.send_result(msg["id"], result)

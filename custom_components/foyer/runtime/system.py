@@ -32,10 +32,12 @@ from ..core import authz
 from ..core.conditions import condition_entities
 from ..core.diagnostics import as_dict as diagnostics_dict, diagnose
 from ..core.engine import arm_blockers, decide, master_state, next_wakeup
-from ..core.journal import LogRow, action_row, rows_for
+from ..core.journal import LogRow, action_row, rows_for, test_action_row
 from ..core.models import (
+    Actor,
     Area,
     AreaState,
+    Channel,
     Decision,
     EntityState,
     Event,
@@ -52,6 +54,7 @@ from ..core.models import (
     User,
     ZoneStateChanged,
 )
+from ..core.response import PlanContext, notify_test_intent, test_intent
 from ..core.simulate import (
     SimulationRequest,
     as_dict as simulation_dict,
@@ -442,6 +445,116 @@ class FoyerSystem:
         simulation = simulate_run(self.config, request, snapshot.entities)
         return simulation_dict(simulation, self.config)
 
+    async def async_test_action(
+        self,
+        *,
+        profile_id: str | None = None,
+        action_id: str | None = None,
+        service: str | None = None,
+        message: str = "",
+        actor: Actor | None = None,
+    ) -> dict[str, Any]:
+        """Really execute one action, and record that it was a test (§11.4).
+
+        It really executes because that is the whole point: the failure this
+        prevents is discovering during the emergency that the emergency
+        channel was misconfigured. The intent is built by ``core/response``,
+        exactly as the engine builds every other one, and handed to the same
+        executor — a test that went through a path of its own would prove
+        that path works.
+
+        Nothing about the alarm changes: no Decision is made, no state is
+        stored, and the row it leaves is filed as a test rather than as the
+        alarm it imitates.
+        """
+        if service:
+            intent = notify_test_intent(service, message)
+        else:
+            profile = self.config.profile(profile_id)
+            if profile is None:
+                return {"success": False, "reason": "unknown_profile"}
+            ctx = PlanContext(
+                config=self.config,
+                snapshot=self._snapshot(),
+                now=dt_util.utcnow(),
+                areas=self.state.areas,
+                incident=self.state.incident,
+                active_zones=self.state.active_zones,
+            )
+            built = test_intent(ctx, profile, action_id or "")
+            if built is None:
+                return {"success": False, "reason": "unknown_action"}
+            intent = built
+        results = await self._executor.async_run(
+            Decision(
+                at=dt_util.utcnow(), accepted=True, state=self.state, actions=(intent,)
+            )
+        )
+        result = results[0]
+        named = self.config.user(actor.user_id) if actor else None
+        self.async_record(
+            (
+                test_action_row(
+                    dt_util.utcnow(),
+                    action_id=intent.action_id,
+                    kind=intent.kind,
+                    ok=result.ok,
+                    error=result.error,
+                    profile_id=profile_id,
+                    user_id=actor.user_id if actor else None,
+                    user_name=named.name if named else None,
+                    channel=actor.channel if actor else None,
+                ),
+            )
+        )
+        return {
+            "success": result.ok,
+            "reason": None if result.ok else "action_failed",
+            "kind": intent.kind,
+            "error": result.error,
+        }
+
+    def walk_test_status(self) -> dict[str, Any] | None:
+        """What page 9 and the banner need while a walk test runs (§11.3).
+
+        ``expected`` is every zone the walk should have reached, so that
+        silence can be shown as a finding rather than as an empty table —
+        which is the whole feature. `always_on` zones are left out: they are
+        live rather than under test, and nobody sets off the smoke detector
+        to prove it works.
+        """
+        walk = self.state.walk_test
+        if walk is None:
+            return None
+        expected = [
+            z.id
+            for z in self.config.zones
+            if z.enabled
+            and z.channel is Channel.INTRUSION
+            and not z.always_on
+            and z.id not in self.state.bypassed
+        ]
+        return {
+            "started_at": walk.started_at.isoformat(),
+            "until": walk.until.isoformat(),
+            "hard_until": walk.hard_until.isoformat(),
+            "deadline": walk.deadline().isoformat(),
+            "window": walk.window,
+            "armed_areas": list(walk.armed_areas),
+            "user_id": walk.user_id,
+            "user_name": walk.user_name,
+            "channel": walk.channel,
+            "expected_zones": expected,
+            "detections": {
+                zone_id: {
+                    "first": d.first.isoformat(),
+                    "last": d.last.isoformat(),
+                    "count": d.count,
+                }
+                for zone_id, d in walk.detections.items()
+            },
+        }
+
     def result(self, decision: Decision, ha_user: Any = None) -> dict[str, Any]:
         """The structured result of SPEC §9.1.
 
@@ -565,6 +678,9 @@ class FoyerSystem:
         return {
             "now": now.isoformat(),
             "active_scenario_id": self.state.active_scenario_id,
+            # §11.3: an unmissable banner in the panel and on every card
+            # while it is active. Both read it from here.
+            "walk_test": self.walk_test_status(),
             "master": {"state": master.value, "mode": mode},
             "areas": areas,
             "scenarios": [

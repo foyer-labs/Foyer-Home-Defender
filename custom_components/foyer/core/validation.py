@@ -29,6 +29,7 @@ from .models import (
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_VERIFICATION_WINDOW,
+    MAX_WALK_TEST_TIMEOUT,
     MIN_ARM_HOLD_TIMEOUT,
     MIN_CODE_LENGTH,
     MIN_LOCKOUT_FAILURES,
@@ -36,6 +37,7 @@ from .models import (
     MIN_LOW_BATTERY_THRESHOLD,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
+    MIN_WALK_TEST_TIMEOUT,
     MQTT_TOPIC_FORBIDDEN,
     NOTIFY_ATTACHMENTS,
     SILENCEABLE,
@@ -218,6 +220,13 @@ def validate(config: FoyerConfig) -> list[Problem]:
         MAX_LOW_BATTERY_THRESHOLD,
     ):
         add(Problem("battery_out_of_range", "settings", None, "low_battery_threshold"))
+    if not _in_range(
+        settings.walk_test_timeout, MIN_WALK_TEST_TIMEOUT, MAX_WALK_TEST_TIMEOUT
+    ):
+        # §5.3 calls the walk test's auto-exit mandatory and non-disableable,
+        # so there is no value here that switches it off — only a shorter or
+        # a longer one, both bounded.
+        add(Problem("walk_test_out_of_range", "settings", None, "walk_test_timeout"))
 
     zones = {z.id: z for z in config.zones}
     for zone in config.zones:

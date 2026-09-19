@@ -309,6 +309,9 @@ def update_settings(
                 low_battery_threshold=int(
                     settings.get("low_battery_threshold", current.low_battery_threshold)
                 ),
+                walk_test_timeout=int(
+                    settings.get("walk_test_timeout", current.walk_test_timeout)
+                ),
                 mqtt=_mqtt_from(settings.get("mqtt"), current.mqtt),
                 # Page 11 does not own these — page 7 does, through
                 # update_security — so a settings save must carry them through

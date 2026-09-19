@@ -123,6 +123,8 @@ CATEGORY: dict[Moment, LogCategory] = {
     Moment.WALK_TEST_STARTED: LogCategory.SYSTEM,
     Moment.WALK_TEST_ENDED: LogCategory.SYSTEM,
     Moment.CHIME_SWITCHED: LogCategory.SYSTEM,
+    # A test is an action, filed with the actions — and marked (§11.4).
+    Moment.ACTION_TESTED: LogCategory.ACTION,
     # A chime sounds exactly when a zone opens unmonitored (§6.6), which is
     # the volume class of zone activity while disarmed — and its category.
     Moment.CHIME: LogCategory.ZONE_DISARMED,
@@ -162,6 +164,7 @@ SEVERITY: dict[Moment, LogSeverity] = {
     Moment.WALK_TEST_ENDED: LogSeverity.INFO,
     Moment.CHIME_SWITCHED: LogSeverity.INFO,
     Moment.CHIME: LogSeverity.INFO,
+    Moment.ACTION_TESTED: LogSeverity.INFO,
 }
 
 # Moments whose row is named something else, because the spec names them: the
@@ -431,6 +434,46 @@ def action_row(
         incident_id=incident_id,
         outcome=(Outcome.OK if ok else Outcome.FAILED).value,
         detail={**detail, "moment": moment.value if moment else None},
+    )
+
+
+def test_action_row(
+    at: datetime,
+    *,
+    action_id: str,
+    kind: str,
+    ok: bool,
+    error: str | None = None,
+    profile_id: str | None = None,
+    user_id: str | None = None,
+    user_name: str | None = None,
+    channel: str | None = None,
+) -> LogRow:
+    """An action somebody tested on purpose (§11.4: "logged as a test").
+
+    Filed with the actions, because it really ran, and named differently
+    from every other one, because it did not happen: a test recorded as a
+    real action is a log that claims the siren went off on the sixth of
+    September, and the log exists to answer exactly that question.
+
+    A failure is a warning for the same reason an ordinary action's is —
+    louder, if anything, since somebody is watching and can fix it now.
+    """
+    detail: dict[str, Any] = {"kind": kind, "action_id": action_id, "test": True}
+    if profile_id:
+        detail["profile_id"] = profile_id
+    if error:
+        detail["error"] = error
+    return LogRow(
+        ts=at,
+        category=LogCategory.ACTION,
+        event_type="action_test",
+        severity=LogSeverity.INFO if ok else LogSeverity.WARNING,
+        user_id=user_id,
+        user_name=user_name,
+        channel=channel,
+        outcome=(Outcome.OK if ok else Outcome.FAILED).value,
+        detail=detail,
     )
 
 
