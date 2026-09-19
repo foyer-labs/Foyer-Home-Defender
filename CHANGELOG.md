@@ -5,7 +5,7 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased] — ask what would happen, without anything happening
+## [0.1.0-beta.4] — ask what would happen, without anything happening
 
 Phase 3, part one. The feature this project exists for: you can now rehearse a
 configuration instead of trusting it, and read what every zone is actually
