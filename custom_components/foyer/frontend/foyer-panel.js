@@ -4144,7 +4144,7 @@ var gt = {
 	enabled: !0
 }, _t = ["tag.", "event."], vt = class extends L {
 	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1;
+		super(...e), this._problems = [], this._busy = !1, this._mqttProblems = [];
 	}
 	static {
 		this.properties = {
@@ -4152,7 +4152,8 @@ var gt = {
 			_draft: { state: !0 },
 			_problems: { state: !0 },
 			_busy: { state: !0 },
-			_mqtt: { state: !0 }
+			_mqtt: { state: !0 },
+			_mqttProblems: { state: !0 }
 		};
 	}
 	_edit(e) {
@@ -4211,7 +4212,7 @@ var gt = {
 					...this.ctx.config.settings,
 					mqtt: this._mqtt
 				}, t = await this.ctx.saveSettings(e);
-				this._problems = t.problems, t.success && (this._mqtt = void 0);
+				this._mqttProblems = t.problems, t.success && (this._mqtt = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -4507,6 +4508,9 @@ var gt = {
               <span class="hint">${V(e, "devices.last_result_hint")}</span>
             </div>
           </div>
+          ${this._mqttProblems.length ? O`<ul class="problems">
+                ${this._mqttProblems.map((t) => O`<li>${W(e, t)}</li>`)}
+              </ul>` : A}
         </div>
         <div class="card-ft">
           <button

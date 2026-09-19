@@ -103,12 +103,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _async_remove_stale_entities(hass, entry)
     entry.async_on_unload(async_watch_zones(system))
     system.async_start()
-    # The broker, if this installation wants one (§9.2). The install id keeps
-    # two houses on one broker apart; it is the entry's, shortened, because a
-    # topic is something a person types into a keypad's configuration.
-    stop_mqtt = await mqtt.async_setup(hass, system, entry.entry_id[:8])
-    if stop_mqtt is not None:
-        entry.async_on_unload(stop_mqtt)
+    # The broker, if this installation wants one (§9.2). Started beside this
+    # setup and not inside it: a broker that does not answer must not keep the
+    # alarm from loading. The install id keeps two houses on one broker apart;
+    # it is the entry's, shortened, because a topic is something a person
+    # types into a keypad's configuration.
+    entry.async_on_unload(mqtt.async_start(hass, entry, system, entry.entry_id[:8]))
     await async_register_frontend(hass)
     return True
 

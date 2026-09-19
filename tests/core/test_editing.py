@@ -207,6 +207,70 @@ def test_settings_are_validated(config):
     assert good.config.settings.arm_hold_timeout == 600
 
 
+def test_saving_settings_leaves_the_code_and_lockout_numbers_alone(config):
+    """Page 11 does not own them; page 7 does (§8.1, §8.4).
+
+    Rebuilding the settings block without them put the code length back to
+    six. A household with eight-digit codes then had a keypad that submitted
+    after six digits and a lockout waiting at the fifth try — which is the
+    "cannot disarm the house" class of failure.
+    """
+    from dataclasses import replace
+
+    from custom_components.foyer.core.models import SecuritySettings
+
+    hardened = replace(
+        config,
+        settings=replace(
+            config.settings,
+            security=SecuritySettings(
+                code_length=8,
+                lockout_failures=3,
+                lockout_window=600,
+                lockout_duration=900,
+            ),
+        ),
+    )
+
+    saved = update_settings(
+        hardened, RuntimeState(), {"siren_duration": 120, "arm_hold_timeout": 600}
+    )
+
+    assert saved.config is not None
+    assert saved.config.settings.security.code_length == 8
+    assert saved.config.settings.security.lockout_failures == 3
+    assert saved.config.settings.security.lockout_window == 600
+    assert saved.config.settings.security.lockout_duration == 900
+
+
+def test_saving_settings_leaves_the_mqtt_contract_alone(config):
+    """The same rule, for the block page 8 owns (§9.2)."""
+    from dataclasses import replace
+
+    from custom_components.foyer.core.models import MqttDetail, MqttSettings
+
+    with_mqtt = replace(
+        config,
+        settings=replace(
+            config.settings,
+            mqtt=MqttSettings(
+                enabled=True,
+                command_topic="house/alarm/cmd",
+                detail=MqttDetail.FULL,
+            ),
+        ),
+    )
+
+    saved = update_settings(
+        with_mqtt, RuntimeState(), {"siren_duration": 120, "arm_hold_timeout": 600}
+    )
+
+    assert saved.config is not None
+    assert saved.config.settings.mqtt.enabled is True
+    assert saved.config.settings.mqtt.command_topic == "house/alarm/cmd"
+    assert saved.config.settings.mqtt.detail is MqttDetail.FULL
+
+
 def test_a_configuration_change_records_the_value_before_and_after(config):
     """A field name on its own does not answer "who changed what" (§10.2)."""
     from dataclasses import replace

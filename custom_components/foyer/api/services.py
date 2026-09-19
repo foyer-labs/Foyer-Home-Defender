@@ -29,6 +29,7 @@ success.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components import persistent_notification
@@ -158,16 +159,33 @@ async def _requester(hass: HomeAssistant, system: FoyerSystem, call: ServiceCall
     )
 
 
+# How often one undeclared device may write a row. A person pressing keys
+# produces a handful; an adapter stuck in a loop produces thousands, and a
+# thousand identical rows bury the `security` category that somebody actually
+# reads — the same reasoning §10.2 applies to zone activity.
+_REPORT_EVERY = timedelta(minutes=1)
+_REPORTED = f"{DOMAIN}_reported_devices"
+
+
 async def async_report_unknown_device(
     hass: HomeAssistant, system: FoyerSystem, *, channel: str, ref: str | None
 ) -> None:
     """Record and show a device that tried to command and is not declared.
 
     One notification per device, not one per message: a keypad configured with
-    the wrong name retries every few seconds, and a hundred notifications are
-    read exactly as carefully as none. The row underneath is written every
-    time, because the log is where the count belongs.
+    the wrong name retries, and a hundred notifications are read exactly as
+    carefully as none. The row underneath is rate-limited for the same reason
+    and no further: it is written the first time, then at most once a minute
+    per device, so a broken adapter leaves a legible trail instead of burying
+    the category in which it sits.
     """
+    seen: dict[str, datetime] = hass.data.setdefault(_REPORTED, {})
+    key = f"{channel}:{ref or ''}"
+    now = dt_util.utcnow()
+    recently = seen.get(key)
+    seen[key] = now
+    if recently is not None and now - recently < _REPORT_EVERY:
+        return
     system.async_record(
         (
             security_row(
@@ -203,11 +221,11 @@ async def _answer(
     """Hand the event to the engine, or answer the refusal in the same shape."""
     if requester.actor is None:
         assert requester.reason is not None
+        # Filed under the transport, never under the channel the message
+        # claimed: a caller that may not choose its channel may not choose
+        # which counter the refusal is recorded against either.
         await async_report_unknown_device(
-            hass,
-            system,
-            channel=call.data.get("channel") or CHANNEL_API,
-            ref=call.data.get("device_id"),
+            hass, system, channel=CHANNEL_API, ref=call.data.get("device_id")
         )
         return system.refusal(requester.reason)
     decision = await system.async_handle(event)
@@ -282,8 +300,17 @@ def async_register(hass: HomeAssistant) -> None:
 
         system = _system(hass)
         requester = await _requester(hass, system, call)
+        # A read, like the panel's own log page: the permission decides, the
+        # code does not. §8.2 asks for a code to *edit* the configuration, and
+        # the WebSocket command behind page 10 asks for none either — two
+        # answers to one question is how one of them ends up being the wrong
+        # one.
         refused = _refused(
-            system, requester, Operation.EDIT_CONFIG, Permission.VIEW_LOG
+            system,
+            requester,
+            Operation.EDIT_CONFIG,
+            Permission.VIEW_LOG,
+            need_code=False,
         )
         if refused is not None:
             return refused
@@ -340,6 +367,8 @@ def async_register(hass: HomeAssistant) -> None:
         requester: Requester,
         operation: Operation,
         permission: Permission,
+        *,
+        need_code: bool = True,
     ) -> ServiceResponse | None:
         """The gate for the services that read or write the configuration.
 
@@ -373,7 +402,8 @@ def async_register(hass: HomeAssistant) -> None:
         if not user.may(permission):
             return {"success": False, "reason": Reason.NOT_PERMITTED.value}
         if (
-            authz.code_required(
+            need_code
+            and authz.code_required(
                 system.config,
                 operation,
                 now=now,

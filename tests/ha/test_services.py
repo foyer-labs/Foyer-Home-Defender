@@ -9,6 +9,8 @@ without the check.
 
 from __future__ import annotations
 
+import pathlib
+
 from homeassistant.components.alarm_control_panel import AlarmControlPanelState
 import pytest
 
@@ -296,10 +298,67 @@ async def test_exporting_the_log_returns_the_rows_it_matched(hass, with_keypad):
     assert "config_save" in result["content"]
 
 
+async def test_reading_the_log_asks_for_the_permission_and_not_the_code(
+    hass, with_keypad
+):
+    """Page 10 asks for no code either, and two answers to one question is how
+    one of them ends up being the wrong one.
+
+    Saying **who** is asking is still required: a service call carries no
+    signed-in account to fall back on, so a caller that names nobody while
+    codes are in force is refused — with `not_permitted`, not
+    `code_required`, because the code is not what was missing.
+    """
+    user_id = hass.data[DOMAIN].config.users[0].id
+
+    named = await _call(hass, "export_log", user_id=user_id, categories=["config"])
+    assert named["success"], named
+    assert named["rows"] >= 1
+
+    anonymous = await _call(hass, "export_log", categories=["config"])
+    assert anonymous["success"] is False
+    assert anonymous["reason"] == "not_permitted"
+
+
 async def test_restoring_a_configuration_that_is_not_ours_is_refused(hass, with_keypad):
     result = await _call(hass, "import_config", code=CODE, document={"hello": "world"})
     assert result["success"] is False
     assert [p["code"] for p in result["problems"]] == ["not_a_foyer_backup"]
+
+
+def test_the_declared_fields_and_the_accepted_fields_are_the_same():
+    """services.yaml is what the UI offers; the schema is what is accepted.
+
+    A field in one and not the other is invisible either way: declared and
+    not accepted, the call fails when somebody uses it; accepted and not
+    declared, nobody finds it. hassfest already checks the yaml against the
+    translations, and nothing checked it against the code.
+    """
+    import yaml
+
+    from custom_components.foyer.api import services
+
+    declared = yaml.safe_load(
+        (pathlib.Path(services.__file__).parent.parent / "services.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    schemas = {
+        services.SERVICE_ARM: services.ARM_SCHEMA,
+        services.SERVICE_DISARM: services.DISARM_SCHEMA,
+        services.SERVICE_BYPASS_ZONE: services.BYPASS_SCHEMA,
+        services.SERVICE_UNBYPASS_ZONE: services.UNBYPASS_SCHEMA,
+        services.SERVICE_ACKNOWLEDGE: services.ACKNOWLEDGE_SCHEMA,
+        services.SERVICE_EXPORT_LOG: services.EXPORT_LOG_SCHEMA,
+        services.SERVICE_EXPORT_CONFIG: services.EXPORT_CONFIG_SCHEMA,
+        services.SERVICE_IMPORT_CONFIG: services.IMPORT_CONFIG_SCHEMA,
+    }
+
+    assert set(declared) == set(schemas)
+    for name, schema in schemas.items():
+        accepted = {str(key) for key in schema.schema}
+        offered = set((declared[name] or {}).get("fields") or {})
+        assert offered == accepted, name
 
 
 async def test_walk_test_and_action_test_are_not_registered_yet(hass, loaded):

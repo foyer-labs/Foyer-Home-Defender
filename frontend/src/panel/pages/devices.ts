@@ -45,6 +45,7 @@ class FoyerPageDevices extends LitElement {
     _problems: { state: true },
     _busy: { state: true },
     _mqtt: { state: true },
+    _mqttProblems: { state: true },
   };
 
   ctx?: PanelContext;
@@ -52,6 +53,7 @@ class FoyerPageDevices extends LitElement {
   private _problems: Problem[] = [];
   private _busy = false;
   private _mqtt?: MqttConfig;
+  private _mqttProblems: Problem[] = [];
 
   private _edit(device?: DeviceConfig): void {
     this._draft = device ? structuredClone(device) : structuredClone(EMPTY);
@@ -117,7 +119,7 @@ class FoyerPageDevices extends LitElement {
         mqtt: this._mqtt,
       };
       const result = await this.ctx.saveSettings(settings);
-      this._problems = result.problems;
+      this._mqttProblems = result.problems;
       if (result.success) this._mqtt = undefined;
     } finally {
       this._busy = false;
@@ -464,6 +466,11 @@ class FoyerPageDevices extends LitElement {
               <span class="hint">${t(s, "devices.last_result_hint")}</span>
             </div>
           </div>
+          ${this._mqttProblems.length
+            ? html`<ul class="problems">
+                ${this._mqttProblems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+              </ul>`
+            : nothing}
         </div>
         <div class="card-ft">
           <button

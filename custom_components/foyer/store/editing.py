@@ -24,6 +24,7 @@ from ..core.models import (
     LogSettings,
     MqttSettings,
     RuntimeState,
+    SecuritySettings,
     Settings,
     ZoneType,
 )
@@ -305,6 +306,13 @@ def update_settings(
                 language=settings.get("language", current.language) or None,
                 wizard_done=bool(settings.get("wizard_done", current.wizard_done)),
                 mqtt=_mqtt_from(settings.get("mqtt"), current.mqtt),
+                # Page 11 does not own these — page 7 does, through
+                # update_security — so a settings save must carry them through
+                # untouched. Rebuilding Settings without them put the code
+                # length back to six, and a household with eight-digit codes
+                # then had a keypad that submitted after six and a lockout
+                # waiting at the fifth try.
+                security=_security_from(settings.get("security"), current.security),
             ),
         )
     except (KeyError, TypeError, ValueError):
@@ -320,6 +328,13 @@ def update_settings(
     ):
         return _fail(Problem("retention_out_of_range", "settings", None, "log"))
     return _check(config, new, state, None)
+
+
+def _security_from(data: Any, current: SecuritySettings) -> SecuritySettings:
+    """The code and lockout numbers, or the ones already stored."""
+    if not isinstance(data, dict):
+        return current
+    return security_from_dict(data)
 
 
 def _mqtt_from(data: Any, current: MqttSettings) -> MqttSettings:

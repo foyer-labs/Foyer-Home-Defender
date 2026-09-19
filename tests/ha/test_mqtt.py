@@ -178,6 +178,50 @@ async def test_a_message_with_no_device_at_all_is_refused(hass, broker):
     assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
 
 
+async def test_repeated_wrong_codes_lock_that_keypad_out(hass, broker, freezer):
+    """§8.4 through the broker: the counter is this device's, and the keypad
+    is told which refusal it is getting."""
+    for _ in range(5):
+        await _send(
+            hass,
+            broker,
+            {
+                "action": "arm",
+                "scenario": SCENARIO,
+                "code": "000000",
+                "device_id": KEYPAD,
+            },
+        )
+        assert _published(broker)[-1]["last_result"] == "bad_code"
+
+    await _send(
+        hass,
+        broker,
+        {"action": "arm", "scenario": SCENARIO, "code": CODE, "device_id": KEYPAD},
+    )
+
+    published = _published(broker)[-1]
+    assert published["last_result"] == "locked_out"
+    assert published["last_reason"] == "locked_out"
+    assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
+
+
+async def test_a_broken_adapter_does_not_bury_the_security_log(hass, broker):
+    """A device stuck in a loop leaves a legible trail, not a thousand rows."""
+    system = hass.data[DOMAIN]
+    for _ in range(6):
+        await _send(
+            hass,
+            broker,
+            {"action": "arm", "scenario": SCENARIO, "device_id": "keypad_ghost"},
+        )
+
+    await system.log.async_flush()
+    rows = (await system.log.async_query(limit=200, categories=["security"]))["rows"]
+    refused = [r for r in rows if r["event_type"] == "device_rejected"]
+    assert len(refused) == 1
+
+
 async def test_a_status_request_republishes_without_commanding(hass, broker):
     before = len(_published(broker))
     await _send(hass, broker, {"action": "status"})
@@ -255,6 +299,30 @@ async def test_the_countdown_is_the_one_about_to_run_out(hass, broker, freezer):
 
     await _advance(hass, freezer, 31)
     assert _published(broker)[-1]["countdown"] is None
+
+
+async def test_a_message_that_says_the_same_thing_is_not_republished(hass, broker):
+    """Foyer notifies on every motion a detector reports; almost none of it
+    changes this message, and a retained payload identical to the last one is
+    traffic on somebody else's broker that tells nobody anything."""
+    before = len(_published(broker))
+
+    hass.states.async_set("binary_sensor.front_door", "on")
+    await hass.async_block_till_done()
+    hass.states.async_set("binary_sensor.front_door", "off")
+    await hass.async_block_till_done()
+    after_movement = len(_published(broker))
+
+    # The door opening and closing does change `ready_to_arm`, so it is news
+    # once each way — and nothing more than that.
+    assert after_movement - before == 2
+
+    # A command is answered even when the house did not move: a keypad asking
+    # again after a reboot is waiting for the message.
+    await _send(hass, broker, {"action": "status"})
+    assert len(_published(broker)) == after_movement + 1
+    await _send(hass, broker, {"action": "status"})
+    assert len(_published(broker)) == after_movement + 2
 
 
 async def test_nothing_is_published_while_the_contract_is_off(

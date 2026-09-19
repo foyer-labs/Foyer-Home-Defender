@@ -214,6 +214,12 @@ actions:
       - conditions:
           - condition: trigger
             id: panel
+          # A state trigger also fires when only an attribute moved. Sending
+          # the same indicator again wakes a battery keypad for nothing.
+          - condition: template
+            value_template: >-
+              {{ trigger.from_state is none
+                 or trigger.from_state.state != trigger.to_state.state }}
         sequence:
           - variables:
               state: "{{ trigger.to_state.state }}"

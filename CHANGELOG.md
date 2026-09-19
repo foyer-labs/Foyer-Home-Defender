@@ -33,10 +33,31 @@ read the first one.
   which people stop. Copying by hand still works and is documented beside it.
 
 ### Fixed
+- **Saving anything on the Settings page reset the code length and the lockout
+  numbers** to their defaults. Present since codes landed in `0.1.0-alpha.13`:
+  if you had set a code length other than six and then touched Settings, the
+  card and the keypad went back to collecting six digits — and a code that
+  never validates is five wrong attempts away from a lockout. Check
+  *Users & codes* if this is you. Found in review, with a regression test.
+- **A misconfigured device could bury the security log.** An undeclared device
+  wrote a row on every message; it now writes one, then at most one a minute
+  per device. The notification was already one per device.
+- **MQTT published a retained message on every motion a detector reported**,
+  usually saying exactly what it already said. It now publishes when the
+  message would differ, and always in answer to a command.
+- **A broker that did not answer could hold up Foyer's own start.** The
+  subscription is started beside the setup now, never inside it: the alarm
+  loads whether or not the broker is there.
+- **`foyer.export_log` asked for a code**, while the panel's own log page does
+  not. Reading the log asks for the `view_log` permission and nothing else —
+  you must still say who you are, since a service call carries no signed-in
+  account.
 - The warning on the arming devices page — *a stolen tag arms and disarms
   without knowing any code* — was rendering as ordinary paragraph text, directly
   above the field where you choose whose tag it is. It is an amber banner now,
   like every other warning in the panel.
+- The shipped keypad blueprints resent their feedback when only an attribute of
+  the panel entity had changed, waking a battery keypad for nothing.
 
 ### Specification
 - **P-1, a stated principle**: outward, every channel starts at the least that

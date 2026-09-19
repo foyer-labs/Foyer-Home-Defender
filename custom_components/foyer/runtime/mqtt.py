@@ -170,6 +170,37 @@ def _countdown(areas: list[dict[str, Any]], now: datetime) -> dict[str, Any] | N
     }
 
 
+@callback
+def async_start(
+    hass: HomeAssistant, entry: Any, system: FoyerSystem, install_id: str
+) -> CALLBACK_TYPE:
+    """Begin, in the background, and never make the alarm wait for a broker.
+
+    Connecting is somebody else's machine's business: it can be slow, it can
+    be down, and Home Assistant waits while an MQTT entry is still setting
+    up. An alarm that does not finish loading because a broker did not answer
+    is exactly the failure this project exists to avoid, so the subscription
+    is started beside the setup rather than inside it. Everything else —
+    entities, the panel, the services, the engine — is up either way.
+    """
+    handles: list[CALLBACK_TYPE] = []
+
+    async def begin() -> None:
+        handle = await async_setup(hass, system, install_id)
+        if handle is not None:
+            handles.append(handle)
+
+    task = entry.async_create_background_task(hass, begin(), name="foyer mqtt")
+
+    @callback
+    def stop() -> None:
+        task.cancel()
+        for handle in handles:
+            handle()
+
+    return stop
+
+
 async def async_setup(
     hass: HomeAssistant, system: FoyerSystem, install_id: str
 ) -> CALLBACK_TYPE | None:
@@ -193,13 +224,31 @@ async def async_setup(
 
     command_topic, state_topic = topics(system, install_id)
     last: tuple[str, str | None] | None = None
+    published: str | None = None
 
-    async def publish(result: tuple[str, str | None] | None = None) -> None:
-        payload = state_payload(system, settings.detail, result, dt_util.utcnow())
+    async def publish(
+        result: tuple[str, str | None] | None = None, *, force: bool = False
+    ) -> None:
+        """Publish the state, unless it would say exactly what it already says.
+
+        Foyer notifies its listeners whenever anything visible moves, which
+        includes every motion a living-room detector reports. At the default
+        detail level almost none of that changes this message, and republishing
+        an identical retained payload is traffic on somebody else's broker that
+        tells nobody anything. A running countdown still publishes each time,
+        because its remaining seconds genuinely differ.
+        """
+        nonlocal published
+        payload = json.dumps(
+            state_payload(system, settings.detail, result, dt_util.utcnow())
+        )
+        if payload == published and not force:
+            return
+        published = payload
         await mqtt.async_publish(
             hass,
             state_topic,
-            json.dumps(payload),
+            payload,
             qos=settings.qos,
             retain=settings.retain,
         )
@@ -213,7 +262,10 @@ async def async_setup(
             _LOGGER.warning("Foyer: unreadable MQTT command on %s", command_topic)
             return
         last = await _async_command(hass, system, data)
-        await publish(last)
+        # A command is always answered, even when nothing about the house
+        # moved: a keypad asking `status` after a reboot, or one refused twice
+        # for the same reason, is waiting for this message.
+        await publish(last, force=True)
 
     @callback
     def on_change() -> None:
