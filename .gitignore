@@ -9,3 +9,8 @@ frontend/node_modules/
 frontend/dist/
 .DS_Store
 Thumbs.db
+
+# Not published: the working agreement and the phase prompts are how this was
+# built, not what it is. They stay on disk and out of the repository.
+CLAUDE.md
+docs/PROMPTS.md
