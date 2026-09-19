@@ -114,6 +114,37 @@ class ChimeMode(StrEnum):
     SPEECH = "speech"  # the zone's name, spoken through tts.speak
 
 
+class ContactChannelKind(StrEnum):
+    """What a contact's channel is, for the person reading page 6 (SPEC §7.1).
+
+    Foyer does not act on it: a channel is a `notify.*` service and whatever
+    that service needs, and §1.2 is explicit that the transport is Home
+    Assistant's job. The kind is what the address book shows beside the
+    service, so "Luca, push then SMS then a call" reads as an order of
+    priority rather than as three service names.
+    """
+
+    PUSH = "push"
+    SMS = "sms"
+    VOICE = "voice"
+    CHAT = "chat"
+    OTHER = "other"
+
+
+class EscalationKind(StrEnum):
+    """What is escalating. Two things do, and they never merge (§5.5, §5.6).
+
+    An intrusion incident has one escalation, and the technical channel has
+    "its own escalation, independent of any intrusion incident", with its own
+    acknowledgement. Nothing else escalates (part 1 decision 2): a profile
+    answering ``armed`` or ``zone_fault`` runs its actions and is done, and
+    there is nothing there for anybody to acknowledge.
+    """
+
+    INCIDENT = "incident"
+    TECHNICAL = "technical"
+
+
 class ActionKind(StrEnum):
     """The action catalogue (SPEC §6.2).
 
@@ -327,7 +358,14 @@ class Moment(StrEnum):
     LOCKOUT = "lockout"
     WALK_TEST_STARTED = "walk_test_started"  # Phase 3
     WALK_TEST_ENDED = "walk_test_ended"  # Phase 3
-    ESCALATION_EXHAUSTED = "escalation_exhausted"  # Phase 4
+    ESCALATION_EXHAUSTED = "escalation_exhausted"
+
+    # Steps that fell due while Home Assistant was down and were not sent
+    # (part 1 decision 5). Not a profile moment and never offered as one:
+    # there is no useful answer to "a notification did not go out four hours
+    # ago" other than the row saying so, and the escalation is still running
+    # for the steps that are still ahead.
+    ESCALATION_SKIPPED = "escalation_skipped"
 
 
 class Reason(StrEnum):
@@ -740,6 +778,20 @@ Condition = TimeCondition | StateCondition
 # a response engine and a second automation engine, and it is enforced.
 MAX_CONDITIONS = 2
 
+# How far from the start of an escalation a step may sit (§7.2). An hour is
+# past the point where a step is still about this alarm: the neighbour of the
+# spec's own example is reached at five minutes, and an installation that
+# wants somebody told tomorrow wants an automation, not a step.
+MAX_ESCALATION_OFFSET = 3600
+
+# How late a step may be and still go out (part 1 decision 5). Steps that fell
+# due while Home Assistant was down are skipped and recorded, because a
+# notification four hours late is worse than none — but saving a setting
+# reloads the integration, and a step lost to that would be a push nobody
+# ever gets and nobody can explain. Sixty seconds is the same line
+# journal.RELOAD_GAP_SECONDS draws between a reload and an outage.
+ESCALATION_RESTART_GRACE = 60
+
 
 @dataclass(frozen=True, slots=True)
 class ProfileAction:
@@ -759,9 +811,23 @@ class ProfileAction:
     conditions: tuple[Condition, ...] = ()
     condition_mode: ConditionMode = ConditionMode.ALL
     enabled: bool = True
+    # Seconds from the start of the escalation, or None for an ordinary
+    # action (§7.2, part 1 decision 1). An escalation step **is** an action:
+    # the same notify, with the same conditions and the same contacts, put at
+    # an offset instead of at once. The offset is the only thing that makes
+    # it a step, so there is one editor, one executor and one trace line.
+    #
+    # An action carrying one is run by the escalation and never by the
+    # ordinary sequence: see response.sequence(), which is the one place that
+    # takes it out, so nothing can run a step twice.
+    escalation_offset: int | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "params", _frozen(self.params))
+
+    @property
+    def is_step(self) -> bool:
+        return self.escalation_offset is not None
 
 
 @dataclass(frozen=True, slots=True)
@@ -812,6 +878,73 @@ class ChimeSettings:
     quiet_start: str | None = None
     quiet_end: str | None = None
     during_exit: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ContactChannel:
+    """One way of reaching a contact (SPEC §7.1).
+
+    ``service`` is any `notify.*` service, or a `notify` entity, present in
+    the installation: Foyer discovers it from the service registry and does
+    not know or care whether it is Twilio, Pushover, a GSM modem or Telegram
+    (§1.2). ``target`` and ``data`` are whatever that transport needs — a
+    phone number, a chat id, `priority: 2` — and travel untouched.
+
+    ``actionable`` says the transport can carry a button that acknowledges
+    the alarm: the Home Assistant Companion app can, an SMS cannot. It is
+    declared rather than guessed from the service name, for the reason
+    decision 90 already had: a transport discards a key it does not know
+    without a word, so a guess is indistinguishable from working until the
+    night it matters.
+    """
+
+    id: str
+    kind: ContactChannelKind = ContactChannelKind.OTHER
+    service: str = ""
+    target: str = ""
+    data: Mapping[str, Any] = field(default_factory=dict)
+    actionable: bool = False
+    enabled: bool = True
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "data", _frozen(self.data))
+
+
+@dataclass(frozen=True, slots=True)
+class Contact:
+    """Somebody the house can reach, and in what order (SPEC §7.1).
+
+    ``channels`` is ordered, highest priority first: the first enabled one is
+    what a notification uses when nothing names another.
+
+    ``quiet_start`` / ``quiet_end`` is a window during which only
+    high-severity events reach this contact, and ``quiet_min_severity`` says
+    what "high" means here (part 1 decision 3). The scale is the log's —
+    info, warning, alarm (§10.1) — and not the profile's ``severity``, which
+    §6.5 states is used for nothing but choosing an incident's escalation.
+    The default is ``alarm``: inside the window a break-in gets through and a
+    successful arming does not.
+
+    ``linked_user_id`` is what makes "who acknowledged" answerable when the
+    answer arrives from a push notification rather than from a code.
+    """
+
+    id: str
+    name: str
+    channels: tuple[ContactChannel, ...] = ()
+    quiet_start: str | None = None
+    quiet_end: str | None = None
+    quiet_min_severity: LogSeverity = LogSeverity.ALARM
+    linked_user_id: str | None = None
+    enabled: bool = True
+
+    def channel(self, channel_id: str | None) -> ContactChannel | None:
+        """The named channel, or the highest-priority enabled one."""
+        if channel_id is None:
+            return next((c for c in self.channels if c.enabled), None)
+        return next(
+            (c for c in self.channels if c.id == channel_id and c.enabled), None
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1001,6 +1134,15 @@ class Settings:
     # mandatory and non-disableable: there is no value here that switches it
     # off, and MAX_WALK_TEST_TOTAL bounds the whole test whatever this says.
     walk_test_timeout: int = DEFAULT_WALK_TEST_TIMEOUT
+    # The webhook a voice provider posts a DTMF keypress to (§7.2), or None.
+    # Off until somebody switches it on, and the reason is INV-6 rather than
+    # taste: a Home Assistant webhook is not authenticated, so whoever holds
+    # the URL can acknowledge an alarm in progress — which is to say, stop
+    # the escalation that was on its way to the neighbour. It is one id,
+    # long and random, generated when the feature is enabled and shown once;
+    # the threat is written beside the switch and in
+    # docs/notification-channels.md (part 1 decision 6).
+    ack_webhook_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1015,6 +1157,10 @@ class FoyerConfig:
     chime: ChimeSettings = field(default_factory=ChimeSettings)
     users: tuple[User, ...] = ()
     devices: tuple[ArmingDevice, ...] = ()
+    contacts: tuple[Contact, ...] = ()
+
+    def contact(self, contact_id: str | None) -> Contact | None:
+        return next((c for c in self.contacts if c.id == contact_id), None)
 
     def device(self, device_id: str | None) -> ArmingDevice | None:
         return next((d for d in self.devices if d.id == device_id), None)
@@ -1167,11 +1313,50 @@ class Contributor:
 
 @dataclass(frozen=True, slots=True)
 class Acknowledgement:
-    """Who acknowledged, and how: an explicit command or a disarm (§7.2)."""
+    """Who acknowledged, and how (§7.2).
+
+    Four paths reach here: an explicit command, a disarm, a button in an
+    actionable push notification and a DTMF keypress the voice provider fed
+    back. Every one of them records who and through which channel, which is
+    what §7.2 asks for — and when the push went to a contact who names no
+    Foyer user, ``contact_id`` is the whole of the answer and ``user_id`` is
+    empty (part 1 decision 7). A row that says "the push channel of Luca,
+    nobody named" is honest; one that invented a person would not be.
+    """
 
     at: datetime
     channel: str | None
-    via: str  # "acknowledge" | "disarm"
+    via: str  # "acknowledge" | "disarm" | "push" | "dtmf"
+    user_id: str | None = None
+    user_name: str | None = None
+    contact_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Escalation:
+    """An escalation in progress (SPEC §7.2). Persisted: INV-3 names it.
+
+    ``profile_id`` is the policy in force — for an incident, the one
+    belonging to the highest-severity contributing profile (§5.6), which can
+    change while the incident grows. ``started_at`` is what every step's
+    offset is measured from, so a policy adopted late finds its early steps
+    already due and runs them at once rather than starting the clock again.
+
+    ``done`` holds the action ids already reached, so a restart resumes where
+    the escalation was instead of beginning again (INV-3). What it does *not*
+    hold is the steps that fell due while Home Assistant was down: those are
+    recorded as skipped and not sent (part 1 decision 5) — a notification
+    four hours late is worse than none, and the log says which ones went
+    missing and why.
+    """
+
+    kind: EscalationKind
+    profile_id: str
+    moment: Moment
+    started_at: datetime
+    severity: int = 1
+    done: tuple[str, ...] = ()
+    reference: str | None = None  # the incident id, when there is one
 
 
 @dataclass(frozen=True, slots=True)
@@ -1378,6 +1563,11 @@ class RuntimeState:
     # default: an older file restores as "no walk test", which is the safe
     # direction — a house that is answering rather than one that is not.
     walk_test: WalkTest | None = None
+    # The escalations in progress (§7.2): at most one for the incident and
+    # one for the technical channel, never merged (§5.5). Persisted, because
+    # an alarm nobody has answered is still unanswered after a restart, and
+    # INV-3 lists escalation progress by name.
+    escalations: tuple[Escalation, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "areas", _frozen(self.areas))
@@ -1389,6 +1579,9 @@ class RuntimeState:
 
     def area(self, area_id: str) -> AreaRuntime:
         return self.areas.get(area_id) or AreaRuntime()
+
+    def escalation(self, kind: EscalationKind) -> Escalation | None:
+        return next((e for e in self.escalations if e.kind is kind), None)
 
 
 # --- snapshot ------------------------------------------------------------------
@@ -1696,6 +1889,27 @@ class ActionIntent:
 
 
 @dataclass(frozen=True, slots=True)
+class ScheduledStep:
+    """A step of a running escalation that has not happened yet (§7.2, §11.2).
+
+    It is on the Decision rather than computed by whoever wants to show it,
+    and that is the whole of INV-1 applied to a feature that is nothing but
+    the future: the simulator's "escalation step 1 at +60s → Luca (SMS)" is
+    read off the same object the runtime acts on, so the trace cannot
+    describe a schedule the engine did not make.
+    """
+
+    kind: EscalationKind
+    profile_id: str
+    action_id: str
+    index: int
+    offset: int
+    due: datetime
+    contact_ids: tuple[str, ...] = ()
+    channel_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class Decision:
     """What should happen in response to one event (INV-1). Executes nothing.
 
@@ -1729,6 +1943,11 @@ class Decision:
     # condition to honour is an executor whose only possible mistake is
     # sounding the siren during a walk test.
     inhibited: tuple[ActionIntent, ...] = ()
+    # The escalation steps still to come, earliest first (§7.2). Nothing is
+    # executed from this: it is what the panel, the card and the simulator's
+    # trace read so that "who will be called, and when" has exactly one
+    # source — the engine that will do the calling.
+    escalation: tuple[ScheduledStep, ...] = ()
 
     @property
     def active_scenario_id(self) -> str | None:

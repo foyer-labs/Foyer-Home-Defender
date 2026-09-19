@@ -22,7 +22,7 @@ from custom_components.foyer.core.models import (
 from custom_components.foyer.core.presets import PRESETS, preset
 from custom_components.foyer.core.validation import edit_conflicts, validate
 
-from .helpers import World
+from .helpers import World, make_house
 
 
 def with_zone(config, zone_id="window", **changes):
@@ -339,3 +339,129 @@ def test_an_attachment_nobody_implements_is_refused(config):
     assert "unknown_attachment" in codes(profile_with("signal"))
     assert "unknown_attachment" not in codes(profile_with("telegram"))
     assert "unknown_attachment" not in codes(profile_with("companion"))
+
+
+# --- contacts and escalation steps (SPEC §7) ---------------------------------------
+
+
+def _house_with_contact(contact):
+    return replace(make_house(), contacts=(contact,))
+
+
+def test_a_contact_with_no_channel_is_refused():
+    from custom_components.foyer.core.models import Contact
+
+    problems = validate(_house_with_contact(Contact("c1", "Luca")))
+    assert ("contact_without_channels", "contact") in {
+        (p.code, p.kind) for p in problems
+    }
+
+
+def test_a_channel_must_name_a_notify_service():
+    from custom_components.foyer.core.models import Contact, ContactChannel
+
+    contact = Contact(
+        "c1", "Luca", channels=(ContactChannel("ch", service="sms.send"),)
+    )
+    codes = {p.code for p in validate(_house_with_contact(contact))}
+    assert "notify_service_required" in codes
+
+
+def test_quiet_hours_need_both_ends():
+    from custom_components.foyer.core.models import Contact, ContactChannel
+
+    contact = Contact(
+        "c1",
+        "Luca",
+        channels=(ContactChannel("ch", service="notify.app"),),
+        quiet_start="22:00",
+    )
+    codes = {p.code for p in validate(_house_with_contact(contact))}
+    assert "quiet_hours_incomplete" in codes
+
+
+def test_a_notify_action_names_a_service_or_contacts_but_never_both():
+    from custom_components.foyer.core.models import (
+        ActionKind,
+        Contact,
+        ContactChannel,
+        Moment,
+        ProfileAction,
+        ResponseProfile,
+    )
+
+    contact = Contact(
+        "c1", "Luca", channels=(ContactChannel("ch", service="notify.app"),)
+    )
+
+    def with_params(params):
+        profile = ResponseProfile(
+            "p",
+            "P",
+            actions=(
+                ProfileAction(
+                    "a", ActionKind.NOTIFY, frozenset({Moment.TRIGGERED}), params=params
+                ),
+            ),
+        )
+        config = replace(
+            _house_with_contact(contact),
+            profiles=(profile,),
+            settings=replace(make_house().settings, default_profile_id="p"),
+        )
+        return {p.code for p in validate(config)}
+
+    assert "notify_target_required" in with_params({"message": "x"})
+    assert "notify_target_ambiguous" in with_params(
+        {"message": "x", "service": "notify.app", "contacts": [{"contact_id": "c1"}]}
+    )
+    assert "unknown_contact" in with_params(
+        {"message": "x", "contacts": [{"contact_id": "nobody"}]}
+    )
+    assert not (
+        {"notify_target_required", "notify_target_ambiguous", "unknown_contact"}
+        & with_params({"message": "x", "contacts": [{"contact_id": "c1"}]})
+    )
+
+
+def test_an_escalation_step_is_a_notification_on_a_moment_that_can_be_acknowledged():
+    from custom_components.foyer.core.models import (
+        ActionKind,
+        Moment,
+        ProfileAction,
+        ResponseProfile,
+    )
+
+    def codes(action):
+        config = replace(
+            make_house(), profiles=(ResponseProfile("p", "P", actions=(action,)),)
+        )
+        config = replace(
+            config, settings=replace(config.settings, default_profile_id="p")
+        )
+        return {p.code for p in validate(config)}
+
+    siren = ProfileAction(
+        "a",
+        ActionKind.SIREN,
+        frozenset({Moment.TRIGGERED}),
+        params={"entity_ids": ["siren.indoor"], "duration": 30},
+        escalation_offset=60,
+    )
+    assert "escalation_kind_invalid" in codes(siren)
+
+    armed = ProfileAction(
+        "a",
+        ActionKind.PERSISTENT_NOTIFICATION,
+        frozenset({Moment.ARMED}),
+        escalation_offset=60,
+    )
+    assert "escalation_moment_invalid" in codes(armed)
+
+    too_far = ProfileAction(
+        "a",
+        ActionKind.PERSISTENT_NOTIFICATION,
+        frozenset({Moment.TRIGGERED}),
+        escalation_offset=999999,
+    )
+    assert "escalation_offset_out_of_range" in codes(too_far)

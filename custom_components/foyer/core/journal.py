@@ -117,6 +117,7 @@ CATEGORY: dict[Moment, LogCategory] = {
     Moment.VERIFICATION_SATISFIED: LogCategory.ALARM,
     Moment.VERIFICATION_EXPIRED: LogCategory.ALARM,
     Moment.ESCALATION_EXHAUSTED: LogCategory.ALARM,
+    Moment.ESCALATION_SKIPPED: LogCategory.ALARM,
     Moment.ZONE_FAULT: LogCategory.SYSTEM,
     Moment.LOW_BATTERY: LogCategory.SYSTEM,
     Moment.HA_RESTARTED: LogCategory.SYSTEM,
@@ -156,6 +157,10 @@ SEVERITY: dict[Moment, LogSeverity] = {
     Moment.VERIFICATION_SATISFIED: LogSeverity.ALARM,
     Moment.VERIFICATION_EXPIRED: LogSeverity.INFO,
     Moment.ESCALATION_EXHAUSTED: LogSeverity.ALARM,
+    # Somebody was not told. The house is still in alarm and the escalation
+    # is still running; what is lost is the steps the restart swallowed, and
+    # a row in warning is how "why did I get no SMS?" has an answer.
+    Moment.ESCALATION_SKIPPED: LogSeverity.WARNING,
     Moment.ZONE_FAULT: LogSeverity.WARNING,
     Moment.LOW_BATTERY: LogSeverity.WARNING,
     # The restart gap is a hole in the coverage, however short (INV-3).

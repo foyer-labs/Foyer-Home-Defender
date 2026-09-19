@@ -24,13 +24,17 @@ from typing import Any
 
 from .clock import in_daily_window
 from .conditions import evaluate, unmet
+from .journal import severity_of
 from .models import (
     ActionIntent,
     ActionKind,
     AreaRuntime,
     ChimeSettings,
+    Contact,
+    ContactChannel,
     FoyerConfig,
     Incident,
+    LogSeverity,
     Moment,
     Occurrence,
     PendingRun,
@@ -43,6 +47,16 @@ from .models import (
     Zone,
 )
 from .templates import render
+from .validation import notify_contacts
+
+# The log's own scale, ordered (§10.1). A contact's quiet hours are read
+# against it rather than against the profile ``severity`` of §6.5, which that
+# section states is used for nothing but choosing an escalation.
+SEVERITY_ORDER: tuple[LogSeverity, ...] = (
+    LogSeverity.INFO,
+    LogSeverity.WARNING,
+    LogSeverity.ALARM,
+)
 
 # The alarm of a zone: the only moments that read the zone's own profile
 # (part 3 decision 1).
@@ -69,6 +83,19 @@ UNION_MOMENTS: frozenset[Moment] = frozenset(
         Moment.VERIFICATION_SATISFIED,
         Moment.INCIDENT_OPENED,
         Moment.INCIDENT_JOINED,
+    }
+)
+
+# What an acknowledgement can stop, and therefore what an actionable button
+# may offer to stop (§7.2). Two things escalate, and these are the moments
+# that start them; a button on an "armed" notification would acknowledge
+# nothing.
+ACK_MOMENTS: frozenset[Moment] = frozenset(
+    {
+        Moment.TRIGGERED,
+        Moment.INCIDENT_OPENED,
+        Moment.INCIDENT_JOINED,
+        Moment.TECHNICAL_RAISED,
     }
 )
 
@@ -231,8 +258,17 @@ def sequence(profile: ResponseProfile, moment: Moment) -> tuple[ProfileAction, .
 
     A ``delay`` participates like any other action: it holds back whatever
     comes after it *in this sequence*.
+
+    An escalation step is **not** here, and this is the one place that takes
+    it out (§7.2, part 1 decision 1). A step is an action at an offset, run
+    by core.escalation when its time comes; leaving it in the sequence would
+    send every step at once, which is the phone spam §5.6 exists to prevent.
     """
-    return tuple(a for a in profile.actions if a.enabled and moment in a.moments)
+    return tuple(
+        a
+        for a in profile.actions
+        if a.enabled and moment in a.moments and not a.is_step
+    )
 
 
 # Why an action in a profile's sequence did not run. The simulator shows
@@ -244,6 +280,70 @@ SKIP_ALREADY_RUNNING = "already_running"
 SKIP_CONDITION = "condition"
 SKIP_HELD_BY_DELAY = "held_by_delay"
 SKIP_WALK_TEST = "walk_test"
+# Every contact this notification names is inside their quiet hours and what
+# happened is not loud enough to reach them (§7.1, part 1 decision 3).
+SKIP_QUIET_HOURS = "quiet_hours"
+
+
+def reachable(
+    ctx: PlanContext, action: ProfileAction, moment: Moment
+) -> tuple[tuple[Mapping[str, Any], ...], tuple[str, ...]]:
+    """Who a notification actually reaches now, and who is in quiet hours.
+
+    Returns the recipients — each one a contact, a channel and everything
+    that channel's transport needs, complete, so the executor looks nothing
+    up (INV-1) — and the ids of the contacts the window held back.
+
+    A contact's quiet hours let through what is at least as loud as the
+    severity they set, on the log's own scale of info / warning / alarm
+    (§10.1, part 1 decision 3). The default is ``alarm``: a break-in gets
+    through at four in the morning and a successful arming does not.
+    """
+    refs = notify_contacts(action)
+    if not refs:
+        return (), ()
+    # A test really executes: that is the whole of §11.4, and the failure it
+    # prevents is discovering during the emergency that the channel was
+    # misconfigured. Quiet hours are a rule about alarms, not about whether
+    # the phone rings when somebody presses "test".
+    testing = moment is Moment.ACTION_TESTED
+    loudness = SEVERITY_ORDER.index(severity_of(moment))
+    recipients: list[Mapping[str, Any]] = []
+    quiet: list[str] = []
+    for ref in refs:
+        contact = ctx.config.contact(ref["contact_id"])
+        if contact is None or not contact.enabled:
+            continue
+        if (
+            not testing
+            and contact.quiet_start
+            and contact.quiet_end
+            and in_daily_window(ctx.now, ctx.tz, contact.quiet_start, contact.quiet_end)
+            and loudness < SEVERITY_ORDER.index(contact.quiet_min_severity)
+        ):
+            quiet.append(contact.id)
+            continue
+        channel = contact.channel(ref["channel_id"])
+        if channel is None:
+            continue
+        recipients.append(
+            {
+                "contact_id": contact.id,
+                "contact_name": contact.name,
+                "channel_id": channel.id,
+                "kind": channel.kind.value,
+                "service": channel.service,
+                "target": channel.target,
+                "data": dict(channel.data),
+                # Whether this channel can carry the button that
+                # acknowledges the alarm, and whether there is anything to
+                # acknowledge (§7.2). Decided here, so the executor adds a
+                # button or does not and decides neither.
+                "ack": channel.actionable and moment in ACK_MOMENTS,
+                "user_id": contact.linked_user_id,
+            }
+        )
+    return tuple(recipients), tuple(quiet)
 
 
 def skip_reason(
@@ -275,6 +375,11 @@ def skip_reason(
         return SKIP_ALREADY_RUNNING
     if not evaluate(action, ctx.snapshot, ctx.now, ctx.tz):
         return SKIP_CONDITION
+    if notify_contacts(action) and not reachable(ctx, action, moment)[0]:
+        # Nobody left: every contact named is inside their quiet hours, or
+        # has no channel to reach them by. A notification to nobody is not a
+        # notification, and the trace says which it was.
+        return SKIP_QUIET_HOURS
     return None
 
 
@@ -328,6 +433,7 @@ def _params(
     values: Mapping[str, str],
     ctx: PlanContext,
     area_id: str | None,
+    moment: Moment = Moment.TRIGGERED,
 ) -> dict[str, Any]:
     """The action's parameters, with every template already rendered."""
     params = {
@@ -351,6 +457,16 @@ def _params(
         params["duration"] = cutoff if not duration else min(int(duration), cutoff)
     if action.kind is ActionKind.CAMERA:
         params.setdefault("directory", ctx.config.settings.camera_dir)
+    if action.kind is ActionKind.NOTIFY and notify_contacts(action):
+        # The address book, resolved: who this reaches, through which
+        # transport, with what that transport needs. The executor is handed
+        # the answer and never opens the configuration (INV-1). ``quiet``
+        # travels with it so the trace and the log can say who was not told
+        # and why, which is the whole point of a window that holds messages
+        # back (§7.1).
+        recipients, quiet = reachable(ctx, action, moment)
+        params["recipients"] = recipients
+        params["quiet"] = quiet
     if action.kind is ActionKind.NOTIFY and params.get("camera_entity_id"):
         # A notification that has to write the picture to a file writes it
         # where every other camera file goes, and the choice is made here so
@@ -432,7 +548,7 @@ def run_sequence(
         )
         if why is not None and why != SKIP_WALK_TEST:
             continue
-        params = _params(action, values, ctx, area_id)
+        params = _params(action, values, ctx, area_id, moment)
         intent = ActionIntent(
             action_id=action.id,
             kind=action.kind.value,
@@ -758,7 +874,7 @@ def test_intent(
         # A delay has nothing to test: it is the waiting itself.
         return None
     values = variables(ctx, ())
-    params = dict(_params(action, values, ctx, None))
+    params = dict(_params(action, values, ctx, None, Moment.ACTION_TESTED))
     if action.kind is ActionKind.SIREN:
         params["duration"] = TEST_SIREN_SECONDS
     return ActionIntent(
@@ -771,13 +887,59 @@ def test_intent(
     )
 
 
+def escalation_intent(
+    ctx: PlanContext,
+    profile: ResponseProfile,
+    action: ProfileAction,
+    values: Mapping[str, str],
+    *,
+    moment: Moment,
+    index: int,
+    kind: str,
+    area_id: str | None = None,
+    incident_id: str | None = None,
+) -> tuple[ActionIntent | None, str | None]:
+    """One escalation step, built exactly as any other action (§7.2).
+
+    Returns the intent, or None and the reason it did not run — a condition
+    that is not met, or every contact inside their quiet hours. It is
+    ``skip_reason`` that decides, the same function the ordinary sequence
+    asks, so the trace can never explain a skip the engine did not make.
+    """
+    why = skip_reason(
+        action,
+        ctx,
+        moment=moment,
+        suppressed=frozenset(),
+        already_started=frozenset(),
+    )
+    if why is not None:
+        return None, why
+    params = _params(action, values, ctx, area_id, moment)
+    # Which step this is, for the log, the trace and the card. The executor
+    # ignores it, as every transport ignores what it does not know.
+    params["escalation"] = kind
+    params["escalation_step"] = index
+    return (
+        ActionIntent(
+            action_id=action.id,
+            kind=action.kind.value,
+            moment=moment,
+            profile_id=profile.id,
+            placeholders=dict(values),
+            params=params,
+        ),
+        None,
+    )
+
+
 def notify_test_intent(service: str, message: str) -> ActionIntent:
     """A notification channel tested on its own, with no action behind it.
 
     §11.4 asks for a test button beside every action *and every contact
-    channel*. The contact book is Phase 4's, so this is the half that exists
-    today: the wizard's "prove a notification arrives", moved off the browser
-    and onto the one path that verifies server-side and records the attempt.
+    channel*. This is the half Phase 3 built, and the wizard still uses it:
+    "prove a notification arrives", off the browser and onto the one path
+    that verifies server-side and records the attempt.
     """
     return ActionIntent(
         action_id=f"notify:{service}",
@@ -785,6 +947,44 @@ def notify_test_intent(service: str, message: str) -> ActionIntent:
         moment=Moment.ACTION_TESTED,
         profile_id=None,
         params={"service": service, "message": message},
+    )
+
+
+def contact_test_intent(
+    contact: Contact, channel: ContactChannel, message: str
+) -> ActionIntent:
+    """The other half of §11.4: the test button beside a contact's channel.
+
+    It is the same call the real thing makes — the same service, the same
+    target, the same extra data the transport needs — so what is proved is
+    the channel, not a simplified version of it. It goes through
+    ``foyer.test_action`` like the button beside an action, needs the same
+    permission and the same code, and leaves the same row marked as a test.
+    """
+    return ActionIntent(
+        action_id=f"contact:{contact.id}:{channel.id}",
+        kind=ActionKind.NOTIFY.value,
+        moment=Moment.ACTION_TESTED,
+        profile_id=None,
+        params={
+            "message": message,
+            "recipients": (
+                {
+                    "contact_id": contact.id,
+                    "contact_name": contact.name,
+                    "channel_id": channel.id,
+                    "kind": channel.kind.value,
+                    "service": channel.service,
+                    "target": channel.target,
+                    "data": dict(channel.data),
+                    # No button: there is nothing to acknowledge, and a test
+                    # that could stop a real escalation would be a way of
+                    # silencing an alarm from the configuration page.
+                    "ack": False,
+                    "user_id": contact.linked_user_id,
+                },
+            ),
+        },
     )
 
 

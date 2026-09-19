@@ -8,6 +8,7 @@ the field.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 import re
 
@@ -19,6 +20,7 @@ from .models import (
     MAX_CODE_LENGTH,
     MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
+    MAX_ESCALATION_OFFSET,
     MAX_EXIT_DELAY,
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
@@ -52,6 +54,7 @@ from .models import (
     EventTrigger,
     FoyerConfig,
     KeyCommand,
+    Moment,
     NumericOperator,
     NumericTrigger,
     Permission,
@@ -272,10 +275,29 @@ def validate(config: FoyerConfig) -> list[Problem]:
     problems.extend(
         _device_problems(config, scenario_ids, {u.id for u in config.users})
     )
+    problems.extend(_contact_problems(config))
     problems.extend(_mqtt_problems(config))
     problems.extend(_security_problems(config))
     for profile in config.profiles:
         problems.extend(_profile_problems(profile))
+    # An action that names somebody the address book no longer has would
+    # reach nobody and say nothing about it, which is the failure §7 exists
+    # to prevent. Checked here rather than inside the action, because only
+    # the whole configuration knows who the contacts are.
+    for profile in config.profiles:
+        for action in profile.actions:
+            for ref in notify_contacts(action):
+                contact = config.contact(ref.get("contact_id"))
+                if contact is None:
+                    problems.append(
+                        Problem("unknown_contact", "action", action.id, "contacts")
+                    )
+                elif ref.get("channel_id") and not any(
+                    ch.id == ref["channel_id"] for ch in contact.channels
+                ):
+                    problems.append(
+                        Problem("unknown_channel", "action", action.id, "contacts")
+                    )
     # A reference to a profile that does not exist would silently fall through
     # to the default, which is exactly the kind of "why is it quiet?" this
     # project exists to avoid.
@@ -291,6 +313,83 @@ def validate(config: FoyerConfig) -> list[Problem]:
                 problems.append(
                     Problem("unknown_profile", kind, obj.id, "response_profile_id")
                 )
+    return problems
+
+
+def notify_contacts(action: ProfileAction) -> tuple[dict, ...]:
+    """The contacts a notify action names, in order (SPEC §6.2, §7.1).
+
+    One reader, used by validation, by the planner and by the simulator's
+    trace, so that "who does this reach" has one answer. Each entry is
+    ``{contact_id, channel_id}``; a channel of None means the contact's own
+    order of priority decides, which is what §7.1 says an ordered channel
+    list is for.
+    """
+    if action.kind is not ActionKind.NOTIFY:
+        return ()
+    out: list[dict] = []
+    for ref in action.params.get("contacts") or ():
+        if isinstance(ref, str):
+            out.append({"contact_id": ref, "channel_id": None})
+        elif isinstance(ref, dict) and ref.get("contact_id"):
+            out.append(
+                {
+                    "contact_id": str(ref["contact_id"]),
+                    "channel_id": str(ref["channel_id"])
+                    if ref.get("channel_id")
+                    else None,
+                }
+            )
+    return tuple(out)
+
+
+def _contact_problems(config: FoyerConfig) -> list[Problem]:
+    """The address book (SPEC §7.1).
+
+    Two rules carry weight. A contact **has at least one channel**: a person
+    in the book with no way of reaching them is a step in an escalation that
+    silently reaches nobody, and the whole of §7 is about not discovering
+    that during the emergency. And a channel **names a `notify.*` service**,
+    because that is what a channel is — Foyer orchestrates transports, it
+    does not implement them (§1.2).
+    """
+    problems: list[Problem] = []
+    ids = [c.id for c in config.contacts]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        problems.append(Problem("duplicate_id", "contact", dup))
+    user_ids = {u.id for u in config.users}
+    seen: set[str] = set()
+    for contact in config.contacts:
+
+        def add(code: str, field: str | None = None, ref: str = contact.id) -> None:
+            problems.append(Problem(code, "contact", ref, field))
+
+        if not contact.name.strip():
+            add("name_required", "name")
+        slug = _slug(contact.name)
+        if slug and slug in seen:
+            # Two contacts alike are two the trace and the log cannot tell
+            # apart, and "notified Luca" would then answer nothing.
+            add("duplicate_name", "name")
+        seen.add(slug)
+        if contact.linked_user_id and contact.linked_user_id not in user_ids:
+            add("unknown_user", "linked_user_id")
+        if not contact.channels:
+            add("contact_without_channels", "channels")
+        channel_ids = [ch.id for ch in contact.channels]
+        if len(set(channel_ids)) != len(channel_ids):
+            add("duplicate_id", "channels")
+        for channel in contact.channels:
+            if not str(channel.service or "").startswith("notify."):
+                add("notify_service_required", "channels")
+            if not isinstance(channel.data, Mapping):
+                add("data_invalid", "channels")
+        for field in ("quiet_start", "quiet_end"):
+            value = getattr(contact, field)
+            if value is not None and parse_hhmm(value) is None:
+                add("time_invalid", field)
+        if (contact.quiet_start is None) != (contact.quiet_end is None):
+            add("quiet_hours_incomplete", "quiet_end")
     return problems
 
 
@@ -542,8 +641,35 @@ def _action_problems(action: ProfileAction) -> list[Problem]:
         value = action.params.get(field)
         if isinstance(value, str) and unknown_variables(value):
             add("unknown_variable", field)
+    problems.extend(_escalation_problems(action, add))
     problems.extend(_params_problems(action, add))
     return problems
+
+
+# What an escalation step may be, and what it may answer (SPEC §7.2, part 1
+# decisions 1 and 2). A step reaches a person: it is a notification, at an
+# offset. A siren scheduled five minutes out would outlive the cutoff of
+# §5.3, and a step on ``armed`` would be an escalation nobody can
+# acknowledge, because only an incident and a technical alarm have an
+# acknowledgement at all.
+ESCALATION_KINDS: frozenset[ActionKind] = frozenset(
+    {ActionKind.NOTIFY, ActionKind.PERSISTENT_NOTIFICATION}
+)
+ESCALATION_MOMENTS: frozenset[Moment] = frozenset(
+    {Moment.TRIGGERED, Moment.TECHNICAL_RAISED}
+)
+
+
+def _escalation_problems(action: ProfileAction, add) -> list[Problem]:
+    if action.escalation_offset is None:
+        return []
+    if not _in_range(action.escalation_offset, 0, MAX_ESCALATION_OFFSET):
+        add("escalation_offset_out_of_range", "escalation_offset")
+    if action.kind not in ESCALATION_KINDS:
+        add("escalation_kind_invalid", "escalation_offset")
+    if not action.moments <= ESCALATION_MOMENTS:
+        add("escalation_moment_invalid", "moments")
+    return []
 
 
 def _params_problems(action: ProfileAction, add) -> list[Problem]:
@@ -564,7 +690,17 @@ def _params_problems(action: ProfileAction, add) -> list[Problem]:
 
     if kind is ActionKind.NOTIFY:
         service = str(params.get("service") or "")
-        if not service.startswith("notify."):
+        contacts = notify_contacts(action)
+        # Both forms exist and both keep existing (part 1 decision 8): the
+        # service every installation already writes, and the address book
+        # §6.2 asks for. What is refused is naming neither — a notification
+        # with no recipient — and naming both, which would leave "who did
+        # this reach?" with two answers and the trace with one.
+        if not service and not contacts:
+            add("notify_target_required", "service")
+        elif service and contacts:
+            add("notify_target_ambiguous", "contacts")
+        elif service and not service.startswith("notify."):
             add("notify_service_required", "service")
         if not str(params.get("message") or "").strip():
             add("message_required", "message")

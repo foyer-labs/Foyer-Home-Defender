@@ -30,10 +30,15 @@ from ..core.models import (
     CodePolicy,
     Condition,
     ConditionMode,
+    Contact,
+    ContactChannel,
+    ContactChannelKind,
     Contributor,
     Detection,
     DeviceKind,
     EntryMode,
+    Escalation,
+    EscalationKind,
     EventTrigger,
     FoyerConfig,
     Group,
@@ -44,6 +49,7 @@ from ..core.models import (
     Lockout,
     LogCategory,
     LogSettings,
+    LogSeverity,
     Moment,
     MqttDetail,
     MqttSettings,
@@ -110,8 +116,16 @@ from ..core.models import (
 # a build that never warns about a battery — which is precisely what it did
 # yesterday. A low battery blocks nothing, so nothing it would have protected
 # goes unprotected (Phase 3 part 1 decisions 1 and 2).
-STORAGE_VERSION = 5
-STORAGE_MINOR_VERSION = 4
+#
+# 6.1 is a major bump, and the reason is the one that made 3.1 and 4.1 major:
+# a 5.x build reading this document would find notify actions that name
+# contacts instead of a service, ignore the contacts, and send nothing — an
+# alarm that says nothing, which is the worst failure there is (decision 63).
+# It would also find escalation steps it does not know are steps and run them
+# all at once, which is the phone spam §5.6 exists to prevent. Refusing the
+# file is the only safe downgrade.
+STORAGE_VERSION = 6
+STORAGE_MINOR_VERSION = 1
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -143,6 +157,7 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
             chime=chime_from_dict(data["chime"]),
             users=tuple(user_from_dict(u) for u in data["users"]),
             devices=tuple(device_from_dict(d) for d in data["devices"]),
+            contacts=tuple(contact_from_dict(c) for c in data["contacts"]),
         )
     except (KeyError, TypeError, ValueError) as err:
         raise ConfigError(f"invalid Foyer configuration: {err!r}") from err
@@ -157,6 +172,7 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
         "profiles": [profile_to_dict(p) for p in config.profiles],
         "users": [user_to_dict(u) for u in config.users],
         "devices": [device_to_dict(d) for d in config.devices],
+        "contacts": [contact_to_dict(c) for c in config.contacts],
         "code_policy": {
             field.name: getattr(config.code_policy, field.name)
             for field in fields(CodePolicy)
@@ -181,6 +197,7 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         wizard_done=bool(s["wizard_done"]),
         low_battery_threshold=int(s["low_battery_threshold"]),
         walk_test_timeout=int(s["walk_test_timeout"]),
+        ack_webhook_id=s.get("ack_webhook_id") or None,
         security=security_from_dict(s["security"]),
         mqtt=mqtt_from_dict(s["mqtt"]),
     )
@@ -201,6 +218,7 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "wizard_done": s.wizard_done,
         "low_battery_threshold": s.low_battery_threshold,
         "walk_test_timeout": s.walk_test_timeout,
+        "ack_webhook_id": s.ack_webhook_id,
         "security": security_to_dict(s.security),
         "mqtt": mqtt_to_dict(s.mqtt),
     }
@@ -225,6 +243,56 @@ def mqtt_to_dict(s: MqttSettings) -> dict[str, Any]:
         "detail": s.detail.value,
         "retain": s.retain,
         "qos": s.qos,
+    }
+
+
+def contact_from_dict(c: dict[str, Any]) -> Contact:
+    return Contact(
+        id=c["id"],
+        name=c["name"],
+        channels=tuple(channel_from_dict(ch) for ch in c.get("channels", ())),
+        quiet_start=c.get("quiet_start") or None,
+        quiet_end=c.get("quiet_end") or None,
+        quiet_min_severity=LogSeverity(c.get("quiet_min_severity", "alarm")),
+        linked_user_id=c.get("linked_user_id") or None,
+        enabled=bool(c.get("enabled", True)),
+    )
+
+
+def contact_to_dict(c: Contact) -> dict[str, Any]:
+    return {
+        "id": c.id,
+        "name": c.name,
+        "channels": [channel_to_dict(ch) for ch in c.channels],
+        "quiet_start": c.quiet_start,
+        "quiet_end": c.quiet_end,
+        "quiet_min_severity": c.quiet_min_severity.value,
+        "linked_user_id": c.linked_user_id,
+        "enabled": c.enabled,
+    }
+
+
+def channel_from_dict(c: dict[str, Any]) -> ContactChannel:
+    return ContactChannel(
+        id=c["id"],
+        kind=ContactChannelKind(c.get("kind", "other")),
+        service=c.get("service", ""),
+        target=c.get("target", ""),
+        data=dict(c.get("data") or {}),
+        actionable=bool(c.get("actionable", False)),
+        enabled=bool(c.get("enabled", True)),
+    )
+
+
+def channel_to_dict(c: ContactChannel) -> dict[str, Any]:
+    return {
+        "id": c.id,
+        "kind": c.kind.value,
+        "service": c.service,
+        "target": c.target,
+        "data": dict(c.data),
+        "actionable": c.actionable,
+        "enabled": c.enabled,
     }
 
 
@@ -393,6 +461,7 @@ def action_from_dict(a: dict[str, Any]) -> ProfileAction:
         conditions=tuple(condition_from_dict(c) for c in a.get("conditions", ())),
         condition_mode=ConditionMode(a.get("condition_mode", "all")),
         enabled=bool(a.get("enabled", True)),
+        escalation_offset=_opt_int(a.get("escalation_offset")),
     )
 
 
@@ -406,6 +475,7 @@ def action_to_dict(a: ProfileAction) -> dict[str, Any]:
         "conditions": [condition_to_dict(c) for c in a.conditions],
         "condition_mode": a.condition_mode.value,
         "enabled": a.enabled,
+        "escalation_offset": a.escalation_offset,
     }
 
 
@@ -782,6 +852,21 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
         # timers, and INV-3 persists pending timers. A restart that lost it
         # would leave a house inhibited with nothing due to end it.
         "walk_test": _walk_test_to(state.walk_test),
+        # Escalation progress (INV-3 names it): what is running, since when,
+        # and which steps have already gone out. An alarm nobody answered is
+        # still unanswered after a restart.
+        "escalations": [
+            {
+                "kind": e.kind.value,
+                "profile_id": e.profile_id,
+                "moment": e.moment.value,
+                "started_at": e.started_at.isoformat(),
+                "severity": e.severity,
+                "done": list(e.done),
+                "reference": e.reference,
+            }
+            for e in state.escalations
+        ],
         "lockouts": {
             key: {
                 "failures": [at.isoformat() for at in lock.failures],
@@ -868,7 +953,14 @@ def _incident_to(incident: Incident | None) -> dict[str, Any] | None:
         ],
         "acknowledged": incident.acknowledged,
         "acknowledgements": [
-            {"at": a.at.isoformat(), "channel": a.channel, "via": a.via}
+            {
+                "at": a.at.isoformat(),
+                "channel": a.channel,
+                "via": a.via,
+                "user_id": a.user_id,
+                "user_name": a.user_name,
+                "contact_id": a.contact_id,
+            }
             for a in incident.acknowledgements
         ],
         "actions_started": list(incident.actions_started),
@@ -901,7 +993,14 @@ def _incident_from(data: dict[str, Any] | None) -> Incident | None:
         at = _dt(a["at"])
         assert at is not None
         acknowledgements.append(
-            Acknowledgement(at=at, channel=a.get("channel"), via=a["via"])
+            Acknowledgement(
+                at=at,
+                channel=a.get("channel"),
+                via=a["via"],
+                user_id=a.get("user_id"),
+                user_name=a.get("user_name"),
+                contact_id=a.get("contact_id"),
+            )
         )
     return Incident(
         id=data["id"],
@@ -1037,6 +1136,23 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 )
                 for key, lock in data.get("lockouts", {}).items()
             },
+            # An escalation whose profile the configuration no longer has is
+            # dropped here rather than resumed against nothing: the steps are
+            # that profile's actions, and without them there is no policy
+            # left to run.
+            escalations=tuple(
+                Escalation(
+                    kind=EscalationKind(e["kind"]),
+                    profile_id=e["profile_id"],
+                    moment=Moment(e["moment"]),
+                    started_at=_required_dt(e["started_at"]),
+                    severity=int(e.get("severity", 1)),
+                    done=tuple(e.get("done", ())),
+                    reference=e.get("reference"),
+                )
+                for e in data.get("escalations", ())
+                if config.profile(e["profile_id"]) is not None
+            ),
         )
     except (KeyError, TypeError, ValueError, AssertionError) as err:
         raise ConfigError(f"invalid Foyer runtime state: {err!r}") from err

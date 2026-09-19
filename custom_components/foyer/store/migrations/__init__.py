@@ -368,6 +368,34 @@ def _v5_3_to_v5_4(data: Document) -> Document:
     return out
 
 
+def _v5_4_to_v6_1(data: Document) -> Document:
+    """Phase 3 -> Phase 4 part 1: contacts, escalation and acknowledgement.
+
+    A major step for the reason 3.1 and 4.1 were major: a 5.x build reading
+    this document would find a notify action naming contacts, know nothing
+    about contacts, and send nothing at all.
+
+    Nothing an installation already has changes. The address book starts
+    empty, every existing notify action keeps the service it names — both
+    forms stay, for ever, and page 6 offers to make a contact out of a
+    service rather than rewriting anybody's configuration (part 1 decision
+    8) — and no action becomes a step, because ``escalation_offset`` is null
+    everywhere. An installation upgrading escalates nothing until somebody
+    writes a step, which is exactly the state it was in yesterday.
+
+    The DTMF webhook is off, and that is not a default chosen for tidiness:
+    a Home Assistant webhook is unauthenticated, so switching one on is
+    handing out a URL that stops an alarm (part 1 decision 6).
+    """
+    out = copy.deepcopy(data)
+    out["contacts"] = []
+    out["settings"]["ack_webhook_id"] = None
+    for profile in out.get("profiles", []):
+        for action in profile.get("actions", []):
+            action["escalation_offset"] = None
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -393,6 +421,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (5, 1): (_v5_1_to_v5_2, (5, 2)),
     (5, 2): (_v5_2_to_v5_3, (5, 3)),
     (5, 3): (_v5_3_to_v5_4, (5, 4)),
+    (5, 4): (_v5_4_to_v6_1, (6, 1)),
 }
 
 

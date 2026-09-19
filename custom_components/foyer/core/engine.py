@@ -28,9 +28,10 @@ from collections.abc import Container
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
-from . import authz
+from . import authz, escalation as escalation_engine
 from .models import (
     CUSTOM_BYPASS,
+    ESCALATION_RESTART_GRACE,
     MAX_WALK_TEST_TIMEOUT,
     MAX_WALK_TEST_TOTAL,
     MIN_WALK_TEST_TIMEOUT,
@@ -57,6 +58,8 @@ from .models import (
     DisarmRequest,
     EntityState,
     EntryMode,
+    Escalation,
+    EscalationKind,
     Event,
     FoyerConfig,
     Incident,
@@ -69,6 +72,7 @@ from .models import (
     Reason,
     RuntimeState,
     Scenario,
+    ScheduledStep,
     SetChime,
     Startup,
     SystemSnapshot,
@@ -86,9 +90,11 @@ from .response import (
     audible_targets,
     chime_suppressed,
     effective_profile,
+    escalation_intent,
     plan_occurrences,
     resume,
     revert_intent,
+    variables,
     without,
 )
 from .triggers import (
@@ -184,6 +190,7 @@ def decide(
         gap = (
             int((now - event.down_since).total_seconds()) if event.down_since else None
         )
+        run.gap_since = event.down_since
         run.occur(
             Moment.HA_RESTARTED,
             detail={
@@ -303,6 +310,10 @@ def next_wakeup(
         # inhibited with nothing due to end it (INV-3).
         dues.append(state.walk_test.deadline())
     dues.extend(run.due for run in state.pending_runs)
+    # An escalation step is a timer like any other, and the reason it is in
+    # the state rather than in memory is the same: a restart must not leave
+    # an alarm nobody answered with nothing due to chase it (INV-3).
+    dues.extend(escalation_engine.wakeups(state.escalations, config, now))
     dues.extend(r.until for r in state.running if r.until is not None)
     windows = all_windows(config)
     for key, activations in state.windows.items():
@@ -380,6 +391,12 @@ class _Run:
         # never did.
         self.walk_test: WalkTest | None = state.walk_test
         self.inhibiting = state.walk_test is not None
+        # Escalations in progress (§7.2), and the gap a restart left. The gap
+        # is filled only by a Startup event: it is what tells the escalation
+        # that a step is overdue because nobody was running, rather than
+        # because its time has simply come (part 1 decision 5).
+        self.escalations: list[Escalation] = list(state.escalations)
+        self.gap_since: datetime | None = None
         # The technical channel: never read or written by the area machine.
         self.technical: dict[str, TechnicalAlarm] = {
             z: a for z, a in state.technical.items() if z in zone_ids
@@ -989,6 +1006,7 @@ class _Run:
             zone_id=zone.id,
             detail={"repeat": "true"} if alarm is not None else {},
         )
+        self.start_technical_escalation(zone)
 
     def technical_normal(self, zone: Zone) -> None:
         """Back to normal: that clears the alarm only once acknowledged."""
@@ -1019,6 +1037,7 @@ class _Run:
                 acknowledged_at=self.now,
                 acknowledged_channel=self.channel,
             )
+        self.stop_escalation(EscalationKind.TECHNICAL)
         self.occur(
             Moment.TECHNICAL_ACKNOWLEDGED, zone_ids=tuple(pending), channel=self.channel
         )
@@ -1438,6 +1457,10 @@ class _Run:
     ) -> None:
         incident = self.incident
         assert incident is not None
+        # Every join recomputes which policy the incident escalates with
+        # (§5.6): a louder zone joining is exactly when the household needs
+        # the louder list of people.
+        self.adopt_escalation()
         if opened:
             self.occur(
                 Moment.INCIDENT_OPENED, area_id=area_id, zone_ids=incident.zone_ids
@@ -1461,6 +1484,10 @@ class _Run:
                 Acknowledgement(at=self.now, channel=channel, via=via),
             ),
         )
+        # The policy stops immediately (§7.2). This is the one path: a
+        # disarm of an area the incident touched arrives here too, which is
+        # what makes disarming an acknowledgement (decision 57).
+        self.stop_escalation(EscalationKind.INCIDENT)
         self.occur(
             Moment.INCIDENT_ACKNOWLEDGED,
             zone_ids=incident.zone_ids,
@@ -1477,6 +1504,184 @@ class _Run:
         self.acknowledge(self.channel, "acknowledge")
         return _ACCEPTED
 
+    # --- escalation (§7.2) ------------------------------------------------------
+
+    def escalation_of(self, kind: EscalationKind) -> Escalation | None:
+        return next((e for e in self.escalations if e.kind is kind), None)
+
+    def set_escalation(self, new: Escalation) -> None:
+        self.escalations = [e for e in self.escalations if e.kind is not new.kind]
+        self.escalations.append(new)
+
+    def stop_escalation(self, kind: EscalationKind) -> None:
+        """An acknowledgement stops the policy immediately (§7.2). Nothing is
+        recorded here: the acknowledgement itself is the row."""
+        self.escalations = [e for e in self.escalations if e.kind is not kind]
+
+    def adopt_escalation(self) -> None:
+        """The incident escalates with the highest-severity contributor's
+        policy (§5.6), recomputed every time a zone joins.
+
+        A policy adopted while the incident is already running keeps the
+        incident's own clock: the escalation started when the house was
+        broken into, not when the louder zone went, so its early steps are
+        already overdue and go out at once rather than starting again.
+        """
+        incident = self.incident
+        if incident is None or incident.acknowledged:
+            return
+        profile = escalation_engine.policy_for(self.config, incident)
+        if profile is None:
+            return
+        current = self.escalation_of(EscalationKind.INCIDENT)
+        if current is not None and current.profile_id == profile.id:
+            return
+        started = escalation_engine.start(
+            EscalationKind.INCIDENT, profile, self.now, reference=incident.id
+        )
+        if current is not None:
+            started = replace(started, started_at=current.started_at)
+        self.set_escalation(started)
+
+    def start_technical_escalation(self, zone: Zone) -> None:
+        """The technical channel's own escalation (§5.5), independent of any
+        intrusion incident and stopped only by its own acknowledgement.
+
+        One escalation for the channel, not one per detector: one
+        acknowledgement already acts on every technical alarm pending at that
+        moment (decision 49), so a second escalation would be a second set of
+        calls nothing separate can stop.
+        """
+        if self.escalation_of(EscalationKind.TECHNICAL) is not None:
+            return
+        profile = effective_profile(
+            self.config, zone_id=zone.id, moment=Moment.TECHNICAL_RAISED
+        )
+        if not escalation_engine.has_steps(profile, Moment.TECHNICAL_RAISED):
+            return
+        assert profile is not None
+        self.set_escalation(
+            escalation_engine.start(
+                EscalationKind.TECHNICAL, profile, self.now, reference=zone.id
+            )
+        )
+
+    def run_escalations(self, ctx: PlanContext) -> list[ActionIntent]:
+        """Send the steps whose time has come, and say what was not sent.
+
+        Called from decision(), before the occurrences are frozen, so that
+        ``escalation_exhausted`` is answered by a profile in the same call
+        that raises it — it is a moment like any other (§7.2).
+        """
+        intents: list[ActionIntent] = []
+        surviving: list[Escalation] = []
+        for current in self.escalations:
+            profile = self.config.profile(current.profile_id)
+            if profile is None:
+                # The policy was deleted while it was running. There is
+                # nothing left to reach anybody with, and pretending
+                # otherwise would leave an escalation open for ever.
+                self.occur(
+                    Moment.ESCALATION_EXHAUSTED,
+                    detail={"kind": current.kind.value, "cause": "profile_gone"},
+                    incident_id=current.reference
+                    if current.kind is EscalationKind.INCIDENT
+                    else None,
+                )
+                continue
+            done = list(current.done)
+            skipped: list[str] = []
+            for action in escalation_engine.due(current, profile, self.now):
+                at = escalation_engine.due_at(current, action)
+                index = escalation_engine.index_of(current, profile, action.id)
+                late = (self.now - at).total_seconds()
+                if self.gap_since is not None and late > ESCALATION_RESTART_GRACE:
+                    # It fell due while Home Assistant was down. A
+                    # notification this late is worse than none (part 1
+                    # decision 5), so it is recorded and not sent, and the
+                    # steps still ahead carry on at their own times.
+                    skipped.append(str(index))
+                    done.append(action.id)
+                    continue
+                intent, _why = escalation_intent(
+                    ctx,
+                    profile,
+                    action,
+                    self.escalation_values(ctx, current),
+                    moment=current.moment,
+                    index=index,
+                    kind=current.kind.value,
+                    area_id=self.escalation_area(current),
+                    incident_id=current.reference
+                    if current.kind is EscalationKind.INCIDENT
+                    else None,
+                )
+                done.append(action.id)
+                if intent is not None:
+                    intents.append(intent)
+            if skipped:
+                self.occur(
+                    Moment.ESCALATION_SKIPPED,
+                    detail={
+                        "kind": current.kind.value,
+                        "steps": ",".join(skipped),
+                        "since": self.gap_since.isoformat() if self.gap_since else "",
+                    },
+                    incident_id=current.reference
+                    if current.kind is EscalationKind.INCIDENT
+                    else None,
+                )
+            advanced = replace(current, done=tuple(done))
+            if escalation_engine.exhausted(advanced, profile):
+                # Every step has gone out and nobody has answered (§7.2).
+                # A moment a profile can act on, and the last entry the
+                # panel's "nothing raises this yet" list had.
+                self.occur(
+                    Moment.ESCALATION_EXHAUSTED,
+                    area_id=self.escalation_area(advanced),
+                    detail={
+                        "kind": advanced.kind.value,
+                        "steps": str(
+                            len(escalation_engine.steps(profile, advanced.moment))
+                        ),
+                    },
+                    incident_id=advanced.reference
+                    if advanced.kind is EscalationKind.INCIDENT
+                    else None,
+                )
+                continue
+            surviving.append(advanced)
+        self.escalations = surviving
+        return intents
+
+    def escalation_area(self, current: Escalation) -> str | None:
+        if current.kind is EscalationKind.INCIDENT and self.incident is not None:
+            return next(iter(self.incident.area_ids), None)
+        zone = self.config.zone(current.reference)
+        return zone.area_id if zone else None
+
+    def escalation_values(
+        self, ctx: PlanContext, current: Escalation
+    ) -> dict[str, str]:
+        """The §6.4 variables for a step's message, built from the same
+        function every other message uses, so "{{ incident_zones }}" means
+        the same thing in a step as it does in the alarm that started it."""
+        if current.kind is EscalationKind.INCIDENT:
+            incident = self.incident
+            occurrence = Occurrence(
+                moment=current.moment,
+                area_id=self.escalation_area(current),
+                zone_ids=incident.zone_ids if incident else (),
+                incident_id=current.reference,
+            )
+        else:
+            occurrence = Occurrence(
+                moment=current.moment,
+                area_id=self.escalation_area(current),
+                zone_id=current.reference,
+            )
+        return variables(ctx, (occurrence,))
+
     def close_incident_if_settled(self) -> None:
         """Closed once acknowledged and every area it touched is disarmed or
         back to armed; a trigger after that opens a new incident (§5.6)."""
@@ -1489,6 +1694,11 @@ class _Run:
         ):
             self.occur(Moment.INCIDENT_CLOSED, zone_ids=incident.zone_ids)
             self.incident = None
+            # Belt and braces: an incident only closes once acknowledged, and
+            # the acknowledgement already stopped the policy. An escalation
+            # outliving its incident would call the neighbour about an alarm
+            # that is over.
+            self.stop_escalation(EscalationKind.INCIDENT)
 
     def followed_window(self, zone: Zone) -> tuple[Timer, str] | None:
         """The running entry window, in another area, of a zone this follows.
@@ -2022,7 +2232,6 @@ class _Run:
     # --- result -----------------------------------------------------------------
 
     def decision(self, outcome: _Outcome) -> Decision:
-        occurrences = tuple(self.occurrences)
         ctx = PlanContext(
             config=self.config,
             snapshot=replace(self.snapshot, entities=self.entities),
@@ -2032,6 +2241,10 @@ class _Run:
             active_zones=frozenset(self.active),
             walk_test=self.inhibiting,
         )
+        # Escalation steps first, because reaching the end of one raises a
+        # moment a profile answers in this same call (§7.2).
+        steps = self.run_escalations(ctx)
+        occurrences = tuple(self.occurrences)
         plan, self.run_seq = plan_occurrences(ctx, occurrences, self.run_seq)
         # Sequences a delay held back and whose time has come (decision 5).
         due = [r for r in self.pending_runs if r.due <= self.now]
@@ -2063,6 +2276,7 @@ class _Run:
             run_seq=self.run_seq,
             lockouts=self.lockouts,
             walk_test=self.walk_test,
+            escalations=tuple(self.escalations),
         )
         chime, chime_inhibited = self.chime_intents(occurrences)
         return Decision(
@@ -2074,9 +2288,20 @@ class _Run:
             bypassed_zones=tuple(self.new_bypasses),
             low_battery_zones=self.low_battery_zones,
             occurrences=occurrences,
-            actions=(*self.extra, *plan.intents, *chime),
+            actions=(*self.extra, *steps, *plan.intents, *chime),
             inhibited=(*plan.inhibited, *chime_inhibited),
+            # What is still to come, read off the state this decision
+            # produced: never a second prediction of it (§11.2, INV-1).
+            escalation=self.scheduled_steps(),
         )
+
+    def scheduled_steps(self) -> tuple[ScheduledStep, ...]:
+        out: list[ScheduledStep] = []
+        for current in self.escalations:
+            profile = self.config.profile(current.profile_id)
+            if profile is not None:
+                out.extend(escalation_engine.scheduled(current, profile, self.now))
+        return tuple(sorted(out, key=lambda step: (step.due, step.index)))
 
     def chime_intents(
         self, occurrences: tuple[Occurrence, ...]

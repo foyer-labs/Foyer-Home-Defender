@@ -29,12 +29,13 @@ from ..core.models import (
     ZoneType,
 )
 from ..core.presets import preset
-from ..core.validation import Problem, edit_conflicts, validate
+from ..core.validation import Problem, edit_conflicts, notify_contacts, validate
 from .schema import (
     ConfigError,
     area_from_dict,
     chime_from_dict,
     config_to_dict,
+    contact_from_dict,
     device_from_dict,
     group_from_dict,
     log_from_dict,
@@ -46,7 +47,16 @@ from .schema import (
     zone_from_dict,
 )
 
-KINDS = ("area", "zone", "scenario", "group", "profile", "user", "device")
+KINDS = (
+    "area",
+    "zone",
+    "scenario",
+    "group",
+    "profile",
+    "user",
+    "device",
+    "contact",
+)
 
 # What a new area is given when the panel does not say. The delays come from
 # the global settings, so a household that wants 45 s sets it once (§15.1).
@@ -107,6 +117,21 @@ _USER_DEFAULTS: dict[str, Any] = {
 # A new arming device. A keypad by default, because that is what somebody is
 # holding when they open page 8; a tag is chosen deliberately, and then has to
 # name its entity and its owner before it may exist at all (core.validation).
+# A new contact: somebody with a name and no way of reaching them yet, which
+# validation refuses to store — page 6 asks for the first channel in the same
+# form, because a contact nobody can reach is a step that silently reaches
+# nobody (§7.1). Quiet hours are off, and when they are set only what the log
+# calls an alarm gets through (part 1 decision 3).
+_CONTACT_DEFAULTS: dict[str, Any] = {
+    "channels": [],
+    "quiet_start": None,
+    "quiet_end": None,
+    "quiet_min_severity": "alarm",
+    "linked_user_id": None,
+    "enabled": True,
+}
+
+
 _DEVICE_DEFAULTS: dict[str, Any] = {
     "kind": "keypad",
     "ref": None,
@@ -158,6 +183,11 @@ def upsert(
         elif kind == "device":
             obj = device_from_dict({**_DEVICE_DEFAULTS, **data})
             new = replace(config, devices=_replace_in(config.devices, obj))
+        elif kind == "contact":
+            for channel in data.get("channels") or ():
+                channel["id"] = channel.get("id") or new_id()
+            obj = contact_from_dict({**_CONTACT_DEFAULTS, **data})
+            new = replace(config, contacts=_replace_in(config.contacts, obj))
         elif kind == "group":
             obj = group_from_dict({**_GROUP_DEFAULTS, **data})
             new = replace(config, groups=_replace_in(config.groups, obj))
@@ -226,6 +256,21 @@ def delete(
         ):
             return _fail(Problem("user_in_scenario", kind, item_id))
         new = replace(config, users=tuple(u for u in config.users if u.id != item_id))
+    elif kind == "contact":
+        if config.contact(item_id) is None:
+            return _fail(Problem("not_found", kind, item_id))
+        # An action still naming this person would quietly reach nobody, and
+        # a step that reaches nobody is the failure §7 exists to prevent. Say
+        # so instead, and let the profile be edited knowingly.
+        if any(
+            item_id in (r["contact_id"] for r in notify_contacts(a))
+            for p in config.profiles
+            for a in p.actions
+        ):
+            return _fail(Problem("contact_in_use", kind, item_id))
+        new = replace(
+            config, contacts=tuple(c for c in config.contacts if c.id != item_id)
+        )
     elif kind == "device":
         if config.device(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))

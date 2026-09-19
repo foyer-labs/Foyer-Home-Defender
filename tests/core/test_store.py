@@ -718,3 +718,16 @@ def test_a_zone_battery_round_trips():
         settings=replace(config.settings, low_battery_threshold=35),
     )
     assert config_from_dict(config_to_dict(richer)) == richer
+
+
+def test_migration_into_phase_4_adds_an_empty_address_book_and_no_steps():
+    """Nothing an installation already has changes (6.1): no contacts, no
+    escalation, and every notify action still names the service it named."""
+    config = migrated()
+    assert config.contacts == ()
+    assert config.settings.ack_webhook_id is None
+    assert all(
+        action.escalation_offset is None
+        for profile in config.profiles
+        for action in profile.actions
+    )

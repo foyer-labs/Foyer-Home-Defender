@@ -58,6 +58,7 @@ from ..core.models import (
     ArmRequest,
     BypassZone,
     CodeResult,
+    ContactChannelKind,
     Decision,
     DisarmRequest,
     LogCategory,
@@ -84,7 +85,10 @@ from ..core.templates import TEMPLATE_VARIABLES
 from ..core.validation import (
     ACTION_DOMAINS,
     CHIME_DOMAINS,
+    ESCALATION_KINDS,
+    ESCALATION_MOMENTS,
     MAX_ACTION_DELAY,
+    MAX_ESCALATION_OFFSET,
     MAX_SEVERITY,
     ZONE_DOMAINS,
     Problem,
@@ -119,14 +123,15 @@ PREFS_KEY = "foyer.prefs"
 
 # Moments a profile can already be written against, though the phase that
 # raises them has not landed (SPEC §6.1; part 3 appendix).
-FUTURE_MOMENTS: tuple[Moment, ...] = (
-    # One left, and it is the only one no phase raises: Phase 4 builds
-    # escalation. The others left as their phase landed — code_rejected and
-    # lockout with Phase 2's identity, low_battery and the walk test's two
-    # with Phase 3 — and a moment still labelled "nothing raises this yet"
-    # after something does is a label that teaches people to skip a working
-    # setting.
-    Moment.ESCALATION_EXHAUSTED,
+# Empty, and that is the point: escalation_exhausted was the last entry, and
+# part 4 raises it. Every moment the editor offers is a moment something
+# produces, and a label still saying "nothing raises this yet" after
+# something does is a label that teaches people to skip a working setting.
+FUTURE_MOMENTS: tuple[Moment, ...] = ()
+
+# Moments nothing can answer, so nothing is offered them (see _meta).
+UNANSWERABLE_MOMENTS: frozenset[Moment] = frozenset(
+    {Moment.ACTION_TESTED, Moment.ESCALATION_SKIPPED}
 )
 
 
@@ -541,18 +546,28 @@ def _meta() -> dict[str, Any]:
                 MAX_LOW_BATTERY_THRESHOLD,
             ],
             "walk_test_timeout": [MIN_WALK_TEST_TIMEOUT, MAX_WALK_TEST_TIMEOUT],
+            "escalation_offset": [0, MAX_ESCALATION_OFFSET],
         },
         # What page 5 needs to build an action editor without knowing the
         # engine: the catalogue, where each kind may point, and the moments.
         "action_kinds": [k.value for k in ActionKind],
         "action_domains": {k: list(v) for k, v in ACTION_DOMAINS.items()},
         "silenceable": sorted(SILENCEABLE),
-        # Every moment a profile may answer. ACTION_TESTED is not one: it is
+        # Every moment a profile may answer. Two are not: ACTION_TESTED is
         # somebody pressing the test button of §11.4, and a profile that
-        # answered a test by sounding the siren would be a loop.
-        "moments": [m.value for m in Moment if m is not Moment.ACTION_TESTED],
+        # answered a test by sounding the siren would be a loop; and
+        # ESCALATION_SKIPPED is a row saying a notification did not go out
+        # while Home Assistant was down, which is a record rather than
+        # something the house can answer.
+        "moments": [m.value for m in Moment if m not in UNANSWERABLE_MOMENTS],
         # Moments no phase raises yet: selectable, and labelled as such.
+        # Part 4 raises the last of them.
         "future_moments": [m.value for m in FUTURE_MOMENTS],
+        # Which moments an escalation step may answer (§7.2): an incident and
+        # the technical channel, the only two things with an acknowledgement.
+        "escalation_moments": sorted(m.value for m in ESCALATION_MOMENTS),
+        "escalation_kinds": sorted(k.value for k in ESCALATION_KINDS),
+        "contact_channel_kinds": [k.value for k in ContactChannelKind],
         "template_variables": list(TEMPLATE_VARIABLES),
         "max_conditions": MAX_CONDITIONS,
         # What pages 10 and 11 need to build the filters and the retention
