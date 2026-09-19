@@ -31,15 +31,18 @@
 > detector — 24h, tamper, technical and panic zones stay fully live. Before
 > these came physical arming — keypads, NFC tags, badges, the `foyer.*` service
 > contract and MQTT in both directions — and before that, codes, users and
-> permissions. Still missing: escalation until somebody acknowledges.
+> permissions. **Escalation has now landed too**: an address book with
+> prioritised channels, a notification that climbs from push to SMS to a second
+> person until somebody acknowledges, and four ways to stop it. Still missing:
+> arming the house by itself, on presence or on a schedule.
 
 **Try it if** you already have door, window or motion sensors in Home
 Assistant, you want one panel with arming scenarios of your own instead of a
 folder of automations, you would rather check a configuration than hope it is
 right, and you are willing to run a beta on a house that has other locks on it.
 
-**Not yet, if** you want something finished, or you need escalation across
-channels and contacts — [Alarmo](https://github.com/nielsfaber/alarmo)
+**Not yet, if** you want something finished, or you need the house to arm
+itself when everybody leaves — [Alarmo](https://github.com/nielsfaber/alarmo)
 has years of use behind it, and a large installed base is a kind of testing this
 project has not had yet.
 
@@ -80,6 +83,19 @@ project has not had yet.
   then the hall, then the stairs. They become a single incident with a single
   acknowledgement, instead of three notification storms at the worst possible
   moment.
+- **A notification that keeps looking for somebody.** An address book of
+  people rather than services, each with their channels in order of priority,
+  and steps at the times you choose: push now, SMS in a minute, a second
+  person two minutes later. It stops the instant anybody acknowledges — from
+  the button in the push notification, by disarming, from a key pressed during
+  the voice call, or from `foyer.acknowledge` — and every acknowledgement
+  records who and through which channel. If nobody does, the last step says so
+  as an event of its own. Quiet hours let a break-in through and hold back the
+  rest.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-contacts-en.png" alt="The Contacts page: three people with their channels in order of priority, the four steps of an escalation with the time between them, and the four ways to stop it" width="900">
+</p>
+
 - **An event log in a database of its own**, which the recorder's ten-day purge
   cannot touch: what happened, where, through which channel, whether each
   action actually worked, and who changed what.
@@ -319,15 +335,13 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No contact list, and no escalation.** A notification goes to a `notify`
-  service and stops there: it does not climb from push to SMS to a phone call
-  until somebody acknowledges, and there is nowhere yet to say who it should
-  climb through. The action test already covers every action you have
-  configured, and any `notify` service directly; a test button beside each
-  contact's channels arrives with the address book. *Next release.*
 - **No automatic rules.** Arming on a schedule, on presence or on a condition
   of your own is still an automation you write, calling `foyer.arm`.
-  *After that.*
+  *Next release.*
+- **No channel health checks.** Foyer does not yet notice that a `notify`
+  service has disappeared, that the GSM modem fell off the network or that the
+  last send failed — the test button beside every channel is how you find out,
+  and it is worth pressing after an update. *After that.*
 - **No ESPHome keypad of our own.** DIY builds fit the contract like anything
   else, but this project does not maintain one in v1.
 
@@ -410,6 +424,15 @@ event log is audit-*useful*, not tamper-*proof*, for the same reason.
 **Foyer is not a certified alarm system.** EN 50131 grade compliance is
 explicitly out of scope, and it does not replace a monitored professional
 installation.
+
+**The acknowledgement webhook, if you switch it on, is an unauthenticated
+URL.** It exists so a voice provider can feed back the key somebody pressed
+during a call. Home Assistant webhooks are open to whoever holds the address,
+so anybody who has it — or intercepts it — can acknowledge an alarm in
+progress, which stops the escalation on its way to the next person. It cannot
+arm, disarm, read the log or change anything. It does not exist until you
+switch it on, the id is generated and random, and switching it off forgets it.
+[The details](docs/notification-channels.md#twilio-voice-call).
 
 **Foyer is not a fire alarm system.** A smoke detector wired into Home
 Assistant does not replace certified, interconnected smoke alarms.
@@ -525,8 +548,8 @@ keypad the code *is* the identity, so the exemption cannot apply there.
 Yes. Foyer makes no outbound connection of its own, and needs no cloud account
 and no broker. Whether your *notifications* survive a cut line is a different
 question, and the honest answer is that a push notification does not — which is
-why escalation across channels is on the roadmap, and why a local channel is
-worth having.
+why an escalation is a list of channels rather than one, and why at least one
+local channel, such as a USB GSM modem, belongs somewhere in that list.
 
 </details>
 
@@ -568,7 +591,7 @@ which version of Foyer and of Home Assistant, what you expected, and what the
 log page shows — the row usually contains the answer, so a screenshot of it is
 worth more than a description. English or Italian, whichever you prefer.
 
-To be told when escalation lands, watch the repository: releases are
+To be told when the next phase lands, watch the repository: releases are
 announced there, and the [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)
 says what changed in behaviour every time.
 

@@ -33,8 +33,11 @@
 > restano completamente attive. Prima di queste era arrivato l'inserimento
 > fisico — tastiere Ring e Zigbee, tag NFC, badge e telecomandi, il contratto
 > `foyer.*` e MQTT nelle due direzioni — e prima ancora utenti, codici per
-> persona e permessi. Manca ancora la scalata delle notifiche finché qualcuno
-> non risponde.
+> persona e permessi. **Ora è arrivata anche la scalata delle notifiche**: una
+> rubrica di persone con i canali in ordine di priorità, una notifica che sale
+> da push a SMS a una seconda persona finché qualcuno non risponde, e quattro
+> modi per fermarla. Manca ancora che la casa si inserisca da sola, sulla
+> presenza o a orario.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
@@ -42,8 +45,8 @@ cartella di automazioni, preferisci controllare una configurazione invece di
 sperare che sia giusta, e vuoi inserire e disinserire da una tastiera, un tag
 o un badge con un registro che dice chi è stato.
 
-**Non ancora, se** ti serve che una notifica senza risposta salga da push a
-SMS a telefonata, o se non vuoi far girare su casa tua una beta con
+**Non ancora, se** ti serve che la casa si inserisca da sola quando esce
+l'ultima persona, o se non vuoi far girare su casa tua una beta con
 pochi mesi di vita: [Alarmo](https://github.com/nielsfaber/alarmo) ha anni di
 installazioni alle spalle, e per un impianto che deve semplicemente funzionare
 oggi è la scelta prudente.
@@ -86,6 +89,19 @@ oggi è la scelta prudente.
   la finestra, poi il corridoio, poi le scale. Diventano un solo incidente con
   una sola presa in carico, invece di tre raffiche di notifiche nel momento
   peggiore possibile.
+- **Una notifica che continua a cercare qualcuno.** Una rubrica di persone,
+  non di servizi, ognuna con i suoi canali in ordine di priorità, e passi ai
+  tempi che scegli: push adesso, SMS fra un minuto, una seconda persona due
+  minuti dopo. Si ferma nell'istante in cui qualcuno prende atto — dal
+  pulsante nella notifica push, disinserendo, da un tasto premuto durante la
+  telefonata o da `foyer.acknowledge` — e ogni presa d'atto registra chi e da
+  quale canale. Se non prende atto nessuno, l'ultimo passo lo dice come evento
+  a sé. Le ore di silenzio lasciano passare un'effrazione e trattengono il
+  resto.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-contacts-it.png" alt="La pagina Contatti: tre persone con i canali in ordine di priorità, i quattro passi di una scalata con i tempi fra l'uno e l'altro, e i quattro modi per fermarla" width="900">
+</p>
+
 - **Un registro eventi in un archivio tutto suo**, che la cancellazione dopo
   dieci giorni del recorder non può toccare: cosa è successo, dove, attraverso
   quale canale, se ogni azione ha davvero funzionato, e chi ha cambiato cosa.
@@ -341,18 +357,14 @@ card.
 
 ## Cosa manca ancora, e conta
 
-- **Nessuna rubrica dei contatti, e nessuna scalata delle notifiche.** Una
-  notifica va a un servizio `notify` e si ferma lì: non sale da push a SMS a
-  telefonata finché qualcuno non risponde, e non c'è ancora dove dire
-  attraverso chi debba salire. La prova delle azioni copre già ogni azione
-  configurata e, direttamente, qualunque servizio `notify`; un pulsante
-  accanto ai canali di ciascun contatto arriva con la rubrica.
-  *Prossima versione.*
 - **Nessuna regola automatica.** Inserire a orario, sulla presenza o su una
   condizione tua è ancora un'automazione che scrivi tu, che chiama
-  `foyer.arm`. Il conto alla rovescia annullabile che serve qui è lo stesso
-  della scalata delle notifiche, quindi le due cose arrivano insieme e non
-  prima: scriverlo due volte sarebbe spreco. *Dopo.*
+  `foyer.arm`. *Prossima versione.*
+- **Nessun controllo di salute dei canali.** Foyer non si accorge ancora che
+  un servizio `notify` è sparito, che il modem GSM non è più registrato sulla
+  rete o che l'ultimo invio è fallito: il pulsante di prova accanto a ogni
+  canale è come lo scopri, e vale la pena premerlo dopo un aggiornamento.
+  *Dopo.*
 - **Nessuna tastiera ESPHome nostra.** Una costruzione fai-da-te rientra nel
   contratto come qualunque altra, ma questo progetto non ne mantiene una
   in v1.
@@ -439,6 +451,16 @@ come traccia, non *inalterabile*.
 dichiaratamente fuori ambito: non soddisfa i requisiti CEI 79-3 / EN 50131 e
 non sostituisce un impianto certificato dove una polizza assicurativa o un
 capitolato lo richiedano.
+
+**Il webhook di presa d'atto, se lo accendi, è un URL non autenticato.**
+Esiste perché un provider vocale possa rimandare il tasto premuto durante una
+chiamata. I webhook di Home Assistant sono aperti a chi ne conosce
+l'indirizzo: chiunque lo abbia, o lo intercetti, può prendere atto di un
+allarme in corso, cioè fermare la scalata mentre sta andando dalla persona
+successiva. Non può inserire, disinserire, leggere il registro o cambiare
+niente. Non esiste finché non lo accendi, l'id è generato a caso, e
+spegnendolo viene dimenticato.
+[I dettagli](docs/notification-channels.md#twilio-voice-call) (in inglese).
 
 **Foyer non è un sistema antincendio.** Un rivelatore di fumo collegato a Home
 Assistant non sostituisce rivelatori certificati e interconnessi.
@@ -569,8 +591,8 @@ condivisa il codice *è* l'identità, quindi lì l'esenzione non vale.
 Sì. Foyer non apre nessuna connessione verso l'esterno, e non richiede né un
 account cloud né un broker. Se sopravvivano le *notifiche* a una linea tagliata
 è un'altra domanda, e la risposta onesta è che una notifica push no — ed è per
-questo che la scalata su più canali è nella tabella di marcia, e per cui un
-canale locale vale la pena di averlo.
+questo che una scalata è una lista di canali e non uno solo, e per cui almeno
+un canale locale, per esempio un modem GSM USB, va messo in quella lista.
 
 </details>
 

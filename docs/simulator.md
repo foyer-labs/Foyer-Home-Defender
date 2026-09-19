@@ -148,6 +148,9 @@ A worked example, of the case that is hardest to reason about:
             ✗ Hall lights — condition not met: time 22:00-07:00
             ✗ Push to the NAS — condition not met: binary_sensor.nobody_home is on
             ✗ Landing lights — held back by a delay earlier in the sequence
+            ✓ escalation step 0 → Luca (Push)
+          ⏱ escalation step 1 at +60s → Luca (SMS)
+          ⏱ escalation step 2 at +120s → Partner (Push)
 21:36:00  Area "Ground floor": Triggered → Armed
           Siren cutoff
 ```
@@ -184,9 +187,17 @@ cross means it did not, with the reason:
 | **this zone is silent and suppresses it** | The zone is marked silent, and this action is one of the kinds a silent zone does not run |
 | **nothing is configured for this moment** | The profile answered, and it has no actions for this moment. Shown only where that is itself the finding — a satisfied group with an empty profile is why the siren stayed quiet |
 
+**Who is being told, and who is next.** A notification says which contacts it
+reached and through which channel, and the ⏱ escalation lines say who comes
+after that and when. They are read off the decision the engine produced, not
+worked out again for the display: what the trace shows is the schedule the
+house would really keep, and it stops at the first acknowledgement exactly as
+the real one does. A contact inside their quiet hours is named too, as held
+back rather than as reached.
+
 **What is still to come.** The ⏱ lines: a siren cutoff, the rest of a sequence
-a delay is holding. Each is announced once, at the moment it is scheduled,
-rather than repeated under every later step.
+a delay is holding, the escalation steps still ahead. Each is announced once,
+at the moment it is scheduled, rather than repeated under every later step.
 
 ### Things worth rehearsing before you trust a configuration
 
