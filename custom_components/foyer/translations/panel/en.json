@@ -1649,10 +1649,10 @@
     "duration_hint": "Minutes without a detection before it ends itself. Each detection pushes it back. It can only be shorter than the installation's setting, never longer: the auto-exit cannot be switched off.",
     "start": "Start walk test",
     "table_title": "Detection during this walk test",
-    "started_by": "Started at {at} by {who} · ends in {time}",
+    "started_by": "Started at {at} by {who}",
     "detected": "detected",
     "never": "never detected",
-    "never_reacted": "{n} zone(s) have not reacted yet. A door nobody opened reads the same as a PIR pointing at the wrong wall — walk them again before you trust the list.",
+    "never_reacted": "{n} zones have not reacted yet. A door nobody opened reads the same as a PIR pointing at the wrong wall — walk them again before you trust the list.",
     "all_reacted": "Every zone under test has detected you at least once.",
     "partly_armed": "The walk test is running, but these zones kept their area out of it: {zones}. Those areas were never armed, so their zones cannot detect anything.",
     "col": {
@@ -1660,7 +1660,8 @@
       "result": "Result",
       "first": "First detection",
       "count": "Detections"
-    }
+    },
+    "never_reacted_one": "One zone has not reacted yet. A door nobody opened reads the same as a PIR pointing at the wrong wall — walk it again before you trust the list."
   },
   "action_test": {
     "warn_title": "These really execute.",

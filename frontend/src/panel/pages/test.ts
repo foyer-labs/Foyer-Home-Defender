@@ -17,7 +17,6 @@ import { LitElement, css, html, nothing } from "lit";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
-import { mmss } from "../../shared/time";
 import type {
   Diagnostics,
   DiagnosticsDevice,
@@ -947,7 +946,6 @@ class FoyerPageTest extends LitElement {
             ${t(s, "walk.started_by", {
               who: walk.user_name ?? t(s, "walk.somebody"),
               at: hhmm(walk.started_at),
-              time: mmss((Date.parse(walk.deadline) - ctx.now()) / 1000),
             })}
           </span>
           <button
@@ -961,7 +959,16 @@ class FoyerPageTest extends LitElement {
         <div class="card-bd">
           ${missed.length
             ? html`<div class="problems" role="alert">
-                ${t(s, "walk.never_reacted", { n: missed.length })}
+                ${t(
+                  s,
+                  // One zone is the common case on a second walk, and
+                  // "1 zone(s) have not reacted" is the kind of string that
+                  // makes a household trust the rest of the page less.
+                  missed.length === 1
+                    ? "walk.never_reacted_one"
+                    : "walk.never_reacted",
+                  { n: missed.length },
+                )}
               </div>`
             : html`<div class="notice">${t(s, "walk.all_reacted")}</div>`}
           <div class="table-wrap">

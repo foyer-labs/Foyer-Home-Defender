@@ -712,6 +712,44 @@ class FoyerPanel extends LitElement {
         font-size: 12px;
         opacity: 0.85;
       }
+      /* The banner §11.3 calls permanent and unmissable. It sits between the
+         toolbar and the tabs, on every page, for as long as the walk test
+         runs — because for as long as it runs a real intrusion produces
+         nothing at all, and that is not something to mention discreetly. */
+      .walk-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--warning-color, #c77700);
+        color: var(--text-primary-color, #fff);
+        font-size: 14px;
+        line-height: 1.35;
+      }
+      .walk-banner > div {
+        flex: 1;
+      }
+      .walk-banner strong {
+        margin-right: 4px;
+      }
+      .walk-banner .btn {
+        background: rgba(0, 0, 0, 0.18);
+        border-color: rgba(255, 255, 255, 0.55);
+        color: inherit;
+        white-space: nowrap;
+      }
+      /* What stays live, said in the banner itself: "have I just switched the
+         smoke detector off?" is the first question, and it is answered here
+         rather than a page away. */
+      .live-note {
+        font-size: 12.5px;
+        opacity: 0.9;
+      }
+      @media (max-width: 600px) {
+        .walk-banner {
+          flex-wrap: wrap;
+        }
+      }
       .help-toggle {
         border: 0;
         background: transparent;

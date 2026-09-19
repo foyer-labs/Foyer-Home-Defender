@@ -1207,12 +1207,12 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
 	_renderKeypadLayout(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
-		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = this._isMaster ? t.scenarios : [];
+		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = this._isMaster ? t.scenarios : [], s = t.scenarios.find((e) => e.id === t.active_scenario_id);
 		return L`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)}
-          ${this._head(this._isMaster ? Z(e, "overview.master") : n?.name ?? "", r, i)}
+          ${this._head(this._isMaster ? s?.name ?? Z(e, "overview.master") : n?.name ?? "", r, i)}
           ${n ? this._countdown(e, n) : z}
           ${this._renderPad(e)}
           <div class="buttons">

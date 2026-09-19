@@ -1649,7 +1649,7 @@
     "duration_hint": "Minuti senza rilevazioni prima che si chiuda da solo. Ogni rilevazione lo rimanda. Può solo essere più breve dell'impostazione dell'installazione, mai più lungo: l'uscita automatica non si disattiva.",
     "start": "Avvia il walk test",
     "table_title": "Rilevazioni durante questo walk test",
-    "started_by": "Avviato alle {at} da {who} · finisce fra {time}",
+    "started_by": "Avviato alle {at} da {who}",
     "detected": "rilevata",
     "never": "mai rilevata",
     "never_reacted": "{n} zone non hanno ancora reagito. Una porta che nessuno ha aperto sembra identica a un PIR puntato sulla parete sbagliata: ripassale prima di fidarti dell'elenco.",
@@ -1660,7 +1660,8 @@
       "result": "Esito",
       "first": "Prima rilevazione",
       "count": "Rilevazioni"
-    }
+    },
+    "never_reacted_one": "Una zona non ha ancora reagito. Una porta che nessuno ha aperto sembra identica a un PIR puntato sulla parete sbagliata: ripassala prima di fidarti dell'elenco."
   },
   "action_test": {
     "warn_title": "Queste prove si eseguono davvero.",

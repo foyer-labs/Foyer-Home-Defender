@@ -726,12 +726,19 @@ class FoyerCard extends LitElement {
       : Boolean(area?.memory);
     const armed = state !== "disarmed" || memory;
     const scenarios = this._isMaster ? status.scenarios : [];
+    // The scenario that is running, named — as the `full` layout names it.
+    // A wall tablet is the one surface where somebody stands and asks "what
+    // is the house doing?", and "Whole house, armed" does not answer it when
+    // the difference between two scenarios is whether the upstairs is armed.
+    const active = status.scenarios.find((sc) => sc.id === status.active_scenario_id);
     return html`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(s)}
           ${this._head(
-            this._isMaster ? t(s, "overview.master") : (area?.name ?? ""),
+            this._isMaster
+              ? (active?.name ?? t(s, "overview.master"))
+              : (area?.name ?? ""),
             state,
             memory,
           )}
