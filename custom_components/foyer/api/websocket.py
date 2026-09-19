@@ -21,7 +21,7 @@ import voluptuous as vol
 from .. import i18n
 from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
 from ..core import authz
-from ..core.journal import config_row
+from ..core.journal import config_row, system_row
 from ..core.models import (
     ARMED_HA_STATES,
     IDENTIFYING_CHANNELS,
@@ -68,6 +68,13 @@ from ..core.models import (
 )
 from ..core.presets import UNAVAILABLE_TYPES, preset
 from ..core.proposals import propose_zone
+from ..core.simulate import (
+    DEFAULT_HORIZON,
+    MAX_HORIZON,
+    SimulationRequest,
+    ZoneOverride,
+    inputs as simulation_inputs,
+)
 from ..core.templates import TEMPLATE_VARIABLES
 from ..core.validation import (
     ACTION_DOMAINS,
@@ -285,6 +292,8 @@ def async_register(hass: HomeAssistant) -> None:
         ws_log_clear,
         ws_config_export,
         ws_config_import,
+        ws_diagnostics,
+        ws_simulate,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -1254,3 +1263,130 @@ async def ws_config_import(
     await _apply(
         hass, connection, msg["id"], system, result, operation="restore", kind="config"
     )
+
+
+# --- page 9: diagnostics and the simulator (SPEC §11.1, §11.2) --------------------
+
+# Both of these **read**, and they are gated as reads: view_log, no code.
+#
+# Decided explicitly rather than copied from whatever was nearby, because the
+# same mistake was made once already and had to be undone. Neither command
+# changes state and neither changes configuration, so edit_config is the wrong
+# permission on both counts: it would refuse the diagnostics table to somebody
+# trusted to read the log of what actually happened, which is strictly more
+# than the table shows. And §8.2 asks for a code to *edit* the configuration —
+# demanding one to open a page teaches a household to keep the code on a
+# sticky note beside the tablet.
+#
+# view_log is the right shape for a second reason: what these two reveal is
+# what the log reveals. The table says which zones exist and which are open;
+# the trace says what the house would do about them. Somebody who may read
+# "disarmed at 03:14 by Luca" may certainly read "the kitchen window is a
+# delayed zone with a 30 s entry delay".
+
+
+@websocket_api.websocket_command({vol.Required("type"): "foyer/diagnostics"})
+@websocket_api.async_response
+async def ws_diagnostics(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Page 9, tab 1: every mapped zone, live (§11.1)."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.VIEW_LOG,
+            need_code=False,
+        )
+    ) is None:
+        return
+    connection.send_result(msg["id"], system.diagnostics())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/simulate",
+        # The hypothetical scenario, or the areas armed on their own. Neither
+        # is a question too: a 24h zone answers on a disarmed house.
+        vol.Exclusive("scenario_id", "target"): vol.Any(str, None),
+        vol.Exclusive("area_ids", "target"): [str],
+        # The hypothetical clock. Absent means now, which is the common case.
+        vol.Optional("start"): vol.Any(str, None),
+        vol.Optional("zones", default=[]): [
+            {
+                vol.Required("zone_id"): str,
+                vol.Required("state"): str,
+                vol.Optional("at", default=0): vol.All(
+                    int, vol.Range(min=0, max=MAX_HORIZON)
+                ),
+            }
+        ],
+        vol.Optional("entities", default={}): {str: str},
+        vol.Optional("horizon", default=DEFAULT_HORIZON): vol.All(
+            int, vol.Range(min=1, max=MAX_HORIZON)
+        ),
+    }
+)
+@websocket_api.async_response
+async def ws_simulate(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Page 9, tab 2: rehearse the configuration (§11.2).
+
+    Nothing here is executed, and that is guaranteed structurally rather than
+    by this handler being careful: core.simulate calls the same decide() the
+    runtime calls and never hands the Decision to the executor (INV-1).
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        actor := await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.VIEW_LOG,
+            need_code=False,
+        )
+    ) is None:
+        return
+    start = dt_util.parse_datetime(msg.get("start") or "") or dt_util.utcnow()
+    request = SimulationRequest(
+        start=dt_util.as_utc(start),
+        timezone=dt_util.get_default_time_zone(),
+        scenario_id=msg.get("scenario_id") or None,
+        area_ids=tuple(msg.get("area_ids") or ()),
+        zones=tuple(
+            ZoneOverride(z["zone_id"], z["state"], z["at"]) for z in msg["zones"]
+        ),
+        entities=dict(msg["entities"]),
+        horizon=msg["horizon"],
+    )
+    # §11.2: every run is logged with its inputs, so a configuration change
+    # can be justified after the fact — which only works if the row carries
+    # enough to run it again.
+    system.async_record(
+        (
+            system_row(
+                dt_util.utcnow(),
+                event_type="simulation_run",
+                user_id=actor.user_id,
+                user_name=(
+                    named.name if (named := system.config.user(actor.user_id)) else None
+                ),
+                channel=CHANNEL_HA_UI,
+                detail=simulation_inputs(request),
+            ),
+        )
+    )
+    connection.send_result(msg["id"], system.simulate(request))

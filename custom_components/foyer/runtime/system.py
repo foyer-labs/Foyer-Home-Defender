@@ -30,6 +30,7 @@ from homeassistant.util import dt as dt_util
 from ..const import CHANNEL_HA_UI, SIGNAL_UPDATE
 from ..core import authz
 from ..core.conditions import condition_entities
+from ..core.diagnostics import as_dict as diagnostics_dict, diagnose
 from ..core.engine import arm_blockers, decide, master_state, next_wakeup
 from ..core.journal import LogRow, action_row, rows_for
 from ..core.models import (
@@ -50,6 +51,11 @@ from ..core.models import (
     Tick,
     User,
     ZoneStateChanged,
+)
+from ..core.simulate import (
+    SimulationRequest,
+    as_dict as simulation_dict,
+    run as simulate_run,
 )
 from ..core.triggers import battery_level, battery_low, fault_cause
 from ..store.log_store import LogStore
@@ -417,6 +423,24 @@ class FoyerSystem:
 
     def master(self) -> tuple[AreaState, str | None]:
         return master_state(self.state, self.config)
+
+    def diagnostics(self) -> dict[str, Any]:
+        """The §11.1 table, built by core from a snapshot it is handed."""
+        return diagnostics_dict(
+            diagnose(self._snapshot(), self.config, dt_util.utcnow())
+        )
+
+    def simulate(self, request: SimulationRequest) -> dict[str, Any]:
+        """Rehearse the configuration and answer with the trace (§11.2).
+
+        The live entity states are read here, because reading Home Assistant
+        is this layer's job, and handed to a pure function that calls the same
+        decide() this class calls. Nothing is executed and nothing is stored:
+        the Decisions never reach the executor and never reach ``self.state``.
+        """
+        snapshot = self._snapshot()
+        simulation = simulate_run(self.config, request, snapshot.entities)
+        return simulation_dict(simulation, self.config)
 
     def result(self, decision: Decision, ha_user: Any = None) -> dict[str, Any]:
         """The structured result of SPEC §9.1.

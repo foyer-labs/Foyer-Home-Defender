@@ -466,6 +466,36 @@ def security_row(
     )
 
 
+def system_row(
+    at: datetime,
+    *,
+    event_type: str,
+    user_id: str | None = None,
+    user_name: str | None = None,
+    channel: str | None = None,
+    severity: LogSeverity = LogSeverity.INFO,
+    detail: Mapping[str, Any] | None = None,
+) -> LogRow:
+    """A row under ``system`` for something no Decision produced (§10.2).
+
+    A simulation run is the first of these: nothing happened in the house, so
+    there is no occurrence to take a row from — and §11.2 still requires the
+    run and its inputs to be recorded, "so a configuration change can be
+    justified after the fact".
+    """
+    return LogRow(
+        ts=at,
+        category=LogCategory.SYSTEM,
+        event_type=event_type,
+        severity=severity,
+        user_id=user_id,
+        user_name=user_name,
+        channel=channel,
+        outcome=Outcome.OK.value,
+        detail=dict(detail or {}),
+    )
+
+
 def config_row(
     at: datetime,
     *,
