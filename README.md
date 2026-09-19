@@ -546,6 +546,17 @@ The whole design, including the reasoning behind decisions that look arbitrary
 until you know why, is in
 [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md).
 
+## If it saved you an evening
+
+Foyer is Apache-2.0 and will stay that way, whatever happens to this button.
+But if it saved you the evening you were going to spend writing the
+automations — or the morning you were going to spend finding out which zone
+never fired — you can buy the author a coffee.
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
+</p>
+
 ## Licence
 
 Apache-2.0. See [LICENSE](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE) and [NOTICE](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/NOTICE).
