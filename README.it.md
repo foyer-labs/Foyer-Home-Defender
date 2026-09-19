@@ -172,6 +172,11 @@ chi, da quale canale, con quale dispositivo.
   per persona non può valere. Un tag però non ha nessun codice da digitare:
   chi lo trova inserisce e disinserisce come chi lo possiede, quindi va
   trattato come una chiave.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-tag-it.png" alt="L'editor del tag: l'avvertenza che un tag rubato inserisce e disinserisce senza sapere nessun codice, sopra il campo che dice di chi è il tag" width="900">
+</p>
+
 - **Tre blueprint pronti**: Ring Alarm Keypad v2 su Z-Wave JS con l'anello LED
   e i conti alla rovescia di uscita e di ingresso, un tastierino Zigbee
   generico via Zigbee2MQTT, e tag e telecomandi per i casi che la

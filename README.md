@@ -125,6 +125,14 @@ Assistant service or publish to an MQTT broker can arm this house.
   `event.*` entity, say whose it is and what a scan does. No automation in
   between, and the log names the person — which is the whole point of a channel
   that identifies rather than one that asks for a code.
+
+  A tag carries no code, and the editor says so where somebody is deciding
+  whether to keep one in their wallet:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-tag-en.png" alt="The tag editor: a warning that a stolen tag arms and disarms without knowing any code, above the field that says whose tag it is" width="900">
+</p>
+
 - **Through the service contract:** `foyer.arm`, `foyer.disarm`,
   `bypass_zone`, `unbypass_zone`, `acknowledge`, and the export and import of
   configuration and log. Every state-changing call takes a code, a user and a

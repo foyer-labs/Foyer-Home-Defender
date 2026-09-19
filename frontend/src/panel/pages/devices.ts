@@ -497,6 +497,20 @@ class FoyerPageDevices extends LitElement {
         font-family: var(--code-font-family, monospace);
         font-size: 12px;
       }
+      /* The one sentence on this page that has to stop somebody: §9.3 says a
+         stolen tag arms and disarms without knowing any code, and it is read
+         while deciding whether to carry one. Plain text would not stop
+         anybody. */
+      .banner {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 16px;
+        margin: 16px 0;
+        border-radius: 8px;
+        background: var(--warning-color, #f0a835);
+        color: #0d1014;
+      }
     `,
   ];
 }
