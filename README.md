@@ -165,8 +165,10 @@ revision, so two keypads sold under the same photograph can send different
 action names. In both cases the arming still works — what a wrong value breaks
 is only what the keypad shows you.
 
-The contract, the hardware comparison and how to write your own adapter are in
-[docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md).
+Each one imports into your own Home Assistant with one button, in
+[docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md) —
+which also holds the contract, the hardware comparison and how to write your
+own adapter.
 A keypad should never be your only way in: batteries die, radios jam, brokers
 stop. Keep the panel and the card.
 

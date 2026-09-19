@@ -96,6 +96,10 @@ from .verification import Verification, all_windows, counter_of, groups
 
 KEY_ZONE_CHANNEL = "key_zone"
 
+# What a row says when the name on it was asserted by the request and not
+# established by a code or a token (§9.1, decision 88).
+_CLAIMED = {"attributed": "claimed"}
+
 # What an intrusion zone's activation does to its area right now (§5.2).
 _TRIGGER = "trigger"
 _START_ENTRY = "start_entry"
@@ -383,6 +387,8 @@ class _Run:
                 kwargs["user_id"] = actor.user_id
                 user = self.config.user(actor.user_id)
                 kwargs["user_name"] = user.name if user else None
+                if actor.claimed:
+                    kwargs["detail"] = {**kwargs.get("detail", {}), **_CLAIMED}
             if actor.device_id is not None:
                 kwargs["device_id"] = actor.device_id
         self.occurrences.append(Occurrence(moment=moment, **kwargs))
@@ -1408,6 +1414,7 @@ class _Run:
                 channel=channel,
                 user_id=self.actor.user_id,
                 device_id=self.actor.device_id,
+                claimed=self.actor.claimed,
                 skipped_exit=skip_exit_delay,
                 causes=(),
             )
@@ -1468,7 +1475,10 @@ class _Run:
             channel=rt.channel,
             user_id=rt.user_id,
             device_id=rt.device_id,
-            detail={"skip_exit_delay": "1"} if rt.skipped_exit else {},
+            detail={
+                **({"skip_exit_delay": "1"} if rt.skipped_exit else {}),
+                **(_CLAIMED if rt.claimed else {}),
+            },
         )
 
     def arming_failed(self, area_id: str, zones: list[Zone], reason: Reason) -> None:
@@ -1481,7 +1491,7 @@ class _Run:
             channel=rt.channel,
             user_id=rt.user_id,
             device_id=rt.device_id,
-            detail={"reason": reason.value},
+            detail={"reason": reason.value, **(_CLAIMED if rt.claimed else {})},
         )
         self.clear_area(area_id)
 

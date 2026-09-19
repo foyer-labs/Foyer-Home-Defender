@@ -1053,6 +1053,9 @@ class AreaRuntime:
     # reason and answers a different question: which keypad, of the three.
     user_id: str | None = None
     device_id: str | None = None
+    # Whether that name was claimed rather than established (decision 88).
+    # Remembered for the same reason the name is.
+    claimed: bool = False
     # Armed with no exit delay at all (§9.1). Remembered for the same reason
     # as `forced`: the row that says so is written when the area reaches
     # `armed`, and "why did it sound while I was still in the hall?" is a
@@ -1340,6 +1343,12 @@ class Actor:
     # The permissions and the validity window of the user it names still
     # apply; only the code policy cannot, because there is nothing to type.
     token: bool = False
+    # The person was NAMED by the request rather than established by it: a
+    # service call passing `user_id` with no code and no token (§9.1). It
+    # grants nothing — that is resolved in core/authz — and it exists so the
+    # log can say how it came by the name it carries. "Who disarmed at 03:14"
+    # deserves no answer rather than a wrong one (decision 88).
+    claimed: bool = False
 
     @property
     def code_verified(self) -> bool:

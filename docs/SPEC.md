@@ -132,6 +132,32 @@ The README contains a "Security model" section stating plainly:
 > `.storage`, disable the integration or call any service directly. Foyer is not
 > a certified alarm system.
 
+### 2.1 Stated principles
+
+Not invariants — breaking one of these does not disable a feature and does not
+require a rewrite — but decisions the project keeps making, written once so
+that the next channel does not have to rediscover them.
+
+#### P-1 — Outward, Foyer says the least that works
+
+Every channel that publishes to something Foyer does not control starts at the
+minimum needed to make it work. Anything that adds the state of the house is an
+explicit option, off by default, with the reason written next to it.
+
+The reasoning is always the same: a message leaving the house is read by
+whoever holds the other end, and "armed, Night, nobody home" tells a third
+party exactly when to come. It is the reason the external watchdog's heartbeat
+is empty (decision 29), and the reason the retained MQTT message starts at
+`minimal` (decision 83). The channels of Phase 4 and Phase 5 — notification
+transports, a DTMF webhook, an export — meet the same rule already written
+rather than arriving at it again by accident, which is how §9.2 came to list
+the open windows by name in the first place.
+
+This does not apply to what stays inside: the panel, the card, the log and the
+entities are Foyer talking to its own household, and there the rule is the
+opposite — say everything, because a system that hides what it knows is the
+failure this project exists to avoid.
+
 ---
 
 ## 3. Architecture
@@ -927,8 +953,16 @@ Three rules the contract needs that the shape above does not carry:
 - **`channel` may only be claimed as `api` or `automation`.** A physical or
   identifying channel is a property of a registered device, never a claim a
   message makes, or an automation would buy the exemption of §8.2 by typing a
-  word. `user_id` is attribution and grants nothing: claiming to be somebody
-  brings their restrictions, never their exemptions.
+  word.
+- **`user_id` is a claim, and the log says so** (decision 88). It grants
+  nothing — claiming to be somebody brings their restrictions, never their
+  exemptions — but arming needs no code by default, so a caller could otherwise
+  write a name into the log that nothing established. Every row whose person
+  was named by the request rather than established by a code or a token carries
+  `attributed: claimed`, and the log page shows it beside the name. The
+  capability stays, because an adapter needs a way to say who acted; what goes
+  is the log's silence about the difference. A wrong answer to "who disarmed at
+  03:14?" is worse than no answer.
 - **`skip_exit_delay` needs no permission of its own** (decision 85): whoever
   may arm may arm at once, and it uncovers nothing — it closes sooner. It does
   turn every delayed zone into an instant one, so the `armed` row records that
@@ -957,15 +991,24 @@ foyer/<install_id>/state
   "areas": { "ground": "armed", "upstairs": "disarmed" },
   "countdown": { "kind": "exit"|"entry", "remaining": 22 },
   "ready_to_arm": false, "open_zones": ["Kitchen window"],
-  "fault": false, "last_result": "ok"|"blocked"|"bad_code"|"locked_out"
-                                |"unknown_device" }
+  "fault": false,
+  "last_result": "ok"|"blocked"|"bad_code"|"locked_out",
+  "last_reason": "zone_open"|"device_not_registered"|… |null }
 ```
 
 Published retained on change and on request. Keypad adapters map `last_result`
-to their own beep and LED vocabulary. `unknown_device` is the fifth value and
-belongs with the other four: "that code is wrong" and "I am not known here"
-are different problems, and a household that hears one sound for both retypes
-a code that was never at fault.
+to their own beep and LED vocabulary.
+
+**The answer is two fields, and the first one never grows** (decision 87).
+`last_result` is this closed set of four for ever, so an adapter written today
+never meets a word it does not recognise — a keypad that goes quiet exactly
+when something new happens is worse than one that says "blocked". Beside it,
+`last_reason` carries the precise reason from the same stable set the services
+return (§9.1), and an adapter that wants to tell "a window is open" from "I am
+not a registered device" reads that one. A simple keypad reads the first and
+never changes; an evolved one reads both. `last_reason` is a stable identifier
+and never a name, so it belongs at every detail level, including the one that
+says nothing about the house.
 
 **How much of that message is published is a setting, in three steps, and it
 starts at the least** (decision 83). The message is retained, on a broker that
@@ -1016,12 +1059,26 @@ before records a baseline rather than arming the house. It carries `token=True`
 permissions, the validity window and the scope of the person it names apply in
 full.
 
-**A tag always names a person** (decision 82). §8.2 calls it a *per-user* NFC
-tag, and that is the only reason it counts as a channel that identifies; a
-token nobody owns is a shared credential, which is a keypad by another name and
-must be configured as one, with a code. The editor states, where somebody is
-deciding whether to carry one, the sentence this section has always made: a
-stolen tag arms and disarms without knowing any code.
+**A tag always names a person, and validation enforces it** (decision 82).
+§8.2 calls it a *per-user* NFC tag, and that is the only reason it counts as a
+channel that identifies; a token nobody owns is a shared credential, which is a
+keypad by another name and must be configured as one, with a code. An
+anonymous tag was considered and refused: the household that wants a remote
+belonging to the house rather than to a person creates a user named for the
+house, with the permissions it should have — and has then said so explicitly,
+instead of leaving a field blank. The editor states, where somebody is deciding
+whether to carry one, the sentence this section has always made: a stolen tag
+arms and disarms without knowing any code.
+
+#### How an adapter reaches an installation
+
+HACS installs `custom_components/` and nothing else, so a blueprint in this
+repository does not arrive anywhere on its own. **Every shipped adapter
+therefore carries a one-click import link** — the `my.home-assistant.io`
+blueprint-import redirect, which opens the import dialogue on the reader's own
+installation — in `docs/keypads.md` and in the README. Copying the file by hand
+still works and is documented beside it; it is simply not the step a reader is
+asked to take first, because it is the step at which people stop.
 
 #### Shipped adapters (blueprints)
 
@@ -1892,3 +1949,6 @@ other way it becomes a permanent source of issues that are nobody's bug.
 | 84 | The channel is the registered device's, never the message's claim | Otherwise an automation buys the per-user exemption of §8.2, or chooses which lockout counter to spend, by typing a word |
 | 85 | `skip_exit_delay` needs no permission of its own, and is recorded | It uncovers nothing; it closes sooner. But it turns every delayed zone into an instant one, and "why did it sound while I was still in the hall?" must have an answer |
 | 86 | `foyer.walk_test` and `foyer.test_action` are registered when Phase 3 builds them | A service that exists and does nothing answers its caller with silence, which is the answer that gets mistaken for success |
+| 87 | `last_result` is four words for ever, and `last_reason` carries the precise why | An adapter written today must never meet a word it does not know: a keypad that goes quiet when something new happens is worse than one that says "blocked" — and the detail is still there for whoever wants it |
+| 88 | A `user_id` nothing established marks its log row `attributed: claimed` | Arming needs no code, so a caller could otherwise write a name the log had no reason to believe; a wrong answer to "who disarmed at 03:14?" is worse than no answer, and the capability is worth keeping |
+| 89 | P-1: outward, every channel starts at the least that works | The watchdog and the MQTT message reached that conclusion separately, and §9.2 reached the opposite one first; a principle written once is what stops the next channel rediscovering it by accident |

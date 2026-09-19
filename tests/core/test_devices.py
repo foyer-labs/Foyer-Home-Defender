@@ -11,6 +11,7 @@ from dataclasses import replace
 
 from custom_components.foyer.core.models import (
     ArmingDevice,
+    CodeResult,
     DeviceKind,
     EntityState,
     KeyCommand,
@@ -160,6 +161,43 @@ def test_what_a_device_was_seen_as_survives_a_restart():
     world = house()
     restored = state_from_dict(state_to_dict(world.state), world.config)
     assert restored.seen_devices == {"luca_tag"}
+
+
+# --- attribution (decision 88) ---------------------------------------------------
+
+
+def test_a_name_nothing_established_is_marked_as_claimed():
+    """A service call may name somebody; nothing verified it (§9.1)."""
+    world = house()
+    world.arm("away", user_id="luca", channel="api", claimed=True)
+    world.advance(30)
+    armed = [o for o in world.last.occurrences if o.moment is Moment.ARMED]
+    assert armed and armed[0].user_name == "Luca"
+    assert armed[0].detail["attributed"] == "claimed"
+
+
+def test_a_name_a_code_established_carries_no_marker():
+    world = house()
+    world.arm("away", user_id="luca", channel="ha_ui", code=CodeResult.VALID)
+    world.advance(30)
+    armed = [o for o in world.last.occurrences if o.moment is Moment.ARMED]
+    assert armed and "attributed" not in armed[0].detail
+
+
+def test_a_tag_is_not_a_claim_either():
+    """Possession established it, even though no code did (§9.3)."""
+    world = house()
+    scan(world)
+    world.advance(30)
+    armed = [o for o in world.last.occurrences if o.moment is Moment.ARMED]
+    assert armed and "attributed" not in armed[0].detail
+
+
+def test_what_a_claim_was_survives_a_restart():
+    world = house()
+    world.arm("away", user_id="luca", channel="api", claimed=True)
+    restored = state_from_dict(state_to_dict(world.state), world.config)
+    assert restored.area("ground").claimed is True
 
 
 # --- the white list (part 2 decision 1) ------------------------------------------

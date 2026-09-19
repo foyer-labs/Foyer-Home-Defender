@@ -366,6 +366,12 @@ class FoyerPageLog extends LitElement {
         <td>${where}</td>
         <td>
           ${row.user_name ?? (row.channel ? channelLabel(s, row.channel) : "")}
+          ${row.detail?.attributed === "claimed"
+            ? // The name was asserted by the request, not established by a
+              // code or a token (§9.1). The row keeps it and stops short of
+              // claiming it knows (decision 88).
+              html`<span class="claimed">${t(s, "log.claimed")}</span>`
+            : nothing}
         </td>
         <td class="detail">${this._summary(s, row)}</td>
       </tr>
@@ -539,6 +545,12 @@ class FoyerPageLog extends LitElement {
     stateStyles,
     formStyles,
     css`
+      .claimed {
+        margin-left: 6px;
+        font-size: 12px;
+        color: var(--warning-color, #c77700);
+        white-space: nowrap;
+      }
       .chips {
         display: flex;
         flex-wrap: wrap;

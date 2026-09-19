@@ -5,6 +5,49 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.2] — what the log knows, and what it only heard
+
+A small release, and two of the three entries change a contract published
+yesterday. If you have already written an MQTT adapter against `0.1.0-beta.1`,
+read the first one.
+
+### Changed
+- **The MQTT answer is two fields** (SPEC §9.2). `last_result` goes back to the
+  four words the specification always had — `ok`, `blocked`, `bad_code`,
+  `locked_out` — and stays those four for ever, so an adapter written today
+  never meets a word it does not recognise. The precise reason moves to a new
+  field beside it, `last_reason` (`zone_open`, `device_not_registered`,
+  `user_not_valid`, …), `null` when the command succeeded. Beta 1 published
+  `unknown_device` inside `last_result`; it is now `last_result: "blocked"`
+  with `last_reason: "device_not_registered"`. A keypad that goes quiet exactly
+  when something new happens is worse than one that says "blocked".
+- **A name nothing established is marked as such in the log.** A service call
+  may pass `user_id`, and arming needs no code, so a caller could write a name
+  into the log that nothing verified. The row keeps the name — attribution is
+  worth having — and now carries `attributed: claimed`, shown beside it on the
+  log page. A code or a tag still produces an unmarked row. A wrong answer to
+  "who disarmed at 03:14?" is worse than no answer.
+- **The blueprints import with one button.** Each adapter in `docs/keypads.md`
+  carries a Home Assistant import link, because HACS installs the integration
+  and not blueprints, and "copy the file into the right folder" is the step at
+  which people stop. Copying by hand still works and is documented beside it.
+
+### Fixed
+- The warning on the arming devices page — *a stolen tag arms and disarms
+  without knowing any code* — was rendering as ordinary paragraph text, directly
+  above the field where you choose whose tag it is. It is an amber banner now,
+  like every other warning in the panel.
+
+### Specification
+- **P-1, a stated principle**: outward, every channel starts at the least that
+  works, and anything that adds the state of the house is an explicit option.
+  The watchdog's empty heartbeat and the MQTT message's `minimal` default had
+  reached that conclusion separately, and §9.2 had first reached the opposite
+  one. Written once, so Phase 4's transports meet it already made.
+- **A tag must name a person**, now stated with the alternative that was
+  considered and refused: a household wanting a remote that belongs to the
+  house creates a user named for the house, and has then said so.
+
 ## [0.1.0-beta.1] — the keypad by the door
 
 **The first beta, and the first release that is not a pre-release.** Phase 2 is

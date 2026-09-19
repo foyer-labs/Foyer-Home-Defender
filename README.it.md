@@ -188,10 +188,11 @@ chi, da quale canale, con quale dispositivo.
   i blueprint fanno con Foyer funziona comunque: a sbagliare è solo ciò che il
   tastierino ti mostra.
 
-Il contratto completo — servizi, MQTT, cosa vale onestamente ogni tipo di
-hardware e come scrivere il proprio adattatore — è in
-[docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md)
-(in inglese, come tutta la documentazione tecnica).
+Ogni blueprint si importa sul tuo Home Assistant con un pulsante, da
+[docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md),
+che contiene anche il contratto completo — servizi, MQTT, cosa vale onestamente
+ogni tipo di hardware e come scrivere il proprio adattatore (in inglese, come
+tutta la documentazione tecnica).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-devices-it.png" alt="Dispositivi di inserimento: due tastierini e un tag, ognuno dichiarato prima di poter comandare qualcosa, e il contratto MQTT con il messaggio che pubblicherà davvero" width="900">

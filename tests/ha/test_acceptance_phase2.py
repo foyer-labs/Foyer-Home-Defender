@@ -98,7 +98,9 @@ async def test_a_keypad_on_a_broker_arms_disarms_and_is_answered(
         mqtt_mock,
         {"action": "disarm", "code": CODE, "device_id": "keypad_garden"},
     )
-    assert _published(mqtt_mock)[-1]["last_result"] == "unknown_device"
+    refused = _published(mqtt_mock)[-1]
+    assert refused["last_result"] == "blocked"
+    assert refused["last_reason"] == "device_not_registered"
     assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.ARMED_AWAY
 
     # 6. The right code disarms.

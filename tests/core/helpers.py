@@ -54,6 +54,7 @@ _ACTOR_FIELDS = (
     "duress",
     "is_admin",
     "token",
+    "claimed",
 )
 
 

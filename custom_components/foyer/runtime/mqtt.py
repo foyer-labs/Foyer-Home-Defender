@@ -25,6 +25,12 @@ publish a command, so the name it gives is the only thing that distinguishes a
 keypad from a stranger, and a name this installation does not carry is refused
 before the code is even looked at — which is also what keeps the lockout of
 §8.4 countable.
+
+**The answer is two fields, not one** (decision 87). ``last_result`` is the
+closed four-word vocabulary of §9.2 and does not grow, so a keypad written
+today never meets a word it does not know; ``last_reason`` beside it carries
+the precise reason, and an adapter that wants the difference between "a window
+is open" and "I am not a registered device" reads that one.
 """
 
 from __future__ import annotations
@@ -53,21 +59,22 @@ from .system import FoyerSystem
 
 _LOGGER = logging.getLogger(__name__)
 
-# What §9.2 calls the result, plus the one this contract had to add: a device
-# nobody declared. A keypad has to be able to beep differently for "wrong
-# code" and "I am not known here", or its owner spends an evening retyping a
-# code that was never the problem.
+# The four words of §9.2, and they stay four. A keypad maps them to its beeps
+# and its LED once, and a value it has never seen would be a keypad that goes
+# quiet exactly when something new happens — so the vocabulary does not grow
+# (decision 87). What grows instead is `last_reason` beside it: the precise
+# reason, from the same stable set the services return, for an adapter that
+# wants to tell "I am not a registered device" from "a window is open". A
+# simple keypad reads the first and never changes; an evolved one reads both.
 RESULT_OK = "ok"
 RESULT_BLOCKED = "blocked"
 RESULT_BAD_CODE = "bad_code"
 RESULT_LOCKED_OUT = "locked_out"
-RESULT_UNKNOWN_DEVICE = "unknown_device"
 
 _RESULTS: dict[Reason, str] = {
     Reason.BAD_CODE: RESULT_BAD_CODE,
     Reason.CODE_REQUIRED: RESULT_BAD_CODE,
     Reason.LOCKED_OUT: RESULT_LOCKED_OUT,
-    Reason.DEVICE_NOT_REGISTERED: RESULT_UNKNOWN_DEVICE,
 }
 
 
@@ -85,17 +92,20 @@ def topics(system: FoyerSystem, install_id: str) -> tuple[str, str]:
     )
 
 
-def result_of(decision: Decision) -> str:
-    """One word a keypad can map to a beep and an LED (§9.2)."""
+def result_of(decision: Decision) -> tuple[str, str | None]:
+    """(result, reason): one word for the beeps, and the precise why (§9.2)."""
     if decision.accepted:
-        return RESULT_OK
+        return RESULT_OK, None
     if decision.reason is None:
-        return RESULT_BLOCKED
-    return _RESULTS.get(decision.reason, RESULT_BLOCKED)
+        return RESULT_BLOCKED, None
+    return _RESULTS.get(decision.reason, RESULT_BLOCKED), decision.reason.value
 
 
 def state_payload(
-    system: FoyerSystem, detail: MqttDetail, last_result: str | None, now: datetime
+    system: FoyerSystem,
+    detail: MqttDetail,
+    last: tuple[str, str | None] | None,
+    now: datetime,
 ) -> dict[str, Any]:
     """What goes on the state topic, at the level this installation chose.
 
@@ -120,7 +130,11 @@ def state_payload(
         # to look, and it names nothing to whoever else reads this topic.
         "blocking_zones": len(set(blocking)),
         "fault": any(z["fault"] for z in status["zones"]),
-        "last_result": last_result,
+        "last_result": last[0] if last else None,
+        # A stable identifier, never a sentence and never a name: it belongs
+        # at every detail level, including the one that says nothing about
+        # the house.
+        "last_reason": last[1] if last else None,
     }
     if detail is MqttDetail.MINIMAL:
         return payload
@@ -178,9 +192,9 @@ async def async_setup(
         return None
 
     command_topic, state_topic = topics(system, install_id)
-    last_result: str | None = None
+    last: tuple[str, str | None] | None = None
 
-    async def publish(result: str | None = None) -> None:
+    async def publish(result: tuple[str, str | None] | None = None) -> None:
         payload = state_payload(system, settings.detail, result, dt_util.utcnow())
         await mqtt.async_publish(
             hass,
@@ -191,19 +205,19 @@ async def async_setup(
         )
 
     async def on_message(message: Any) -> None:
-        nonlocal last_result
+        nonlocal last
         try:
             data = json.loads(message.payload)
             assert isinstance(data, dict)
         except (ValueError, AssertionError):
             _LOGGER.warning("Foyer: unreadable MQTT command on %s", command_topic)
             return
-        last_result = await _async_command(hass, system, data)
-        await publish(last_result)
+        last = await _async_command(hass, system, data)
+        await publish(last)
 
     @callback
     def on_change() -> None:
-        hass.async_create_task(publish(last_result), eager_start=True)
+        hass.async_create_task(publish(last), eager_start=True)
 
     unsubscribe = await mqtt.async_subscribe(
         hass, command_topic, on_message, qos=settings.qos
@@ -222,12 +236,12 @@ async def async_setup(
 
 async def _async_command(
     hass: HomeAssistant, system: FoyerSystem, data: dict[str, Any]
-) -> str:
+) -> tuple[str, str | None]:
     """One inbound message (§9.2). Returns what the keypad should be told."""
     action = str(data.get("action") or "")
     if action == "status":
         # Not a command: "tell me again", for a keypad that has just booted.
-        return RESULT_OK
+        return RESULT_OK, None
     ref = data.get("device_id")
     if not ref:
         # Over a broker the device is not optional. Anybody who can publish to
@@ -235,7 +249,7 @@ async def _async_command(
         # only thing separating the hall keypad from a stranger — and the only
         # thing that makes the lockout of §8.4 countable.
         await async_report_unknown_device(hass, system, channel=CHANNEL_MQTT, ref=None)
-        return RESULT_UNKNOWN_DEVICE
+        return RESULT_BLOCKED, Reason.DEVICE_NOT_REGISTERED.value
     requester = await async_requester(
         hass,
         system.config,
@@ -247,7 +261,7 @@ async def _async_command(
         await async_report_unknown_device(
             hass, system, channel=CHANNEL_MQTT, ref=str(ref)
         )
-        return RESULT_UNKNOWN_DEVICE
+        return RESULT_BLOCKED, Reason.DEVICE_NOT_REGISTERED.value
     actor = requester.actor
     scenario = data.get("scenario")
     force = bool(data.get("force", False))
@@ -269,7 +283,7 @@ async def _async_command(
         event = AcknowledgeIncident(actor)
     else:
         _LOGGER.warning("Foyer: unknown MQTT action %r", action)
-        return RESULT_BLOCKED
+        return RESULT_BLOCKED, "unknown_action"
     decision = await system.async_handle(event)
     return result_of(decision)
 

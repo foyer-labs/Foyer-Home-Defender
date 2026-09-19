@@ -202,6 +202,41 @@ async def test_a_declared_keypad_arms_and_is_named_in_the_log(
     assert disarmed[0]["device_id"] == device_id
 
 
+async def test_a_name_a_service_call_asserts_is_marked_in_the_log(
+    hass, with_keypad, freezer
+):
+    """§9.1 lets a caller name somebody; nothing verified it (decision 88).
+
+    The row keeps the name — attribution is useful — and stops asserting more
+    than it knows, because a wrong answer to "who disarmed at 03:14" is worse
+    than no answer.
+    """
+    user_id = hass.data[DOMAIN].config.users[0].id
+    assert (await _call(hass, "arm", scenario_name=SCENARIO, user_id=user_id))[
+        "success"
+    ]
+    # The `armed` row is written when the exit delay ends, which is exactly
+    # why the area has to remember how it came by the name.
+    await _advance(hass, freezer, 31)
+
+    rows = await _rows(hass, category="arming")
+    armed = [r for r in rows if r["event_type"] == "armed"]
+    assert armed
+    assert armed[0]["user_name"] == "Luca"
+    assert armed[0]["detail"]["attributed"] == "claimed"
+
+
+async def test_a_name_a_code_established_is_not_marked(hass, with_keypad, freezer):
+    assert (
+        await _call(hass, "arm", scenario_name=SCENARIO, code=CODE, device_id=KEYPAD)
+    )["success"]
+    await _advance(hass, freezer, 31)
+
+    rows = await _rows(hass, category="arming")
+    armed = [r for r in rows if r["event_type"] == "armed"]
+    assert armed and "attributed" not in armed[0]["detail"]
+
+
 async def test_a_channel_that_identifies_cannot_be_claimed_by_a_caller(
     hass, with_keypad
 ):

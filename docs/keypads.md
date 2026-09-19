@@ -140,7 +140,8 @@ At the default level, `minimal`:
   "ready_to_arm": false,
   "blocking_zones": 1,
   "fault": false,
-  "last_result": "ok"
+  "last_result": "blocked",
+  "last_reason": "zone_open"
 }
 ```
 
@@ -154,23 +155,33 @@ armed and nobody is in", and — at `full` — which window is open. That is the
 same reasoning the external watchdog uses for its empty heartbeat. Raise the
 level knowingly.
 
-`last_result` is one of `ok`, `blocked`, `bad_code`, `locked_out`,
-`unknown_device`. It is what lets a keypad tell *arming was blocked by an open
-window* from *that code is wrong*, instead of failing silently at both. The
-last value is the last command's, whichever keypad sent it; with two keypads in
-a house, a keypad should read it in response to its own command and not treat
-it as a standing fact.
+**Two fields, and the first never grows.** `last_result` is one of `ok`,
+`blocked`, `bad_code`, `locked_out` — this set, for ever, so an adapter written
+today never meets a word it does not recognise. `last_reason` beside it carries
+the precise reason, from the same stable set the services return
+(`zone_open`, `device_not_registered`, `user_not_valid`, …) and is `null` when
+the command succeeded.
+
+Map `last_result` to your beeps and your LED; read `last_reason` only if you
+want to tell *a window is open* from *I am not a registered device*. Both are
+the last command's, whichever keypad sent it: with two keypads in a house, read
+them in response to your own command rather than as a standing fact.
 
 ---
 
 ## The shipped adapters
 
-Three blueprints live under `blueprints/automation/foyer/`. HACS installs the
-integration, not blueprints, so copy the file into
-`config/blueprints/automation/foyer/` and reload automations, or use the
-**import blueprint** button in Home Assistant with the file's URL.
+Three blueprints live under `blueprints/automation/foyer/`. **HACS installs the
+integration, not blueprints**, so each one carries its own import button below:
+it opens the blueprint import dialogue on your own Home Assistant, and you
+press *Preview* then *Import*. (The button is the official
+`my.home-assistant.io` redirect: it forwards you to your own installation and
+nothing else. If you would rather not use it, copy the file into
+`config/blueprints/automation/foyer/` and reload automations.)
 
 ### Ring Alarm Keypad v2 over Z-Wave JS
+
+[![Open your Home Assistant instance and show the blueprint import dialog](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Ffoyer-labs%2FFoyer-Home-Defender%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Ffoyer%2Fring_keypad_v2_zwave_js.yaml)
 
 `ring_keypad_v2_zwave_js.yaml`. Reads the keypad's Entry Control notification —
 which key, and the digits typed before it — calls `foyer.arm` or `foyer.disarm`
@@ -186,6 +197,8 @@ what breaks with a wrong number is only what the keypad shows you.
 
 ### Generic Zigbee keypad over Zigbee2MQTT
 
+[![Open your Home Assistant instance and show the blueprint import dialog](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Ffoyer-labs%2FFoyer-Home-Defender%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Ffoyer%2Fzigbee_keypad_z2m.yaml)
+
 `zigbee_keypad_z2m.yaml`. Reads the keypad's Zigbee2MQTT message (`action` plus
 `action_code`) and publishes `arm_mode` back so the display follows the house.
 
@@ -197,6 +210,8 @@ correct the action names in the blueprint's `variables` block. This is not a
 defect in the blueprint; it is what that market is.
 
 ### NFC tags and remotes
+
+[![Open your Home Assistant instance and show the blueprint import dialog](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Ffoyer-labs%2FFoyer-Home-Defender%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Ffoyer%2Fnfc_tag_and_remote.yaml)
 
 `nfc_tag_and_remote.yaml` — **and you probably do not need it.** Foyer reads
 tags and remotes natively: add one under *Arming devices*, choose its `tag.*`

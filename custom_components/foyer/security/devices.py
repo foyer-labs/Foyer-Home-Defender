@@ -104,6 +104,9 @@ async def async_requester(
             device_id=device.id if device else None,
             code=credential.result,
             duress=credential.duress,
+            # Nothing established this person: the message said so. The log
+            # records the difference rather than flattening it.
+            claimed=credential.user is None and bool(resolved),
         ),
         device=device,
     )

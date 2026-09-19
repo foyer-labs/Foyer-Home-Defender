@@ -124,7 +124,9 @@ async def test_a_wrong_code_is_answered_as_a_wrong_code(hass, broker, freezer):
         hass, broker, {"action": "disarm", "code": "000000", "device_id": KEYPAD}
     )
 
-    assert _published(broker)[-1]["last_result"] == "bad_code"
+    published = _published(broker)[-1]
+    assert published["last_result"] == "bad_code"
+    assert published["last_reason"] == "bad_code"
     assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.ARMED_AWAY
 
 
@@ -141,6 +143,7 @@ async def test_an_open_zone_is_not_a_wrong_code(hass, broker):
 
     published = _published(broker)[-1]
     assert published["last_result"] == "blocked"
+    assert published["last_reason"] == "zone_open"
     assert published["ready_to_arm"] is False
     assert published["blocking_zones"] == 1
 
@@ -157,7 +160,11 @@ async def test_an_undeclared_device_can_do_nothing_a_code_would_allow(hass, brok
         },
     )
 
-    assert _published(broker)[-1]["last_result"] == "unknown_device"
+    published = _published(broker)[-1]
+    # Four words in last_result, for ever (decision 87); the precise why is
+    # beside it, for an adapter that wants to tell this from an open window.
+    assert published["last_result"] == "blocked"
+    assert published["last_reason"] == "device_not_registered"
     assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
 
 
@@ -165,7 +172,9 @@ async def test_a_message_with_no_device_at_all_is_refused(hass, broker):
     """Anybody who can publish to the topic can publish a command."""
     await _send(hass, broker, {"action": "arm", "scenario": SCENARIO, "code": CODE})
 
-    assert _published(broker)[-1]["last_result"] == "unknown_device"
+    published = _published(broker)[-1]
+    assert published["last_result"] == "blocked"
+    assert published["last_reason"] == "device_not_registered"
     assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
 
 
@@ -200,6 +209,7 @@ async def test_the_retained_message_names_nothing_by_default(hass, broker):
         "blocking_zones",
         "fault",
         "last_result",
+        "last_reason",
     }
     assert "scenario" not in payload
     assert "open_zones" not in payload

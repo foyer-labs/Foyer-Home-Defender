@@ -701,6 +701,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "channel": rt.channel,
                 "user_id": rt.user_id,
                 "device_id": rt.device_id,
+                "claimed": rt.claimed,
                 "skipped_exit": rt.skipped_exit,
             }
             for area_id, rt in state.areas.items()
@@ -866,6 +867,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 channel=rt.get("channel"),
                 user_id=rt.get("user_id"),
                 device_id=rt.get("device_id"),
+                claimed=bool(rt.get("claimed", False)),
                 skipped_exit=bool(rt.get("skipped_exit", False)),
             )
         for area_id in area_ids - areas.keys():

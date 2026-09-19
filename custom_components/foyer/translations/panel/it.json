@@ -1217,7 +1217,8 @@
     "removed": "rimossa",
     "changed": "modificato",
     "and_more": "e altre {count}",
-    "gap_short": "{seconds} s"
+    "gap_short": "{seconds} s",
+    "claimed": "(dichiarato)"
   },
   "language": {
     "en": "English",
@@ -1303,7 +1304,8 @@
     "seconds": "Secondi",
     "zone": "Zona",
     "scenario": "Scenario",
-    "state": "Stato"
+    "state": "Stato",
+    "attributed": "Attribuzione"
   },
   "code": {
     "title": "Codice",

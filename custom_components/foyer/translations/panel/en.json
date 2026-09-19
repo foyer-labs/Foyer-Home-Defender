@@ -1217,7 +1217,8 @@
     "removed": "removed",
     "changed": "changed",
     "and_more": "and {count} more",
-    "gap_short": "{seconds} s"
+    "gap_short": "{seconds} s",
+    "claimed": "(claimed)"
   },
   "language": {
     "en": "English",
@@ -1303,7 +1304,8 @@
     "seconds": "Seconds",
     "zone": "Zone",
     "scenario": "Scenario",
-    "state": "State"
+    "state": "State",
+    "attributed": "Attribution"
   },
   "code": {
     "title": "Code",

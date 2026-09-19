@@ -4833,6 +4833,7 @@ var X = 50, xt = class extends L {
         <td>${o}</td>
         <td>
           ${t.user_name ?? (t.channel ? Z(e, t.channel) : "")}
+          ${t.detail?.attributed === "claimed" ? O`<span class="claimed">${V(e, "log.claimed")}</span>` : A}
         </td>
         <td class="detail">${this._summary(e, t)}</td>
       </tr>
@@ -4924,6 +4925,12 @@ var X = 50, xt = class extends L {
 			H,
 			U,
 			o`
+      .claimed {
+        margin-left: 6px;
+        font-size: 12px;
+        color: var(--warning-color, #c77700);
+        white-space: nowrap;
+      }
       .chips {
         display: flex;
         flex-wrap: wrap;
