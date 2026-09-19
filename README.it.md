@@ -24,11 +24,11 @@
 >
 > Protegge la casa di chi lo scrive. Con questa versione è completa la parte
 > che serve a verificarlo prima di fidarsene: il simulatore, che prova una
-> decisione senza che succeda nulla; la **prova di percorso** (*walk test*),
+> decisione senza che succeda nulla; il **walk test** — la prova di percorso —
 > che inserisce l'impianto per davvero trattenendo ogni risposta e ti dice
 > quali zone non ti hanno mai visto passare; e la **prova delle azioni**, che
 > fa suonare la sirena sul serio, così un canale d'emergenza configurato male
-> lo scopri adesso e non durante l'emergenza. Una prova di percorso non
+> lo scopri adesso e non durante l'emergenza. Un walk test non
 > silenzia mai un rivelatore di fumo: le zone 24h, tamper, tecniche e panico
 > restano completamente attive. Prima di queste era arrivato l'inserimento
 > fisico — tastiere Ring e Zigbee, tag NFC, badge e telecomandi, il contratto
@@ -94,10 +94,10 @@ oggi è la scelta prudente.
   minuto dopo, e leggi tutta la decisione, comprese le azioni che *non*
   sarebbero partite e perché. [Qui sotto](#chiedere-cosa-succederebbe-senza-che-succeda-niente),
   con un esempio.
-- **Una prova di percorso che ti dice quali zone non ti hanno mai visto.**
+- **Un walk test che ti dice quali zone non ti hanno mai visto.**
   L'impianto è inserito per davvero e ogni risposta è trattenuta — tranne
   quelle delle zone 24h, tamper, tecniche e panico, che restano completamente
-  attive, perché una prova di percorso non deve mai silenziare un rivelatore
+  attive, perché un walk test non deve mai silenziare un rivelatore
   di fumo. Si chiude da sola, e finché è attiva lo dice su ogni schermo.
   [Qui sotto](#camminare-per-casa-e-premere-il-pulsante).
 - **Un pulsante di prova accanto a ogni azione, e si esegue davvero.** Fa
@@ -194,20 +194,20 @@ ognuna con il suo motivo:
 21:32:30  Area «Piano terra»: In inserimento → Inserito
             Profilo «Base», ereditato dal profilo predefinito
             ✓ Notifica di Home Assistant
-21:33:30  Zona «Open space PIR 1» → on
+21:33:30  Zona «PIR soggiorno» → on
           Area «Piano terra»: Inserito → In allarme · sirena fino alle 21:36:30
-          Gruppo «Open space»: 1 su 2 entro 60 s → non soddisfatto
+          Gruppo «Soggiorno»: 1 su 2 entro 60 s → non soddisfatto
           Incidente aperto 20260914-213330-1
             Profilo «Silenzioso», ereditato dalla zona
             ✓ Avvisa Luca
           ⏱ taglio della sirena alle 21:36:30
-21:34:00  Zona «Open space PIR 2» → on
-          Gruppo «Open space»: 2 su 2 entro 60 s → SODDISFATTO
+21:34:00  Zona «PIR ingresso» → on
+          Gruppo «Soggiorno»: 2 su 2 entro 60 s → SODDISFATTO
           Zona aggiunta all'incidente 20260914-213330-1
             Profilo «Completo», ereditato dal gruppo
             ✓ Sirena interna
             ✗ Luci ingresso — condizione non soddisfatta: orario 22:00-07:00
-            ✗ Luci pianerottolo — trattenuta da un ritardo precedente nella sequenza
+            ✗ Luci scale — trattenuta da un ritardo precedente nella sequenza
           ⏱ il resto di questa sequenza alle 21:34:30
 21:36:30  Area «Piano terra»: In allarme → Inserito
           Fine della sirena
@@ -219,7 +219,7 @@ Ecco com'è fatta una risposta graduata, vista prima che te la mostri un ladro.
 Due limiti, perché sono la differenza fra uno strumento utile e l'illusione di
 averne uno. Prova la **decisione**, non il trasporto: ti dice che una notifica
 partirebbe verso un certo destinatario, non che quel destinatario funzioni. E
-non sostituisce una prova di percorso — forzare lo stato di una zona dimostra
+non sostituisce un walk test — forzare lo stato di una zona dimostra
 cosa ne fa il motore, e non dimostra niente su dove sia puntato il rivelatore
 del corridoio. Di quello si occupa la sezione qui sotto.
 
@@ -232,18 +232,24 @@ Il simulatore risponde a *cosa farebbe l'allarme*. Due cose non può dirtele:
 se quel rivelatore è puntato davvero sul corridoio, e se la tua notifica
 arriva davvero. Per quelle servono la casa e il canale in persona.
 
-**La prova di percorso** inserisce ogni area per davvero e legge ogni sensore
+**Il walk test** inserisce ogni area per davvero e legge ogni sensore
 per davvero — e trattiene tutta la risposta. Cammina di stanza in stanza e la
 pagina si riempie in diretta. Quel che conta non sono le zone che ti hanno
 rilevato, ma quelle che non l'hanno mai fatto, che stanno in cima all'elenco:
 una porta che nessuno ha aperto e un rivelatore puntato sulla parete sbagliata
-sono identici lì, e una batteria scarica si vede accanto.
+lì sono identici — mentre un sensore che ha semplicemente smesso di farsi
+sentire viene segnato come guasto lì accanto, ed è l'unico dei tre casi che
+l'elenco sa distinguere da solo.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-it.png" alt="Un walk test in corso: un banner dice che ogni risposta è trattenuta e che cosa resta attivo, e in cima alla tabella ci sono le tre zone che non hanno mai reagito — il PIR del garage, che è anche in guasto perché è rimasto muto troppo a lungo, un PIR del disimpegno che non ha visto nessuno benché la finestra della camera sullo stesso piano sia stata aperta alle 21:12, e una finestra che nessuno ha aperto" width="900">
+</p>
 
 Tre cose non sono facoltative, perché finché la prova è attiva un'intrusione
 vera non produce nulla:
 
 - **Le zone 24h, tamper, tecniche e panico restano completamente attive.** Una
-  prova di percorso non silenzia mai un rivelatore di fumo.
+  walk test non silenzia mai un rivelatore di fumo.
 - **Si chiude da sola.** Quindici minuti senza rilevazioni per impostazione
   predefinita, con ogni rilevazione che li rimanda — così una casa grande si
   cammina in un giro solo — e un tetto assoluto che la chiude comunque. Non
@@ -253,13 +259,13 @@ vera non produce nulla:
   notifica all'inizio e alla fine, ed entrambe nel registro con la persona che
   l'ha avviata.
 
-Una rilevazione durante la prova viene registrata e non muove nient'altro:
+Una rilevazione durante il walk test viene registrata e non muove nient'altro:
 niente allarme, niente incidente, nessuna memoria d'allarme, e nessuno dice a
 HomeKit o ad Alexa che qualcuno è entrato. Uscendo vengono disinserite
 esattamente le aree che la prova aveva inserito.
 
-**La prova delle azioni** è un pulsante accanto a ogni azione, e si esegue
-davvero. È il punto: l'errore che evita è scoprire durante l'emergenza che il
+**La prova delle azioni** è un pulsante accanto a ogni azione, e la esegue
+davvero: la sirena suona, la notifica parte. È il punto: l'errore che evita è scoprire durante l'emergenza che il
 canale d'emergenza era configurato male. Chiede conferma, richiede il permesso
 `test_actions` e un codice, fa suonare la sirena per tre secondi qualunque
 sia la durata configurata, e lascia nel registro una riga marcata come prova —
@@ -364,7 +370,7 @@ copia il codice. Dove differiscono oggi:
 | | Foyer | Alarmo |
 |---|---|---|
 | **Simulatore** | Sì: lo stesso motore, un mondo e un orologio inventati, e una traccia che dice perché ogni azione sarebbe partita o no | — |
-| **Prova di percorso** | Sì: inserito per davvero, ogni risposta trattenuta, e in cima le zone che non hanno mai reagito. Le zone 24h, tamper, tecniche e panico restano attive | — |
+| **Walk test** | Sì: l'impianto è inserito per davvero, ogni risposta è trattenuta, e in cima ci sono le zone che non hanno mai reagito. Le zone 24h, tamper, tecniche e panico restano attive | — |
 | **Prova delle azioni** | Sì: fa suonare la sirena o parte il messaggio sul serio, con conferma, e nel registro come prova | — |
 | **Scenari di inserimento** | Quanti ne vuoi, ciascuno inserisce un insieme di aree scelto | Le quattro modalità fisse di Home Assistant |
 | **Aree con stato indipendente** | Sì: un `alarm_control_panel` ciascuna, più una centrale | Una centrale sola, sensori raggruppati per modalità |
@@ -529,7 +535,7 @@ rifiutato e la via per superarla.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-it.png" alt="La disposizione a tastierino per un tablet a muro, e lo stesso tastierino aperto dentro la disposizione completa" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-it.png" alt="Il layout a tastierino per un tablet a muro: tutta la casa disinserita, un codice digitato a metà e i quattro scenari di inserimento sotto — e accanto lo stesso tastierino aperto dentro il layout completo" width="620">
 </p>
 
 ## Domande che vengono fatte

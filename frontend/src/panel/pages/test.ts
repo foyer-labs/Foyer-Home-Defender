@@ -863,11 +863,18 @@ class FoyerPageTest extends LitElement {
    */
   private _renderWalkTest(s: Strings) {
     const walk = this.ctx!.status.walk_test;
+    // While one is running the shell's banner is directly above this, on
+    // every page, and it already says what is held back, when it ends and
+    // what stays live. Saying it again here would be the page repeating
+    // itself inside one screen — so this keeps only what the banner has no
+    // room for: what to do now.
     return html`
       <div class="notice ${walk ? "danger" : "warn"}">
-        <strong>${t(s, walk ? "walk.active_title" : "walk.idle_title")}</strong>
-        ${t(s, walk ? "walk.active" : "walk.idle")}
-        <div class="hint">${t(s, "walk.always_on_live")}</div>
+        ${walk
+          ? t(s, "walk.active")
+          : html`<strong>${t(s, "walk.idle_title")}</strong>
+              ${t(s, "walk.idle")}
+              <div class="hint">${t(s, "walk.always_on_live")}</div>`}
       </div>
       ${walk ? this._renderWalkRunning(s, walk) : this._renderWalkStart(s)}
     `;
@@ -948,13 +955,6 @@ class FoyerPageTest extends LitElement {
               at: hhmm(walk.started_at),
             })}
           </span>
-          <button
-            class="btn danger"
-            ?disabled=${this._busy}
-            @click=${() => void this._endWalkTest()}
-          >
-            ${t(s, "walk.end")}
-          </button>
         </div>
         <div class="card-bd">
           ${missed.length
@@ -1013,17 +1013,6 @@ class FoyerPageTest extends LitElement {
           zones: result.blocking_zones.map((z) => z.name).join(", "),
         });
       }
-    } finally {
-      this._busy = false;
-    }
-  }
-
-  private async _endWalkTest(): Promise<void> {
-    const ctx = this.ctx;
-    if (!ctx) return;
-    this._busy = true;
-    try {
-      await ctx.walkTest(false);
     } finally {
       this._busy = false;
     }

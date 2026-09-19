@@ -5229,9 +5229,9 @@ var At = class extends I {
 		let t = this.ctx.status.walk_test;
 		return D`
       <div class="notice ${t ? "danger" : "warn"}">
-        <strong>${B(e, t ? "walk.active_title" : "walk.idle_title")}</strong>
-        ${B(e, t ? "walk.active" : "walk.idle")}
-        <div class="hint">${B(e, "walk.always_on_live")}</div>
+        ${t ? B(e, "walk.active") : D`<strong>${B(e, "walk.idle_title")}</strong>
+              ${B(e, "walk.idle")}
+              <div class="hint">${B(e, "walk.always_on_live")}</div>`}
       </div>
       ${t ? this._renderWalkRunning(e, t) : this._renderWalkStart(e)}
     `;
@@ -5301,13 +5301,6 @@ var At = class extends I {
 			at: Y(t.started_at)
 		})}
           </span>
-          <button
-            class="btn danger"
-            ?disabled=${this._busy}
-            @click=${() => void this._endWalkTest()}
-          >
-            ${B(e, "walk.end")}
-          </button>
         </div>
         <div class="card-bd">
           ${a.length ? D`<div class="problems" role="alert">
@@ -5341,17 +5334,6 @@ var At = class extends I {
 			try {
 				let t = Number(this._walkDuration) || 0, n = await e.walkTest(!0, { duration: t > 0 ? t * 60 : void 0 });
 				n.success ? n.blocking_zones.length && (this._error = B(e.strings, "walk.partly_armed", { zones: n.blocking_zones.map((e) => e.name).join(", ") })) : this._error = Ve(e.strings, n);
-			} finally {
-				this._busy = !1;
-			}
-		}
-	}
-	async _endWalkTest() {
-		let e = this.ctx;
-		if (e) {
-			this._busy = !0;
-			try {
-				await e.walkTest(!1);
 			} finally {
 				this._busy = !1;
 			}

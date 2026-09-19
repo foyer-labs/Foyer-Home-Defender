@@ -1233,16 +1233,16 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
                   >
                     ${Z(e, "card.arm")}
                   </button>`}
-            <button
-              class="primary"
-              ?disabled=${this._busy}
-              @click=${() => this._run({
+            ${a ? L`<button
+                  class="primary"
+                  ?disabled=${this._busy}
+                  @click=${() => this._run({
 			type: "foyer/disarm",
 			...this._isMaster || !n ? {} : { area_ids: [n.id] }
 		})}
-            >
-              ${Z(e, "card.disarm")}
-            </button>
+                >
+                  ${Z(e, "card.disarm")}
+                </button>` : z}
           </div>
           ${this._renderFeedback()}
         </div>

@@ -167,15 +167,15 @@ with the reason:
 21:32:30  Area "Ground floor": Arming → Armed
             Profile "Default", inherited from the global default
             ✓ Home Assistant notification
-21:33:30  Zone "Open plan PIR 1" → on
+21:33:30  Zone "Living room PIR" → on
           Area "Ground floor": Armed → Triggered · siren until 21:36:30
-          Group "Open plan": 1 of 2 within 60 s → not satisfied
+          Group "Living room": 1 of 2 within 60 s → not satisfied
           Incident opened 20260914-213330-1
             Profile "Silent", inherited from the zone
-            ✓ Notify Luca
+            ✓ Notify Ruth
           ⏱ siren cutoff at 21:36:30
-21:34:00  Zone "Open plan PIR 2" → on
-          Group "Open plan": 2 of 2 within 60 s → SATISFIED
+21:34:00  Zone "Hallway PIR" → on
+          Group "Living room": 2 of 2 within 60 s → SATISFIED
           Zone joined the incident 20260914-213330-1
             Profile "Full", inherited from the group
             ✓ Indoor siren
@@ -209,7 +209,13 @@ actually arrives. Those need the house and the channel themselves.
 and holds the whole response back. Walk from room to room and the page fills
 in live. What matters is not the zones that detected you but the ones that
 never did, which are listed first: a door nobody opened and a PIR pointing at
-the wrong wall look identical there, and a flat battery shows up beside them.
+the wrong wall look identical there — and a sensor that has simply stopped
+reporting is marked as a fault beside them, which is the one case of the three
+the list can tell apart for you.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the three zones that never reacted at the top of the table — the garage PIR, which is also faulted for going silent too long, a landing PIR that saw nobody although the bedroom window on the same floor was opened at 21:12, and a window nobody opened" width="900">
+</p>
 
 Three things about it that are not optional, because for as long as it runs a
 real intrusion produces nothing:
@@ -486,7 +492,7 @@ refused it and the way past it.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet, and the same pad opened inside the full layout" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet: the whole house disarmed, a code half typed, and the four arming scenarios underneath — with the same pad opened inside the full layout beside it" width="620">
 </p>
 
 ## Questions people ask

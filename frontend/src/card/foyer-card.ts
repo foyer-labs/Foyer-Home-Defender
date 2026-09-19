@@ -764,17 +764,19 @@ class FoyerCard extends LitElement {
                   >
                     ${t(s, "card.arm")}
                   </button>`}
-            <button
-              class="primary"
-              ?disabled=${this._busy}
-              @click=${() =>
-                this._run({
-                  type: "foyer/disarm",
-                  ...(this._isMaster || !area ? {} : { area_ids: [area.id] }),
-                })}
-            >
-              ${t(s, "card.disarm")}
-            </button>
+            ${armed
+              ? html`<button
+                  class="primary"
+                  ?disabled=${this._busy}
+                  @click=${() =>
+                    this._run({
+                      type: "foyer/disarm",
+                      ...(this._isMaster || !area ? {} : { area_ids: [area.id] }),
+                    })}
+                >
+                  ${t(s, "card.disarm")}
+                </button>`
+              : nothing}
           </div>
           ${this._renderFeedback()}
         </div>
