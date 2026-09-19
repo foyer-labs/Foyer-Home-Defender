@@ -45,13 +45,44 @@ from ..core.models import AcknowledgeIncident, AcknowledgeTechnical, Actor
 _LOGGER = logging.getLogger(__name__)
 
 TECHNICAL = "technical"
+INCIDENT = "incident"
 
 
-def _event_for(kind: str, via: str, contact_id: str | None, channel: str) -> Any:
+def _events_for(kind: str, via: str, contact_id: str | None, channel: str) -> list[Any]:
+    """Which alarm this answers. Two are possible and they never merge (§5.5).
+
+    A named kind acknowledges that one. An unnamed one acknowledges **both**,
+    for the same reason ``button.foyer_acknowledge`` does: somebody pressed a
+    button that says "I have seen it", and when the message did not survive
+    the round trip the honest reading is that they saw what they were sent.
+    Guessing "intrusion" instead would let a smoke alarm close a burglary.
+    """
     actor = Actor(channel=channel)
     if kind == TECHNICAL:
-        return AcknowledgeTechnical(actor, via=via, contact_id=contact_id)
-    return AcknowledgeIncident(actor, via=via, contact_id=contact_id)
+        return [AcknowledgeTechnical(actor, via=via, contact_id=contact_id)]
+    if kind == INCIDENT:
+        return [AcknowledgeIncident(actor, via=via, contact_id=contact_id)]
+    return [
+        AcknowledgeIncident(actor, via=via, contact_id=contact_id),
+        AcknowledgeTechnical(actor, via=via, contact_id=contact_id),
+    ]
+
+
+def _pending(system) -> bool:
+    """Whether there is anything to acknowledge at all.
+
+    Asked before the engine is, and only here: a request that arrives with
+    the house quiet is somebody — or something — knocking on a URL, and
+    handing it to the engine would write an ALARM-category refusal for every
+    knock. The engine still decides every acknowledgement that has something
+    to act on; this only declines to ask it about nothing.
+    """
+    state = system.state
+    incident = state.incident
+    return bool(
+        (incident is not None and not incident.acknowledged)
+        or any(not alarm.acknowledged for alarm in state.technical.values())
+    )
 
 
 @callback
@@ -67,14 +98,19 @@ def async_listen_push(hass: HomeAssistant, system) -> Any:
         data = event.data or {}
         if data.get("action") != ACK_ACTION:
             return
-        await system.async_handle(
-            _event_for(
-                str(data.get("foyer_kind") or ""),
-                ACK_VIA_PUSH,
-                data.get("foyer_contact") or None,
-                CHANNEL_API,
-            )
-        )
+        # The app decides how much of the action it echoes back: Android
+        # returns the extra keys beside the action, and iOS carries what it
+        # carries under ``action_data``. Both are read, and neither is
+        # required — an answer with nothing but the action name still
+        # acknowledges, because the person pressed the button.
+        extra = {**dict(data.get("action_data") or {}), **data}
+        for ack in _events_for(
+            str(extra.get("foyer_kind") or ""),
+            ACK_VIA_PUSH,
+            extra.get("foyer_contact") or None,
+            CHANNEL_API,
+        ):
+            await system.async_handle(ack)
 
     return hass.bus.async_listen(MOBILE_APP_ACTION_EVENT, _handle)
 
@@ -102,18 +138,35 @@ def async_register_webhook(hass: HomeAssistant, system) -> Any:
                 payload = dict(await request.post())
         except Exception:  # a provider posting something unreadable still meant it
             _LOGGER.debug("Foyer could not read the acknowledgement webhook body")
-        await system.async_handle(
-            _event_for(
-                str(payload.get("target") or ""),
-                ACK_VIA_DTMF,
-                str(payload.get("contact_id") or "") or None,
-                CHANNEL_API,
-            )
-        )
+        if not _pending(system):
+            # Nothing is in alarm, so there is nothing to answer and nothing
+            # is recorded. The URL is unauthenticated (INV-6): without this,
+            # anybody who holds it could fill the log with refusals and bury
+            # the row that matters.
+            return Response(status=200)
+        # A voice provider posts a form body it composes itself, so the
+        # query string is the only part of the URL the household controls:
+        # `...?target=technical` is how a call about the smoke detector
+        # acknowledges the smoke detector. Neither is trusted for anything
+        # but choosing which alarm — the request grants nothing else.
+        asked = payload.get("target") or request.query.get("target") or ""
+        contact = payload.get("contact_id") or request.query.get("contact_id") or ""
+        for ack in _events_for(
+            str(asked), ACK_VIA_DTMF, str(contact) or None, CHANNEL_API
+        ):
+            await system.async_handle(ack)
         return Response(status=200)
 
     webhook.async_register(
-        hass, DOMAIN, "Foyer acknowledgement", webhook_id, _handle
+        hass,
+        DOMAIN,
+        "Foyer acknowledgement",
+        webhook_id,
+        _handle,
+        # A voice provider calls from the internet by definition, so this
+        # says so rather than leaving Home Assistant to warn about a default
+        # it is in the middle of changing.
+        local_only=False,
     )
 
     @callback

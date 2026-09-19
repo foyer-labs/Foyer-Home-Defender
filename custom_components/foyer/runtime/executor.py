@@ -193,11 +193,7 @@ class Executor:
         # Which alarm the button would acknowledge. The technical channel is
         # never the intrusion one (§5.5), so a button on a smoke alarm must
         # not close an incident.
-        kind = (
-            "technical"
-            if intent.moment is Moment.TECHNICAL_RAISED
-            else "incident"
-        )
+        kind = "technical" if intent.moment is Moment.TECHNICAL_RAISED else "incident"
         for recipient in recipients:
             try:
                 await self._async_reach(recipient, dict(data), kind)
@@ -238,11 +234,11 @@ class Executor:
                     {
                         "action": ACK_ACTION,
                         "title": i18n.translate(strings, "notification.acknowledge"),
-                        # Who the button was offered to, so the log can say
-                        # which channel answered even when the contact names
-                        # no Foyer user (part 1 decision 7).
+                        # Who the button was offered to, so the log can name
+                        # the contact that answered even when that contact
+                        # names no Foyer user (part 1 decision 7), and which
+                        # of the two escalations it would stop.
                         "foyer_contact": recipient.get("contact_id", ""),
-                        "foyer_channel": recipient.get("channel_id", ""),
                         "foyer_kind": kind,
                     }
                 ],
@@ -255,22 +251,59 @@ class Executor:
         try:
             await self._async_notify_call(service, payload)
         except Exception:
+            # The retry waits, and the alarm does not wait with it. It runs
+            # detached on purpose: this is awaited inside the decision, and
+            # a sleep here would hold back the siren that comes after this
+            # action in the same sequence — seconds spent on a phone that is
+            # already not answering.
             _LOGGER.warning(
                 "Foyer: %s did not accept the notification; one retry in %s s",
                 service,
                 NOTIFY_RETRY_SECONDS,
             )
-            await asyncio.sleep(NOTIFY_RETRY_SECONDS)
+            self.hass.async_create_background_task(
+                self._async_retry(service, payload),
+                f"foyer_notify_retry_{slugify(service)}",
+            )
+            raise
+
+    async def _async_retry(self, service: str, payload: dict[str, Any]) -> None:
+        """The one retry of part 1 decision 4, off the alarm path.
+
+        For the transport that is not ready a second after a restart. What
+        it cannot do is make the row already written say it worked: the log
+        records the attempt that failed, and this one records its own
+        outcome beside it.
+        """
+        await asyncio.sleep(NOTIFY_RETRY_SECONDS)
+        try:
             await self._async_notify_call(service, payload)
+        except Exception:
+            _LOGGER.error("Foyer: %s refused the notification twice", service)
+        else:
+            _LOGGER.warning("Foyer: %s accepted the notification on the retry", service)
 
     async def _async_notify_call(self, service: str, data: dict[str, Any]) -> None:
         if self.hass.states.get(service) is not None:
             # A notify *entity*: one service for all of them (HA 2024.6+).
-            await self._call(
-                "notify",
-                "send_message",
-                {ATTR_ENTITY_ID: service, "message": data.get("message", "")},
-            )
+            # It carries a message and a title and nothing else — no target,
+            # no transport data, no action button. Whatever else was asked
+            # for is said out loud rather than dropped in silence, because a
+            # channel that reports success while losing the button is the
+            # discovery §11.4 exists to move earlier.
+            lost = [key for key in ("data", "target") if data.get(key)]
+            if lost:
+                _LOGGER.warning(
+                    "Foyer: %s is a notify entity, which carries only a title "
+                    "and a message; %s was not sent. Use the notify service "
+                    "behind it if this channel needs it",
+                    service,
+                    " and ".join(lost),
+                )
+            payload = {ATTR_ENTITY_ID: service, "message": data.get("message", "")}
+            if title := data.get("title"):
+                payload["title"] = title
+            await self._call("notify", "send_message", payload)
             return
         domain, _, name = service.partition(".")
         if not name:

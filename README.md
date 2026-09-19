@@ -92,10 +92,6 @@ project has not had yet.
   records who and through which channel. If nobody does, the last step says so
   as an event of its own. Quiet hours let a break-in through and hold back the
   rest.
-<p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-contacts-en.png" alt="The Contacts page: three people with their channels in order of priority, the four steps of an escalation with the time between them, and the four ways to stop it" width="900">
-</p>
-
 - **An event log in a database of its own**, which the recorder's ten-day purge
   cannot touch: what happened, where, through which channel, whether each
   action actually worked, and who changed what.
@@ -109,8 +105,9 @@ project has not had yet.
   panic zones, which stay fully live, because a walk test must never silence a
   smoke detector. It ends itself, and it says so on every screen while it
   runs. [Below](#walking-the-house-and-pressing-the-button).
-- **A test button beside every action, and it really executes.** Sound the
-  siren for three seconds, actually send the notification. The failure this
+- **A test button beside every action and every contact channel, and it
+  really executes.** Sound the siren for three seconds, actually send the
+  notification to that person through that transport. The failure this
   prevents is discovering during the emergency that the emergency channel was
   misconfigured. Confirmed, permissioned, and logged as a test.
 - **Test & diagnostics: a live table of every zone**, with the one column the
@@ -118,6 +115,10 @@ project has not had yet.
   as *triggered right now*, read through that zone's own trigger. Plus whether
   it would block arming and for which of the two reasons, its battery, its
   radio, and when it last actually moved.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-contacts-en.png" alt="The Contacts page: three people with their channels in order of priority, the four steps of an escalation with the time between them, and the four ways to stop it" width="900">
+</p>
 
 <details>
 <summary><strong>The rest of what is already there</strong></summary>
@@ -356,6 +357,7 @@ its code. Where they differ today:
 
 | | Foyer | Alarmo |
 |---|---|---|
+| **Escalation until somebody answers** | Contacts with channels in priority order, steps at times you choose, stopped by any of four acknowledgements | Notifications, no escalation |
 | **Simulator** | Yes: the same engine, a made-up world and a made-up clock, and a trace saying why each action would or would not have run | — |
 | **Walk test** | Yes: really armed, every response held back, and the zones that never reacted listed first. 24h, tamper, technical and panic zones stay live | — |
 | **Action test** | Yes: really sounds the siren or sends the message, with confirmation, and logged as a test | — |
@@ -444,7 +446,9 @@ Assistant does not replace certified, interconnected smoke alarms.
 - At least one door, window or motion sensor already working in Home
   Assistant.
 - A `notify.*` service that works. Foyer orchestrates notifications; it does
-  not implement them.
+  not implement them, and
+  [docs/notification-channels.md](docs/notification-channels.md) has a recipe
+  for each of the usual ones — including which survive a cut fibre.
 - A siren, a switch or a smart plug, if you want noise. Optional.
 - A keypad, an NFC tag or a remote, if you want to arm from the wall.
   Optional — and an MQTT broker only if the device you choose speaks MQTT.
@@ -607,7 +611,7 @@ custom_components/foyer/   the integration (HACS installs this directory as is)
   frontend/                built panel and card bundles, committed
 frontend/                  TypeScript + Lit sources, built with Vite
 blueprints/                keypad and tag adapters (copied by hand, not by HACS)
-docs/                      the specification, the keypad contract, screenshots
+docs/                      the specification, the keypad and notification contracts, screenshots
 tests/core, tests/repo     run without Home Assistant installed
 tests/ha                   run inside Home Assistant's test harness
 ```

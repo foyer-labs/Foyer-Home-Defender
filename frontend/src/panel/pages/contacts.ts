@@ -30,6 +30,7 @@ import type {
   Problem,
 } from "../../shared/types";
 import { notifyTargets } from "../ha-targets";
+import { testReason } from "./test";
 import { problemText, type PanelContext } from "../context";
 
 const EMPTY: ContactConfig = {
@@ -185,11 +186,25 @@ class FoyerPageContacts extends LitElement {
       });
       this._tested = {
         ...this._tested,
-        [channel.id]: { ok: result.success, error: result.error },
+        [channel.id]: {
+          ok: result.success,
+          error:
+            result.error ?? testReason(this.ctx.strings, result.reason ?? null),
+        },
       };
     } finally {
       this._busy = false;
     }
+  }
+
+  /** A notify *entity* carries a message and a title and nothing else: no
+   * target, no transport data, no action button. The difference is not in
+   * the name — `notify.mobile_app_luca` is a service and `notify.my_phone`
+   * may be an entity — so it is read the way the backend reads it, from
+   * whether Home Assistant has a state for it. Said where somebody is
+   * ticking the box, rather than discovered when the button never arrives. */
+  private _isEntity(service: string): boolean {
+    return Boolean(service && this.ctx?.hass.states[service]);
   }
 
   private async _toggleWebhook(enabled: boolean): Promise<void> {
@@ -403,6 +418,16 @@ class FoyerPageContacts extends LitElement {
     kinds: ContactChannelKind[],
   ) {
     const tested = channel.id ? this._tested[channel.id] : undefined;
+    // A service this installation cannot see right now — an integration
+    // being reloaded, or one that failed to load after an update — is still
+    // what this channel is configured to use. Dropping it from the list
+    // would show the channel as unset and lose it on the next save, which is
+    // a notification channel silently disappearing from an alarm.
+    const options = services.some((target) => target.id === channel.service)
+      ? services
+      : [...services, { id: channel.service, name: channel.service }].filter(
+          (target) => target.id,
+        );
     return html`
       <div class="channel">
         <div class="channel-hd">
@@ -440,7 +465,7 @@ class FoyerPageContacts extends LitElement {
                 })}
             >
               <option value="" ?selected=${!channel.service}>—</option>
-              ${services.map(
+              ${options.map(
                 (target) => html`<option
                   .value=${target.id}
                   ?selected=${target.id === channel.service}
@@ -472,7 +497,14 @@ class FoyerPageContacts extends LitElement {
                 })}
             />
             <span class="lbl">${t(s, "contacts.actionable")}</span>
-            <span class="hint">${t(s, "contacts.actionable_hint")}</span>
+            <span class="hint">
+              ${t(
+                s,
+                this._isEntity(channel.service)
+                  ? "contacts.actionable_entity"
+                  : "contacts.actionable_hint",
+              )}
+            </span>
           </label>
         </div>
         <div class="channel-ft">

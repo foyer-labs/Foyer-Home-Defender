@@ -724,7 +724,9 @@ export interface TraceStep {
     moment: string | null;
     area_id: string | null;
     /** An escalation step still to come: "escalation step 1 at +60s ->
-     * Luca (SMS)" (§11.2). Read off the Decision, never predicted. */
+     * Luca (SMS)" (§11.2). Read off the Decision, never predicted.
+     * `escalation` is which of the two escalations it belongs to. */
+    escalation: string | null;
     step: number | null;
     offset: number | null;
     contact_ids: string[];

@@ -1094,9 +1094,10 @@ class FoyerPageTest extends LitElement {
    * emergency channel was misconfigured. So it asks first, it says what is
    * about to happen, and every run leaves a row in the log marked as a test.
    *
-   * §11.4 also asks for a button beside every *contact channel*. The contact
-   * book is Phase 4's, so what exists here today is the actions; the
-   * channels arrive with page 6.
+   * §11.4 also asks for a button beside every *contact channel*. That half
+   * lives on page 6, beside the channel it tests, because that is where
+   * somebody has just finished configuring it and is wondering whether it
+   * arrives.
    */
   private _renderActionTest(s: Strings) {
     const profiles = this.ctx!.config?.profiles ?? [];
@@ -1217,18 +1218,19 @@ class FoyerPageTest extends LitElement {
         profile_id: asking.profile_id,
         action_id: asking.action_id,
       });
+      const detail = result.error ?? testReason(ctx.strings, result.reason);
       this._tested = {
         ...this._tested,
         [`${asking.profile_id}:${asking.action_id}`]: {
           ok: result.success,
           at: Date.now(),
-          error: result.error ?? result.reason ?? undefined,
+          error: detail || undefined,
         },
       };
       if (!result.success) {
         this._error = t(ctx.strings, "action_test.failed_detail", {
           action: asking.name,
-          detail: result.error ?? result.reason ?? "",
+          detail,
         });
       }
     } finally {
@@ -1355,6 +1357,16 @@ class FoyerPageTest extends LitElement {
       }
     `,
   ];
+}
+
+/** Why a test did not run at all: a reason rather than a transport error,
+ * and the panel writes the sentence, as it does for every other code the
+ * backend returns (§15.2). An unknown one is shown as it came, which is
+ * better than nothing at all. */
+export function testReason(s: Strings, reason: string | null): string {
+  if (!reason) return "";
+  const text = t(s, `action_test.reason.${reason}`);
+  return text.startsWith("action_test.reason.") ? reason : text;
 }
 
 if (!customElements.get("foyer-page-test")) {

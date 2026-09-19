@@ -1060,7 +1060,8 @@
     "escalation_skipped": {
       "title": "Foyer: notifications were not sent",
       "message": "Home Assistant was down when these escalation steps fell due, so they were not sent."
-    }
+    },
+    "acknowledge": "Acknowledge"
   },
   "chime_mode": {
     "sound": "Single sound",
@@ -1181,7 +1182,8 @@
     "low_battery": "Low battery",
     "walk_test_started": "Walk test started",
     "walk_test_ended": "Walk test ended",
-    "escalation_exhausted": "Escalation exhausted"
+    "escalation_exhausted": "Escalation exhausted",
+    "escalation_skipped": "Escalation steps not sent"
   },
   "condition": {
     "add": "Add a condition",
@@ -1225,7 +1227,7 @@
     "revert_hint": "In seconds. Empty: leave it as it is.",
     "camera_hint": "The notification attaches the live picture; the file is written to the camera folder.",
     "call_service_hint": "Anything Foyer does not model natively. Data is JSON.",
-    "escalation_later": "Escalation across contacts arrives in Phase 4.",
+    "escalation_later": "An escalation step is a notification with a time on it: give one a step time, and it waits instead of firing at once. Who it reaches lives on the Contacts page.",
     "future_moment": "Raised from a later phase on.",
     "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written.",
     "attach_hint_telegram": "Telegram fetches the picture from outside the house, so a still is written to the camera folder and sent with the message. That folder must be in allowlist_external_dirs.",
@@ -1676,7 +1678,8 @@
       "condition": "condition not met: {conditions}",
       "silent": "this zone is silent and suppresses it",
       "already_running": "already running for this incident, not restarted",
-      "held_by_delay": "held back by a delay earlier in the sequence"
+      "held_by_delay": "held back by a delay earlier in the sequence",
+      "quiet_hours": "every contact it names is inside their quiet hours, or has no channel left"
     },
     "timer": {
       "exit": "exit delay",
@@ -1756,6 +1759,13 @@
       "chime": "Plays the chime",
       "revert": "Switches back off",
       "delay": "Nothing: a delay is the waiting itself"
+    },
+    "reason": {
+      "unknown_profile": "that response profile no longer exists",
+      "unknown_action": "that action no longer exists",
+      "no_recipients": "nobody left to send it to: every contact it names is disabled, or has no channel",
+      "unknown_contact": "that contact or channel no longer exists",
+      "not_permitted": "you do not have the permission to run a test"
     }
   },
   "channel_kind": {
@@ -1809,6 +1819,7 @@
     "webhook_warning": "This URL stops an alarm, and nothing authenticates it.",
     "webhook_warning_hint": "Home Assistant webhooks are open to whoever holds the address: anybody who has it, or intercepts it, can stop the escalation on its way to your neighbour. Switch it on only if a voice provider needs it, and give the address to nothing else.",
     "webhook_hint": "Post to this path from the voice provider when the key is pressed. Switching this off forgets the address: switching it on again gives out a new one.",
-    "no_quiet_hours": "Always reachable"
+    "no_quiet_hours": "Always reachable",
+    "actionable_entity": "This is a notify entity: it carries a message and a title and nothing else, so no button, no target and no extra data reach the phone. Use the notify service behind it if this channel should be able to acknowledge."
   }
 }

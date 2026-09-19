@@ -184,6 +184,7 @@ cross means it did not, with the reason:
 | **condition not met: …** | Which condition failed, spelled out. A time window is shown as its hours; an entity condition as the entity and the state it wanted |
 | **held back by a delay earlier in the sequence** | Not skipped — it is going to run, and the ⏱ line says when |
 | **already running for this incident, not restarted** | A siren already sounding is not restarted when a second zone joins (§5.6) |
+| **every contact it names is inside their quiet hours** | The notification named contacts and the window held all of them back. Nobody would be told, so nothing was sent |
 | **this zone is silent and suppresses it** | The zone is marked silent, and this action is one of the kinds a silent zone does not run |
 | **nothing is configured for this moment** | The profile answered, and it has no actions for this moment. Shown only where that is itself the finding — a satisfied group with an empty profile is why the siren stayed quiet |
 

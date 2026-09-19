@@ -1060,7 +1060,8 @@
     "escalation_skipped": {
       "title": "Foyer: notifiche non inviate",
       "message": "Home Assistant era spento quando questi passi di escalation sono scaduti, quindi non sono partiti."
-    }
+    },
+    "acknowledge": "Prendo atto"
   },
   "chime_mode": {
     "sound": "Suono singolo",
@@ -1181,7 +1182,8 @@
     "low_battery": "Batteria scarica",
     "walk_test_started": "Walk test avviato",
     "walk_test_ended": "Walk test concluso",
-    "escalation_exhausted": "Escalation esaurita"
+    "escalation_exhausted": "Escalation esaurita",
+    "escalation_skipped": "Passi di escalation non inviati"
   },
   "condition": {
     "add": "Aggiungi una condizione",
@@ -1225,7 +1227,7 @@
     "revert_hint": "In secondi. Vuoto: lascialo com'è.",
     "camera_hint": "La notifica allega l'immagine dal vivo; il file finisce nella cartella telecamere.",
     "call_service_hint": "Tutto ciò che Foyer non modella nativamente. I dati sono JSON.",
-    "escalation_later": "L'escalation fra contatti arriva nella Fase 4.",
+    "escalation_later": "Un passo di escalation è una notifica con un tempo sopra: dai un momento del passo e aspetta invece di partire subito. Chi raggiunge si configura nella pagina Contatti.",
     "future_moment": "Prodotto da una fase successiva.",
     "attach_hint": "L'immagine dal vivo accompagna la notifica, attraverso il proxy autenticato di Home Assistant. Nessun file viene scritto.",
     "attach_hint_telegram": "Telegram scarica l'immagine da fuori casa, quindi uno scatto viene salvato nella cartella telecamere e spedito con il messaggio. Quella cartella deve essere in allowlist_external_dirs.",
@@ -1676,7 +1678,8 @@
       "condition": "condizione non soddisfatta: {conditions}",
       "silent": "questa zona è silenziosa e la sopprime",
       "already_running": "già in corso per questo incidente, non riavviata",
-      "held_by_delay": "trattenuta da un ritardo precedente nella sequenza"
+      "held_by_delay": "trattenuta da un ritardo precedente nella sequenza",
+      "quiet_hours": "ogni contatto che nomina è nelle sue ore di silenzio, o non ha più un canale"
     },
     "timer": {
       "exit": "ritardo d'uscita",
@@ -1756,6 +1759,13 @@
       "chime": "Suona il gong",
       "revert": "Rimette a posto",
       "delay": "Nulla: un ritardo è l'attesa stessa"
+    },
+    "reason": {
+      "unknown_profile": "quel profilo di risposta non esiste più",
+      "unknown_action": "quell'azione non esiste più",
+      "no_recipients": "non resta nessuno a cui mandarla: ogni contatto che nomina è disattivato o non ha canali",
+      "unknown_contact": "quel contatto o quel canale non esiste più",
+      "not_permitted": "non hai il permesso di eseguire una prova"
     }
   },
   "channel_kind": {
@@ -1809,6 +1819,7 @@
     "webhook_warning": "Questo URL ferma un allarme e nulla lo autentica.",
     "webhook_warning_hint": "I webhook di Home Assistant sono aperti a chi ne conosce l'indirizzo: chiunque lo abbia, o lo intercetti, può fermare l'escalation mentre sta andando dal vicino. Attivalo solo se serve a un provider vocale e non darlo a nient'altro.",
     "webhook_hint": "Il provider vocale fa una POST su questo percorso quando il tasto viene premuto. Disattivandolo l'indirizzo viene dimenticato: riattivandolo ne viene dato uno nuovo.",
-    "no_quiet_hours": "Sempre raggiungibile"
+    "no_quiet_hours": "Sempre raggiungibile",
+    "actionable_entity": "Questa è un'entità notify: porta un messaggio e un titolo e nient'altro, quindi al telefono non arrivano né il pulsante né i dati aggiuntivi. Usa il servizio notify che ci sta dietro se da questo canale si deve poter prendere atto."
   }
 }

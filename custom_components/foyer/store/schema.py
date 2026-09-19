@@ -1137,9 +1137,11 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 for key, lock in data.get("lockouts", {}).items()
             },
             # An escalation whose profile the configuration no longer has is
-            # dropped here rather than resumed against nothing: the steps are
-            # that profile's actions, and without them there is no policy
-            # left to run.
+            # restored all the same, and the engine ends it on the next call
+            # with a row saying why. Dropping it here would make the same
+            # event — a policy deleted while it was running — appear in the
+            # log or not depending on whether the deletion happened before
+            # or after a restart.
             escalations=tuple(
                 Escalation(
                     kind=EscalationKind(e["kind"]),
@@ -1151,7 +1153,6 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     reference=e.get("reference"),
                 )
                 for e in data.get("escalations", ())
-                if config.profile(e["profile_id"]) is not None
             ),
         )
     except (KeyError, TypeError, ValueError, AssertionError) as err:

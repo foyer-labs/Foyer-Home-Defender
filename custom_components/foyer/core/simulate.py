@@ -185,9 +185,14 @@ class Scheduled:
     profile_id: str | None = None
     moment: str | None = None
     area_id: str | None = None
-    # An escalation step still to come (§7.2): which step it is, how far
-    # from the start, and who it reaches. This is the "⏱ escalation step 1
-    # at +60s → Luca (SMS)" of §11.2's own example.
+    # An escalation step still to come (§7.2): which escalation it belongs
+    # to, which step it is, how far from the start, and who it reaches. This
+    # is the "⏱ escalation step 1 at +60s → Luca (SMS)" of §11.2's example.
+    #
+    # ``escalation`` is deliberately not folded into ``moment`` above: that
+    # field carries a Moment everywhere else, and a consumer translating it
+    # would find "incident" and "technical" are not moments.
+    escalation: str | None = None
     step: int | None = None
     offset: int | None = None
     contact_ids: tuple[str, ...] = ()
@@ -629,7 +634,7 @@ def _scheduled(decision: Decision) -> tuple[Scheduled, ...]:
             at=step.due,
             kind="escalation_step",
             profile_id=step.profile_id,
-            moment=step.kind.value,
+            escalation=step.kind.value,
             step=step.index,
             offset=step.offset,
             contact_ids=step.contact_ids,
@@ -773,6 +778,7 @@ def as_dict(simulation: Simulation, config: FoyerConfig) -> dict[str, Any]:
                         "profile_id": s.profile_id,
                         "moment": s.moment,
                         "area_id": s.area_id,
+                        "escalation": s.escalation,
                         "step": s.step,
                         "offset": s.offset,
                         "contact_ids": list(s.contact_ids),

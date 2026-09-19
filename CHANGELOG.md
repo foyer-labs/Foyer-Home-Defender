@@ -18,8 +18,8 @@ service it names, and nothing escalates until somebody writes a step.
 ### Added
 - **Contacts, with channels in order of priority** (panel page 6). A person
   rather than a service: push first, SMS next, a voice call after that. Every
-  channel is a `notify.*` service this installation already has, with whatever
-  that transport needs — Foyer orchestrates transports, it does not implement
+  channel names a `notify.*` service, chosen from what this installation
+  really has, with whatever that transport needs — Foyer orchestrates transports, it does not implement
   them.
 - **Escalation steps.** A step is an ordinary notification with a time on it,
   added to the response profile that answers the alarm. At +0 s it reaches the
@@ -51,6 +51,11 @@ service it names, and nothing escalates until somebody writes a step.
   reached, who its quiet hours held back, and the steps still ahead with their
   timings — read off the decision the engine produced rather than worked out a
   second time for the display.
+- **`escalation_skipped`**, a warning row and a notification naming the steps
+  that did not go out and why — swallowed by a restart, or reaching a contact
+  who is inside their quiet hours and nobody else. It is a record rather than
+  a moment a profile can answer, and it exists because an escalation that
+  quietly reached nobody is the silence this feature was built to end.
 - **`docs/notification-channels.md`**: recipes for the Companion app with
   actionable notifications and iOS critical alerts, Pushover priority 2, Twilio
   SMS and voice with the DTMF gather, a USB GSM modem, Telegram and Signal —
@@ -64,9 +69,15 @@ service it names, and nothing escalates until somebody writes a step.
 - **A notify action names contacts or a service, never both.** Both forms stay,
   for ever: nobody's configuration is rewritten, and page 6 is where a contact
   is made out of a service by hand.
-- **A failed send is retried once**, a few seconds later, for the transport
-  that is not ready yet after a restart. After that the escalation carries on
-  at its own times.
+- **A send to a contact's channel is retried once**, a few seconds later, for
+  the transport that is not ready yet after a restart. The retry runs on its
+  own, so the alarm does not wait for it, and after that the escalation
+  carries on at its own times.
+- **Escalation steps that fell due while Home Assistant was down are not
+  sent.** They are recorded as skipped, with the gap that swallowed them and
+  the steps it took, and the steps still ahead carry on at their own times: a
+  notification four hours late is worse than none. A reload's second is not an
+  outage, so the step it interrupted still goes out.
 
 ### Security
 - **The DTMF webhook is an unauthenticated URL, and it does not exist until you
@@ -77,11 +88,6 @@ service it names, and nothing escalates until somebody writes a step.
   the backend and switching the webhook off forgets it, so switching it on
   again hands out a new one. The threat is stated on the page, in the README's
   security model and in `docs/notification-channels.md`.
-- **Escalation steps that fell due while Home Assistant was down are not
-  sent.** They are recorded as skipped, with the gap that swallowed them, and
-  the steps still ahead carry on at their own times: a notification four hours
-  late is worse than none. A reload's second is not an outage, so the step it
-  interrupted still goes out.
 
 ## [0.1.0-beta.6] — the banner, actually visible
 

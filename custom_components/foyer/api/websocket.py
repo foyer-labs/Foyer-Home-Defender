@@ -475,9 +475,7 @@ async def ws_acknowledge(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     actor = await _actor(hass, system, connection, msg)
-    kind = (
-        AcknowledgeIncident if msg["target"] == "incident" else AcknowledgeTechnical
-    )
+    kind = AcknowledgeIncident if msg["target"] == "incident" else AcknowledgeTechnical
     event: Any = kind(actor, via=msg["via"], contact_id=msg.get("contact_id"))
     decision = await system.async_handle(event)
     connection.send_result(msg["id"], _result(system, decision, connection.user))
@@ -808,13 +806,15 @@ async def ws_ack_webhook(
     ) is None:
         return
     webhook_id = webhook.async_generate_id() if msg["enabled"] else None
-    # The whole settings block, with this one field replaced: update_settings
-    # takes a complete block, and a partial one would quietly reset a number
-    # nobody touched.
+    # The whole settings block, unchanged, plus the one field this command
+    # owns. It is passed beside the block rather than inside it: the store
+    # refuses to read this id out of anything a client sent, so that the
+    # address of an unauthenticated URL can only ever be generated here.
     result = update_settings(
         system.config,
         system.state,
-        {**settings_to_dict(system.config.settings), "ack_webhook_id": webhook_id},
+        settings_to_dict(system.config.settings),
+        webhook_id=webhook_id,
     )
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="settings"

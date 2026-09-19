@@ -384,8 +384,13 @@ class FoyerPageProfiles extends LitElement {
     if (!contacts.length) {
       return html`<span class="hint">${t(s, "profiles.no_contacts")}</span>`;
     }
-    const update = (next: NotifyContact[]): void =>
+    const update = (next: NotifyContact[]): void => {
       this._setParam(index, "contacts", next.length ? next : null);
+      // Contacts or a service, never both — and the service field is hidden
+      // while contacts are chosen, so leaving a stale one behind would mean
+      // a save refused for a field the page is not showing.
+      if (next.length) this._setParam(index, "service", null);
+    };
     return html`<div class="field">
       <span class="lbl">${t(s, "field.contacts")}</span>
       ${contacts.map((contact) => {

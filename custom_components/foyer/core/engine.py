@@ -110,6 +110,10 @@ from .verification import Verification, all_windows, counter_of, groups
 
 KEY_ZONE_CHANNEL = "key_zone"
 
+# Why a step did not go out, when it was the restart that swallowed it. The
+# other reasons are response.SKIP_*, which the panel already translates.
+RESTART = "restart"
+
 # What a row says when the name on it was asserted by the request and not
 # established by a code or a token (§9.1, decision 88).
 _CLAIMED = {"attributed": "claimed"}
@@ -190,6 +194,7 @@ def decide(
         gap = (
             int((now - event.down_since).total_seconds()) if event.down_since else None
         )
+        run.restarted = True
         run.gap_since = event.down_since
         run.occur(
             Moment.HA_RESTARTED,
@@ -391,16 +396,28 @@ class _Run:
         # never did.
         self.walk_test: WalkTest | None = state.walk_test
         self.inhibiting = state.walk_test is not None
-        # Escalations in progress (§7.2), and the gap a restart left. The gap
-        # is filled only by a Startup event: it is what tells the escalation
-        # that a step is overdue because nobody was running, rather than
-        # because its time has simply come (part 1 decision 5).
-        self.escalations: list[Escalation] = list(state.escalations)
-        self.gap_since: datetime | None = None
         # The technical channel: never read or written by the area machine.
         self.technical: dict[str, TechnicalAlarm] = {
             z: a for z, a in state.technical.items() if z in zone_ids
         }
+        # Escalations in progress (§7.2), and whether this call is a restart.
+        # ``restarted`` is what tells the escalation that an overdue step is
+        # overdue because nobody was running, rather than because its time
+        # has simply come (part 1 decision 5). It is a flag and not the gap
+        # itself, because a Startup that cannot say how long the gap was is
+        # still a restart: "unknown" is read as an outage, not as none.
+        self.escalations: list[Escalation] = [
+            e
+            for e in state.escalations
+            # A technical escalation outlives nothing: the channel is empty
+            # when the zone that raised it has been deleted, and an
+            # escalation nobody can acknowledge — acknowledge_technical
+            # refuses when nothing is pending — would run to its end
+            # calling people about an alarm that no longer exists.
+            if e.kind is not EscalationKind.TECHNICAL or self.technical
+        ]
+        self.restarted = False
+        self.gap_since: datetime | None = None
         self.incident: Incident | None = state.incident
         self.incident_seq = state.incident_seq
         self.chime_enabled = state.chime_enabled
@@ -1608,20 +1625,25 @@ class _Run:
                 )
                 continue
             done = list(current.done)
-            skipped: list[str] = []
+            # Steps that did not go out, and why. There are two ways for a
+            # step to reach nobody and both are recorded: a notification that
+            # never went is exactly the silence this feature exists to end,
+            # and "the escalation ran and nothing happened" is the worst
+            # possible answer to "why did nobody call me?".
+            missed: list[tuple[str, str]] = []
             for action in escalation_engine.due(current, profile, self.now):
                 at = escalation_engine.due_at(current, action)
                 index = escalation_engine.index_of(current, profile, action.id)
                 late = (self.now - at).total_seconds()
-                if self.gap_since is not None and late > ESCALATION_RESTART_GRACE:
+                if self.restarted and late > ESCALATION_RESTART_GRACE:
                     # It fell due while Home Assistant was down. A
                     # notification this late is worse than none (part 1
                     # decision 5), so it is recorded and not sent, and the
                     # steps still ahead carry on at their own times.
-                    skipped.append(str(index))
+                    missed.append((str(index), RESTART))
                     done.append(action.id)
                     continue
-                intent, _why = escalation_intent(
+                intent, why = escalation_intent(
                     ctx,
                     profile,
                     action,
@@ -1637,12 +1659,20 @@ class _Run:
                 done.append(action.id)
                 if intent is not None:
                     intents.append(intent)
-            if skipped:
+                else:
+                    # Every contact it names is inside their quiet hours, or
+                    # disabled, or a condition on it is not met. The step is
+                    # spent either way — its moment has passed — but it is
+                    # said, with the reason skip_reason gave.
+                    missed.append((str(index), why or ""))
+            if missed:
                 self.occur(
                     Moment.ESCALATION_SKIPPED,
+                    area_id=self.escalation_area(current),
                     detail={
                         "kind": current.kind.value,
-                        "steps": ",".join(skipped),
+                        "steps": ",".join(index for index, _ in missed),
+                        "reasons": ",".join(why for _, why in missed),
                         "since": self.gap_since.isoformat() if self.gap_since else "",
                     },
                     incident_id=current.reference
@@ -1651,22 +1681,30 @@ class _Run:
                 )
             advanced = replace(current, done=tuple(done))
             if escalation_engine.exhausted(advanced, profile):
-                # Every step has gone out and nobody has answered (§7.2).
-                # A moment a profile can act on, and the last entry the
-                # panel's "nothing raises this yet" list had.
-                self.occur(
-                    Moment.ESCALATION_EXHAUSTED,
-                    area_id=self.escalation_area(advanced),
-                    detail={
-                        "kind": advanced.kind.value,
-                        "steps": str(
-                            len(escalation_engine.steps(profile, advanced.moment))
-                        ),
-                    },
-                    incident_id=advanced.reference
-                    if advanced.kind is EscalationKind.INCIDENT
-                    else None,
-                )
+                if not missed:
+                    # Every step has gone out and nobody has answered (§7.2).
+                    # A moment a profile can act on, and the last entry the
+                    # panel's "nothing raises this yet" list had.
+                    #
+                    # Only when the list was really tried: an escalation
+                    # whose last steps were swallowed by a restart, or which
+                    # reached nobody, has not been exhausted — it has been
+                    # missed, and the row above says so. A profile answering
+                    # "the whole list failed" must not fire for a list that
+                    # was never attempted.
+                    self.occur(
+                        Moment.ESCALATION_EXHAUSTED,
+                        area_id=self.escalation_area(advanced),
+                        detail={
+                            "kind": advanced.kind.value,
+                            "steps": str(
+                                len(escalation_engine.steps(profile, advanced.moment))
+                            ),
+                        },
+                        incident_id=advanced.reference
+                        if advanced.kind is EscalationKind.INCIDENT
+                        else None,
+                    )
                 continue
             surviving.append(advanced)
         self.escalations = surviving

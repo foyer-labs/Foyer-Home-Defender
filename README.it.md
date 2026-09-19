@@ -33,7 +33,7 @@
 > restano completamente attive. Prima di queste era arrivato l'inserimento
 > fisico — tastiere Ring e Zigbee, tag NFC, badge e telecomandi, il contratto
 > `foyer.*` e MQTT nelle due direzioni — e prima ancora utenti, codici per
-> persona e permessi. **Ora è arrivata anche la scalata delle notifiche**: una
+> persona e permessi. **Ora è arrivata anche l'escalation delle notifiche**: una
 > rubrica di persone con i canali in ordine di priorità, una notifica che sale
 > da push a SMS a una seconda persona finché qualcuno non risponde, e quattro
 > modi per fermarla. Manca ancora che la casa si inserisca da sola, sulla
@@ -87,7 +87,7 @@ oggi è la scelta prudente.
   azzera.
 - **Un incidente solo, non un allarme per zona.** Un'effrazione vera fa scattare
   la finestra, poi il corridoio, poi le scale. Diventano un solo incidente con
-  una sola presa in carico, invece di tre raffiche di notifiche nel momento
+  una sola presa d'atto, invece di tre raffiche di notifiche nel momento
   peggiore possibile.
 - **Una notifica che continua a cercare qualcuno.** Una rubrica di persone,
   non di servizi, ognuna con i suoi canali in ordine di priorità, e passi ai
@@ -98,10 +98,6 @@ oggi è la scelta prudente.
   quale canale. Se non prende atto nessuno, l'ultimo passo lo dice come evento
   a sé. Le ore di silenzio lasciano passare un'effrazione e trattengono il
   resto.
-<p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-contacts-it.png" alt="La pagina Contatti: tre persone con i canali in ordine di priorità, i quattro passi di una scalata con i tempi fra l'uno e l'altro, e i quattro modi per fermarla" width="900">
-</p>
-
 - **Un registro eventi in un archivio tutto suo**, che la cancellazione dopo
   dieci giorni del recorder non può toccare: cosa è successo, dove, attraverso
   quale canale, se ogni azione ha davvero funzionato, e chi ha cambiato cosa.
@@ -116,7 +112,8 @@ oggi è la scelta prudente.
   attive, perché un walk test non deve mai silenziare un rivelatore
   di fumo. Si chiude da sola, e finché è attiva lo dice su ogni schermo.
   [Qui sotto](#camminare-per-casa-e-premere-il-pulsante).
-- **Un pulsante di prova accanto a ogni azione, e si esegue davvero.** Fa
+- **Un pulsante di prova accanto a ogni azione e a ogni canale di un
+  contatto, e si esegue davvero.** Fa
   suonare la sirena per tre secondi, manda la notifica sul serio. L'errore che
   evita è scoprire durante l'emergenza che il canale d'emergenza era
   configurato male. Con conferma, con permesso, e a registro come prova.
@@ -126,6 +123,10 @@ oggi è la scelta prudente.
   trigger di quella zona. In più: se bloccherebbe l'inserimento e per quale dei
   due motivi, lo stato della batteria, il segnale radio, e quando ha rilevato
   qualcosa l'ultima volta.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-contacts-it.png" alt="La pagina Contatti: tre persone con i canali in ordine di priorità, i quattro passi di un'escalation con i tempi fra l'uno e l'altro, e i quattro modi per fermarla" width="900">
+</p>
 
 <details>
 <summary><strong>Il resto di ciò che c'è già</strong></summary>
@@ -381,13 +382,14 @@ copia il codice. Dove differiscono oggi:
 
 | | Foyer | Alarmo |
 |---|---|---|
+| **Escalation finché qualcuno non risponde** | Contatti con i canali in ordine di priorità, passi ai tempi che scegli, fermati da una qualunque delle quattro prese d'atto | Notifiche, nessuna escalation |
 | **Simulatore** | Sì: lo stesso motore, un mondo e un orologio inventati, e una traccia che dice perché ogni azione sarebbe partita o no | — |
 | **Walk test** | Sì: l'impianto è inserito per davvero, ogni risposta è trattenuta, e in cima ci sono le zone che non hanno mai reagito. Le zone 24h, tamper, tecniche e panico restano attive | — |
 | **Prova delle azioni** | Sì: fa suonare la sirena o parte il messaggio sul serio, con conferma, e nel registro come prova | — |
 | **Scenari di inserimento** | Quanti ne vuoi, ciascuno inserisce un insieme di aree scelto | Le quattro modalità fisse di Home Assistant |
 | **Aree con stato indipendente** | Sì: un `alarm_control_panel` ciascuna, più una centrale | Una centrale sola, sensori raggruppati per modalità |
 | **Fumo, gas, acqua** | Un canale separato, attivo a impianto disinserito, mai `triggered` su un'entità d'allarme | Sensori ordinari |
-| **Un incidente per effrazione** | Sì, con una sola presa in carico | Un allarme per sensore |
+| **Un incidente per effrazione** | Sì, con una sola presa d'atto | Un allarme per sensore |
 | **Utenti, codici, permessi** | Sì: un codice a testa, politica per operazione, codice sotto costrizione, blocco | Sì, codici per utente |
 | **Tastiere, MQTT** | Sì, e un comando rifiutato torna indietro con un motivo stabile e le zone che hanno bloccato, per nome: una tastiera può suonare diversamente per *codice sbagliato* e per *finestra della cucina aperta* | Sì |
 | **Tag NFC e telecomandi** | Nativi, legati a una persona, senza automazioni da scrivere | Tramite automazioni |
@@ -395,10 +397,11 @@ copia il codice. Dove differiscono oggi:
 | **Maturità** | Beta. Un solo autore, pochi mesi di vita | Anni di utilizzo, moltissime installazioni |
 | **Italiano** | Pannello, card e aiuto contestuale di ogni pagina | Interfaccia tradotta |
 
-Le righe in cui Alarmo ha un trattino sono tre, e sono tre modi di
-controllare una configurazione invece di sperarci. Quella che decide
-resta la maturità: se vuoi un impianto che sia già stato collaudato da molti
-altri prima che da te, usa Alarmo.
+Le righe in cui Alarmo ha un trattino sono quattro: tre sono modi di
+controllare una configurazione invece di sperarci, e la quarta è il modo per
+non farla suonare quando non serve. Quella che decide resta la maturità: se
+vuoi un impianto che sia già stato collaudato da molti altri prima che da te,
+usa Alarmo.
 
 ## Come puoi verificarlo invece di fidarti
 
@@ -456,7 +459,7 @@ capitolato lo richiedano.
 Esiste perché un provider vocale possa rimandare il tasto premuto durante una
 chiamata. I webhook di Home Assistant sono aperti a chi ne conosce
 l'indirizzo: chiunque lo abbia, o lo intercetti, può prendere atto di un
-allarme in corso, cioè fermare la scalata mentre sta andando dalla persona
+allarme in corso, cioè fermare l'escalation mentre sta andando dalla persona
 successiva. Non può inserire, disinserire, leggere il registro o cambiare
 niente. Non esiste finché non lo accendi, l'id è generato a caso, e
 spegnendolo viene dimenticato.
@@ -591,7 +594,7 @@ condivisa il codice *è* l'identità, quindi lì l'esenzione non vale.
 Sì. Foyer non apre nessuna connessione verso l'esterno, e non richiede né un
 account cloud né un broker. Se sopravvivano le *notifiche* a una linea tagliata
 è un'altra domanda, e la risposta onesta è che una notifica push no — ed è per
-questo che una scalata è una lista di canali e non uno solo, e per cui almeno
+questo che un'escalation è una lista di canali e non uno solo, e per cui almeno
 un canale locale, per esempio un modem GSM USB, va messo in quella lista.
 
 </details>

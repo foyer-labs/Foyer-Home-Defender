@@ -740,6 +740,32 @@ o`
     font-size: 12.5px;
     margin: 1px 2px;
   }
+  /* A chip that carries a verdict: a code set or missing, who a tag belongs
+     to. Pages 7 and 8 have asked for one since Phase 2 and there was no rule
+     behind the class, so it rendered as plain text — the same defect the
+     walk test banner had. The colour is on the text: a filled chip in
+     warning amber next to a name reads as an alarm. */
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--secondary-background-color);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .pill.ok {
+    color: var(--success-color, #2e9e4f);
+  }
+  .pill.warn {
+    color: var(--warning-color, #c77700);
+  }
+  .pill.bad {
+    color: var(--error-color, #d32f2f);
+  }
+  .pill.idle {
+    color: var(--secondary-text-color);
+  }
   .muted {
     color: var(--secondary-text-color);
   }

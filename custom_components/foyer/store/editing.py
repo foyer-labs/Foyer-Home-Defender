@@ -317,8 +317,20 @@ def _referenced_profiles(config: FoyerConfig) -> set[str]:
     return {ref for ref in refs if ref}
 
 
+# The one field of the settings block a caller may never choose, only ask for
+# (§7.2, part 1 decision 6). The whole of what protects an unauthenticated
+# webhook is that nobody can guess its address, so the id is generated and
+# handed down through ``webhook_id`` — never read out of the settings a
+# client sends, however much permission that client holds.
+KEEP_WEBHOOK = object()
+
+
 def update_settings(
-    config: FoyerConfig, state: RuntimeState, settings: dict[str, Any]
+    config: FoyerConfig,
+    state: RuntimeState,
+    settings: dict[str, Any],
+    *,
+    webhook_id: str | object | None = KEEP_WEBHOOK,
 ) -> EditResult:
     """The global settings block. Unknown keys are ignored; known ones keep
     their current value when the caller leaves them out."""
@@ -357,14 +369,15 @@ def update_settings(
                 walk_test_timeout=int(
                     settings.get("walk_test_timeout", current.walk_test_timeout)
                 ),
-                # The DTMF webhook's id, when this installation has switched
-                # it on (§7.2). The id is never the caller's to choose: the
-                # API generates it, because the whole of what protects an
-                # unauthenticated URL is that nobody can guess it.
-                ack_webhook_id=settings.get(
-                    "ack_webhook_id", current.ack_webhook_id
-                )
-                or None,
+                # The DTMF webhook's id (§7.2). Deliberately NOT read from
+                # ``settings``: an id a client could choose would eventually
+                # be one somebody could guess, and this URL stops an alarm.
+                # It changes only through the command that generates it.
+                ack_webhook_id=(
+                    current.ack_webhook_id
+                    if webhook_id is KEEP_WEBHOOK
+                    else (webhook_id or None)  # type: ignore[arg-type]
+                ),
                 mqtt=_mqtt_from(settings.get("mqtt"), current.mqtt),
                 # Page 11 does not own these — page 7 does, through
                 # update_security — so a settings save must carry them through

@@ -794,6 +794,32 @@ var V = o`
     font-size: 12.5px;
     margin: 1px 2px;
   }
+  /* A chip that carries a verdict: a code set or missing, who a tag belongs
+     to. Pages 7 and 8 have asked for one since Phase 2 and there was no rule
+     behind the class, so it rendered as plain text — the same defect the
+     walk test banner had. The colour is on the text: a filled chip in
+     warning amber next to a name reads as an alarm. */
+  .pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--secondary-background-color);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .pill.ok {
+    color: var(--success-color, #2e9e4f);
+  }
+  .pill.warn {
+    color: var(--warning-color, #c77700);
+  }
+  .pill.bad {
+    color: var(--error-color, #d32f2f);
+  }
+  .pill.idle {
+    color: var(--secondary-text-color);
+  }
   .muted {
     color: var(--secondary-text-color);
   }
@@ -3023,7 +3049,9 @@ var _t = class extends I {
 	_renderContacts(e, t, n) {
 		let r = this.ctx?.config?.contacts ?? [], i = gt(t);
 		if (!r.length) return D`<span class="hint">${B(e, "profiles.no_contacts")}</span>`;
-		let a = (e) => this._setParam(n, "contacts", e.length ? e : null);
+		let a = (e) => {
+			this._setParam(n, "contacts", e.length ? e : null), e.length && this._setParam(n, "service", null);
+		};
 		return D`<div class="field">
       <span class="lbl">${B(e, "field.contacts")}</span>
       ${r.map((t) => {
@@ -4757,567 +4785,23 @@ var Ct = {
 };
 customElements.define("foyer-page-devices", Tt);
 //#endregion
-//#region src/panel/pages/contacts.ts
-var Ot = {
-	name: "",
-	channels: [],
-	quiet_start: null,
-	quiet_end: null,
-	quiet_min_severity: "alarm",
-	linked_user_id: null,
-	enabled: !0
-}, kt = {
-	kind: "push",
-	service: "",
-	target: "",
-	data: {},
-	actionable: !1,
-	enabled: !0
-}, At = [
-	"push",
-	"disarm",
-	"dtmf",
-	"service"
-];
-function jt(e) {
-	let t = /* @__PURE__ */ new Map();
-	for (let n of e) {
-		let e = n.actions.filter((e) => e.enabled && e.escalation_offset !== null).sort((e, t) => (e.escalation_offset ?? 0) - (t.escalation_offset ?? 0)).map((e, t) => ({
-			profile: n,
-			action: e,
-			index: t
-		}));
-		e.length && t.set(n.id ?? n.name, e);
-	}
-	return t;
-}
-function Mt(e) {
-	let t = e.params.contacts;
-	return Array.isArray(t) ? t.map((e) => typeof e == "string" ? {
-		contact_id: e,
-		channel_id: null
-	} : e).filter((e) => e && e.contact_id) : [];
-}
-var Nt = class extends I {
-	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1, this._tested = {};
-	}
-	static {
-		this.properties = {
-			ctx: { attribute: !1 },
-			_draft: { state: !0 },
-			_problems: { state: !0 },
-			_busy: { state: !0 },
-			_tested: { state: !0 }
-		};
-	}
-	_edit(e) {
-		this._draft = e ? structuredClone(e) : {
-			...structuredClone(Ot),
-			channels: [structuredClone(kt)]
-		}, this._problems = [];
-	}
-	_set(e, t) {
-		this._draft &&= {
-			...this._draft,
-			[e]: t
-		};
-	}
-	_setChannel(e, t) {
-		if (!this._draft) return;
-		let n = this._draft.channels.map((n, r) => r === e ? {
-			...n,
-			...t
-		} : n);
-		this._draft = {
-			...this._draft,
-			channels: n
-		};
-	}
-	_move(e, t) {
-		if (!this._draft) return;
-		let n = [...this._draft.channels], r = e + t;
-		r < 0 || r >= n.length || ([n[e], n[r]] = [n[r], n[e]], this._draft = {
-			...this._draft,
-			channels: n
-		});
-	}
-	_addChannel() {
-		this._draft &&= {
-			...this._draft,
-			channels: [...this._draft.channels, structuredClone(kt)]
-		};
-	}
-	_removeChannel(e) {
-		this._draft &&= {
-			...this._draft,
-			channels: this._draft.channels.filter((t, n) => n !== e)
-		};
-	}
-	async _save() {
-		if (this.ctx && this._draft) {
-			this._busy = !0;
-			try {
-				let e = await this.ctx.save("contact", this._draft);
-				this._problems = e.problems, e.success && (this._draft = void 0);
-			} finally {
-				this._busy = !1;
-			}
-		}
-	}
-	async _delete() {
-		if (this.ctx && this._draft?.id) {
-			this._busy = !0;
-			try {
-				let e = await this.ctx.remove("contact", this._draft.id);
-				this._problems = e.problems, e.success && (this._draft = void 0);
-			} finally {
-				this._busy = !1;
-			}
-		}
-	}
-	async _test(e, t) {
-		if (this.ctx && e.id && t.id) {
-			this._busy = !0;
-			try {
-				let n = await this.ctx.testAction({
-					contact_id: e.id,
-					channel_id: t.id
-				});
-				this._tested = {
-					...this._tested,
-					[t.id]: {
-						ok: n.success,
-						error: n.error
-					}
-				};
-			} finally {
-				this._busy = !1;
-			}
-		}
-	}
-	async _toggleWebhook(e) {
-		if (this.ctx) {
-			this._busy = !0;
-			try {
-				await this.ctx.setAckWebhook(e);
-			} finally {
-				this._busy = !1;
-			}
-		}
-	}
-	render() {
-		let e = this.ctx;
-		if (!e?.config) return k;
-		let t = e.strings, n = e.config.contacts ?? [];
-		return D`
-      <div class="card">
-        <div class="card-hd">
-          <h2>${B(t, "contacts.title")}</h2>
-          <button class="btn primary" @click=${() => this._edit()}>
-            ${B(t, "contacts.add")}
-          </button>
-        </div>
-        ${n.length ? D`<div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>${B(t, "field.name")}</th>
-                    <th>${B(t, "contacts.channels_order")}</th>
-                    <th>${B(t, "contacts.quiet_hours")}</th>
-                    <th>${B(t, "field.linked_user_id")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${n.map((e) => this._row(t, e))}
-                </tbody>
-              </table>
-            </div>` : D`<div class="empty">${B(t, "contacts.none")}</div>`}
-        <div class="card-bd">
-          <p class="note">${B(t, "contacts.orchestration")}</p>
-        </div>
-      </div>
-      ${this._draft ? this._renderEditor(t, this._draft) : k}
-      ${this._renderPolicies(t)} ${this._renderAcknowledgement(t)}
-    `;
-	}
-	_row(e, t) {
-		let n = (this.ctx?.config?.users ?? []).find((e) => e.id === t.linked_user_id);
-		return D`<tr
-      class="clickable"
-      aria-selected=${this._draft?.id === t.id ? "true" : "false"}
-      @click=${() => this._edit(t)}
-    >
-      <td><strong>${t.name}</strong></td>
-      <td>
-        <div class="channels">
-          ${t.channels.map((t, n) => D`<span class="tag"
-                >${n + 1}. ${B(e, `channel_kind.${t.kind}`)} ·
-                ${t.service}</span
-              >`)}
-        </div>
-      </td>
-      <td class="mono">
-        ${t.quiet_start ? `${t.quiet_start}–${t.quiet_end}` : B(e, "contacts.no_quiet_hours")}
-      </td>
-      <td>${n?.name ?? "—"}</td>
-    </tr>`;
-	}
-	_renderEditor(e, t) {
-		let n = this.ctx, r = n.config?.users ?? [], i = J(n.hass), a = n.meta?.contact_channel_kinds ?? [
-			"push",
-			"sms",
-			"voice",
-			"chat",
-			"other"
-		];
-		return D`
-      <div class="card">
-        <div class="card-hd">
-          <h2>${t.id ? t.name : B(e, "contacts.new")}</h2>
-        </div>
-        <div class="card-bd">
-          <div class="grid-form">
-            <label class="field">
-              <span class="lbl">${B(e, "field.name")}</span>
-              <input
-                .value=${t.name}
-                @input=${(e) => this._set("name", e.target.value)}
-              />
-            </label>
-            <label class="field">
-              <span class="lbl">${B(e, "field.linked_user_id")}</span>
-              <select
-                @change=${(e) => this._set("linked_user_id", e.target.value || null)}
-              >
-                <option value="" ?selected=${!t.linked_user_id}>—</option>
-                ${r.map((e) => D`<option
-                    .value=${e.id ?? ""}
-                    ?selected=${e.id === t.linked_user_id}
-                  >
-                    ${e.name}
-                  </option>`)}
-              </select>
-              <span class="hint">${B(e, "contacts.linked_hint")}</span>
-            </label>
-          </div>
-
-          <h3>${B(e, "contacts.channels")}</h3>
-          <p class="note">${B(e, "contacts.channels_hint")}</p>
-          ${t.channels.map((n, r) => this._renderChannel(e, t, n, r, i, a))}
-          <button class="btn" @click=${() => this._addChannel()}>
-            ${B(e, "contacts.add_channel")}
-          </button>
-
-          <h3>${B(e, "contacts.quiet_hours")}</h3>
-          <p class="note">${B(e, "contacts.quiet_hint")}</p>
-          <div class="grid-form">
-            <label class="field">
-              <span class="lbl">${B(e, "field.quiet_start")}</span>
-              <input
-                type="time"
-                .value=${t.quiet_start ?? ""}
-                @change=${(e) => this._set("quiet_start", e.target.value || null)}
-              />
-            </label>
-            <label class="field">
-              <span class="lbl">${B(e, "field.quiet_end")}</span>
-              <input
-                type="time"
-                .value=${t.quiet_end ?? ""}
-                @change=${(e) => this._set("quiet_end", e.target.value || null)}
-              />
-            </label>
-            <label class="field">
-              <span class="lbl">${B(e, "contacts.quiet_min_severity")}</span>
-              <select
-                @change=${(e) => this._set("quiet_min_severity", e.target.value)}
-              >
-                ${[
-			"info",
-			"warning",
-			"alarm"
-		].map((n) => D`<option
-                    .value=${n}
-                    ?selected=${n === t.quiet_min_severity}
-                  >
-                    ${B(e, `severity.${n}`)}
-                  </option>`)}
-              </select>
-              <span class="hint">${B(e, "contacts.quiet_severity_hint")}</span>
-            </label>
-          </div>
-
-          ${this._problems.map((t) => D`<p class="problem">${U(e, t)}</p>`)}
-        </div>
-        <div class="card-ft">
-          ${t.id ? D`<button class="btn danger" ?disabled=${this._busy} @click=${() => this._delete()}>
-                ${B(e, "common.delete")}
-              </button>` : k}
-          <button class="btn" @click=${() => this._draft = void 0}>
-            ${B(e, "common.cancel")}
-          </button>
-          <button class="btn primary" ?disabled=${this._busy} @click=${() => this._save()}>
-            ${B(e, "common.save")}
-          </button>
-        </div>
-      </div>
-    `;
-	}
-	_renderChannel(e, t, n, r, i, a) {
-		let o = n.id ? this._tested[n.id] : void 0;
-		return D`
-      <div class="channel">
-        <div class="channel-hd">
-          <span class="rank">${r + 1}</span>
-          <div class="channel-tools">
-            <button class="btn sm" @click=${() => this._move(r, -1)}>↑</button>
-            <button class="btn sm" @click=${() => this._move(r, 1)}>↓</button>
-            <button class="btn sm danger" @click=${() => this._removeChannel(r)}>
-              ${B(e, "common.delete")}
-            </button>
-          </div>
-        </div>
-        <div class="grid-form">
-          <label class="field">
-            <span class="lbl">${B(e, "field.kind")}</span>
-            <select
-              @change=${(e) => this._setChannel(r, { kind: e.target.value })}
-            >
-              ${a.map((t) => D`<option .value=${t} ?selected=${t === n.kind}>
-                  ${B(e, `channel_kind.${t}`)}
-                </option>`)}
-            </select>
-          </label>
-          <label class="field">
-            <span class="lbl">${B(e, "contacts.service")}</span>
-            <select
-              @change=${(e) => this._setChannel(r, { service: e.target.value })}
-            >
-              <option value="" ?selected=${!n.service}>—</option>
-              ${i.map((e) => D`<option
-                  .value=${e.id}
-                  ?selected=${e.id === n.service}
-                >
-                  ${e.name}
-                </option>`)}
-            </select>
-            <span class="hint">${B(e, "contacts.service_hint")}</span>
-          </label>
-          <label class="field">
-            <span class="lbl">${B(e, "contacts.target")}</span>
-            <input
-              .value=${n.target}
-              @input=${(e) => this._setChannel(r, { target: e.target.value })}
-            />
-            <span class="hint">${B(e, "contacts.target_hint")}</span>
-          </label>
-          <label class="check">
-            <input
-              type="checkbox"
-              .checked=${n.actionable}
-              @change=${(e) => this._setChannel(r, { actionable: e.target.checked })}
-            />
-            <span class="lbl">${B(e, "contacts.actionable")}</span>
-            <span class="hint">${B(e, "contacts.actionable_hint")}</span>
-          </label>
-        </div>
-        <div class="channel-ft">
-          <button
-            class="btn sm"
-            ?disabled=${this._busy || !t.id || !n.id}
-            @click=${() => this._test(t, n)}
-          >
-            ${B(e, "contacts.test")}
-          </button>
-          ${t.id && n.id ? k : D`<span class="hint">${B(e, "contacts.test_after_save")}</span>`}
-          ${o ? D`<span class=${o.ok ? "tag ok" : "tag bad"}>
-                ${o.ok ? B(e, "contacts.test_sent") : o.error}
-              </span>` : k}
-        </div>
-      </div>
-    `;
-	}
-	_renderPolicies(e) {
-		let t = this.ctx, n = t.config?.contacts ?? [], r = jt(t.config?.profiles ?? []);
-		return D`
-      <div class="card">
-        <div class="card-hd">
-          <h2>${B(e, "contacts.policies")}</h2>
-          <button class="btn" @click=${() => t.navigate("profiles")}>
-            ${B(e, "contacts.edit_on_profiles")}
-          </button>
-        </div>
-        ${r.size ? D`<div class="card-bd">
-              ${[...r.values()].map((t) => D`
-                  <h3>${t[0].profile.name}</h3>
-                  ${t.map(({ action: t, index: r }) => D`
-                      <div class="step">
-                        <span class="mono at">+${t.escalation_offset}s</span>
-                        <div>
-                          <div class="who">
-                            ${Mt(t).map((t) => {
-			let r = n.find((e) => e.id === t.contact_id), i = r?.channels.find((e) => e.id === t.channel_id);
-			return i ? `${r?.name} · ${B(e, `channel_kind.${i.kind}`)}` : r?.name ?? B(e, "problem.unknown_contact");
-		}).join(" · ") || String(t.params.service ?? "")}
-                          </div>
-                          <div class="mono">
-                            ${B(e, "contacts.step_number")} ${r} ·
-                            ${B(e, `moment.${t.moments[0]}`)}
-                          </div>
-                        </div>
-                      </div>
-                    `)}
-                `)}
-              <p class="note">${B(e, "contacts.exhausted")}</p>
-            </div>` : D`<div class="empty">${B(e, "contacts.no_policies")}</div>`}
-      </div>
-    `;
-	}
-	_renderAcknowledgement(e) {
-		let t = this.ctx.config?.settings.ack_webhook_id ?? null;
-		return D`
-      <div class="card">
-        <div class="card-hd">
-          <h2>${B(e, "contacts.acknowledgement")}</h2>
-        </div>
-        <div class="card-bd">
-          <p class="note">${B(e, "contacts.ack_stops")}</p>
-          ${At.map((t) => D`<div class="path">
-              <div class="who">${B(e, `contacts.ack_${t}`)}</div>
-              <div class="mono">${B(e, `contacts.ack_${t}_how`)}</div>
-            </div>`)}
-          <h3>${B(e, "contacts.webhook")}</h3>
-          <div class="banner warn">
-            <strong>${B(e, "contacts.webhook_warning")}</strong>
-            <span>${B(e, "contacts.webhook_warning_hint")}</span>
-          </div>
-          <label class="check">
-            <input
-              type="checkbox"
-              .checked=${t !== null}
-              ?disabled=${this._busy}
-              @change=${(e) => this._toggleWebhook(e.target.checked)}
-            />
-            <span class="lbl">${B(e, "contacts.webhook_enable")}</span>
-          </label>
-          ${t ? D`<p class="sample">/api/webhook/${t}</p>
-                <p class="note">${B(e, "contacts.webhook_hint")}</p>` : k}
-        </div>
-      </div>
-    `;
-	}
-	static {
-		this.styles = [
-			H,
-			V,
-			o`
-      /* One chip per channel, in priority order. Without the gap they run
-         into each other and "…luca2. SMS" reads as one service. */
-      .channels {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-      .channel {
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 12px;
-      }
-      .channel-hd {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 8px;
-      }
-      .channel-tools {
-        display: flex;
-        gap: 6px;
-      }
-      .channel-ft {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 10px;
-      }
-      .tag.ok {
-        color: var(--success-color, #2e9e4f);
-      }
-      .tag.bad {
-        color: var(--error-color, #d32f2f);
-      }
-      .rank {
-        font-weight: 600;
-        color: var(--secondary-text-color);
-      }
-      .step,
-      .path {
-        display: grid;
-        grid-template-columns: 72px 1fr;
-        gap: 14px;
-        padding: 10px 0;
-        border-bottom: 1px solid var(--divider-color);
-      }
-      .path {
-        grid-template-columns: 1fr;
-        gap: 2px;
-      }
-      .at {
-        color: var(--secondary-text-color);
-      }
-      .who {
-        font-weight: 500;
-      }
-      .mono {
-        font-family: var(--code-font-family, monospace);
-        font-size: 12px;
-        color: var(--secondary-text-color);
-      }
-      .sample {
-        margin: 8px 0 0;
-        padding: 10px 12px;
-        border-radius: 8px;
-        background: var(--secondary-background-color);
-        font-family: var(--code-font-family, monospace);
-        font-size: 12px;
-        overflow-x: auto;
-      }
-      /* The sentence that has to stop somebody: a Home Assistant webhook is
-         not authenticated, and this one stops an alarm (INV-6). */
-      .banner {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding: 12px 16px;
-        margin: 12px 0;
-        border-radius: 8px;
-        background: var(--warning-color, #f0a835);
-        color: #0d1014;
-      }
-    `
-		];
-	}
-};
-customElements.define("foyer-page-contacts", Nt);
-//#endregion
 //#region src/panel/pages/test.ts
-var Pt = [
+var Ot = [
 	"diagnostics",
 	"simulator",
 	"walktest",
 	"actiontest"
-], Ft = /* @__PURE__ */ new Set([
+], kt = /* @__PURE__ */ new Set([
 	"triggered",
 	"entry_started",
 	"verification_satisfied",
 	"technical_raised"
 ]);
-function It(e, t) {
+function At(e, t) {
 	let n = e.config?.zones.find((e) => e.id === t);
 	return n && n.trigger.kind === "state" ? n.trigger.states : [];
 }
-function Lt(e) {
+function jt(e) {
 	let t = /* @__PURE__ */ new Set();
 	for (let n of e.config?.profiles ?? []) for (let e of n.actions) for (let n of e.conditions) n.kind === "state" && t.add(n.entity_id);
 	return [...t].sort();
@@ -5329,7 +4813,7 @@ function Y(e) {
 		second: "2-digit"
 	});
 }
-var Rt = class extends I {
+var Mt = class extends I {
 	constructor(...e) {
 		super(...e), this._tab = "diagnostics", this._busy = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set(), this._walkDuration = "", this._tested = {};
 	}
@@ -5392,7 +4876,7 @@ var Rt = class extends I {
 		let t = e.strings;
 		return D`
       <nav class="subtabs" role="tablist">
-        ${Pt.map((e) => D`
+        ${Ot.map((e) => D`
             <button
               role="tab"
               aria-selected=${e === this._tab ? "true" : "false"}
@@ -5618,7 +5102,7 @@ var Rt = class extends I {
               <select
                 @change=${(e) => this._setOverride(r, {
 			zone_id: e.target.value,
-			state: It(t, e.target.value)[0] ?? n.state
+			state: At(t, e.target.value)[0] ?? n.state
 		})}
               >
                 <option value="">${B(e, "test.simulator.pick_zone")}</option>
@@ -5637,7 +5121,7 @@ var Rt = class extends I {
                 @change=${(e) => this._setOverride(r, { state: e.target.value })}
               />
               <datalist id="foyer-sim-states-${r}">
-                ${It(t, n.zone_id).map((e) => D`<option .value=${e}></option>`)}
+                ${At(t, n.zone_id).map((e) => D`<option .value=${e}></option>`)}
               </datalist>
               <input
                 class="at-input"
@@ -5670,7 +5154,7 @@ var Rt = class extends I {
     `;
 	}
 	_renderEntityOverrides(e) {
-		let t = Lt(this.ctx);
+		let t = jt(this.ctx);
 		return t.length ? D`
       <fieldset>
         <legend>${B(e, "test.simulator.entities")}</legend>
@@ -5844,7 +5328,7 @@ var Rt = class extends I {
       </div>` : D`<div class="key">${B(e, `moment.${t.moment}`)}</div>`;
 	}
 	_renderBatches(e, t) {
-		return D`${t.batches.filter((e) => e.actions.length > 0 || Ft.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
+		return D`${t.batches.filter((e) => e.actions.length > 0 || kt.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
 	}
 	_renderBatch(e, t) {
 		return t.profile_id ? D`
@@ -6090,17 +5574,17 @@ var Rt = class extends I {
 				let n = await t.testAction({
 					profile_id: e.profile_id,
 					action_id: e.action_id
-				});
+				}), r = n.error ?? Nt(t.strings, n.reason);
 				this._tested = {
 					...this._tested,
 					[`${e.profile_id}:${e.action_id}`]: {
 						ok: n.success,
 						at: Date.now(),
-						error: n.error ?? n.reason ?? void 0
+						error: r || void 0
 					}
 				}, n.success || (this._error = B(t.strings, "action_test.failed_detail", {
 					action: e.name,
-					detail: n.error ?? n.reason ?? ""
+					detail: r
 				}));
 			} finally {
 				this._busy = !1;
@@ -6229,10 +5713,567 @@ var Rt = class extends I {
 		];
 	}
 };
-customElements.get("foyer-page-test") || customElements.define("foyer-page-test", Rt);
+function Nt(e, t) {
+	if (!t) return "";
+	let n = B(e, `action_test.reason.${t}`);
+	return n.startsWith("action_test.reason.") ? t : n;
+}
+customElements.get("foyer-page-test") || customElements.define("foyer-page-test", Mt);
+//#endregion
+//#region src/panel/pages/contacts.ts
+var Pt = {
+	name: "",
+	channels: [],
+	quiet_start: null,
+	quiet_end: null,
+	quiet_min_severity: "alarm",
+	linked_user_id: null,
+	enabled: !0
+}, Ft = {
+	kind: "push",
+	service: "",
+	target: "",
+	data: {},
+	actionable: !1,
+	enabled: !0
+}, It = [
+	"push",
+	"disarm",
+	"dtmf",
+	"service"
+];
+function Lt(e) {
+	let t = /* @__PURE__ */ new Map();
+	for (let n of e) {
+		let e = n.actions.filter((e) => e.enabled && e.escalation_offset !== null).sort((e, t) => (e.escalation_offset ?? 0) - (t.escalation_offset ?? 0)).map((e, t) => ({
+			profile: n,
+			action: e,
+			index: t
+		}));
+		e.length && t.set(n.id ?? n.name, e);
+	}
+	return t;
+}
+function Rt(e) {
+	let t = e.params.contacts;
+	return Array.isArray(t) ? t.map((e) => typeof e == "string" ? {
+		contact_id: e,
+		channel_id: null
+	} : e).filter((e) => e && e.contact_id) : [];
+}
+var zt = class extends I {
+	constructor(...e) {
+		super(...e), this._problems = [], this._busy = !1, this._tested = {};
+	}
+	static {
+		this.properties = {
+			ctx: { attribute: !1 },
+			_draft: { state: !0 },
+			_problems: { state: !0 },
+			_busy: { state: !0 },
+			_tested: { state: !0 }
+		};
+	}
+	_edit(e) {
+		this._draft = e ? structuredClone(e) : {
+			...structuredClone(Pt),
+			channels: [structuredClone(Ft)]
+		}, this._problems = [];
+	}
+	_set(e, t) {
+		this._draft &&= {
+			...this._draft,
+			[e]: t
+		};
+	}
+	_setChannel(e, t) {
+		if (!this._draft) return;
+		let n = this._draft.channels.map((n, r) => r === e ? {
+			...n,
+			...t
+		} : n);
+		this._draft = {
+			...this._draft,
+			channels: n
+		};
+	}
+	_move(e, t) {
+		if (!this._draft) return;
+		let n = [...this._draft.channels], r = e + t;
+		r < 0 || r >= n.length || ([n[e], n[r]] = [n[r], n[e]], this._draft = {
+			...this._draft,
+			channels: n
+		});
+	}
+	_addChannel() {
+		this._draft &&= {
+			...this._draft,
+			channels: [...this._draft.channels, structuredClone(Ft)]
+		};
+	}
+	_removeChannel(e) {
+		this._draft &&= {
+			...this._draft,
+			channels: this._draft.channels.filter((t, n) => n !== e)
+		};
+	}
+	async _save() {
+		if (this.ctx && this._draft) {
+			this._busy = !0;
+			try {
+				let e = await this.ctx.save("contact", this._draft);
+				this._problems = e.problems, e.success && (this._draft = void 0);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _delete() {
+		if (this.ctx && this._draft?.id) {
+			this._busy = !0;
+			try {
+				let e = await this.ctx.remove("contact", this._draft.id);
+				this._problems = e.problems, e.success && (this._draft = void 0);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _test(e, t) {
+		if (this.ctx && e.id && t.id) {
+			this._busy = !0;
+			try {
+				let n = await this.ctx.testAction({
+					contact_id: e.id,
+					channel_id: t.id
+				});
+				this._tested = {
+					...this._tested,
+					[t.id]: {
+						ok: n.success,
+						error: n.error ?? Nt(this.ctx.strings, n.reason ?? null)
+					}
+				};
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	_isEntity(e) {
+		return !!(e && this.ctx?.hass.states[e]);
+	}
+	async _toggleWebhook(e) {
+		if (this.ctx) {
+			this._busy = !0;
+			try {
+				await this.ctx.setAckWebhook(e);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	render() {
+		let e = this.ctx;
+		if (!e?.config) return k;
+		let t = e.strings, n = e.config.contacts ?? [];
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(t, "contacts.title")}</h2>
+          <button class="btn primary" @click=${() => this._edit()}>
+            ${B(t, "contacts.add")}
+          </button>
+        </div>
+        ${n.length ? D`<div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>${B(t, "field.name")}</th>
+                    <th>${B(t, "contacts.channels_order")}</th>
+                    <th>${B(t, "contacts.quiet_hours")}</th>
+                    <th>${B(t, "field.linked_user_id")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${n.map((e) => this._row(t, e))}
+                </tbody>
+              </table>
+            </div>` : D`<div class="empty">${B(t, "contacts.none")}</div>`}
+        <div class="card-bd">
+          <p class="note">${B(t, "contacts.orchestration")}</p>
+        </div>
+      </div>
+      ${this._draft ? this._renderEditor(t, this._draft) : k}
+      ${this._renderPolicies(t)} ${this._renderAcknowledgement(t)}
+    `;
+	}
+	_row(e, t) {
+		let n = (this.ctx?.config?.users ?? []).find((e) => e.id === t.linked_user_id);
+		return D`<tr
+      class="clickable"
+      aria-selected=${this._draft?.id === t.id ? "true" : "false"}
+      @click=${() => this._edit(t)}
+    >
+      <td><strong>${t.name}</strong></td>
+      <td>
+        <div class="channels">
+          ${t.channels.map((t, n) => D`<span class="tag"
+                >${n + 1}. ${B(e, `channel_kind.${t.kind}`)} ·
+                ${t.service}</span
+              >`)}
+        </div>
+      </td>
+      <td class="mono">
+        ${t.quiet_start ? `${t.quiet_start}–${t.quiet_end}` : B(e, "contacts.no_quiet_hours")}
+      </td>
+      <td>${n?.name ?? "—"}</td>
+    </tr>`;
+	}
+	_renderEditor(e, t) {
+		let n = this.ctx, r = n.config?.users ?? [], i = J(n.hass), a = n.meta?.contact_channel_kinds ?? [
+			"push",
+			"sms",
+			"voice",
+			"chat",
+			"other"
+		];
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t.id ? t.name : B(e, "contacts.new")}</h2>
+        </div>
+        <div class="card-bd">
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.name")}</span>
+              <input
+                .value=${t.name}
+                @input=${(e) => this._set("name", e.target.value)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.linked_user_id")}</span>
+              <select
+                @change=${(e) => this._set("linked_user_id", e.target.value || null)}
+              >
+                <option value="" ?selected=${!t.linked_user_id}>—</option>
+                ${r.map((e) => D`<option
+                    .value=${e.id ?? ""}
+                    ?selected=${e.id === t.linked_user_id}
+                  >
+                    ${e.name}
+                  </option>`)}
+              </select>
+              <span class="hint">${B(e, "contacts.linked_hint")}</span>
+            </label>
+          </div>
+
+          <h3>${B(e, "contacts.channels")}</h3>
+          <p class="note">${B(e, "contacts.channels_hint")}</p>
+          ${t.channels.map((n, r) => this._renderChannel(e, t, n, r, i, a))}
+          <button class="btn" @click=${() => this._addChannel()}>
+            ${B(e, "contacts.add_channel")}
+          </button>
+
+          <h3>${B(e, "contacts.quiet_hours")}</h3>
+          <p class="note">${B(e, "contacts.quiet_hint")}</p>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.quiet_start")}</span>
+              <input
+                type="time"
+                .value=${t.quiet_start ?? ""}
+                @change=${(e) => this._set("quiet_start", e.target.value || null)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.quiet_end")}</span>
+              <input
+                type="time"
+                .value=${t.quiet_end ?? ""}
+                @change=${(e) => this._set("quiet_end", e.target.value || null)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "contacts.quiet_min_severity")}</span>
+              <select
+                @change=${(e) => this._set("quiet_min_severity", e.target.value)}
+              >
+                ${[
+			"info",
+			"warning",
+			"alarm"
+		].map((n) => D`<option
+                    .value=${n}
+                    ?selected=${n === t.quiet_min_severity}
+                  >
+                    ${B(e, `severity.${n}`)}
+                  </option>`)}
+              </select>
+              <span class="hint">${B(e, "contacts.quiet_severity_hint")}</span>
+            </label>
+          </div>
+
+          ${this._problems.map((t) => D`<p class="problem">${U(e, t)}</p>`)}
+        </div>
+        <div class="card-ft">
+          ${t.id ? D`<button class="btn danger" ?disabled=${this._busy} @click=${() => this._delete()}>
+                ${B(e, "common.delete")}
+              </button>` : k}
+          <button class="btn" @click=${() => this._draft = void 0}>
+            ${B(e, "common.cancel")}
+          </button>
+          <button class="btn primary" ?disabled=${this._busy} @click=${() => this._save()}>
+            ${B(e, "common.save")}
+          </button>
+        </div>
+      </div>
+    `;
+	}
+	_renderChannel(e, t, n, r, i, a) {
+		let o = n.id ? this._tested[n.id] : void 0, s = i.some((e) => e.id === n.service) ? i : [...i, {
+			id: n.service,
+			name: n.service
+		}].filter((e) => e.id);
+		return D`
+      <div class="channel">
+        <div class="channel-hd">
+          <span class="rank">${r + 1}</span>
+          <div class="channel-tools">
+            <button class="btn sm" @click=${() => this._move(r, -1)}>↑</button>
+            <button class="btn sm" @click=${() => this._move(r, 1)}>↓</button>
+            <button class="btn sm danger" @click=${() => this._removeChannel(r)}>
+              ${B(e, "common.delete")}
+            </button>
+          </div>
+        </div>
+        <div class="grid-form">
+          <label class="field">
+            <span class="lbl">${B(e, "field.kind")}</span>
+            <select
+              @change=${(e) => this._setChannel(r, { kind: e.target.value })}
+            >
+              ${a.map((t) => D`<option .value=${t} ?selected=${t === n.kind}>
+                  ${B(e, `channel_kind.${t}`)}
+                </option>`)}
+            </select>
+          </label>
+          <label class="field">
+            <span class="lbl">${B(e, "contacts.service")}</span>
+            <select
+              @change=${(e) => this._setChannel(r, { service: e.target.value })}
+            >
+              <option value="" ?selected=${!n.service}>—</option>
+              ${s.map((e) => D`<option
+                  .value=${e.id}
+                  ?selected=${e.id === n.service}
+                >
+                  ${e.name}
+                </option>`)}
+            </select>
+            <span class="hint">${B(e, "contacts.service_hint")}</span>
+          </label>
+          <label class="field">
+            <span class="lbl">${B(e, "contacts.target")}</span>
+            <input
+              .value=${n.target}
+              @input=${(e) => this._setChannel(r, { target: e.target.value })}
+            />
+            <span class="hint">${B(e, "contacts.target_hint")}</span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${n.actionable}
+              @change=${(e) => this._setChannel(r, { actionable: e.target.checked })}
+            />
+            <span class="lbl">${B(e, "contacts.actionable")}</span>
+            <span class="hint">
+              ${B(e, this._isEntity(n.service) ? "contacts.actionable_entity" : "contacts.actionable_hint")}
+            </span>
+          </label>
+        </div>
+        <div class="channel-ft">
+          <button
+            class="btn sm"
+            ?disabled=${this._busy || !t.id || !n.id}
+            @click=${() => this._test(t, n)}
+          >
+            ${B(e, "contacts.test")}
+          </button>
+          ${t.id && n.id ? k : D`<span class="hint">${B(e, "contacts.test_after_save")}</span>`}
+          ${o ? D`<span class=${o.ok ? "tag ok" : "tag bad"}>
+                ${o.ok ? B(e, "contacts.test_sent") : o.error}
+              </span>` : k}
+        </div>
+      </div>
+    `;
+	}
+	_renderPolicies(e) {
+		let t = this.ctx, n = t.config?.contacts ?? [], r = Lt(t.config?.profiles ?? []);
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "contacts.policies")}</h2>
+          <button class="btn" @click=${() => t.navigate("profiles")}>
+            ${B(e, "contacts.edit_on_profiles")}
+          </button>
+        </div>
+        ${r.size ? D`<div class="card-bd">
+              ${[...r.values()].map((t) => D`
+                  <h3>${t[0].profile.name}</h3>
+                  ${t.map(({ action: t, index: r }) => D`
+                      <div class="step">
+                        <span class="mono at">+${t.escalation_offset}s</span>
+                        <div>
+                          <div class="who">
+                            ${Rt(t).map((t) => {
+			let r = n.find((e) => e.id === t.contact_id), i = r?.channels.find((e) => e.id === t.channel_id);
+			return i ? `${r?.name} · ${B(e, `channel_kind.${i.kind}`)}` : r?.name ?? B(e, "problem.unknown_contact");
+		}).join(" · ") || String(t.params.service ?? "")}
+                          </div>
+                          <div class="mono">
+                            ${B(e, "contacts.step_number")} ${r} ·
+                            ${B(e, `moment.${t.moments[0]}`)}
+                          </div>
+                        </div>
+                      </div>
+                    `)}
+                `)}
+              <p class="note">${B(e, "contacts.exhausted")}</p>
+            </div>` : D`<div class="empty">${B(e, "contacts.no_policies")}</div>`}
+      </div>
+    `;
+	}
+	_renderAcknowledgement(e) {
+		let t = this.ctx.config?.settings.ack_webhook_id ?? null;
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "contacts.acknowledgement")}</h2>
+        </div>
+        <div class="card-bd">
+          <p class="note">${B(e, "contacts.ack_stops")}</p>
+          ${It.map((t) => D`<div class="path">
+              <div class="who">${B(e, `contacts.ack_${t}`)}</div>
+              <div class="mono">${B(e, `contacts.ack_${t}_how`)}</div>
+            </div>`)}
+          <h3>${B(e, "contacts.webhook")}</h3>
+          <div class="banner warn">
+            <strong>${B(e, "contacts.webhook_warning")}</strong>
+            <span>${B(e, "contacts.webhook_warning_hint")}</span>
+          </div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t !== null}
+              ?disabled=${this._busy}
+              @change=${(e) => this._toggleWebhook(e.target.checked)}
+            />
+            <span class="lbl">${B(e, "contacts.webhook_enable")}</span>
+          </label>
+          ${t ? D`<p class="sample">/api/webhook/${t}</p>
+                <p class="note">${B(e, "contacts.webhook_hint")}</p>` : k}
+        </div>
+      </div>
+    `;
+	}
+	static {
+		this.styles = [
+			H,
+			V,
+			o`
+      /* One chip per channel, in priority order. Without the gap they run
+         into each other and "…luca2. SMS" reads as one service. */
+      .channels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .channel {
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+      }
+      .channel-hd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .channel-tools {
+        display: flex;
+        gap: 6px;
+      }
+      .channel-ft {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .tag.ok {
+        color: var(--success-color, #2e9e4f);
+      }
+      .tag.bad {
+        color: var(--error-color, #d32f2f);
+      }
+      .rank {
+        font-weight: 600;
+        color: var(--secondary-text-color);
+      }
+      .step,
+      .path {
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        gap: 14px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--divider-color);
+      }
+      .path {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+      .at {
+        color: var(--secondary-text-color);
+      }
+      .who {
+        font-weight: 500;
+      }
+      .mono {
+        font-family: var(--code-font-family, monospace);
+        font-size: 12px;
+        color: var(--secondary-text-color);
+      }
+      .sample {
+        margin: 8px 0 0;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--secondary-background-color);
+        font-family: var(--code-font-family, monospace);
+        font-size: 12px;
+        overflow-x: auto;
+      }
+      /* The sentence that has to stop somebody: a Home Assistant webhook is
+         not authenticated, and this one stops an alarm (INV-6). */
+      .banner {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 16px;
+        margin: 12px 0;
+        border-radius: 8px;
+        background: var(--warning-color, #f0a835);
+        color: #0d1014;
+      }
+    `
+		];
+	}
+};
+customElements.define("foyer-page-contacts", zt);
 //#endregion
 //#region src/panel/pages/log.ts
-var X = 50, zt = class extends I {
+var X = 50, Bt = class extends I {
 	constructor(...e) {
 		super(...e), this._rows = [], this._total = 0, this._offset = 0, this._filters = {}, this._busy = !1, this._confirmClear = !1, this._loaded = !1;
 	}
@@ -6492,14 +6533,14 @@ var X = 50, zt = class extends I {
       <tr class="clickable" aria-selected=${a ? "true" : "false"} @click=${() => this._open = a ? void 0 : t.id}>
         <td class="mono">${new Date(t.ts).toLocaleString(n.hass.language)}</td>
         <td>
-          <span class="state ${Ht(t.severity)}">
-            ${Bt(e, t.event_type)}
+          <span class="state ${Ut(t.severity)}">
+            ${Vt(e, t.event_type)}
           </span>
         </td>
         <td><span class="tag">${B(e, `category.${t.category}`)}</span></td>
         <td>${o}</td>
         <td>
-          ${t.user_name ?? (t.channel ? Vt(e, t.channel) : "")}
+          ${t.user_name ?? (t.channel ? Ht(e, t.channel) : "")}
           ${t.detail?.attributed === "claimed" ? D`<span class="claimed">${B(e, "log.claimed")}</span>` : k}
         </td>
         <td class="detail">${this._summary(e, t)}</td>
@@ -6521,7 +6562,7 @@ var X = 50, zt = class extends I {
                 ${t.outcome ? D`<dt>${B(e, "log.outcome")}</dt>
                       <dd>${B(e, `outcome.${t.outcome}`)}</dd>` : k}
                 ${t.channel ? D`<dt>${B(e, "log.channel")}</dt>
-                      <dd>${Vt(e, t.channel)}</dd>` : k}
+                      <dd>${Ht(e, t.channel)}</dd>` : k}
                 ${this._changeLines(e, t).map((t, n) => D`<dt>${n ? "" : B(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
                 ${this._plainDetail(t).map(([t, n]) => D`<dt>${B(e, `detail.${t}`)}</dt>
@@ -6650,23 +6691,23 @@ var X = 50, zt = class extends I {
 		];
 	}
 };
-function Bt(e, t) {
+function Vt(e, t) {
 	let n = B(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
 	let r = B(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-function Vt(e, t) {
+function Ht(e, t) {
 	let n = B(e, `log_channel.${t}`);
 	return n.startsWith("log_channel.") ? t : n;
 }
-function Ht(e) {
+function Ut(e) {
 	return e === "alarm" ? "triggered" : e === "warning" ? "arming" : "disarmed";
 }
-customElements.get("foyer-page-log") || customElements.define("foyer-page-log", zt);
+customElements.get("foyer-page-log") || customElements.define("foyer-page-log", Bt);
 //#endregion
 //#region src/panel/pages/settings.ts
-var Ut = ["en", "it"], Wt = {
+var Wt = ["en", "it"], Gt = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -6675,7 +6716,7 @@ var Ut = ["en", "it"], Wt = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, Gt = class extends I {
+}, Kt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1;
 	}
@@ -6691,7 +6732,7 @@ var Ut = ["en", "it"], Wt = {
 		};
 	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Wt);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Gt);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -6902,7 +6943,7 @@ var Ut = ["en", "it"], Wt = {
               <option value="" ?selected=${!n.language}>
                 ${B(e, "settings.language_system")}
               </option>
-              ${Ut.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
+              ${Wt.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
                     ${B(e, `language.${t}`)}
                   </option>`)}
             </select>
@@ -7160,7 +7201,7 @@ var Ut = ["en", "it"], Wt = {
     `];
 	}
 };
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Gt);
+customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Kt);
 //#endregion
 //#region src/panel/wizard.ts
 var Z = [
@@ -7169,7 +7210,7 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], Kt = 3, qt = class extends I {
+], qt = 3, Jt = class extends I {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -7327,7 +7368,7 @@ var Z = [
 		return D`
       <p>${B(e, "wizard.zones_text", {
 			have: n.length,
-			want: Kt
+			want: qt
 		})}</p>
       <ul class="zones">
         ${n.map((t) => D`<li>
@@ -7664,10 +7705,10 @@ var Z = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", qt);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", Jt);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var Jt = [
+var Yt = [
 	"overview",
 	"areas",
 	"zones",
@@ -7680,7 +7721,7 @@ var Jt = [
 	"test",
 	"log",
 	"settings"
-], Yt = [
+], Xt = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -7690,7 +7731,7 @@ var Jt = [
 	"devices",
 	"contacts",
 	"settings"
-], Xt = {
+], Zt = {
 	overview: [
 		"area",
 		"master",
@@ -7794,7 +7835,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var Zt = class extends I {
+var Qt = class extends I {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._offset = 0;
 	}
@@ -8094,7 +8135,7 @@ var Zt = class extends I {
     `;
 	}
 	_renderTabs(e) {
-		let t = this._canConfigure ? Jt : Jt.filter((e) => !Yt.includes(e));
+		let t = this._canConfigure ? Yt : Yt.filter((e) => !Xt.includes(e));
 		return t.length < 2 ? k : D`
       <nav class="tabs" role="tablist">
         ${t.map((t) => D`
@@ -8155,7 +8196,7 @@ var Zt = class extends I {
         ${r ? D`<div class="help-body">
               <p>${B(e, `${n}.intro`)}</p>
               <dl>
-                ${Xt[t].map((t) => D`
+                ${Zt[t].map((t) => D`
                     <dt>${B(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${B(e, `${n}.items.${t}.text`)}</dd>
                   `)}
@@ -8399,5 +8440,5 @@ var Zt = class extends I {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", Zt);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", Qt);
 //#endregion

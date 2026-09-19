@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from homeassistant.util import dt as dt_util
+
 from custom_components.foyer.const import ACK_ACTION, DOMAIN, MOBILE_APP_ACTION_EVENT
 
 from .conftest import ZONE
@@ -146,8 +148,11 @@ async def test_an_acknowledgement_stops_the_climb(
 
 async def test_a_step_survives_a_restart(hass, hass_ws_client, loaded, freezer):
     """INV-3 lists escalation progress. An alarm nobody answered is still
-    unanswered after a restart — and the steps still ahead still go out."""
+    unanswered after a restart — and the step still ahead still goes out,
+    which is the half of the phase's acceptance that a saved state alone
+    does not prove."""
     await _notify_recorder(hass)
+    sms = await _notify_recorder(hass, "sms_gateway")
     client = await hass_ws_client(hass)
     await _address_book(hass, client)
     await _break_in(hass, freezer)
@@ -156,6 +161,9 @@ async def test_a_step_survives_a_restart(hass, hass_ws_client, loaded, freezer):
     await hass.config_entries.async_reload(_entry_id(hass))
     await hass.async_block_till_done()
     assert _system(hass).state.escalations != ()
+
+    await _advance(hass, freezer, 60)
+    assert [c["message"] for c in sms] == ["Still nobody"]
 
 
 def _entry_id(hass) -> str:
@@ -382,3 +390,105 @@ async def test_quiet_hours_do_not_hold_back_a_break_in(
 
     await _break_in(hass, freezer)
     assert [c["message"] for c in push] == ["Alarm at home"]
+
+
+# --- what the review closed ---------------------------------------------------------
+
+
+async def test_the_webhook_records_nothing_when_there_is_nothing_to_acknowledge(
+    hass, hass_ws_client, hass_client_no_auth, loaded
+):
+    """The URL is unauthenticated (INV-6). Without this, anybody holding it
+    could fill the log with refusals and bury the row that matters."""
+    client = await hass_ws_client(hass)
+    await _ws(client, {"type": "foyer/ack_webhook", "enabled": True})
+    await hass.async_block_till_done()
+    webhook_id = _system(hass).config.settings.ack_webhook_id
+
+    http = await hass_client_no_auth()
+    for _ in range(3):
+        assert (await http.post(f"/api/webhook/{webhook_id}")).status == 200
+    await hass.async_block_till_done()
+
+    rows = await _ws(client, {"type": "foyer/log/query", "categories": ["alarm"]})
+    assert rows["rows"] == []
+
+
+async def test_a_push_that_does_not_say_which_alarm_acknowledges_both(
+    hass, hass_ws_client, loaded, freezer
+):
+    """The app decides how much of the action it echoes back. When the answer
+    comes back bare, the honest reading is that the person saw what they were
+    sent — the same rule button.foyer_acknowledge follows."""
+    await _notify_recorder(hass)
+    client = await hass_ws_client(hass)
+    await _address_book(hass, client, actionable=True)
+    await _break_in(hass, freezer)
+
+    hass.bus.async_fire(MOBILE_APP_ACTION_EVENT, {"action": ACK_ACTION})
+    await hass.async_block_till_done()
+    assert _system(hass).state.incident.acknowledged
+
+
+async def test_the_webhook_id_cannot_be_chosen_through_the_settings(
+    hass, hass_ws_client, loaded
+):
+    """An id a client could choose would eventually be one somebody could
+    guess, and this URL stops an alarm."""
+    client = await hass_ws_client(hass)
+    settings = {**_public_settings(hass), "ack_webhook_id": "foyer"}
+    result = await _ws(client, {"type": "foyer/config/settings", "settings": settings})
+    assert result["success"], result
+    await hass.async_block_till_done()
+    assert _system(hass).config.settings.ack_webhook_id is None
+
+
+def _public_settings(hass) -> dict:
+    from custom_components.foyer.store.schema import settings_to_dict
+
+    return settings_to_dict(_system(hass).config.settings)
+
+
+async def test_a_notify_entity_still_gets_the_title(hass, hass_ws_client, loaded):
+    """It carries a message and a title and nothing else. What it cannot
+    carry is said in the log rather than dropped in silence."""
+    calls: list[dict] = []
+
+    async def record(call):
+        calls.append(dict(call.data))
+
+    hass.services.async_register("notify", "send_message", record)
+    hass.states.async_set("notify.wall_tablet", "unknown")
+    await hass.async_block_till_done()
+
+    system = _system(hass)
+    from custom_components.foyer.core.models import ActionIntent, Decision, Moment
+
+    intent = ActionIntent(
+        action_id="t",
+        kind="notify",
+        moment=Moment.ACTION_TESTED,
+        params={
+            "message": "Alarm",
+            "title": "Foyer",
+            "recipients": (
+                {
+                    "contact_id": "c",
+                    "contact_name": "Luca",
+                    "channel_id": "ch",
+                    "kind": "push",
+                    "service": "notify.wall_tablet",
+                    "target": "",
+                    "data": {"push": {"sound": "alarm"}},
+                    "ack": True,
+                },
+            ),
+        },
+    )
+    await system._executor.async_run(
+        Decision(
+            at=dt_util.utcnow(), accepted=True, state=system.state, actions=(intent,)
+        )
+    )
+    assert calls and calls[0]["message"] == "Alarm"
+    assert calls[0]["title"] == "Foyer"

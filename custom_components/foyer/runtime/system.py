@@ -41,6 +41,7 @@ from ..core.engine import (
 )
 from ..core.journal import LogRow, action_row, rows_for, test_action_row
 from ..core.models import (
+    ActionKind,
     Actor,
     Area,
     AreaState,
@@ -516,6 +517,16 @@ class FoyerSystem:
             built = test_intent(ctx, profile, action_id or "")
             if built is None:
                 return {"success": False, "reason": "unknown_action"}
+            if (
+                built.kind == ActionKind.NOTIFY.value
+                and not built.params.get("service")
+                and not built.params.get("recipients")
+            ):
+                # It names contacts and every one of them is disabled, or has
+                # no channel left. Sending it would fail with "not a notify
+                # service: ''", which answers a different question from the
+                # one the button asked.
+                return {"success": False, "reason": "no_recipients"}
             intent = built
         results = await self._executor.async_run(
             Decision(

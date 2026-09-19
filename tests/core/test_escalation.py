@@ -9,6 +9,7 @@ whole thing.
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import timedelta
 
 import pytest
 
@@ -197,14 +198,20 @@ def test_a_step_that_fell_due_while_home_assistant_was_down_is_skipped_and_said(
     fire(world)
     # Four hours later the house comes back. Steps 1 and 2 fell due in the
     # gap: a notification that late is worse than none (part 1 decision 5).
-    world.now += __import__("datetime").timedelta(hours=4)
+    world.now += timedelta(hours=4)
     decision = world.send(Startup(down_since=NOW))
 
     assert notified(decision) == []
     skipped = [o for o in decision.occurrences if o.moment is Moment.ESCALATION_SKIPPED]
     assert skipped and skipped[0].detail["steps"] == "1,2"
-    # And the escalation is finished rather than left open for ever.
-    assert any(o.moment is Moment.ESCALATION_EXHAUSTED for o in decision.occurrences)
+    assert skipped[0].detail["reasons"] == "restart,restart"
+    # The escalation is finished rather than left open for ever — but it was
+    # never exhausted: nothing went out past step 0, and a profile answering
+    # "the whole list failed" must not fire for a list nobody tried.
+    assert decision.state.escalations == ()
+    assert not any(
+        o.moment is Moment.ESCALATION_EXHAUSTED for o in decision.occurrences
+    )
 
 
 def test_a_reload_does_not_lose_the_step_it_interrupted():
@@ -212,7 +219,7 @@ def test_a_reload_does_not_lose_the_step_it_interrupted():
     fire(world)
     world.advance(61)  # step 1 is one second overdue
     world.state = replace(world.state, escalations=world.state.escalations)
-    world.now += __import__("datetime").timedelta(seconds=1)
+    world.now += timedelta(seconds=1)
     # Saving a setting reloads the integration; the gap is a second, not an
     # outage, and a step lost to it would be a push nobody can explain.
     decision = world.send(Startup(down_since=world.now, cause="reload"))
@@ -268,17 +275,24 @@ def test_the_incident_adopts_the_loudest_contributing_policy_and_keeps_its_clock
     assert "partner/partner-push" in notified(decision)
 
 
-def test_the_technical_channel_escalates_on_its_own_and_a_disarm_does_not_stop_it():
+def technical_house(second_step: int = 60):
+    """The house, plus a smoke detector and an escalation of its own."""
     config = escalating_house()
     technical = ResponseProfile(
         "technical",
         "Technical",
         actions=(
             step("t0", 0, "luca", "luca-push", moment=Moment.TECHNICAL_RAISED),
-            step("t1", 60, "partner", "partner-push", moment=Moment.TECHNICAL_RAISED),
+            step(
+                "t1",
+                second_step,
+                "partner",
+                "partner-push",
+                moment=Moment.TECHNICAL_RAISED,
+            ),
         ),
     )
-    config = replace(
+    return replace(
         config,
         profiles=(*config.profiles, technical),
         zones=(
@@ -296,7 +310,10 @@ def test_the_technical_channel_escalates_on_its_own_and_a_disarm_does_not_stop_i
         ),
         settings=replace(config.settings, technical_profile_id="technical"),
     )
-    world = World(config)
+
+
+def test_the_technical_channel_escalates_on_its_own_and_a_disarm_does_not_stop_it():
+    world = World(technical_house())
     world.set(SMOKE, "on")
     assert notified(world.last) == ["luca/luca-push"]
 
@@ -518,3 +535,82 @@ def test_a_walk_test_never_holds_back_the_escalation_of_a_tamper_zone():
 
     assert notified(world.last) == ["luca/luca-push"]
     assert notified(world.advance(60)) == ["luca/luca-sms"]
+
+
+# --- what the agents' review closed --------------------------------------------------
+
+
+def test_a_step_that_reaches_nobody_says_so_instead_of_vanishing():
+    """A notification that never went out is the silence this whole feature
+    exists to end, so it is recorded with the reason skip_reason gave."""
+    config = escalating_house()
+    config = replace(
+        config,
+        contacts=(
+            replace(config.contacts[0], enabled=False),
+            replace(config.contacts[1], enabled=False),
+        ),
+    )
+    world = World(config)
+    fire(world)
+
+    assert notified(world.last) == []
+    skipped = [
+        o for o in world.last.occurrences if o.moment is Moment.ESCALATION_SKIPPED
+    ]
+    assert skipped and skipped[0].detail["steps"] == "0"
+    assert skipped[0].detail["reasons"] == SKIP_QUIET_HOURS
+
+
+def test_a_technical_escalation_does_not_outlive_the_zone_that_raised_it():
+    """Deleting the zone empties the channel, and an escalation nobody can
+    acknowledge — the technical acknowledgement refuses when nothing is
+    pending — would call people about an alarm that no longer exists."""
+    config = technical_house()
+    world = World(config)
+    world.set(SMOKE, "on")
+    assert world.state.escalation(EscalationKind.TECHNICAL) is not None
+
+    world.config = replace(
+        world.config, zones=tuple(z for z in world.config.zones if z.id != "smoke")
+    )
+    assert notified(world.advance(60)) == []
+    assert world.state.escalation(EscalationKind.TECHNICAL) is None
+
+
+def test_a_restart_that_cannot_say_how_long_it_was_is_still_a_restart():
+    """`down_since` is optional and a state file may not carry it. Unknown is
+    read as an outage, not as no outage: the alternative is every overdue
+    step going out at once, which is what decision 5 forbids."""
+    world = World(escalating_house())
+    fire(world)
+    world.now += timedelta(hours=4)
+    decision = world.send(Startup(down_since=None))
+
+    assert notified(decision) == []
+    assert any(o.moment is Moment.ESCALATION_SKIPPED for o in decision.occurrences)
+
+
+def test_an_escalation_whose_profile_was_deleted_ends_with_a_row_after_a_restart():
+    """The same event must read the same in the log whether the profile was
+    deleted before or after the restart."""
+    from custom_components.foyer.store.schema import state_from_dict, state_to_dict
+
+    world = World(escalating_house())
+    fire(world)
+    stored = state_to_dict(world.state)
+
+    world.config = replace(
+        world.config,
+        profiles=tuple(p for p in world.config.profiles if p.id != "loud"),
+        areas=tuple(replace(a, response_profile_id=None) for a in world.config.areas),
+    )
+    world.state = state_from_dict(stored, world.config)
+    assert world.state.escalations != ()
+
+    decision = world.advance(60)
+    exhausted = [
+        o for o in decision.occurrences if o.moment is Moment.ESCALATION_EXHAUSTED
+    ]
+    assert exhausted and exhausted[0].detail["cause"] == "profile_gone"
+    assert decision.state.escalations == ()

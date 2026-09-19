@@ -12,9 +12,10 @@ Three things are worth reading before configuring anything:
   and hands to the service.
 - **Every internet-dependent channel fails at exactly the wrong moment.**
   Somebody who cuts the power or the fibre has cut the push notification, the
-  Telegram message and the Twilio call with it. `docs/resilience.md` says this
-  at length; the short version is a UPS on the router and at least one local
-  GSM channel somewhere in the list.
+  Telegram message and the Twilio call with it. The specification makes a
+  document of its own out of this (§7.3, still to be written); the short
+  version is a UPS on the router and at least one local GSM channel somewhere
+  in the list.
 - **Test every channel from page 6.** The button beside each one really sends.
   The failure this prevents is discovering during the emergency that the
   emergency channel was misconfigured, and it is the reason the button exists
@@ -38,12 +39,19 @@ The rule behind the table: put the channel that survives a cut internet
 connection **somewhere in the list**, not at the bottom. A list whose first
 three steps all depend on the same router is one step long.
 
+**A note on the service names below.** The Companion app, Pushover and the GSM
+modem create a service with a fixed name. The rest are YAML `notify:`
+platforms, whose service is named after the `name:` you give the platform —
+leave it out and Home Assistant creates `notify.notify` instead. The names
+here assume you set `name:` to match, and the dropdown on page 6 shows you
+what this installation really has.
+
 ---
 
 ## Home Assistant Companion app
 
 The channel most households already have, and the only one in this document
-that Foyer can hand an acknowledgement button to.
+whose button comes back to Foyer.
 
 **Service:** `notify.mobile_app_<device>`, created by the app itself when it
 signs in. If the service is missing, the phone has not completed setup.
@@ -53,7 +61,7 @@ channel. Foyer then sends the notification with an action whose id is
 `FOYER_ACKNOWLEDGE`, and listens for the `mobile_app_notification_action`
 event the app fires when it is pressed. Nothing else is needed: no automation,
 no blueprint. The acknowledgement goes through the same check every other one
-does, and the log records the contact and the channel that answered.
+does, and the log records the contact the notification had gone to.
 
 **iOS critical alerts.** An alarm at four in the morning is exactly what they
 exist for: they sound through Focus, Do Not Disturb and the silent switch. Put
@@ -71,16 +79,30 @@ The phone asks for permission the first time one arrives, and refuses them
 silently until it is granted — so send a test from page 6 while the phone is in
 your hand, not while the house is being burgled.
 
-**Android.** The equivalent is a high-importance channel plus
-`ttl: 0` and `priority: high`, which keeps the notification out of the
-battery-saving queue:
+**What comes back.** The action carries which alarm it belongs to and which
+contact it was sent to, and Foyer reads them from the event and from
+`action_data`, whichever the app fills in. An answer that arrives with neither
+still acknowledges: it acknowledges **both** the intrusion incident and the
+technical channel, for the same reason `button.foyer_acknowledge` does — the
+person pressed a button that says "I have seen it", and guessing which alarm
+they meant is how a smoke detector closes a burglary.
+
+**Android.** These four keys keep the notification out of the battery-saving
+queue and out of the notification drawer's quiet pile:
 
 ```yaml
 ttl: 0
 priority: high
 channel: Foyer alarm
 importance: high
+media_stream: alarm_stream_max
 ```
+
+The last one is the part that matters at four in the morning, and the part
+that is not simply "delivered promptly": it plays the notification at alarm
+volume, through the silent switch and through Do Not Disturb. The app asks for
+the Do Not Disturb permission the first time, in its own settings, so — again
+— send a test from page 6 with the phone in your hand.
 
 ---
 
@@ -126,7 +148,7 @@ URL you host.
 
 **The DTMF keypress.** §7.2 of the specification lists "a key press during the
 call" among the four ways to acknowledge, and this is how it is wired: the
-TwiML gathers a digit and posts it to Foyer's acknowledgement webhook.
+TwiML gathers a digit and posts to Foyer's acknowledgement webhook.
 
 ```xml
 <Response>
@@ -135,6 +157,21 @@ TwiML gathers a digit and posts it to Foyer's acknowledgement webhook.
   </Gather>
 </Response>
 ```
+
+**Foyer does not read the digit.** The POST itself is the acknowledgement:
+whichever key was pressed, and whatever else can reach that URL, answers the
+alarm. `<Gather>` only posts when a key is pressed, which is what makes the
+recipe work — but it is worth knowing that the digit is not a second check.
+
+By default this acknowledges the intrusion incident. To answer the technical
+channel instead — a call placed about the smoke detector — put it in the
+action's query string, which is the part of the URL you control:
+`…/api/webhook/YOUR_ID?target=technical`.
+
+And if this installation has raised the code policy for acknowledging (page 7;
+it needs no code by default), then neither this nor the button in a push
+notification can answer at all: a webhook carries no code. Leave that one
+operation codeless, or do not rely on these two paths.
 
 **Read this before switching the webhook on.** A Home Assistant webhook is
 **not authenticated**. Whoever holds that URL — or intercepts it, since the
@@ -209,6 +246,18 @@ households that already use Signal; not worth it as a first channel.
 
 ---
 
+## A notify entity is not a notify service
+
+Both appear in the dropdown, and they are not equivalent. A `notify.*`
+**service** takes a title, a target and whatever extra data the transport
+understands — which is what carries an iOS critical alert, a Telegram photo or
+the acknowledge button. A notify **entity** takes a message and a title and
+nothing else; everything else is dropped, and Foyer says so in the Home
+Assistant log rather than letting it vanish.
+
+So: for a channel that needs to do more than say a sentence, pick the service.
+Page 6 says the same thing beside the tick-box.
+
 ## What Foyer sends
 
 A notification carries the message the action renders, with the fixed variable
@@ -226,10 +275,12 @@ channel declared able to carry one.
 ## When a send fails
 
 The step is recorded as failed in the log, under `action`, with the error the
-transport gave — and Foyer retries it once, a few seconds later, for the
-service that is not ready yet after a restart. After that the escalation
-carries on at its own times: a channel that is dead stays dead, and the next
-step is what reaches somebody.
+transport gave — and a send to a contact's channel is retried once, a few
+seconds later, for the service that is not ready yet after a restart. (A
+notification that names a service directly, rather than a contact, is not
+retried.) The retry runs on its own, so the alarm does not wait for it, and
+the escalation carries on at its own times: a channel that is dead stays dead,
+and the next step is what reaches somebody.
 
 Checking that a channel is *still* real — that the service still exists, that
 the modem is still registered, that the last send worked — is system health,
