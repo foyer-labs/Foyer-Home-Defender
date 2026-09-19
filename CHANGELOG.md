@@ -5,7 +5,7 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased] — walk the house, and press the button before the night you need it
+## [0.1.0-beta.5] — walk the house, and press the button before the night you need it
 
 Phase 3, part two. The other half of the verification story: you can now find
 out which zones never saw you without a siren sounding, and prove your
@@ -31,7 +31,11 @@ an emergency.
   otherwise leave forty alarms in the log and alarm memory on every one.
 
   Leaving it disarms exactly the areas it armed, and never one that was
-  already armed before it started.
+  already armed before it started — and never one that is in alarm or holds
+  its memory. A disarm stops the sirens and acknowledges the incident, so the
+  safeguard that keeps `always_on` zones live would otherwise switch off the
+  alarm it had protected, fifteen minutes later, with nobody having seen it.
+  The row says which areas were left armed and why.
 - **The safeguards, none of them optional.** An automatic exit that cannot be
   switched off — fifteen minutes without a detection by default, each
   detection pushing it back so a large house can be walked in one pass, and an
