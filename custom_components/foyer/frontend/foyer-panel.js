@@ -4647,7 +4647,7 @@ function Y(e) {
 }
 var Ot = class extends I {
 	constructor(...e) {
-		super(...e), this._tab = "diagnostics", this._busy = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set();
+		super(...e), this._tab = "diagnostics", this._busy = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set();
 	}
 	static {
 		this.properties = {
@@ -4661,7 +4661,8 @@ var Ot = class extends I {
 			_start: { state: !0 },
 			_overrides: { state: !0 },
 			_entities: { state: !0 },
-			_code: { state: !0 }
+			_code: { state: !0 },
+			_codeWanted: { state: !0 }
 		};
 	}
 	updated() {
@@ -4681,7 +4682,7 @@ var Ot = class extends I {
 	}
 	async _run() {
 		if (!this.ctx) return;
-		this._busy = !0, this._error = void 0;
+		this._busy = !0, this._error = void 0, this._codeWanted = !1;
 		let e = {
 			scenario_id: this._scenario || null,
 			start: this._start ? new Date(this._start).toISOString() : null,
@@ -4692,7 +4693,8 @@ var Ot = class extends I {
 		try {
 			this._simulation = await this.ctx.simulate(e);
 		} catch (e) {
-			this._simulation = void 0, this._error = String(e?.message ?? e);
+			let t = e?.code;
+			this._codeWanted = t === "bad_code" || t === "code_required", this._simulation = void 0, this._error = this._codeWanted ? void 0 : String(e?.message ?? e);
 		} finally {
 			this._busy = !1;
 		}
@@ -5019,29 +5021,11 @@ var Ot = class extends I {
           <span class="hint">${B(e, "test.trace.subtitle")}</span>
         </div>
         <div class="card-bd">
+          ${this._premiseNeedsCode(t) ? this._renderCodePrompt(e) : k}
           ${t ? D`
                 <ol class="trace">
                   ${t.steps.filter((e) => this._worthShowing(e)).map((t) => this._renderStep(e, t))}
                 </ol>
-                ${this._premiseNeedsCode(t) ? D`<div class="notice">
-                      <p>${B(e, "test.simulator.premise_code")}</p>
-                      <input
-                        type="password"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        .value=${this._code}
-                        @change=${(e) => this._code = e.target.value}
-                      />
-                      <div class="actions">
-                        <button
-                          class="btn primary"
-                          ?disabled=${this._busy}
-                          @click=${() => void this._run()}
-                        >
-                          ${B(e, "test.simulator.run")}
-                        </button>
-                      </div>
-                    </div>` : k}
                 ${t.truncated ? D`<p class="notice">${B(e, "test.trace.truncated")}</p>` : k}
               ` : D`<p class="empty">
                 ${B(e, this._busy ? "common.loading" : "test.trace.empty")}
@@ -5051,11 +5035,35 @@ var Ot = class extends I {
     `;
 	}
 	_premiseNeedsCode(e) {
-		let t = e.steps.find((e) => e.kind === "request");
+		if (this._codeWanted) return !0;
+		let t = e?.steps.find((e) => e.kind === "request");
 		return !!t && !t.accepted && (t.reason === "code_required" || t.reason === "bad_code");
 	}
 	_worthShowing(e) {
 		return e.kind === "setup" ? !1 : e.kind === "zone" || !e.accepted || e.occurrences.length > 0 || e.areas.length > 0 || e.loose_actions.length > 0;
+	}
+	_renderCodePrompt(e) {
+		return D`
+      <div class="notice">
+        <p>${B(e, "test.simulator.premise_code")}</p>
+        <input
+          type="password"
+          inputmode="numeric"
+          autocomplete="off"
+          .value=${this._code}
+          @change=${(e) => this._code = e.target.value}
+        />
+        <div class="actions">
+          <button
+            class="btn primary"
+            ?disabled=${this._busy}
+            @click=${() => void this._run()}
+          >
+            ${B(e, "test.simulator.run")}
+          </button>
+        </div>
+      </div>
+    `;
 	}
 	_renderStep(e, t) {
 		let n = this.ctx, r = t.zone_id ? n.status.zones.find((e) => e.id === t.zone_id)?.name ?? t.zone_id : "";

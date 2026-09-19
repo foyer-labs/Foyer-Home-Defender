@@ -220,9 +220,7 @@ class Simulation:
 
 
 def _initial(
-    config: FoyerConfig,
-    request: SimulationRequest,
-    live: Mapping[str, EntityState],
+    request: SimulationRequest, live: Mapping[str, EntityState]
 ) -> dict[str, EntityState]:
     """The world the run starts in: the real one, with the overrides not yet
     applied — they are applied as changes, because a change is what a zone
@@ -300,7 +298,7 @@ def run(
     hypothetical, and inheriting a real alarm in progress would answer a
     different one.
     """
-    entities = _initial(config, request, live or {})
+    entities = _initial(request, live or {})
     state = RuntimeState(areas={a.id: AreaRuntime() for a in config.areas})
     now = request.start
     deadline = request.start + timedelta(
@@ -308,7 +306,6 @@ def run(
     )
     steps: list[SimStep] = []
     pending = _queue(config, request)
-    truncated = False
 
     def send(event: Event, at: datetime, kind: str) -> Decision:
         nonlocal state, entities
