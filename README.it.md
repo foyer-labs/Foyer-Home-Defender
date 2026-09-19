@@ -22,24 +22,24 @@
 
 > ### Stato: beta. Il nucleo dell'allarme funziona, e puoi chiedergli cosa farebbe prima di fidartene.
 >
-> Può proteggere una casa, e lo sta facendo. Siamo alle **prime beta**: agli
-> utenti, ai codici per persona e ai permessi si aggiungono i dispositivi di
-> inserimento fisici — tastiere Ring e Zigbee, tag NFC, badge e telecomandi —
-> con il contratto dei servizi `foyer.*` e MQTT nelle due direzioni. Un
-> tastiera riceve una risposta vera: distingue «codice sbagliato» da
-> «bloccato dalla finestra della cucina», invece di fallire in silenzio.
-> Accanto c'è tutta la storia della verifica: il simulatore, che prova la
-> decisione senza che succeda nulla; la **prova di percorso**, che inserisce
-> l'impianto per davvero trattenendo ogni risposta e ti dice quali zone non ti
-> hanno mai visto passare; e la **prova delle azioni**, che fa suonare la
-> sirena sul serio, così lo scopri adesso e non durante l'emergenza. Una prova
-> di percorso non silenzia mai un rivelatore di fumo: le zone 24h, tamper,
-> tecniche e panico restano completamente attive. Fuori resta la scalata delle
-> notifiche.
+> Protegge la casa di chi lo scrive. Con questa versione è completa la parte
+> che serve a verificarlo prima di fidarsene: il simulatore, che prova una
+> decisione senza che succeda nulla; la **prova di percorso** (*walk test*),
+> che inserisce l'impianto per davvero trattenendo ogni risposta e ti dice
+> quali zone non ti hanno mai visto passare; e la **prova delle azioni**, che
+> fa suonare la sirena sul serio, così un canale d'emergenza configurato male
+> lo scopri adesso e non durante l'emergenza. Una prova di percorso non
+> silenzia mai un rivelatore di fumo: le zone 24h, tamper, tecniche e panico
+> restano completamente attive. Prima di queste era arrivato l'inserimento
+> fisico — tastiere Ring e Zigbee, tag NFC, badge e telecomandi, il contratto
+> `foyer.*` e MQTT nelle due direzioni — e prima ancora utenti, codici per
+> persona e permessi. Manca ancora la scalata delle notifiche finché qualcuno
+> non risponde.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
-cartella di automazioni, e vuoi inserire e disinserire da una tastiera, un tag
+cartella di automazioni, preferisci controllare una configurazione invece di
+sperare che sia giusta, e vuoi inserire e disinserire da una tastiera, un tag
 o un badge con un registro che dice chi è stato.
 
 **Non ancora, se** ti serve che una notifica senza risposta salga da push a
@@ -66,7 +66,7 @@ oggi è la scelta prudente.
   possono chiederne di più, e ogni riga del registro dice chi è stato. In più
   un codice sotto costrizione, che disinserisce normalmente e fa scattare un
   allarme silenzioso, e il blocco dopo codici sbagliati ripetuti.
-- **Inserimento dalla tastiera alla porta.** Tastiere Ring e Zigbee, tag
+- **Una tastiera accanto alla porta, un tag in tasca.** Tastiere Ring e Zigbee, tag
   NFC, badge RFID e telecomandi. Foyer non parla con i singoli modelli: espone
   un contratto — i servizi `foyer.*` e MQTT nelle due direzioni, con topic
   configurabili — e risponde in modo strutturato, così una tastiera può emettere
@@ -115,7 +115,8 @@ oggi è la scelta prudente.
 <summary><strong>Il resto di ciò che c'è già</strong></summary>
 
 - **Otto preimpostazioni di zona** su proprietà modificabili: istantanea,
-  ritardata, percorso (allarma solo se prima si è aperta una zona ritardata),
+  ritardata, percorso interno (allarma solo se prima si è aperta una zona
+  ritardata),
   24h, antimanomissione, tecnica, antirapina, e zone chiave che inseriscono o
   disinseriscono invece di allarmare.
 - **Ritardi di uscita e di ingresso** — con la possibilità di saltare quello di
@@ -247,7 +248,7 @@ vera non produce nulla:
   predefinita, con ogni rilevazione che li rimanda — così una casa grande si
   cammina in un giro solo — e un tetto assoluto che la chiude comunque. Non
   c'è un'impostazione che disattivi l'uscita automatica.
-- **Lo dice ovunque.** Un banner nel pannello e su ogni layout della scheda,
+- **Lo dice ovunque.** Un banner nel pannello e su ogni layout della card,
   `badge` compreso, che non ha nulla da premere e lo mostra lo stesso; più una
   notifica all'inizio e alla fine, ed entrambe nel registro con la persona che
   l'ha avviata.
@@ -260,8 +261,8 @@ esattamente le aree che la prova aveva inserito.
 **La prova delle azioni** è un pulsante accanto a ogni azione, e si esegue
 davvero. È il punto: l'errore che evita è scoprire durante l'emergenza che il
 canale d'emergenza era configurato male. Chiede conferma, richiede il permesso
-`test_actions` e un codice, fa suonare una sirena per tre secondi qualunque
-durata abbia configurata, e lascia nel registro una riga marcata come prova —
+`test_actions` e un codice, fa suonare la sirena per tre secondi qualunque
+sia la durata configurata, e lascia nel registro una riga marcata come prova —
 mai come l'allarme che imita.
 
 ## Tastiere, tag e telecomandi
@@ -297,7 +298,7 @@ chi, da quale canale, con quale dispositivo.
   `event.*`, la persona a cui appartiene, e cosa fa una scansione: nessuna
   automazione da scrivere, e il registro nomina quella persona — che è tutto il
   motivo per cui un tag vale come canale che identifica. Una tastiera
-  condiviso è l'opposto: lì il codice *è* l'identità, e l'esenzione dal codice
+  condivisa è l'opposto: lì il codice *è* l'identità, e l'esenzione dal codice
   per persona non può valere. Un tag però non ha nessun codice da digitare:
   chi lo trova inserisce e disinserisce come chi lo possiede, quindi va
   trattato come una chiave.
@@ -308,15 +309,15 @@ chi, da quale canale, con quale dispositivo.
 
 - **Tre blueprint pronti**: Ring Alarm Keypad v2 su Z-Wave JS con l'anello LED
   e i conti alla rovescia di uscita e di ingresso, una tastiera Zigbee
-  generico via Zigbee2MQTT, e tag e telecomandi per i casi che la
+  generica via Zigbee2MQTT, e tag e telecomandi per i casi che la
   configurazione nativa non copre apposta. Due avvertenze, perché servono: i
   valori degli indicatori LED del Ring sono mappature della comunità, non
   documentazione del produttore e vanno verificati sul tuo firmware con
   `zwave_js.set_value`; e i cloni della famiglia Tuya cambiano i nomi delle
   azioni e i campi da una revisione di firmware all'altra, quindi la tua
   tastiera Zigbee va guardata una volta sul suo topic prima di fidartene. Quello che
-  i blueprint fanno con Foyer funziona comunque: a sbagliare è solo ciò che il
-  tastiera ti mostra.
+  i blueprint fanno con Foyer funziona comunque: a essere sbagliato è solo
+  quello che la tastiera ti mostra.
 
 Ogni blueprint si importa sul tuo Home Assistant con un pulsante, da
 [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md),
@@ -334,19 +335,21 @@ card.
 
 ## Cosa manca ancora, e conta
 
-- **Nessuna rubrica, e nessun pulsante di prova accanto a un canale.** La
-  prova delle azioni copre ogni azione configurata e qualunque servizio
-  `notify` direttamente; un pulsante accanto ai canali di ciascun contatto
-  arriva con la rubrica. *Prossima versione.*
+- **Nessuna rubrica dei contatti, e nessuna scalata delle notifiche.** Una
+  notifica va a un servizio `notify` e si ferma lì: non sale da push a SMS a
+  telefonata finché qualcuno non risponde, e non c'è ancora dove dire
+  attraverso chi debba salire. La prova delle azioni copre già ogni azione
+  configurata e, direttamente, qualunque servizio `notify`; un pulsante
+  accanto ai canali di ciascun contatto arriva con la rubrica.
+  *Prossima versione.*
 - **Nessuna regola automatica.** Inserire a orario, sulla presenza o su una
   condizione tua è ancora un'automazione che scrivi tu, che chiama
   `foyer.arm`. Il conto alla rovescia annullabile che serve qui è lo stesso
   della scalata delle notifiche, quindi le due cose arrivano insieme e non
   prima: scriverlo due volte sarebbe spreco. *Dopo.*
-- **Nessuna rubrica dei contatti e nessuna scalata delle notifiche.** Vanno
-  direttamente a un servizio
-  `notify`; non salgono da push a SMS a telefonata finché qualcuno non
-  risponde. *Dopo.*
+- **Nessuna tastiera ESPHome nostra.** Una costruzione fai-da-te rientra nel
+  contratto come qualunque altra, ma questo progetto non ne mantiene una
+  in v1.
 
 L'ordine è fissato e scritto, con quello che ogni passo deve dimostrare prima
 di contare come fatto:
@@ -372,9 +375,10 @@ copia il codice. Dove differiscono oggi:
 | **Tag NFC e telecomandi** | Nativi, legati a una persona, senza automazioni da scrivere | Tramite automazioni |
 | **Gruppi di verifica (N su M)** | Sì, con i membri che mantengono la propria risposta | — |
 | **Maturità** | Beta. Un solo autore, pochi mesi di vita | Anni di utilizzo, moltissime installazioni |
-| **Italiano** | Pannello, card, testi di aiuto e documentazione utente | Interfaccia tradotta |
+| **Italiano** | Pannello, card e aiuto contestuale di ogni pagina | Interfaccia tradotta |
 
-La tastiera non è più la riga che separa i due progetti. Quella che decide
+Le righe in cui Alarmo ha un trattino sono tre, e sono tre modi di
+controllare una configurazione invece di sperarci. Quella che decide
 resta la maturità: se vuoi un impianto che sia già stato collaudato da molti
 altri prima che da te, usa Alarmo.
 
@@ -412,7 +416,9 @@ altri prima che da te, usa Alarmo.
 </p>
 
 Come si legge una traccia di decisione, e cosa vale la pena provare prima di
-fidarsi di una configurazione: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
+fidarsi di una configurazione:
+[docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md)
+(in inglese).
 
 ## Modello di sicurezza
 
@@ -547,7 +553,7 @@ crei il primo utente non viene chiesto nulla a nessuno e chiunque abbia accesso
 a Home Assistant può disinserire — il pannello lo dice apertamente finché dura.
 Una persona può essere esentata dal digitare il codice sui canali che già sanno
 chi è, come l'interfaccia di Home Assistant con il suo account; su una tastiera
-condiviso il codice *è* l'identità, quindi lì l'esenzione non vale.
+condivisa il codice *è* l'identità, quindi lì l'esenzione non vale.
 
 </details>
 

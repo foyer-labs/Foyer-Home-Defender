@@ -313,13 +313,12 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No contact list, and no test button beside a channel.** The action test
-  covers every configured action and any `notify` service directly; a test
-  button beside each contact's channels arrives with the address book.
-  *Next release.*
-- **No escalation, and no contact list.** Notifications go to a `notify`
-  service directly; they do not climb from push to SMS to a phone call until
-  somebody acknowledges. *After that.*
+- **No contact list, and no escalation.** A notification goes to a `notify`
+  service and stops there: it does not climb from push to SMS to a phone call
+  until somebody acknowledges, and there is nowhere yet to say who it should
+  climb through. The action test already covers every action you have
+  configured, and any `notify` service directly; a test button beside each
+  contact's channels arrives with the address book. *Next release.*
 - **No automatic rules.** Arming on a schedule, on presence or on a condition
   of your own is still an automation you write, calling `foyer.arm`.
   *After that.*
@@ -345,7 +344,8 @@ its code. Where they differ today:
 | **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Ordinary sensors |
 | **One incident per break-in** | Yes, with one acknowledgement | An alarm per sensor |
 | **Users, codes, permissions** | Yes: one code each, per-operation policy, duress code, lockout | Yes, per-user codes |
-| **Keypads, tags, MQTT** | Yes, and a refused command comes back with a stable reason and the blocking zones by name, so a keypad can sound different for *wrong code* and *kitchen window open* | Yes |
+| **Keypads, MQTT** | Yes, and a refused command comes back with a stable reason and the blocking zones by name, so a keypad can sound different for *wrong code* and *kitchen window open* | Yes |
+| **NFC tags and remotes** | Native, declared on a page and bound to a person, with no automation to write | Via automations |
 | **Verification groups (N of M)** | Yes, with the members keeping their own response | — |
 | **Maturity** | Beta. One author, months old | Years of use, a large installed base |
 
@@ -354,6 +354,12 @@ of, use Alarmo. Foyer is a beta, and the honest difference between the two
 columns above is time.
 
 ## How you can check it rather than trust it
+
+Three of these you can do this evening: rehearse a night in the
+[simulator](#asking-what-would-happen-without-anything-happening),
+[walk the house](#walking-the-house-and-pressing-the-button) and see which
+zones never noticed you, and press the test button beside your siren. The rest
+are structural, and they are why the first three are worth believing.
 
 - **The part that decides is a pure function.** "This zone opened, this area is
   armed, what now?" is answered by code that cannot reach Home Assistant, has
@@ -377,8 +383,8 @@ columns above is time.
 - **The changelog says what changed in behaviour**, not "various fixes",
   because that is what you need in order to decide whether to take an update.
 
-How to read a decision trace, and what is worth rehearsing before you trust a
-configuration: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
+All three verification tools, and how to read what they tell you:
+[docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-log-en.png" alt="The log: arming, an alarm, an arming refused with the zone that blocked it, the restart gap, a configuration change with its old and new value, and a notification that failed" width="900">
@@ -556,7 +562,7 @@ which version of Foyer and of Home Assistant, what you expected, and what the
 log page shows — the row usually contains the answer, so a screenshot of it is
 worth more than a description. English or Italian, whichever you prefer.
 
-To be told when the walk test lands, watch the repository: releases are
+To be told when escalation lands, watch the repository: releases are
 announced there, and the [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)
 says what changed in behaviour every time.
 
