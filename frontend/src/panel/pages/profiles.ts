@@ -10,6 +10,7 @@ import type {
   ActionConfig,
   ActionKind,
   Condition,
+  NotifyContact,
   ProfileConfig,
   Problem,
 } from "../../shared/types";
@@ -67,6 +68,10 @@ const MOMENT_GROUPS: Record<string, string[]> = {
 // reads `photo`, and neither complains about the other's.
 const ATTACHMENTS = ["companion", "telegram"];
 
+// What an escalation step may be: it reaches a person (§7.2). A siren five
+// minutes out would outlive the cutoff of §5.3.
+const ESCALATABLE: ActionKind[] = ["notify", "persistent_notification"];
+
 const MULTI_ENTITY: ActionKind[] = ["siren", "light", "switch"];
 const SINGLE_ENTITY: ActionKind[] = ["camera", "scene", "tts"];
 
@@ -87,7 +92,21 @@ function blankAction(kind: ActionKind): ActionConfig {
     conditions: [],
     condition_mode: "all",
     enabled: true,
+    // An ordinary action. It becomes an escalation step the moment somebody
+    // gives it an offset, and nothing else about it changes (§7.2).
+    escalation_offset: null,
   };
+}
+
+/** Who a notify action reaches, read the way the backend reads it. */
+function notifyContacts(action: ActionConfig): NotifyContact[] {
+  const raw = (action.params as { contacts?: unknown }).contacts;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((entry) =>
+    typeof entry === "string"
+      ? { contact_id: entry, channel_id: null }
+      : (entry as NotifyContact),
+  );
 }
 
 class FoyerPageProfiles extends LitElement {
@@ -353,6 +372,103 @@ class FoyerPageProfiles extends LitElement {
     `;
   }
 
+  /** The address book, and which channel of each contact (§7.1, §7.2).
+   *
+   * A channel left unchosen means the contact's own order of priority
+   * decides, which is what an ordered channel list is for: step 0 reaches
+   * them however they are best reached, and a later step names the channel
+   * that survives a cut fibre. */
+  private _renderContacts(s: Strings, action: ActionConfig, index: number) {
+    const contacts = this.ctx?.config?.contacts ?? [];
+    const chosen = notifyContacts(action);
+    if (!contacts.length) {
+      return html`<span class="hint">${t(s, "profiles.no_contacts")}</span>`;
+    }
+    const update = (next: NotifyContact[]): void =>
+      this._setParam(index, "contacts", next.length ? next : null);
+    return html`<div class="field">
+      <span class="lbl">${t(s, "field.contacts")}</span>
+      ${contacts.map((contact) => {
+        const ref = chosen.find((c) => c.contact_id === contact.id);
+        return html`<div class="contact-row">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${ref !== undefined}
+              @change=${(e: Event) =>
+                update(
+                  (e.target as HTMLInputElement).checked
+                    ? [...chosen, { contact_id: contact.id!, channel_id: null }]
+                    : chosen.filter((c) => c.contact_id !== contact.id),
+                )}
+            />
+            <span>${contact.name}</span>
+          </label>
+          ${ref
+            ? html`<select
+                @change=${(e: Event) =>
+                  update(
+                    chosen.map((c) =>
+                      c.contact_id === contact.id
+                        ? {
+                            ...c,
+                            channel_id: (e.target as HTMLSelectElement).value || null,
+                          }
+                        : c,
+                    ),
+                  )}
+              >
+                <option value="" ?selected=${!ref.channel_id}>
+                  ${t(s, "profiles.highest_channel")}
+                </option>
+                ${contact.channels.map(
+                  (channel) => html`<option
+                    .value=${channel.id ?? ""}
+                    ?selected=${channel.id === ref.channel_id}
+                  >
+                    ${t(s, `channel_kind.${channel.kind}`)} · ${channel.service}
+                  </option>`,
+                )}
+              </select>`
+            : nothing}
+        </div>`;
+      })}
+      <span class="hint">${t(s, "profiles.contacts_hint")}</span>
+    </div>`;
+  }
+
+  /** The offset that turns this notification into an escalation step (§7.2).
+   *
+   * Offered only where there is something to escalate: an incident and the
+   * technical channel are the two things with an acknowledgement, so they
+   * are the two moments a step can answer. */
+  private _renderEscalation(s: Strings, action: ActionConfig, index: number) {
+    const moments = this.ctx?.meta?.escalation_moments ?? [];
+    if (!ESCALATABLE.includes(action.kind)) return nothing;
+    if (!action.moments.length || !action.moments.every((m) => moments.includes(m))) {
+      return action.escalation_offset === null
+        ? nothing
+        : html`<span class="hint">${t(s, "profiles.escalation_moment_hint")}</span>`;
+    }
+    const bounds = this.ctx?.meta?.bounds.escalation_offset ?? [0, 3600];
+    return html`<label class="field">
+      <span class="lbl">${t(s, "field.escalation_offset")}</span>
+      <input
+        type="number"
+        min=${bounds[0]}
+        max=${bounds[1]}
+        .value=${action.escalation_offset === null ? "" : String(action.escalation_offset)}
+        @input=${(e: Event) => {
+          const raw = (e.target as HTMLInputElement).value;
+          this._setAction(index, {
+            escalation_offset: raw === "" ? null : Number(raw),
+          });
+        }}
+      />
+      <span class="hint">${t(s, "profiles.escalation_hint")}</span>
+    </label>`;
+  }
+
   private _renderAction(s: Strings, action: ActionConfig, index: number) {
     const open = this._open === index;
     return html`
@@ -371,6 +487,7 @@ class FoyerPageProfiles extends LitElement {
           open
             ? html`<div class="action-bd">
                 ${this._renderParams(s, action, index)} ${this._renderMoments(s, action, index)}
+                ${this._renderEscalation(s, action, index)}
                 ${this._renderConditions(s, action, index)}
                 <div class="actions">
                   <button class="btn" @click=${() => this._moveAction(index, -1)}>&uarr;</button>
@@ -629,16 +746,21 @@ class FoyerPageProfiles extends LitElement {
     }
     switch (action.kind) {
       case "notify":
-        parts.push(
-          this._suggested(
-            s,
-            action,
-            index,
-            "service",
-            notifyTargets(this.ctx!.hass),
-            t(s, "profiles.notify_hint"),
-          ),
-        );
+        // Contacts or a service, never both: the address book of §7.1, or
+        // the service every installation already writes (part 1 decision 8).
+        parts.push(this._renderContacts(s, action, index));
+        if (!notifyContacts(action).length) {
+          parts.push(
+            this._suggested(
+              s,
+              action,
+              index,
+              "service",
+              notifyTargets(this.ctx!.hass),
+              t(s, "profiles.notify_hint"),
+            ),
+          );
+        }
         parts.push(this._text(s, action, index, "title"));
         parts.push(this._text(s, action, index, "message", messageHint));
         parts.push(
@@ -998,6 +1120,15 @@ class FoyerPageProfiles extends LitElement {
     formStyles,
     stateStyles,
     css`
+      .contact-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 0;
+      }
+      .contact-row select {
+        flex: 1;
+      }
       .page-intro {
         margin: 0 4px 12px;
         color: var(--secondary-text-color);

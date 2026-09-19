@@ -185,6 +185,13 @@ class Scheduled:
     profile_id: str | None = None
     moment: str | None = None
     area_id: str | None = None
+    # An escalation step still to come (§7.2): which step it is, how far
+    # from the start, and who it reaches. This is the "⏱ escalation step 1
+    # at +60s → Luca (SMS)" of §11.2's own example.
+    step: int | None = None
+    offset: int | None = None
+    contact_ids: tuple[str, ...] = ()
+    channel_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -576,7 +583,9 @@ def _loose(intent: ActionIntent) -> PlannedAction:
         kind=intent.kind,
         name="",
         moment=intent.moment.value,
-        profile_id=None,
+        # An escalation step belongs to a profile even though it belongs to
+        # no sequence: the trace names the policy that reached somebody.
+        profile_id=intent.profile_id,
         ran=True,
         params=dict(intent.params),
     )
@@ -612,6 +621,21 @@ def _scheduled(decision: Decision) -> tuple[Scheduled, ...]:
     out.extend(
         Scheduled(at=when, kind="bypass_ends")
         for when in decision.state.bypass_until.values()
+    )
+    # Read off the Decision, never predicted by a second code path: the
+    # engine says which steps are still ahead and when (INV-1).
+    out.extend(
+        Scheduled(
+            at=step.due,
+            kind="escalation_step",
+            profile_id=step.profile_id,
+            moment=step.kind.value,
+            step=step.index,
+            offset=step.offset,
+            contact_ids=step.contact_ids,
+            channel_ids=step.channel_ids,
+        )
+        for step in decision.escalation
     )
     return tuple(sorted(out, key=lambda s: s.at))
 
@@ -749,6 +773,10 @@ def as_dict(simulation: Simulation, config: FoyerConfig) -> dict[str, Any]:
                         "profile_id": s.profile_id,
                         "moment": s.moment,
                         "area_id": s.area_id,
+                        "step": s.step,
+                        "offset": s.offset,
+                        "contact_ids": list(s.contact_ids),
+                        "channel_ids": list(s.channel_ids),
                     }
                     for s in step.scheduled
                 ],
@@ -768,6 +796,20 @@ def _action_dict(action: PlannedAction) -> dict[str, Any]:
         "ran": action.ran,
         "skipped": action.skipped,
         "conditions": [dict(c) for c in action.conditions],
+        # Who a notification reached, and who its quiet hours held back
+        # (§7.1), and which escalation step it was (§7.2). Identifiers, as
+        # everything else here: the panel writes the sentence.
+        "recipients": [
+            {
+                "contact_id": r.get("contact_id"),
+                "channel_id": r.get("channel_id"),
+                "kind": r.get("kind"),
+            }
+            for r in action.params.get("recipients") or ()
+        ],
+        "quiet": list(action.params.get("quiet") or ()),
+        "escalation": action.params.get("escalation"),
+        "escalation_step": action.params.get("escalation_step"),
     }
 
 

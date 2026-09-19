@@ -874,3 +874,55 @@ def test_an_arming_that_was_refused_still_lets_the_run_carry_on():
     assert any(not step.accepted for step in sim.steps)
     opened = next(step for step in sim.steps if step.kind == "zone")
     assert opened.at == START + timedelta(seconds=10)
+
+
+# --- escalation in the trace (§11.2, §7.2) ------------------------------------------
+
+
+def test_the_trace_shows_the_escalation_steps_with_their_timings():
+    """§11.2's worked example ends with two lines that did not exist until
+    part 4: "escalation step 1 at +60s -> Luca (SMS)". They are read off the
+    Decision, never predicted by a second code path (INV-1)."""
+    from .test_escalation import escalating_house
+
+    config = escalating_house()
+    simulation = simulate(
+        config,
+        scenario_id="away",
+        zones=(ZoneOverride(zone_id="window", state="on"),),
+    )
+    step = step_with(simulation, Moment.TRIGGERED)
+
+    ahead = [s for s in step.scheduled if s.kind == "escalation_step"]
+    assert [(s.step, s.offset) for s in ahead] == [(1, 60), (2, 120)]
+    assert ahead[0].contact_ids == ("luca",)
+    assert ahead[0].channel_ids == ("luca-sms",)
+
+    # And the step that went out now is in the trace as something that ran.
+    sent = next(a for a in step.loose_actions if a.params.get("escalation"))
+    assert sent.params["escalation_step"] == 0
+    assert sent.ran is True
+
+
+def test_the_wire_carries_who_a_notification_reached_and_who_it_did_not():
+    from .test_escalation import escalating_house
+
+    config = escalating_house()
+    simulation = simulate(
+        config,
+        scenario_id="away",
+        zones=(ZoneOverride(zone_id="window", state="on"),),
+    )
+    payload = as_dict(simulation, config)
+    step = next(
+        s
+        for s in payload["steps"]
+        if any(o["moment"] == "triggered" for o in s["occurrences"])
+    )
+    sent = next(a for a in step["loose_actions"] if a["escalation"])
+    assert sent["recipients"] == [
+        {"contact_id": "luca", "channel_id": "luca-push", "kind": "push"}
+    ]
+    assert sent["quiet"] == []
+    ahead = [s for s in step["scheduled"] if s["kind"] == "escalation_step"]
+    assert [s["offset"] for s in ahead] == [60, 120]

@@ -26,7 +26,8 @@
     "log": "Registro",
     "users": "Utenti",
     "devices": "Dispositivi di inserimento",
-    "test": "Test e diagnostica"
+    "test": "Test e diagnostica",
+    "contacts": "Contatti"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -887,6 +888,40 @@
           "text": "È questo che la rende utile: l'errore che evita è scoprire durante l'emergenza che il canale d'emergenza era configurato male. Chiede conferma, e ogni prova finisce nel registro come prova, non come allarme."
         }
       }
+    },
+    "contacts": {
+      "title": "Che cosa decide questa pagina",
+      "intro": "L'escalation raggiunge persone, non servizi. I trasporti — push, SMS, voce, messaggistica — li fornisce già Home Assistant: qui si configurano l'ordine, i tempi e che cosa vale come “qualcuno se n'è accorto”.",
+      "items": {
+        "order": {
+          "term": "Ordine dei canali",
+          "text": "Provati dall'alto. Metti in elenco, non in fondo, il canale che sopravvive a una linea tagliata."
+        },
+        "quiet": {
+          "term": "Ore di silenzio",
+          "text": "Dentro la finestra raggiunge il contatto solo ciò che è abbastanza grave. Non zittisce mai l'allarme per tutta la casa."
+        },
+        "linked": {
+          "term": "Utente collegato",
+          "text": "Permette di attribuire nel registro a una persona una presa d'atto arrivata da un telefono."
+        },
+        "step": {
+          "term": "Passo di escalation",
+          "text": "Una notifica con un tempo sopra, nel profilo che risponde all'allarme. La politica si ferma appena qualcuno prende atto."
+        },
+        "acknowledge": {
+          "term": "Presa d'atto",
+          "text": "Quattro percorsi fermano la politica, e ognuno registra chi ha risposto e come."
+        },
+        "webhook": {
+          "term": "Webhook di presa d'atto",
+          "text": "Un URL non autenticato che ferma un allarme. Spento finché non lo accendi, e da non dare a nessuno tranne al provider vocale."
+        },
+        "test": {
+          "term": "Prova i canali",
+          "text": "Invia davvero. Usalo: un canale d'emergenza mai provato è un canale che si scopre durante l'emergenza."
+        }
+      }
     }
   },
   "notification": {
@@ -1202,7 +1237,12 @@
     "moments_more": "{moments} e altri {count}",
     "siren_duration_hint": "In secondi. Viene limitata al tempo massimo di sirena, così una sirena non sopravvive all'allarme.",
     "no_tones": "Questa sirena non dichiara toni.",
-    "default_tone": "Quello della sirena"
+    "default_tone": "Quello della sirena",
+    "no_contacts": "Ancora nessun contatto. Aggiungine uno nella pagina Contatti per avvisare una persona invece di un servizio.",
+    "contacts_hint": "Chi raggiunge questa notifica. Scegli i contatti oppure un servizio, mai entrambi.",
+    "highest_channel": "Canale più prioritario",
+    "escalation_hint": "Secondi dall'inizio dell'escalation. Con un tempo qui questa notifica diventa un passo: aspetta e si ferma appena qualcuno prende atto.",
+    "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto."
   },
   "camera_mode": {
     "snapshot": "Scatto",
@@ -1614,10 +1654,14 @@
       "no_profile": "✗ nessun profilo risponde a questo — non verrebbe eseguito nulla",
       "later": {
         "delay": "⏱ il resto di questa sequenza alle {at}",
-        "siren": "⏱ taglio della sirena alle {at}"
+        "siren": "⏱ taglio della sirena alle {at}",
+        "escalation_step": "⏱ passo di escalation {step} a +{offset}s → {who}"
       },
       "nothing_configured": "✗ non è configurato nulla per questo momento",
-      "a_group": "un gruppo"
+      "a_group": "un gruppo",
+      "escalation_sent": "✓ passo di escalation {step} → {who}",
+      "reached": "→ {who}",
+      "quiet": "trattenuti dalle ore di silenzio: {who}"
     },
     "source": {
       "zone": "dalla zona",
@@ -1713,5 +1757,58 @@
       "revert": "Rimette a posto",
       "delay": "Nulla: un ritardo è l'attesa stessa"
     }
+  },
+  "channel_kind": {
+    "push": "Push",
+    "sms": "SMS",
+    "voice": "Chiamata vocale",
+    "chat": "Chat",
+    "other": "Altro"
+  },
+  "contacts": {
+    "title": "Contatti",
+    "add": "Aggiungi contatto",
+    "new": "Nuovo contatto",
+    "none": "Ancora nessun contatto. Un'escalation raggiunge persone, quindi ne serve almeno uno.",
+    "channels": "Canali",
+    "channels_order": "Canali, dal più prioritario",
+    "channels_hint": "Provati dall'alto. Metti in elenco, non in fondo, il canale che sopravvive a una linea internet tagliata.",
+    "add_channel": "Aggiungi canale",
+    "service": "Servizio di notifica",
+    "service_hint": "Qualsiasi servizio o entità notify presente qui. Foyer orchestra i trasporti, non li implementa.",
+    "target": "Destinatario",
+    "target_hint": "Ciò che serve a questo trasporto per raggiungere la persona: un numero, un id di chat. Lascialo vuoto se il servizio lo sa già.",
+    "actionable": "Può portare un pulsante di presa d'atto",
+    "actionable_hint": "L'app Companion sì, un SMS no. Un trasporto scarta senza dire niente una chiave che non conosce, quindi qui si dichiara invece di indovinare.",
+    "quiet_hours": "Ore di silenzio",
+    "quiet_hint": "Dentro questa finestra raggiunge il contatto solo ciò che è abbastanza grave. Non zittisce mai l'allarme per tutta la casa.",
+    "quiet_min_severity": "Passa la finestra",
+    "quiet_severity_hint": "Sulla scala del registro. Lasciato su allarme, un'effrazione passa alle quattro del mattino e un'inserzione riuscita no.",
+    "linked_hint": "Permette di attribuire nel registro a questa persona una presa d'atto arrivata dal suo telefono.",
+    "orchestration": "L'escalation raggiunge persone, non servizi. I trasporti li fornisce già Home Assistant: qui si decide chi, in che ordine e quando fermarsi.",
+    "test": "Prova questo canale",
+    "test_after_save": "Salva prima il contatto: la prova passa dal canale salvato, non dalla bozza.",
+    "test_sent": "Inviato",
+    "policies": "Politiche di escalation",
+    "no_policies": "Ancora nessun passo di escalation. Un passo è una notifica con un tempo sopra, aggiunta a un profilo di risposta.",
+    "edit_on_profiles": "Modifica nei profili di risposta",
+    "step_number": "Passo",
+    "exhausted": "Se nessuno prende atto, l'ultimo passo solleva escalation_exhausted, che è a sua volta un momento su cui un profilo può agire.",
+    "acknowledgement": "Presa d'atto",
+    "ack_stops": "La politica si ferma nell'istante in cui ne arriva una. Ogni presa d'atto registra chi e da quale canale.",
+    "ack_push": "Pulsante in una notifica push",
+    "ack_push_how": "Un canale dichiarato capace di portarne uno",
+    "ack_disarm": "Disinserimento da qualunque canale",
+    "ack_disarm_how": "Tastierino, scheda, tag, chiamata di servizio — su un'area toccata dall'allarme",
+    "ack_dtmf": "Tasto premuto durante una chiamata vocale",
+    "ack_dtmf_how": "Catturato dal provider e rimandato al webhook qui sotto",
+    "ack_service": "Chiamata di servizio o pulsante",
+    "ack_service_how": "foyer.acknowledge, button.foyer_acknowledge",
+    "webhook": "Webhook di presa d'atto",
+    "webhook_enable": "Accetta una presa d'atto da un webhook",
+    "webhook_warning": "Questo URL ferma un allarme e nulla lo autentica.",
+    "webhook_warning_hint": "I webhook di Home Assistant sono aperti a chi ne conosce l'indirizzo: chiunque lo abbia, o lo intercetti, può fermare l'escalation mentre sta andando dal vicino. Attivalo solo se serve a un provider vocale e non darlo a nient'altro.",
+    "webhook_hint": "Il provider vocale fa una POST su questo percorso quando il tasto viene premuto. Disattivandolo l'indirizzo viene dimenticato: riattivandolo ne viene dato uno nuovo.",
+    "no_quiet_hours": "Sempre raggiungibile"
   }
 }

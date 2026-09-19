@@ -723,10 +723,19 @@ class FoyerPageTest extends LitElement {
           )}
           ${step.occurrences.map((occurrence) => this._renderOccurrence(s, occurrence))}
           ${this._renderBatches(s, step)}
-          ${step.loose_actions.map(
-            (action) => html`<div class="yes">
-              ${t(s, "test.trace.ran", { action: t(s, `action_kind.${action.kind}`) })}
-            </div>`,
+          ${step.loose_actions.map((action) =>
+            action.escalation
+              ? html`<div class="yes">
+                  ${t(s, "test.trace.escalation_sent", {
+                    step: String(action.escalation_step ?? 0),
+                    who: this._whoFor(action.recipients),
+                  })}
+                </div>`
+              : html`<div class="yes">
+                  ${t(s, "test.trace.ran", {
+                    action: t(s, `action_kind.${action.kind}`),
+                  })}
+                </div>`,
           )}
           ${step.scheduled
             .filter((item) => item.kind === "delay" || item.kind === "siren")
@@ -736,9 +745,47 @@ class FoyerPageTest extends LitElement {
                 ${t(s, `test.trace.later.${item.kind}`, { at: hhmm(item.at) })}
               </div>`,
             )}
+          ${step.scheduled
+            .filter((item) => item.kind === "escalation_step")
+            .map(
+              (item) => html`<div class="wait">
+                ${t(s, "test.trace.later.escalation_step", {
+                  step: String(item.step ?? 0),
+                  offset: String(item.offset ?? 0),
+                  who: this._whoAhead(item.contact_ids, item.channel_ids),
+                })}
+              </div>`,
+            )}
         </div>
       </li>
     `;
+  }
+
+  /** Who an escalation step reached, or will reach. The backend sends
+   * identifiers and this page writes the words (§15.2). */
+  private _whoFor(recipients: TraceAction["recipients"]): string {
+    const contacts = this.ctx?.config?.contacts ?? [];
+    return recipients
+      .map((recipient) => {
+        const contact = contacts.find((c) => c.id === recipient.contact_id);
+        const kind = t(this.ctx!.strings, `channel_kind.${recipient.kind}`);
+        return `${contact?.name ?? recipient.contact_id} (${kind})`;
+      })
+      .join(", ");
+  }
+
+  private _whoAhead(contactIds: string[], channelIds: string[]): string {
+    const contacts = this.ctx?.config?.contacts ?? [];
+    return contactIds
+      .map((id, index) => {
+        const contact = contacts.find((c) => c.id === id);
+        const channel = contact?.channels.find((c) => c.id === channelIds[index]);
+        const kind = channel
+          ? ` (${t(this.ctx!.strings, `channel_kind.${channel.kind}`)})`
+          : "";
+        return `${contact?.name ?? id}${kind}`;
+      })
+      .join(", ");
   }
 
   /** A siren cutoff is scheduled once and stays scheduled; saying so again
@@ -826,7 +873,27 @@ class FoyerPageTest extends LitElement {
   private _renderAction(s: Strings, action: TraceAction) {
     const name = action.name || t(s, `action_kind.${action.kind}`);
     if (action.ran) {
-      return html`<div class="yes">${t(s, "test.trace.ran", { action: name })}</div>`;
+      return html`<div class="yes">
+        ${t(s, "test.trace.ran", { action: name })}
+        ${action.recipients.length
+          ? html`<span class="muted">
+              ${t(s, "test.trace.reached", { who: this._whoFor(action.recipients) })}
+            </span>`
+          : nothing}
+        ${action.quiet.length
+          ? html`<span class="muted">
+              ${t(s, "test.trace.quiet", {
+                who: action.quiet
+                  .map(
+                    (id) =>
+                      (this.ctx?.config?.contacts ?? []).find((c) => c.id === id)
+                        ?.name ?? id,
+                  )
+                  .join(", "),
+              })}
+            </span>`
+          : nothing}
+      </div>`;
     }
     // "Skipped AND WHY", well enough to act on (§11.2). A condition names
     // itself; everything else has one sentence that says the whole reason.

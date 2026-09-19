@@ -48,6 +48,9 @@ export interface PanelContext {
   remove(kind: string, id: string): Promise<EditResult>;
   saveChime(chime: ChimeConfig): Promise<EditResult>;
   saveSettings(settings: Partial<SettingsConfig>): Promise<EditResult>;
+  /** Switch the DTMF acknowledgement webhook on or off (§7.2). The id is
+   * the backend's to generate and this never sends one. */
+  setAckWebhook(enabled: boolean): Promise<EditResult>;
   /** Create or change a person. The codes travel separately and one way:
    * absent means "leave it", null means "remove it" (SPEC §8.1). */
   saveUser(

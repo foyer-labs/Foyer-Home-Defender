@@ -2776,16 +2776,16 @@ var ut = {
 		"escalation_exhausted",
 		"chime"
 	]
-}, dt = ["companion", "telegram"], ft = [
+}, dt = ["companion", "telegram"], ft = ["notify", "persistent_notification"], pt = [
 	"siren",
 	"light",
 	"switch"
-], pt = [
+], mt = [
 	"camera",
 	"scene",
 	"tts"
 ];
-function mt(e) {
+function ht(e) {
 	let t = {};
 	return e === "switch" && (t.state = "on"), e === "camera" && (t.mode = "snapshot"), e === "delay" && (t.seconds = 30), (e === "notify" || e === "tts") && (t.message = "{{ zone }}"), e === "notify" && (t.attachment = "companion"), {
 		kind: e,
@@ -2794,10 +2794,18 @@ function mt(e) {
 		params: t,
 		conditions: [],
 		condition_mode: "all",
-		enabled: !0
+		enabled: !0,
+		escalation_offset: null
 	};
 }
-var ht = class extends I {
+function gt(e) {
+	let t = e.params.contacts;
+	return Array.isArray(t) ? t.map((e) => typeof e == "string" ? {
+		contact_id: e,
+		channel_id: null
+	} : e) : [];
+}
+var _t = class extends I {
 	constructor(...e) {
 		super(...e), this._open = -1, this._filters = {}, this._problems = [], this._busy = !1, this._tested = {};
 	}
@@ -2846,7 +2854,7 @@ var ht = class extends I {
 	_addAction(e) {
 		this._draft && (this._draft = {
 			...this._draft,
-			actions: [...this._draft.actions, mt(e)]
+			actions: [...this._draft.actions, ht(e)]
 		}, this._open = this._draft.actions.length - 1);
 	}
 	_removeAction(e) {
@@ -3012,6 +3020,67 @@ var ht = class extends I {
       </div>
     `;
 	}
+	_renderContacts(e, t, n) {
+		let r = this.ctx?.config?.contacts ?? [], i = gt(t);
+		if (!r.length) return D`<span class="hint">${B(e, "profiles.no_contacts")}</span>`;
+		let a = (e) => this._setParam(n, "contacts", e.length ? e : null);
+		return D`<div class="field">
+      <span class="lbl">${B(e, "field.contacts")}</span>
+      ${r.map((t) => {
+			let n = i.find((e) => e.contact_id === t.id);
+			return D`<div class="contact-row">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${n !== void 0}
+              @change=${(e) => a(e.target.checked ? [...i, {
+				contact_id: t.id,
+				channel_id: null
+			}] : i.filter((e) => e.contact_id !== t.id))}
+            />
+            <span>${t.name}</span>
+          </label>
+          ${n ? D`<select
+                @change=${(e) => a(i.map((n) => n.contact_id === t.id ? {
+				...n,
+				channel_id: e.target.value || null
+			} : n))}
+              >
+                <option value="" ?selected=${!n.channel_id}>
+                  ${B(e, "profiles.highest_channel")}
+                </option>
+                ${t.channels.map((t) => D`<option
+                    .value=${t.id ?? ""}
+                    ?selected=${t.id === n.channel_id}
+                  >
+                    ${B(e, `channel_kind.${t.kind}`)} · ${t.service}
+                  </option>`)}
+              </select>` : k}
+        </div>`;
+		})}
+      <span class="hint">${B(e, "profiles.contacts_hint")}</span>
+    </div>`;
+	}
+	_renderEscalation(e, t, n) {
+		let r = this.ctx?.meta?.escalation_moments ?? [];
+		if (!ft.includes(t.kind)) return k;
+		if (!t.moments.length || !t.moments.every((e) => r.includes(e))) return t.escalation_offset === null ? k : D`<span class="hint">${B(e, "profiles.escalation_moment_hint")}</span>`;
+		let i = this.ctx?.meta?.bounds.escalation_offset ?? [0, 3600];
+		return D`<label class="field">
+      <span class="lbl">${B(e, "field.escalation_offset")}</span>
+      <input
+        type="number"
+        min=${i[0]}
+        max=${i[1]}
+        .value=${t.escalation_offset === null ? "" : String(t.escalation_offset)}
+        @input=${(e) => {
+			let t = e.target.value;
+			this._setAction(n, { escalation_offset: t === "" ? null : Number(t) });
+		}}
+      />
+      <span class="hint">${B(e, "profiles.escalation_hint")}</span>
+    </label>`;
+	}
 	_renderAction(e, t, n) {
 		let r = this._open === n;
 		return D`
@@ -3024,6 +3093,7 @@ var ht = class extends I {
         </button>
         ${r ? D`<div class="action-bd">
                 ${this._renderParams(e, t, n)} ${this._renderMoments(e, t, n)}
+                ${this._renderEscalation(e, t, n)}
                 ${this._renderConditions(e, t, n)}
                 <div class="actions">
                   <button class="btn" @click=${() => this._moveAction(n, -1)}>&uarr;</button>
@@ -3193,9 +3263,9 @@ var ht = class extends I {
 	}
 	_renderParams(e, t, n) {
 		let r = this.ctx?.meta?.action_domains[t.kind] ?? [], i = B(e, "profiles.message_hint", { variables: (this.ctx?.meta?.template_variables ?? []).map((e) => `{{ ${e} }}`).join(" ") }), a = [];
-		switch (ft.includes(t.kind) && a.push(this._picker(e, t, n, "entity_ids", r, !0)), pt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_id", r, !1)), t.kind) {
+		switch (pt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_ids", r, !0)), mt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_id", r, !1)), t.kind) {
 			case "notify":
-				a.push(this._suggested(e, t, n, "service", J(this.ctx.hass), B(e, "profiles.notify_hint"))), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i)), a.push(this._picker(e, t, n, "camera_entity_id", ["camera"], !1)), t.params.camera_entity_id && (a.push(this._select(e, t, n, "attachment", dt, (t) => B(e, `attachment.${t}`))), a.push(D`<span class="hint"
+				a.push(this._renderContacts(e, t, n)), gt(t).length || a.push(this._suggested(e, t, n, "service", J(this.ctx.hass), B(e, "profiles.notify_hint"))), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i)), a.push(this._picker(e, t, n, "camera_entity_id", ["camera"], !1)), t.params.camera_entity_id && (a.push(this._select(e, t, n, "attachment", dt, (t) => B(e, `attachment.${t}`))), a.push(D`<span class="hint"
               >${B(e, t.params.attachment === "telegram" ? "profiles.attach_hint_telegram" : "profiles.attach_hint")}</span
             >`));
 				break;
@@ -3395,6 +3465,15 @@ var ht = class extends I {
 			H,
 			V,
 			o`
+      .contact-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 0;
+      }
+      .contact-row select {
+        flex: 1;
+      }
       .page-intro {
         margin: 0 4px 12px;
         color: var(--secondary-text-color);
@@ -3501,10 +3580,10 @@ var ht = class extends I {
 		];
 	}
 };
-customElements.get("foyer-page-profiles") || customElements.define("foyer-page-profiles", ht);
+customElements.get("foyer-page-profiles") || customElements.define("foyer-page-profiles", _t);
 //#endregion
 //#region src/panel/pages/groups.ts
-var gt = class extends I {
+var vt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -3757,10 +3836,10 @@ var gt = class extends I {
 		];
 	}
 };
-customElements.get("foyer-page-groups") || customElements.define("foyer-page-groups", gt);
+customElements.get("foyer-page-groups") || customElements.define("foyer-page-groups", vt);
 //#endregion
 //#region src/panel/pages/users.ts
-var _t = {
+var yt = {
 	name: "",
 	has_code: !1,
 	has_duress_code: !1,
@@ -3779,17 +3858,17 @@ var _t = {
 	code_exempt_when_identified: !1,
 	enabled: !0
 };
-function vt(e) {
+function bt(e) {
 	if (!e) return "";
 	let t = new Date(e), n = (e) => String(e).padStart(2, "0");
 	return `${t.getFullYear()}-${n(t.getMonth() + 1)}-${n(t.getDate())}T${n(t.getHours())}:${n(t.getMinutes())}`;
 }
-function yt(e) {
+function xt(e) {
 	if (!e) return null;
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
-var bt = class extends I {
+var St = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -3803,7 +3882,7 @@ var bt = class extends I {
 		};
 	}
 	_edit(e) {
-		this._draft = e ? { ...structuredClone(e) } : structuredClone(_t), this._problems = [];
+		this._draft = e ? { ...structuredClone(e) } : structuredClone(yt), this._problems = [];
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -3974,16 +4053,16 @@ var bt = class extends I {
               <span class="lbl">${B(e, "field.valid_from")}</span>
               <input
                 type="datetime-local"
-                .value=${vt(t.valid_from)}
-                @input=${(e) => this._set("valid_from", yt(e.target.value))}
+                .value=${bt(t.valid_from)}
+                @input=${(e) => this._set("valid_from", xt(e.target.value))}
               />
             </label>
             <label class="field">
               <span class="lbl">${B(e, "field.valid_until")}</span>
               <input
                 type="datetime-local"
-                .value=${vt(t.valid_until)}
-                @input=${(e) => this._set("valid_until", yt(e.target.value))}
+                .value=${bt(t.valid_until)}
+                @input=${(e) => this._set("valid_until", xt(e.target.value))}
               />
               <span class="hint">${B(e, "users.validity_hint")}</span>
             </label>
@@ -4239,10 +4318,10 @@ var bt = class extends I {
 		];
 	}
 };
-customElements.define("foyer-page-users", bt);
+customElements.define("foyer-page-users", St);
 //#endregion
 //#region src/panel/pages/devices.ts
-var xt = {
+var Ct = {
 	name: "",
 	kind: "keypad",
 	ref: "",
@@ -4252,7 +4331,7 @@ var xt = {
 	command: "toggle",
 	scenario_id: null,
 	enabled: !0
-}, St = ["tag.", "event."], Ct = class extends I {
+}, wt = ["tag.", "event."], Tt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._mqttProblems = [];
 	}
@@ -4267,7 +4346,7 @@ var xt = {
 		};
 	}
 	_edit(e) {
-		this._draft = e ? structuredClone(e) : structuredClone(xt), this._problems = [];
+		this._draft = e ? structuredClone(e) : structuredClone(Ct), this._problems = [];
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -4381,7 +4460,7 @@ var xt = {
     </tr>`;
 	}
 	_renderEditor(e, t) {
-		let n = this.ctx, r = n.config?.users ?? [], i = n.config?.scenarios ?? [], a = Object.keys(n.hass.states).filter((e) => St.some((t) => e.startsWith(t))).sort();
+		let n = this.ctx, r = n.config?.users ?? [], i = n.config?.scenarios ?? [], a = Object.keys(n.hass.states).filter((e) => wt.some((t) => e.startsWith(t))).sort();
 		return D`
       <div class="card">
         <div class="card-hd">
@@ -4610,11 +4689,11 @@ var xt = {
           <div class="grid-form">
             <div class="field">
               <span class="lbl">${B(e, "devices.inbound")}</span>
-              <pre class="sample">${wt}</pre>
+              <pre class="sample">${Et}</pre>
             </div>
             <div class="field">
               <span class="lbl">${B(e, "devices.outbound")}</span>
-              <pre class="sample">${Tt[t.detail]}</pre>
+              <pre class="sample">${Dt[t.detail]}</pre>
               <span class="hint">${B(e, "devices.last_result_hint")}</span>
             </div>
           </div>
@@ -4671,30 +4750,574 @@ var xt = {
     `
 		];
 	}
-}, wt = "{\n  \"action\": \"arm\",\n  \"scenario\": \"Night\",\n  \"code\": \"123456\",\n  \"device_id\": \"keypad_hall\"\n}", Tt = {
+}, Et = "{\n  \"action\": \"arm\",\n  \"scenario\": \"Night\",\n  \"code\": \"123456\",\n  \"device_id\": \"keypad_hall\"\n}", Dt = {
 	minimal: "{\n  \"master\": \"armed_night\",\n  \"countdown\": { \"kind\": \"exit\", \"remaining\": 22 },\n  \"ready_to_arm\": false,\n  \"blocking_zones\": 1,\n  \"fault\": false,\n  \"last_result\": \"ok\"\n}",
 	standard: "{\n  \"master\": \"armed_night\",\n  \"countdown\": null,\n  \"ready_to_arm\": true,\n  \"blocking_zones\": 0,\n  \"fault\": false,\n  \"last_result\": \"ok\",\n  \"scenario\": \"Night\",\n  \"areas\": { \"Ground floor\": \"armed\" }\n}",
 	full: "{\n  \"master\": \"armed_night\",\n  \"countdown\": null,\n  \"ready_to_arm\": false,\n  \"blocking_zones\": 1,\n  \"fault\": false,\n  \"last_result\": \"blocked\",\n  \"scenario\": \"Night\",\n  \"areas\": { \"Ground floor\": \"armed\" },\n  \"open_zones\": [\"Bathroom window\"]\n}"
 };
-customElements.define("foyer-page-devices", Ct);
+customElements.define("foyer-page-devices", Tt);
+//#endregion
+//#region src/panel/pages/contacts.ts
+var Ot = {
+	name: "",
+	channels: [],
+	quiet_start: null,
+	quiet_end: null,
+	quiet_min_severity: "alarm",
+	linked_user_id: null,
+	enabled: !0
+}, kt = {
+	kind: "push",
+	service: "",
+	target: "",
+	data: {},
+	actionable: !1,
+	enabled: !0
+}, At = [
+	"push",
+	"disarm",
+	"dtmf",
+	"service"
+];
+function jt(e) {
+	let t = /* @__PURE__ */ new Map();
+	for (let n of e) {
+		let e = n.actions.filter((e) => e.enabled && e.escalation_offset !== null).sort((e, t) => (e.escalation_offset ?? 0) - (t.escalation_offset ?? 0)).map((e, t) => ({
+			profile: n,
+			action: e,
+			index: t
+		}));
+		e.length && t.set(n.id ?? n.name, e);
+	}
+	return t;
+}
+function Mt(e) {
+	let t = e.params.contacts;
+	return Array.isArray(t) ? t.map((e) => typeof e == "string" ? {
+		contact_id: e,
+		channel_id: null
+	} : e).filter((e) => e && e.contact_id) : [];
+}
+var Nt = class extends I {
+	constructor(...e) {
+		super(...e), this._problems = [], this._busy = !1, this._tested = {};
+	}
+	static {
+		this.properties = {
+			ctx: { attribute: !1 },
+			_draft: { state: !0 },
+			_problems: { state: !0 },
+			_busy: { state: !0 },
+			_tested: { state: !0 }
+		};
+	}
+	_edit(e) {
+		this._draft = e ? structuredClone(e) : {
+			...structuredClone(Ot),
+			channels: [structuredClone(kt)]
+		}, this._problems = [];
+	}
+	_set(e, t) {
+		this._draft &&= {
+			...this._draft,
+			[e]: t
+		};
+	}
+	_setChannel(e, t) {
+		if (!this._draft) return;
+		let n = this._draft.channels.map((n, r) => r === e ? {
+			...n,
+			...t
+		} : n);
+		this._draft = {
+			...this._draft,
+			channels: n
+		};
+	}
+	_move(e, t) {
+		if (!this._draft) return;
+		let n = [...this._draft.channels], r = e + t;
+		r < 0 || r >= n.length || ([n[e], n[r]] = [n[r], n[e]], this._draft = {
+			...this._draft,
+			channels: n
+		});
+	}
+	_addChannel() {
+		this._draft &&= {
+			...this._draft,
+			channels: [...this._draft.channels, structuredClone(kt)]
+		};
+	}
+	_removeChannel(e) {
+		this._draft &&= {
+			...this._draft,
+			channels: this._draft.channels.filter((t, n) => n !== e)
+		};
+	}
+	async _save() {
+		if (this.ctx && this._draft) {
+			this._busy = !0;
+			try {
+				let e = await this.ctx.save("contact", this._draft);
+				this._problems = e.problems, e.success && (this._draft = void 0);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _delete() {
+		if (this.ctx && this._draft?.id) {
+			this._busy = !0;
+			try {
+				let e = await this.ctx.remove("contact", this._draft.id);
+				this._problems = e.problems, e.success && (this._draft = void 0);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _test(e, t) {
+		if (this.ctx && e.id && t.id) {
+			this._busy = !0;
+			try {
+				let n = await this.ctx.testAction({
+					contact_id: e.id,
+					channel_id: t.id
+				});
+				this._tested = {
+					...this._tested,
+					[t.id]: {
+						ok: n.success,
+						error: n.error
+					}
+				};
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _toggleWebhook(e) {
+		if (this.ctx) {
+			this._busy = !0;
+			try {
+				await this.ctx.setAckWebhook(e);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	render() {
+		let e = this.ctx;
+		if (!e?.config) return k;
+		let t = e.strings, n = e.config.contacts ?? [];
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(t, "contacts.title")}</h2>
+          <button class="btn primary" @click=${() => this._edit()}>
+            ${B(t, "contacts.add")}
+          </button>
+        </div>
+        ${n.length ? D`<div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>${B(t, "field.name")}</th>
+                    <th>${B(t, "contacts.channels_order")}</th>
+                    <th>${B(t, "contacts.quiet_hours")}</th>
+                    <th>${B(t, "field.linked_user_id")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${n.map((e) => this._row(t, e))}
+                </tbody>
+              </table>
+            </div>` : D`<div class="empty">${B(t, "contacts.none")}</div>`}
+        <div class="card-bd">
+          <p class="note">${B(t, "contacts.orchestration")}</p>
+        </div>
+      </div>
+      ${this._draft ? this._renderEditor(t, this._draft) : k}
+      ${this._renderPolicies(t)} ${this._renderAcknowledgement(t)}
+    `;
+	}
+	_row(e, t) {
+		let n = (this.ctx?.config?.users ?? []).find((e) => e.id === t.linked_user_id);
+		return D`<tr
+      class="clickable"
+      aria-selected=${this._draft?.id === t.id ? "true" : "false"}
+      @click=${() => this._edit(t)}
+    >
+      <td><strong>${t.name}</strong></td>
+      <td>
+        <div class="channels">
+          ${t.channels.map((t, n) => D`<span class="tag"
+                >${n + 1}. ${B(e, `channel_kind.${t.kind}`)} ·
+                ${t.service}</span
+              >`)}
+        </div>
+      </td>
+      <td class="mono">
+        ${t.quiet_start ? `${t.quiet_start}–${t.quiet_end}` : B(e, "contacts.no_quiet_hours")}
+      </td>
+      <td>${n?.name ?? "—"}</td>
+    </tr>`;
+	}
+	_renderEditor(e, t) {
+		let n = this.ctx, r = n.config?.users ?? [], i = J(n.hass), a = n.meta?.contact_channel_kinds ?? [
+			"push",
+			"sms",
+			"voice",
+			"chat",
+			"other"
+		];
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t.id ? t.name : B(e, "contacts.new")}</h2>
+        </div>
+        <div class="card-bd">
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.name")}</span>
+              <input
+                .value=${t.name}
+                @input=${(e) => this._set("name", e.target.value)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.linked_user_id")}</span>
+              <select
+                @change=${(e) => this._set("linked_user_id", e.target.value || null)}
+              >
+                <option value="" ?selected=${!t.linked_user_id}>—</option>
+                ${r.map((e) => D`<option
+                    .value=${e.id ?? ""}
+                    ?selected=${e.id === t.linked_user_id}
+                  >
+                    ${e.name}
+                  </option>`)}
+              </select>
+              <span class="hint">${B(e, "contacts.linked_hint")}</span>
+            </label>
+          </div>
+
+          <h3>${B(e, "contacts.channels")}</h3>
+          <p class="note">${B(e, "contacts.channels_hint")}</p>
+          ${t.channels.map((n, r) => this._renderChannel(e, t, n, r, i, a))}
+          <button class="btn" @click=${() => this._addChannel()}>
+            ${B(e, "contacts.add_channel")}
+          </button>
+
+          <h3>${B(e, "contacts.quiet_hours")}</h3>
+          <p class="note">${B(e, "contacts.quiet_hint")}</p>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.quiet_start")}</span>
+              <input
+                type="time"
+                .value=${t.quiet_start ?? ""}
+                @change=${(e) => this._set("quiet_start", e.target.value || null)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.quiet_end")}</span>
+              <input
+                type="time"
+                .value=${t.quiet_end ?? ""}
+                @change=${(e) => this._set("quiet_end", e.target.value || null)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "contacts.quiet_min_severity")}</span>
+              <select
+                @change=${(e) => this._set("quiet_min_severity", e.target.value)}
+              >
+                ${[
+			"info",
+			"warning",
+			"alarm"
+		].map((n) => D`<option
+                    .value=${n}
+                    ?selected=${n === t.quiet_min_severity}
+                  >
+                    ${B(e, `severity.${n}`)}
+                  </option>`)}
+              </select>
+              <span class="hint">${B(e, "contacts.quiet_severity_hint")}</span>
+            </label>
+          </div>
+
+          ${this._problems.map((t) => D`<p class="problem">${U(e, t)}</p>`)}
+        </div>
+        <div class="card-ft">
+          ${t.id ? D`<button class="btn danger" ?disabled=${this._busy} @click=${() => this._delete()}>
+                ${B(e, "common.delete")}
+              </button>` : k}
+          <button class="btn" @click=${() => this._draft = void 0}>
+            ${B(e, "common.cancel")}
+          </button>
+          <button class="btn primary" ?disabled=${this._busy} @click=${() => this._save()}>
+            ${B(e, "common.save")}
+          </button>
+        </div>
+      </div>
+    `;
+	}
+	_renderChannel(e, t, n, r, i, a) {
+		let o = n.id ? this._tested[n.id] : void 0;
+		return D`
+      <div class="channel">
+        <div class="channel-hd">
+          <span class="rank">${r + 1}</span>
+          <div class="channel-tools">
+            <button class="btn sm" @click=${() => this._move(r, -1)}>↑</button>
+            <button class="btn sm" @click=${() => this._move(r, 1)}>↓</button>
+            <button class="btn sm danger" @click=${() => this._removeChannel(r)}>
+              ${B(e, "common.delete")}
+            </button>
+          </div>
+        </div>
+        <div class="grid-form">
+          <label class="field">
+            <span class="lbl">${B(e, "field.kind")}</span>
+            <select
+              @change=${(e) => this._setChannel(r, { kind: e.target.value })}
+            >
+              ${a.map((t) => D`<option .value=${t} ?selected=${t === n.kind}>
+                  ${B(e, `channel_kind.${t}`)}
+                </option>`)}
+            </select>
+          </label>
+          <label class="field">
+            <span class="lbl">${B(e, "contacts.service")}</span>
+            <select
+              @change=${(e) => this._setChannel(r, { service: e.target.value })}
+            >
+              <option value="" ?selected=${!n.service}>—</option>
+              ${i.map((e) => D`<option
+                  .value=${e.id}
+                  ?selected=${e.id === n.service}
+                >
+                  ${e.name}
+                </option>`)}
+            </select>
+            <span class="hint">${B(e, "contacts.service_hint")}</span>
+          </label>
+          <label class="field">
+            <span class="lbl">${B(e, "contacts.target")}</span>
+            <input
+              .value=${n.target}
+              @input=${(e) => this._setChannel(r, { target: e.target.value })}
+            />
+            <span class="hint">${B(e, "contacts.target_hint")}</span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${n.actionable}
+              @change=${(e) => this._setChannel(r, { actionable: e.target.checked })}
+            />
+            <span class="lbl">${B(e, "contacts.actionable")}</span>
+            <span class="hint">${B(e, "contacts.actionable_hint")}</span>
+          </label>
+        </div>
+        <div class="channel-ft">
+          <button
+            class="btn sm"
+            ?disabled=${this._busy || !t.id || !n.id}
+            @click=${() => this._test(t, n)}
+          >
+            ${B(e, "contacts.test")}
+          </button>
+          ${t.id && n.id ? k : D`<span class="hint">${B(e, "contacts.test_after_save")}</span>`}
+          ${o ? D`<span class=${o.ok ? "tag ok" : "tag bad"}>
+                ${o.ok ? B(e, "contacts.test_sent") : o.error}
+              </span>` : k}
+        </div>
+      </div>
+    `;
+	}
+	_renderPolicies(e) {
+		let t = this.ctx, n = t.config?.contacts ?? [], r = jt(t.config?.profiles ?? []);
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "contacts.policies")}</h2>
+          <button class="btn" @click=${() => t.navigate("profiles")}>
+            ${B(e, "contacts.edit_on_profiles")}
+          </button>
+        </div>
+        ${r.size ? D`<div class="card-bd">
+              ${[...r.values()].map((t) => D`
+                  <h3>${t[0].profile.name}</h3>
+                  ${t.map(({ action: t, index: r }) => D`
+                      <div class="step">
+                        <span class="mono at">+${t.escalation_offset}s</span>
+                        <div>
+                          <div class="who">
+                            ${Mt(t).map((t) => {
+			let r = n.find((e) => e.id === t.contact_id), i = r?.channels.find((e) => e.id === t.channel_id);
+			return i ? `${r?.name} · ${B(e, `channel_kind.${i.kind}`)}` : r?.name ?? B(e, "problem.unknown_contact");
+		}).join(" · ") || String(t.params.service ?? "")}
+                          </div>
+                          <div class="mono">
+                            ${B(e, "contacts.step_number")} ${r} ·
+                            ${B(e, `moment.${t.moments[0]}`)}
+                          </div>
+                        </div>
+                      </div>
+                    `)}
+                `)}
+              <p class="note">${B(e, "contacts.exhausted")}</p>
+            </div>` : D`<div class="empty">${B(e, "contacts.no_policies")}</div>`}
+      </div>
+    `;
+	}
+	_renderAcknowledgement(e) {
+		let t = this.ctx.config?.settings.ack_webhook_id ?? null;
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "contacts.acknowledgement")}</h2>
+        </div>
+        <div class="card-bd">
+          <p class="note">${B(e, "contacts.ack_stops")}</p>
+          ${At.map((t) => D`<div class="path">
+              <div class="who">${B(e, `contacts.ack_${t}`)}</div>
+              <div class="mono">${B(e, `contacts.ack_${t}_how`)}</div>
+            </div>`)}
+          <h3>${B(e, "contacts.webhook")}</h3>
+          <div class="banner warn">
+            <strong>${B(e, "contacts.webhook_warning")}</strong>
+            <span>${B(e, "contacts.webhook_warning_hint")}</span>
+          </div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t !== null}
+              ?disabled=${this._busy}
+              @change=${(e) => this._toggleWebhook(e.target.checked)}
+            />
+            <span class="lbl">${B(e, "contacts.webhook_enable")}</span>
+          </label>
+          ${t ? D`<p class="sample">/api/webhook/${t}</p>
+                <p class="note">${B(e, "contacts.webhook_hint")}</p>` : k}
+        </div>
+      </div>
+    `;
+	}
+	static {
+		this.styles = [
+			H,
+			V,
+			o`
+      /* One chip per channel, in priority order. Without the gap they run
+         into each other and "…luca2. SMS" reads as one service. */
+      .channels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .channel {
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+      }
+      .channel-hd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .channel-tools {
+        display: flex;
+        gap: 6px;
+      }
+      .channel-ft {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .tag.ok {
+        color: var(--success-color, #2e9e4f);
+      }
+      .tag.bad {
+        color: var(--error-color, #d32f2f);
+      }
+      .rank {
+        font-weight: 600;
+        color: var(--secondary-text-color);
+      }
+      .step,
+      .path {
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        gap: 14px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--divider-color);
+      }
+      .path {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+      .at {
+        color: var(--secondary-text-color);
+      }
+      .who {
+        font-weight: 500;
+      }
+      .mono {
+        font-family: var(--code-font-family, monospace);
+        font-size: 12px;
+        color: var(--secondary-text-color);
+      }
+      .sample {
+        margin: 8px 0 0;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--secondary-background-color);
+        font-family: var(--code-font-family, monospace);
+        font-size: 12px;
+        overflow-x: auto;
+      }
+      /* The sentence that has to stop somebody: a Home Assistant webhook is
+         not authenticated, and this one stops an alarm (INV-6). */
+      .banner {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 16px;
+        margin: 12px 0;
+        border-radius: 8px;
+        background: var(--warning-color, #f0a835);
+        color: #0d1014;
+      }
+    `
+		];
+	}
+};
+customElements.define("foyer-page-contacts", Nt);
 //#endregion
 //#region src/panel/pages/test.ts
-var Et = [
+var Pt = [
 	"diagnostics",
 	"simulator",
 	"walktest",
 	"actiontest"
-], Dt = /* @__PURE__ */ new Set([
+], Ft = /* @__PURE__ */ new Set([
 	"triggered",
 	"entry_started",
 	"verification_satisfied",
 	"technical_raised"
 ]);
-function Ot(e, t) {
+function It(e, t) {
 	let n = e.config?.zones.find((e) => e.id === t);
 	return n && n.trigger.kind === "state" ? n.trigger.states : [];
 }
-function kt(e) {
+function Lt(e) {
 	let t = /* @__PURE__ */ new Set();
 	for (let n of e.config?.profiles ?? []) for (let e of n.actions) for (let n of e.conditions) n.kind === "state" && t.add(n.entity_id);
 	return [...t].sort();
@@ -4706,7 +5329,7 @@ function Y(e) {
 		second: "2-digit"
 	});
 }
-var At = class extends I {
+var Rt = class extends I {
 	constructor(...e) {
 		super(...e), this._tab = "diagnostics", this._busy = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set(), this._walkDuration = "", this._tested = {};
 	}
@@ -4769,7 +5392,7 @@ var At = class extends I {
 		let t = e.strings;
 		return D`
       <nav class="subtabs" role="tablist">
-        ${Et.map((e) => D`
+        ${Pt.map((e) => D`
             <button
               role="tab"
               aria-selected=${e === this._tab ? "true" : "false"}
@@ -4995,7 +5618,7 @@ var At = class extends I {
               <select
                 @change=${(e) => this._setOverride(r, {
 			zone_id: e.target.value,
-			state: Ot(t, e.target.value)[0] ?? n.state
+			state: It(t, e.target.value)[0] ?? n.state
 		})}
               >
                 <option value="">${B(e, "test.simulator.pick_zone")}</option>
@@ -5014,7 +5637,7 @@ var At = class extends I {
                 @change=${(e) => this._setOverride(r, { state: e.target.value })}
               />
               <datalist id="foyer-sim-states-${r}">
-                ${Ot(t, n.zone_id).map((e) => D`<option .value=${e}></option>`)}
+                ${It(t, n.zone_id).map((e) => D`<option .value=${e}></option>`)}
               </datalist>
               <input
                 class="at-input"
@@ -5047,7 +5670,7 @@ var At = class extends I {
     `;
 	}
 	_renderEntityOverrides(e) {
-		let t = kt(this.ctx);
+		let t = Lt(this.ctx);
 		return t.length ? D`
       <fieldset>
         <legend>${B(e, "test.simulator.entities")}</legend>
@@ -5162,15 +5785,41 @@ var At = class extends I {
             `)}
           ${t.occurrences.map((t) => this._renderOccurrence(e, t))}
           ${this._renderBatches(e, t)}
-          ${t.loose_actions.map((t) => D`<div class="yes">
-              ${B(e, "test.trace.ran", { action: B(e, `action_kind.${t.kind}`) })}
-            </div>`)}
+          ${t.loose_actions.map((t) => t.escalation ? D`<div class="yes">
+                  ${B(e, "test.trace.escalation_sent", {
+			step: String(t.escalation_step ?? 0),
+			who: this._whoFor(t.recipients)
+		})}
+                </div>` : D`<div class="yes">
+                  ${B(e, "test.trace.ran", { action: B(e, `action_kind.${t.kind}`) })}
+                </div>`)}
           ${t.scheduled.filter((e) => e.kind === "delay" || e.kind === "siren").filter((e) => this._firstMention(e)).map((t) => D`<div class="wait">
                 ${B(e, `test.trace.later.${t.kind}`, { at: Y(t.at) })}
+              </div>`)}
+          ${t.scheduled.filter((e) => e.kind === "escalation_step").map((t) => D`<div class="wait">
+                ${B(e, "test.trace.later.escalation_step", {
+			step: String(t.step ?? 0),
+			offset: String(t.offset ?? 0),
+			who: this._whoAhead(t.contact_ids, t.channel_ids)
+		})}
               </div>`)}
         </div>
       </li>
     `;
+	}
+	_whoFor(e) {
+		let t = this.ctx?.config?.contacts ?? [];
+		return e.map((e) => {
+			let n = t.find((t) => t.id === e.contact_id), r = B(this.ctx.strings, `channel_kind.${e.kind}`);
+			return `${n?.name ?? e.contact_id} (${r})`;
+		}).join(", ");
+	}
+	_whoAhead(e, t) {
+		let n = this.ctx?.config?.contacts ?? [];
+		return e.map((e, r) => {
+			let i = n.find((t) => t.id === e), a = i?.channels.find((e) => e.id === t[r]), o = a ? ` (${B(this.ctx.strings, `channel_kind.${a.kind}`)})` : "";
+			return `${i?.name ?? e}${o}`;
+		}).join(", ");
 	}
 	_firstMention(e) {
 		let t = `${e.kind}|${e.at}|${e.area_id ?? ""}`;
@@ -5195,7 +5844,7 @@ var At = class extends I {
       </div>` : D`<div class="key">${B(e, `moment.${t.moment}`)}</div>`;
 	}
 	_renderBatches(e, t) {
-		return D`${t.batches.filter((e) => e.actions.length > 0 || Dt.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
+		return D`${t.batches.filter((e) => e.actions.length > 0 || Ft.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
 	}
 	_renderBatch(e, t) {
 		return t.profile_id ? D`
@@ -5212,7 +5861,15 @@ var At = class extends I {
 	}
 	_renderAction(e, t) {
 		let n = t.name || B(e, `action_kind.${t.kind}`);
-		if (t.ran) return D`<div class="yes">${B(e, "test.trace.ran", { action: n })}</div>`;
+		if (t.ran) return D`<div class="yes">
+        ${B(e, "test.trace.ran", { action: n })}
+        ${t.recipients.length ? D`<span class="muted">
+              ${B(e, "test.trace.reached", { who: this._whoFor(t.recipients) })}
+            </span>` : k}
+        ${t.quiet.length ? D`<span class="muted">
+              ${B(e, "test.trace.quiet", { who: t.quiet.map((e) => (this.ctx?.config?.contacts ?? []).find((t) => t.id === e)?.name ?? e).join(", ") })}
+            </span>` : k}
+      </div>`;
 		let r = t.skipped === "condition" ? B(e, "test.skip.condition", { conditions: t.conditions.map((t) => t.kind === "time" ? B(e, "test.condition.time", t) : B(e, "test.condition.state", {
 			entity_id: t.entity_id,
 			operator: B(e, `condition.${t.operator}`),
@@ -5572,10 +6229,10 @@ var At = class extends I {
 		];
 	}
 };
-customElements.get("foyer-page-test") || customElements.define("foyer-page-test", At);
+customElements.get("foyer-page-test") || customElements.define("foyer-page-test", Rt);
 //#endregion
 //#region src/panel/pages/log.ts
-var X = 50, jt = class extends I {
+var X = 50, zt = class extends I {
 	constructor(...e) {
 		super(...e), this._rows = [], this._total = 0, this._offset = 0, this._filters = {}, this._busy = !1, this._confirmClear = !1, this._loaded = !1;
 	}
@@ -5835,14 +6492,14 @@ var X = 50, jt = class extends I {
       <tr class="clickable" aria-selected=${a ? "true" : "false"} @click=${() => this._open = a ? void 0 : t.id}>
         <td class="mono">${new Date(t.ts).toLocaleString(n.hass.language)}</td>
         <td>
-          <span class="state ${Pt(t.severity)}">
-            ${Mt(e, t.event_type)}
+          <span class="state ${Ht(t.severity)}">
+            ${Bt(e, t.event_type)}
           </span>
         </td>
         <td><span class="tag">${B(e, `category.${t.category}`)}</span></td>
         <td>${o}</td>
         <td>
-          ${t.user_name ?? (t.channel ? Nt(e, t.channel) : "")}
+          ${t.user_name ?? (t.channel ? Vt(e, t.channel) : "")}
           ${t.detail?.attributed === "claimed" ? D`<span class="claimed">${B(e, "log.claimed")}</span>` : k}
         </td>
         <td class="detail">${this._summary(e, t)}</td>
@@ -5864,7 +6521,7 @@ var X = 50, jt = class extends I {
                 ${t.outcome ? D`<dt>${B(e, "log.outcome")}</dt>
                       <dd>${B(e, `outcome.${t.outcome}`)}</dd>` : k}
                 ${t.channel ? D`<dt>${B(e, "log.channel")}</dt>
-                      <dd>${Nt(e, t.channel)}</dd>` : k}
+                      <dd>${Vt(e, t.channel)}</dd>` : k}
                 ${this._changeLines(e, t).map((t, n) => D`<dt>${n ? "" : B(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
                 ${this._plainDetail(t).map(([t, n]) => D`<dt>${B(e, `detail.${t}`)}</dt>
@@ -5993,23 +6650,23 @@ var X = 50, jt = class extends I {
 		];
 	}
 };
-function Mt(e, t) {
+function Bt(e, t) {
 	let n = B(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
 	let r = B(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-function Nt(e, t) {
+function Vt(e, t) {
 	let n = B(e, `log_channel.${t}`);
 	return n.startsWith("log_channel.") ? t : n;
 }
-function Pt(e) {
+function Ht(e) {
 	return e === "alarm" ? "triggered" : e === "warning" ? "arming" : "disarmed";
 }
-customElements.get("foyer-page-log") || customElements.define("foyer-page-log", jt);
+customElements.get("foyer-page-log") || customElements.define("foyer-page-log", zt);
 //#endregion
 //#region src/panel/pages/settings.ts
-var Ft = ["en", "it"], It = {
+var Ut = ["en", "it"], Wt = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -6018,7 +6675,7 @@ var Ft = ["en", "it"], It = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, Lt = class extends I {
+}, Gt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1;
 	}
@@ -6034,7 +6691,7 @@ var Ft = ["en", "it"], It = {
 		};
 	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? It);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Wt);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -6245,7 +6902,7 @@ var Ft = ["en", "it"], It = {
               <option value="" ?selected=${!n.language}>
                 ${B(e, "settings.language_system")}
               </option>
-              ${Ft.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
+              ${Ut.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
                     ${B(e, `language.${t}`)}
                   </option>`)}
             </select>
@@ -6503,7 +7160,7 @@ var Ft = ["en", "it"], It = {
     `];
 	}
 };
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Lt);
+customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Gt);
 //#endregion
 //#region src/panel/wizard.ts
 var Z = [
@@ -6512,7 +7169,7 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], Rt = 3, zt = class extends I {
+], Kt = 3, qt = class extends I {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -6670,7 +7327,7 @@ var Z = [
 		return D`
       <p>${B(e, "wizard.zones_text", {
 			have: n.length,
-			want: Rt
+			want: Kt
 		})}</p>
       <ul class="zones">
         ${n.map((t) => D`<li>
@@ -7007,10 +7664,10 @@ var Z = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", zt);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", qt);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var Bt = [
+var Jt = [
 	"overview",
 	"areas",
 	"zones",
@@ -7019,10 +7676,11 @@ var Bt = [
 	"groups",
 	"users",
 	"devices",
+	"contacts",
 	"test",
 	"log",
 	"settings"
-], Vt = [
+], Yt = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -7030,8 +7688,9 @@ var Bt = [
 	"groups",
 	"users",
 	"devices",
+	"contacts",
 	"settings"
-], Ht = {
+], Xt = {
 	overview: [
 		"area",
 		"master",
@@ -7093,6 +7752,15 @@ var Bt = [
 		"detail",
 		"last_result"
 	],
+	contacts: [
+		"order",
+		"quiet",
+		"linked",
+		"step",
+		"acknowledge",
+		"webhook",
+		"test"
+	],
 	test: [
 		"trigger_column",
 		"blocks",
@@ -7126,7 +7794,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var Ut = class extends I {
+var Zt = class extends I {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._offset = 0;
 	}
@@ -7227,6 +7895,10 @@ var Ut = class extends I {
 			saveChime: (e) => this._edit("chime", {
 				type: "foyer/config/chime",
 				chime: e
+			}),
+			setAckWebhook: (e) => this._edit("settings", {
+				type: "foyer/ack_webhook",
+				enabled: e
 			}),
 			saveSettings: (e) => this._edit("settings", {
 				type: "foyer/config/settings",
@@ -7422,7 +8094,7 @@ var Ut = class extends I {
     `;
 	}
 	_renderTabs(e) {
-		let t = this._canConfigure ? Bt : Bt.filter((e) => !Vt.includes(e));
+		let t = this._canConfigure ? Jt : Jt.filter((e) => !Yt.includes(e));
 		return t.length < 2 ? k : D`
       <nav class="tabs" role="tablist">
         ${t.map((t) => D`
@@ -7459,6 +8131,7 @@ var Ut = class extends I {
 			case "groups": return D`<foyer-page-groups .ctx=${t}></foyer-page-groups>`;
 			case "users": return D`<foyer-page-users .ctx=${t}></foyer-page-users>`;
 			case "devices": return D`<foyer-page-devices .ctx=${t}></foyer-page-devices>`;
+			case "contacts": return D`<foyer-page-contacts .ctx=${t}></foyer-page-contacts>`;
 			case "test": return D`<foyer-page-test .ctx=${t}></foyer-page-test>`;
 			case "log": return D`<foyer-page-log .ctx=${t}></foyer-page-log>`;
 			case "settings": return D`<foyer-page-settings .ctx=${t}></foyer-page-settings>`;
@@ -7482,7 +8155,7 @@ var Ut = class extends I {
         ${r ? D`<div class="help-body">
               <p>${B(e, `${n}.intro`)}</p>
               <dl>
-                ${Ht[t].map((t) => D`
+                ${Xt[t].map((t) => D`
                     <dt>${B(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${B(e, `${n}.items.${t}.text`)}</dd>
                   `)}
@@ -7726,5 +8399,5 @@ var Ut = class extends I {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", Ut);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", Zt);
 //#endregion

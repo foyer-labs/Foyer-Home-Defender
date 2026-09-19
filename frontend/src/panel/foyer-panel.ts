@@ -28,6 +28,7 @@ import "./pages/profiles";
 import "./pages/groups";
 import "./pages/users";
 import "./pages/devices";
+import "./pages/contacts";
 import "./pages/test";
 import "./pages/log";
 import "./pages/settings";
@@ -43,6 +44,7 @@ const PAGES: PageId[] = [
   "groups",
   "users",
   "devices",
+  "contacts",
   "test",
   "log",
   "settings",
@@ -55,6 +57,7 @@ const CONFIG_PAGES: PageId[] = [
   "groups",
   "users",
   "devices",
+  "contacts",
   "settings",
 ];
 
@@ -77,6 +80,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   groups: ["threshold", "members", "suppress", "derived"],
   users: ["own_code", "policy", "identified", "duress", "lockout", "scope"],
   devices: ["declared", "device_id", "identifies", "topics", "detail", "last_result"],
+  contacts: ["order", "quiet", "linked", "step", "acknowledge", "webhook", "test"],
   test: ["trigger_column", "blocks", "battery", "nothing_runs", "clock", "skipped", "inherited"],
   log: ["category", "zone_disarmed", "incident", "user", "export"],
   settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
@@ -302,6 +306,11 @@ class FoyerPanel extends LitElement {
           }),
         ),
       saveChime: (chime) => this._edit("chime", { type: "foyer/config/chime", chime }),
+      // The URL itself is never sent from here: the backend generates it,
+      // because what protects an unauthenticated webhook is that nobody can
+      // guess it (§7.2, part 1 decision 6).
+      setAckWebhook: (enabled) =>
+        this._edit("settings", { type: "foyer/ack_webhook", enabled }),
       saveSettings: (settings) =>
         this._edit("settings", {
           type: "foyer/config/settings",
@@ -586,6 +595,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-users .ctx=${ctx}></foyer-page-users>`;
       case "devices":
         return html`<foyer-page-devices .ctx=${ctx}></foyer-page-devices>`;
+      case "contacts":
+        return html`<foyer-page-contacts .ctx=${ctx}></foyer-page-contacts>`;
       case "test":
         return html`<foyer-page-test .ctx=${ctx}></foyer-page-test>`;
       case "log":

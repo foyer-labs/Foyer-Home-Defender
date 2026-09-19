@@ -241,6 +241,48 @@ export interface ActionConfig {
   conditions: Condition[];
   condition_mode: "all" | "any";
   enabled: boolean;
+  /** Seconds from the start of the escalation, or null for an ordinary
+   * action (§7.2). An escalation step is a notification at an offset: the
+   * offset is the only thing that makes it one. */
+  escalation_offset: number | null;
+}
+
+/** Who a notify action reaches: a contact, and which of their channels.
+ * A null channel means the contact's own order of priority decides. */
+export interface NotifyContact {
+  contact_id: string;
+  channel_id: string | null;
+}
+
+export type ContactChannelKind = "push" | "sms" | "voice" | "chat" | "other";
+
+export interface ContactChannelConfig {
+  id?: string;
+  kind: ContactChannelKind;
+  /** Any `notify.*` service, or a notify entity. Foyer orchestrates
+   * transports; it does not implement them (§1.2). */
+  service: string;
+  target: string;
+  data: Record<string, unknown>;
+  /** Whether this transport can carry the button that acknowledges an
+   * alarm. Declared rather than guessed: a transport discards a key it does
+   * not know without a word. */
+  actionable: boolean;
+  enabled: boolean;
+}
+
+export interface ContactConfig {
+  id?: string;
+  name: string;
+  /** Ordered, highest priority first (§7.1). */
+  channels: ContactChannelConfig[];
+  quiet_start: string | null;
+  quiet_end: string | null;
+  /** What counts as high severity inside the quiet window: the log's own
+   * scale of info / warning / alarm (§10.1). */
+  quiet_min_severity: "info" | "warning" | "alarm";
+  linked_user_id: string | null;
+  enabled: boolean;
 }
 
 export interface ProfileConfig {
@@ -417,6 +459,10 @@ export interface SettingsConfig {
   /** How long a walk test runs without a detection before it ends itself
    * (§5.3, §11.3). Bounded in code: the auto-exit cannot be switched off. */
   walk_test_timeout: number;
+  /** The DTMF acknowledgement webhook's id, or null when it is off (§7.2).
+   * A Home Assistant webhook is not authenticated, so this URL is a way of
+   * stopping an alarm: it exists only while somebody wants it to. */
+  ack_webhook_id: string | null;
 }
 
 export interface FoyerConfig {
@@ -429,6 +475,7 @@ export interface FoyerConfig {
   chime: ChimeConfig;
   users: UserConfig[];
   devices: DeviceConfig[];
+  contacts: ContactConfig[];
   code_policy: CodePolicyConfig;
 }
 
@@ -459,6 +506,11 @@ export interface ConfigMeta {
   future_operations: string[];
   /** The channels on which the per-user exemption of §8.2 can apply. */
   identifying_channels: string[];
+  /** Which moments an escalation step may answer, and the two things that
+   * escalate at all (§5.5, §5.6, §7.2). */
+  escalation_moments: string[];
+  escalation_kinds: string[];
+  contact_channel_kinds: ContactChannelKind[];
   /** The stored configuration's schema version, shown beside a backup. */
   schema_version: [number, number];
 }
@@ -613,6 +665,12 @@ export interface TraceAction {
     | { kind: "time"; after: string; before: string }
     | { kind: "state"; entity_id: string; operator: string; state: string }
   )[];
+  /** Who a notification reached, and who its quiet hours held back (§7.1),
+   * and which escalation step it was (§7.2). */
+  recipients: { contact_id: string; channel_id: string; kind: string }[];
+  quiet: string[];
+  escalation: string | null;
+  escalation_step: number | null;
 }
 
 export interface TraceBatch {
@@ -665,6 +723,12 @@ export interface TraceStep {
     profile_id: string | null;
     moment: string | null;
     area_id: string | null;
+    /** An escalation step still to come: "escalation step 1 at +60s ->
+     * Luca (SMS)" (§11.2). Read off the Decision, never predicted. */
+    step: number | null;
+    offset: number | null;
+    contact_ids: string[];
+    channel_ids: string[];
   }[];
 }
 
@@ -702,8 +766,11 @@ export interface TestActionQuery {
   /** One configured action of one profile (page 5)… */
   profile_id?: string;
   action_id?: string;
-  /** …or a notification channel on its own, which is the half of §11.4's
-   * "every contact channel" that exists before the contact book of Phase 4. */
+  /** …or one channel of one contact (page 6), which is §11.4's "a test
+   * button next to every action and every contact channel"… */
+  contact_id?: string;
+  channel_id?: string;
+  /** …or a notification service on its own, which is what the wizard tests. */
   service?: string;
   message?: string;
   code?: string;
@@ -718,6 +785,7 @@ export type PageId =
   | "groups"
   | "users"
   | "devices"
+  | "contacts"
   | "log"
   | "settings"
   | "test";

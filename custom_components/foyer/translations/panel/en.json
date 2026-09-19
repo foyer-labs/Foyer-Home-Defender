@@ -26,7 +26,8 @@
     "log": "Log",
     "users": "Users",
     "devices": "Arming devices",
-    "test": "Test & diagnostics"
+    "test": "Test & diagnostics",
+    "contacts": "Contacts"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -887,6 +888,40 @@
           "text": "That is what makes it worth having: the failure it prevents is discovering during the emergency that the emergency channel was misconfigured. It asks first, and every run is in the log as a test rather than as an alarm."
         }
       }
+    },
+    "contacts": {
+      "title": "What this page decides",
+      "intro": "Escalation targets people, not services. Home Assistant already provides the transports — push, SMS, voice, messaging — so what is configured here is the order, the timing, and what counts as somebody having taken notice.",
+      "items": {
+        "order": {
+          "term": "Channel order",
+          "text": "Tried highest first. Put the channel that survives a cut internet connection somewhere in the list, not at the bottom."
+        },
+        "quiet": {
+          "term": "Quiet hours",
+          "text": "Only what is loud enough reaches this contact inside the window. It never suppresses an alarm to the whole household."
+        },
+        "linked": {
+          "term": "Linked user",
+          "text": "Lets an acknowledgement from a phone be attributed to a person in the log."
+        },
+        "step": {
+          "term": "Escalation step",
+          "text": "A notification with a time on it, on the profile that answers the alarm. The policy stops the instant anyone acknowledges."
+        },
+        "acknowledge": {
+          "term": "Acknowledgement",
+          "text": "Four paths stop the policy, and each records who answered and how."
+        },
+        "webhook": {
+          "term": "Acknowledgement webhook",
+          "text": "An unauthenticated URL that stops an alarm. Off until you switch it on, and worth giving to nothing but the voice provider."
+        },
+        "test": {
+          "term": "Test channels",
+          "text": "Really sends. Use it — an untested emergency channel is one you discover during the emergency."
+        }
+      }
     }
   },
   "notification": {
@@ -1202,7 +1237,12 @@
     "moments_more": "{moments} and {count} more",
     "siren_duration_hint": "In seconds. It is capped at the siren cutoff, so a siren never outlives the alarm.",
     "no_tones": "This siren declares no tones.",
-    "default_tone": "The siren's own"
+    "default_tone": "The siren's own",
+    "no_contacts": "No contacts yet. Add one on the Contacts page to notify a person rather than a service.",
+    "contacts_hint": "Who this notification reaches. Choose contacts or a service, never both.",
+    "highest_channel": "Highest priority channel",
+    "escalation_hint": "Seconds from the start of the escalation. With a time here this notification becomes a step: it waits, and it stops the moment somebody acknowledges.",
+    "escalation_moment_hint": "Only an alarm or a technical alarm can be escalated: they are the two that can be acknowledged."
   },
   "camera_mode": {
     "snapshot": "Snapshot",
@@ -1614,10 +1654,14 @@
       "no_profile": "✗ no profile answers this — nothing would run",
       "later": {
         "delay": "⏱ the rest of this sequence at {at}",
-        "siren": "⏱ siren cutoff at {at}"
+        "siren": "⏱ siren cutoff at {at}",
+        "escalation_step": "⏱ escalation step {step} at +{offset}s → {who}"
       },
       "nothing_configured": "✗ nothing is configured for this moment",
-      "a_group": "a group"
+      "a_group": "a group",
+      "escalation_sent": "✓ escalation step {step} → {who}",
+      "reached": "→ {who}",
+      "quiet": "quiet hours held back: {who}"
     },
     "source": {
       "zone": "zone",
@@ -1713,5 +1757,58 @@
       "revert": "Switches back off",
       "delay": "Nothing: a delay is the waiting itself"
     }
+  },
+  "channel_kind": {
+    "push": "Push",
+    "sms": "SMS",
+    "voice": "Voice call",
+    "chat": "Chat",
+    "other": "Other"
+  },
+  "contacts": {
+    "title": "Contacts",
+    "add": "Add contact",
+    "new": "New contact",
+    "none": "No contacts yet. An escalation reaches people, so it needs at least one.",
+    "channels": "Channels",
+    "channels_order": "Channels, highest priority first",
+    "channels_hint": "Tried highest first. Put the channel that survives a cut internet connection somewhere in the list, not at the bottom.",
+    "add_channel": "Add channel",
+    "service": "Notification service",
+    "service_hint": "Any notify service or notify entity in this installation. Foyer orchestrates transports; it does not implement them.",
+    "target": "Target",
+    "target_hint": "What this transport needs to reach the person: a phone number, a chat id. Leave it empty when the service already knows.",
+    "actionable": "Can carry an acknowledge button",
+    "actionable_hint": "The Companion app can; an SMS cannot. A transport throws away a key it does not know without a word, so this is declared rather than guessed.",
+    "quiet_hours": "Quiet hours",
+    "quiet_hint": "Inside this window only what is loud enough reaches this contact. It never silences the alarm for the whole household.",
+    "quiet_min_severity": "Gets through the window",
+    "quiet_severity_hint": "On the log's own scale. Left at alarm, a break-in gets through at four in the morning and a successful arming does not.",
+    "linked_hint": "Lets an acknowledgement from this person's phone be attributed to them in the log.",
+    "orchestration": "Escalation targets people, not services. Home Assistant already provides the transports, so what is configured here is who, in what order, and when to stop.",
+    "test": "Test this channel",
+    "test_after_save": "Save the contact first: a test sends through the stored channel, not the draft.",
+    "test_sent": "Sent",
+    "policies": "Escalation policies",
+    "no_policies": "No escalation steps yet. A step is a notification with a time on it, added to a response profile.",
+    "edit_on_profiles": "Edit on response profiles",
+    "step_number": "Step",
+    "exhausted": "If nobody acknowledges, the last step raises escalation_exhausted, which is itself a moment a profile can act on.",
+    "acknowledgement": "Acknowledgement",
+    "ack_stops": "The policy stops the instant any of these arrives. Every acknowledgement records who and through which channel.",
+    "ack_push": "Action button in a push notification",
+    "ack_push_how": "A channel marked as able to carry one",
+    "ack_disarm": "Disarming through any channel",
+    "ack_disarm_how": "Keypad, card, tag, service call — an area the alarm touched",
+    "ack_dtmf": "Key press during a voice call",
+    "ack_dtmf_how": "Captured by the provider, fed back to the webhook below",
+    "ack_service": "Service call or button",
+    "ack_service_how": "foyer.acknowledge, button.foyer_acknowledge",
+    "webhook": "Acknowledgement webhook",
+    "webhook_enable": "Accept an acknowledgement from a webhook",
+    "webhook_warning": "This URL stops an alarm, and nothing authenticates it.",
+    "webhook_warning_hint": "Home Assistant webhooks are open to whoever holds the address: anybody who has it, or intercepts it, can stop the escalation on its way to your neighbour. Switch it on only if a voice provider needs it, and give the address to nothing else.",
+    "webhook_hint": "Post to this path from the voice provider when the key is pressed. Switching this off forgets the address: switching it on again gives out a new one.",
+    "no_quiet_hours": "Always reachable"
   }
 }
