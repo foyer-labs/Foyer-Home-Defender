@@ -24,16 +24,17 @@
 > con il contratto dei servizi `foyer.*` e MQTT nelle due direzioni. Un
 > tastierino riceve una risposta vera: distingue «codice sbagliato» da
 > «bloccato dalla finestra della cucina», invece di fallire in silenzio. Fuori
-> restano il simulatore, la prova di percorso e la scalata delle notifiche.
+> Accanto c'è il simulatore: chiedi cosa succederebbe, e te lo dice senza che
+> succeda. Fuori restano la prova di percorso e la scalata delle notifiche.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
 cartella di automazioni, e vuoi inserire e disinserire da un tastierino, un tag
 o un badge con un registro che dice chi è stato.
 
-**Non ancora, se** vuoi verificare una configurazione di quaranta zone senza
-farla scattare davvero, se ti serve che una notifica senza risposta salga da
-push a SMS a telefonata, o se non vuoi far girare su casa tua una beta con
+**Non ancora, se** ti serve camminare per casa a impianto inserito per sapere
+quali zone ti rilevano davvero, se ti serve che una notifica senza risposta
+salga da push a SMS a telefonata, o se non vuoi far girare su casa tua una beta con
 pochi mesi di vita: [Alarmo](https://github.com/nielsfaber/alarmo) ha anni di
 installazioni alle spalle, e per un impianto che deve semplicemente funzionare
 oggi è la scelta prudente.
@@ -78,6 +79,20 @@ oggi è la scelta prudente.
 - **Un registro eventi in un archivio tutto suo**, che la cancellazione dopo
   dieci giorni del recorder non può toccare: cosa è successo, dove, attraverso
   quale canale, se ogni azione ha davvero funzionato, e chi ha cambiato cosa.
+- **Un simulatore che risponde a «cosa succederebbe se…» senza che succeda
+  niente.** Scegli uno scenario e un'ora, forza l'apertura di una finestra
+  sessanta secondi dopo, e leggi tutta la decisione: quale area ha cambiato
+  stato, quale ritardo è partito, quale profilo ha risposto e da dove è stato
+  ereditato, quali azioni sono partite e quali no *con il motivo* — una
+  condizione non soddisfatta, una sirena già in funzione, un ritardo che
+  trattiene ancora il resto della sequenza. Chiama lo stesso motore che chiama
+  l'allarme e semplicemente non consegna mai la risposta a chi farebbe suonare
+  le sirene: è a questo che serviva la funzione pura di cui sopra.
+- **Una tabella in tempo reale di ogni zona**, con l'unica colonna che le
+  pagine di configurazione non possono mostrarti: se Foyer considererebbe
+  quel sensore *scattato adesso*, letto attraverso il trigger di quella zona.
+  E poi se bloccherebbe l'inserimento e perché, la batteria, il segnale radio,
+  e quando si è mosso davvero l'ultima volta.
 
 <details>
 <summary><strong>Il resto di ciò che c'è già</strong></summary>
@@ -208,9 +223,12 @@ tutta la documentazione tecnica).
 
 ## Cosa manca ancora, e conta
 
-- **Nessun simulatore e nessuna prova di percorso.** Non puoi ancora chiedere
-  «cosa succederebbe se la finestra della cucina si aprisse adesso, con questo
-  scenario, a quest'ora?» senza aprirla. *Prossima versione.*
+- **Nessuna prova di percorso e nessuna prova delle azioni.** Non puoi ancora
+  inserire davvero l'impianto con tutte le risposte inibite e camminare per
+  casa per vedere quali zone ti rilevano, né premere un pulsante che faccia
+  suonare la sirena per tre secondi sul serio. `foyer.walk_test` e
+  `foyer.test_action` non sono registrati di proposito, invece di esserlo e
+  restare muti. *Prossima versione.*
 - **Nessun inserimento automatico.** Foyer non si inserisce da solo quando la
   casa si svuota. Arriva insieme alla scalata delle notifiche, non prima: il
   conto alla rovescia annullabile che serve a entrambe è lo stesso meccanismo,
@@ -239,7 +257,8 @@ copia il codice. Dove differiscono oggi:
 | **Tastierini, MQTT** | Sì: contratto dei servizi e MQTT nelle due direzioni, dispositivi dichiarati, tre blueprint | Sì |
 | **Tag NFC e telecomandi** | Nativi, legati a una persona, senza automazioni da scrivere | Tramite automazioni |
 | **Maturità** | Beta. Un solo autore, pochi mesi di vita | Anni di utilizzo, moltissime installazioni |
-| **Simulatore, prova di percorso** | Previsti, non scritti | — |
+| **Simulatore** | Sì: lo stesso motore, un mondo e un orologio inventati, e una traccia che dice perché ogni azione è partita o no | — |
+| **Prova di percorso** | Prossima versione | — |
 | **Interfaccia in italiano** | Completa: pannello, card e testi di aiuto | Solo in inglese |
 
 Il tastierino non è più la riga che decide. Quella che resta è l'ultima: se
@@ -252,8 +271,10 @@ usa Alarmo.
   area è inserita, e adesso?» viene deciso da codice che non può raggiungere
   Home Assistant, non ha un orologio suo e non può eseguire nessuna azione; è
   testato per conto proprio, e la CI rifiuta un commit che vi faccia entrare
-  Home Assistant. È lo stesso vincolo che renderà veritiera, e non ottimistica,
-  la risposta del simulatore.
+  Home Assistant. È questo che rende veritiera, e non ottimistica, la risposta
+  del simulatore: è la stessa funzione, a cui viene dato un mondo inventato, e
+  un test verifica che lei e l'allarme in funzione arrivino alla stessa identica
+  decisione dagli stessi identici dati.
 - **Un buco nella copertura viene scritto.** Se Home Assistant è rimasto giù per
   due ore, il registro lo dice, con la durata. Non lascia mai credere che tu
   fossi protetto quando non lo eri.
@@ -276,6 +297,9 @@ usa Alarmo.
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-users-it.png" alt="Utenti e codici: due persone con i loro permessi, ambito e validità, e la tabella di quali operazioni chiedono un codice" width="900">
 </p>
+
+Come si legge una traccia di decisione, e cosa vale la pena provare prima di
+fidarsi di una configurazione: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
 
 ## Modello di sicurezza
 

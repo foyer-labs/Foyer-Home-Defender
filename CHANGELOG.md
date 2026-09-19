@@ -5,6 +5,89 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [Unreleased] — ask what would happen, without anything happening
+
+Phase 3, part one. The feature this project exists for: you can now rehearse a
+configuration instead of trusting it, and read what every zone is actually
+doing rather than what you meant it to do.
+
+### Added
+- **The simulator** (panel page 9, *Test & diagnostics* → *Simulator*). Pick a
+  scenario, a date and time, and force zones into states at chosen seconds
+  after the start; read back the whole decision chain. Which area changed
+  state and which timer started, which verification group filled up and by how
+  much, when an incident opened and when a second zone joined it, which
+  profile answered and **where it was inherited from**, which actions ran, and
+  which did not with the reason — a condition that was not met and which one,
+  a siren already sounding, a zone that is silent, or a delay still holding the
+  rest of the sequence.
+
+  **Nothing is executed, structurally.** It calls the same `decide()` the
+  running alarm calls, with a fabricated world and a fabricated clock, and
+  never hands the result to the executor. A test asserts that the simulator
+  and the runtime reach an identical decision from identical inputs; a test in
+  Home Assistant registers a service and asserts nothing called it, because
+  "no action was configured" and "nothing ran" look the same in a log.
+
+  Every run is recorded under `system` with its inputs, so a configuration
+  change can be justified afterwards. New command `foyer/simulate`.
+- **Live zone diagnostics** (page 9 → *Diagnostics*). Every mapped zone with
+  its backing entity, live state, **resolved trigger evaluation** — would Foyer
+  count this as triggered right now, read through that zone's own trigger —
+  last state change, availability, battery, radio quality where the entity
+  exposes one, supervision window, and whether it blocks arming and for which
+  of the two reasons. Entities a zone or a device names that Home Assistant
+  does not have are listed separately: a renamed entity is the commonest
+  silent failure there is. Arming devices get a table of their own below the
+  zones. New command `foyer/diagnostics`.
+- **A zone can name the entity that reports its battery**, and the
+  `low_battery` moment is raised. What counts as low is one setting for the
+  installation, 20 % by default (page 11); a battery `binary_sensor` is read
+  by Home Assistant's own convention, where `on` means low.
+- **Every arming attempt says which zones are on a low battery**, on every
+  channel — the panel, the card and the structured result a service call or a
+  keypad gets back. The panel offers to exclude them from that arming in one
+  press, which is an ordinary manual exclusion and ends when you disarm.
+- **`docs/simulator.md`**: how to read a decision trace, and what is worth
+  rehearsing before trusting a configuration.
+
+### Changed
+- **A low battery warns and never blocks arming, and is not a fault.** A
+  contact reporting 15 % is still seeing the door, and a house of forty
+  battery zones that cannot be armed the morning one of them dips is an alarm
+  that gets switched off.
+- **A battery entity that cannot be read *is* a fault and blocks**, like any
+  other unreadable entity (INV-4). A battery sensor that has gone silent is a
+  radio that has gone silent, and the contact beside it is the next thing to
+  stop reporting. Only zones that name a battery entity are affected; nothing
+  else changes for an installation that names none.
+
+### Fixed
+- **The "ready to arm" reading could disagree with arming itself.** The read
+  model behind `binary_sensor.foyer_ready_to_arm`, the panel's per-area
+  *ready* flag and page 9's *blocks arming* column trusted the stored set of
+  active zones, while a real decision refreshes every zone's trigger from the
+  world before deciding anything. Between an entity changing and the decision
+  it causes, the two could differ — the reading said ready, the arming
+  refused. Both now read the world through the same function.
+
+### Permissions
+- `foyer/diagnostics` and `foyer/simulate` only read, and are gated as reads:
+  `view_log`, and no code. §8.2 asks for a code to *edit* the configuration,
+  and demanding one to open a page teaches a household to keep the code on a
+  sticky note beside the tablet. What these two reveal is what the log
+  reveals.
+
+### Not in this release, on purpose
+- **The walk test and the real action test**, with their tabs on page 9.
+  `foyer.walk_test` and `foyer.test_action` stay unregistered rather than
+  registered and silent (decision 86).
+
+Configuration schema **5.3**, a minor step: a zone's battery entity and the
+threshold it is read against are additive, and a 5.2 build ignoring both never
+warns about a battery — which is exactly what it did yesterday. Foyer is not a
+certified alarm system and is not a fire alarm system.
+
 ## [0.1.0-beta.3] — the picture, and the page you were on
 
 Three defects found by using it rather than by reading it, and one of them

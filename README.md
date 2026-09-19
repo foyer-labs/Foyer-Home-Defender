@@ -22,8 +22,9 @@
 > keypads, NFC tags, RFID badges and remotes, a full `foyer.*` service contract
 > and MQTT in both directions — so a keypad can tell *that code is wrong* from
 > *the kitchen window is open* instead of beeping the same way at both. Codes,
-> users, permissions and lockout arrived in the release before. What is still
-> missing is the simulator, the walk test and escalation.
+> users, permissions and lockout arrived in the release before. Beside it now
+> sits the simulator: ask what would happen, and it tells you without anything
+> happening. What is still missing is the walk test and escalation.
 
 **Try it if** you already have door, window or motion sensors in Home
 Assistant, you want one panel with real arming scenarios instead of a folder of
@@ -31,7 +32,7 @@ automations, you want to arm from the wall rather than from a phone, and you are
 willing to run a beta on a house that has other locks on it.
 
 **Not yet, if** you want something finished, or you need escalation across
-channels, a simulator or a walk test — [Alarmo](https://github.com/nielsfaber/alarmo)
+channels, or a walk test to prove which zones really see you — [Alarmo](https://github.com/nielsfaber/alarmo)
 has years of use behind it, and a large installed base is a kind of testing this
 project has not had yet.
 
@@ -75,6 +76,19 @@ project has not had yet.
 - **An event log in a database of its own**, which the recorder's ten-day purge
   cannot touch: what happened, where, through which channel, whether each
   action actually worked, and who changed what.
+- **A simulator that answers "what would happen if…" without anything
+  happening.** Pick a scenario and an hour, force a window open sixty seconds
+  in, and read the whole decision: which area changed state, which delay
+  started, which profile answered and where it was inherited from, which
+  actions ran, and which did not *with the reason* — a condition that was not
+  met, a siren already sounding, a delay still holding the rest of the
+  sequence. It calls the same engine the alarm calls and simply never hands
+  the answer to the part that runs sirens, which is what the pure function
+  above was for.
+- **A live table of every zone**, with the one column the configuration pages
+  cannot show you: whether Foyer would count that sensor as *triggered right
+  now*, read through that zone's own trigger. Plus whether it would block
+  arming and why, its battery, its radio, and when it last actually moved.
 
 <details>
 <summary><strong>The rest of what is already there</strong></summary>
@@ -198,10 +212,11 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No simulator and no walk test.** You cannot yet ask "what would happen if
-  the kitchen window opened right now, in this scenario, at this hour?" without
-  opening it, and `foyer.walk_test` is deliberately not registered rather than
-  registered and silent. *Next release.*
+- **No walk test and no real action test.** You cannot yet arm the house for
+  real with every response inhibited and walk it to see which zones detect you,
+  and you cannot press a button to actually sound the siren for three seconds.
+  `foyer.walk_test` and `foyer.test_action` are deliberately not registered
+  rather than registered and silent. *Next release.*
 - **No escalation, and no contact list.** Notifications go to a `notify`
   service directly; they do not climb from push to SMS to a phone call until
   somebody acknowledges. *After that.*
@@ -229,7 +244,8 @@ its code. Where they differ today:
 | **Keypads, tags, MQTT** | Yes: a service contract and MQTT both ways, devices declared before they may command, three blueprints | Yes |
 | **What a refused command tells the device** | A stable reason and the blocking zones by name | Success or failure |
 | **Maturity** | Beta. One author, months old | Years of use, a large installed base |
-| **Simulator, walk test** | Planned, not written | — |
+| **Simulator** | Yes: the same engine, a made-up world and clock, and a trace saying why each action ran or did not | — |
+| **Walk test** | Next release | — |
 
 If you need an alarm that thousands of houses have already shaken the bugs out
 of, use Alarmo. Foyer is a beta, and the honest difference between the two
@@ -240,8 +256,10 @@ columns above is time.
 - **The part that decides is a pure function.** "This zone opened, this area is
   armed, what now?" is answered by code that cannot reach Home Assistant, has
   no clock of its own and cannot perform an action; it is tested on its own,
-  and CI refuses a commit that lets Home Assistant in. That same constraint is
-  what will make the simulator's answer truthful rather than optimistic.
+  and CI refuses a commit that lets Home Assistant in. That is what makes the
+  simulator's answer truthful rather than optimistic: it is the same function,
+  given a made-up world, and a test asserts that it and the running alarm reach
+  an identical decision from identical inputs.
 - **A gap in coverage is written down.** If Home Assistant was down for two
   hours, the log says so, with the duration. It never implies you were
   protected when you were not.
@@ -256,6 +274,9 @@ columns above is time.
   silence.
 - **The changelog says what changed in behaviour**, not "various fixes",
   because that is what you need in order to decide whether to take an update.
+
+How to read a decision trace, and what is worth rehearsing before you trust a
+configuration: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-log-en.png" alt="The log: arming, an alarm, an arming refused with the zone that blocked it, the restart gap, a configuration change with its old and new value, and a notification that failed" width="900">
