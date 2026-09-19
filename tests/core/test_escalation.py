@@ -488,3 +488,33 @@ def test_an_escalation_survives_a_round_trip_through_the_store(settings):
     fire(world)
     restored = state_from_dict(state_to_dict(world.state), world.config)
     assert restored.escalations == world.state.escalations
+
+
+# --- the walk test (§11.3) ---------------------------------------------------------
+
+
+def test_a_walk_test_starts_no_escalation_for_an_ordinary_detection():
+    """A walk test holds back the response, and an escalation is a response.
+
+    It needs no case of its own in the escalation: part 2 decision 3 already
+    keeps an ordinary detection out of the state machine, so there is no
+    incident to escalate.
+    """
+    world = World(escalating_house())
+    world.walk_test(True)
+    world.set(WINDOW, "on")
+
+    assert world.state.escalations == ()
+    assert notified(world.advance(120)) == []
+
+
+def test_a_walk_test_never_holds_back_the_escalation_of_a_tamper_zone():
+    """`always_on` zones stay fully live (§11.3), and an alarm of theirs is a
+    real incident: the people on the list are reached."""
+    config = escalating_house()
+    world = World(config)
+    world.walk_test(True)
+    world.set(TAMPER, "on")
+
+    assert notified(world.last) == ["luca/luca-push"]
+    assert notified(world.advance(60)) == ["luca/luca-sms"]
