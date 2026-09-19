@@ -90,11 +90,16 @@ STEP_TICK = "tick"
 class ZoneOverride:
     """A zone forced into a state, at a chosen moment of the run.
 
-    ``at`` is seconds from the start. It exists because the features §11.2
-    demands of the trace — a verification group filling up, a second zone
-    joining an incident — are about *sequence*: two zones forced at the same
-    instant can never show a group reaching two of two thirty seconds apart.
-    Zero is the default and is the ordinary case.
+    ``at`` is seconds **from the moment the house has finished arming**, not
+    from the start of the run: the run begins by arming, and an offset
+    counted from the start would put the zone inside the exit delay. Zero is
+    the default and means what a person means by it — the house is armed,
+    and then this happens.
+
+    The offset exists at all because the features §11.2 demands of the trace
+    — a verification group filling up, a second zone joining an incident —
+    are about *sequence*: two zones forced at the same instant can never show
+    a group reaching two of two thirty seconds apart.
     """
 
     zone_id: str
@@ -234,27 +239,55 @@ def _initial(
     return entities
 
 
-def _queue(
+def _premise(
     config: FoyerConfig, request: SimulationRequest
 ) -> list[tuple[datetime, Event]]:
-    """The events the operator asked for, in the order they happen.
-
-    The arming request goes first at the start instant, then each override at
-    its own offset. Everything between them is a Tick the scheduler would
-    have sent, and that is worked out step by step rather than listed here.
-    """
-    events: list[tuple[datetime, Event]] = []
+    """The arming the run supposes, at the start instant. Empty for a
+    disarmed house, which is a question in its own right."""
     if request.scenario_id:
-        events.append((request.start, ArmRequest(request.scenario_id, request.actor)))
-    else:
-        for area_id in request.area_ids:
-            events.append((request.start, ArmAreaRequest(area_id, request.actor)))
+        return [(request.start, ArmRequest(request.scenario_id, request.actor))]
+    return [
+        (request.start, ArmAreaRequest(area_id, request.actor))
+        for area_id in request.area_ids
+    ]
+
+
+def _targets(config: FoyerConfig, request: SimulationRequest) -> tuple[str, ...]:
+    """The areas the premise tries to arm."""
+    scenario = config.scenario(request.scenario_id)
+    if scenario is not None:
+        return tuple(a.id for a in config.areas if a.id in scenario.areas)
+    return tuple(a.id for a in config.areas if a.id in request.area_ids)
+
+
+def _settled(state: RuntimeState, targets: Sequence[str]) -> bool:
+    """Has the premise finished happening?
+
+    True once no target area is still counting down its exit delay —
+    whether it armed, failed to arm, or was refused outright. Everything the
+    operator asked for is measured from that instant.
+    """
+    return all(state.area(area_id).state is not AreaState.ARMING for area_id in targets)
+
+
+def _overrides(
+    config: FoyerConfig, request: SimulationRequest, anchor: datetime
+) -> list[tuple[datetime, Event]]:
+    """The forced zones, placed relative to the moment the house was armed.
+
+    Not relative to the start of the run (decision of 2026-09-19). The run
+    begins by arming, so an offset counted from the start would put a zone
+    inside the exit delay — and "arming failed, zone open" is a true answer
+    to a question almost nobody was asking. Zero now means what a person
+    means by it: the house is armed, and *then* this happens.
+    """
     zones = {z.id: z for z in config.zones}
+    events: list[tuple[datetime, Event]] = []
     for override in request.zones:
         zone = zones.get(override.zone_id)
         if zone is None:
             continue
-        at = request.start + timedelta(seconds=max(0, override.at))
+        at = anchor + timedelta(seconds=max(0, override.at))
         events.append(
             (
                 at,
@@ -302,11 +335,20 @@ def run(
     entities = _initial(request, live or {})
     state = RuntimeState(areas={a.id: AreaRuntime() for a in config.areas})
     now = request.start
-    deadline = request.start + timedelta(
-        seconds=max(0, min(request.horizon, MAX_HORIZON))
-    )
+    horizon = max(0, min(request.horizon, MAX_HORIZON))
     steps: list[SimStep] = []
-    pending = _queue(config, request)
+    targets = _targets(config, request)
+    pending = _premise(config, request)
+    # When the premise finished happening. Every forced zone is placed
+    # relative to it, and so is the horizon: a long exit delay must not eat
+    # the time the operator asked to watch. A disarmed house has no premise,
+    # so the run starts at once.
+    anchor: datetime | None = None if pending else request.start
+    if anchor is not None:
+        pending += _overrides(config, request, anchor)
+    deadline = (anchor or request.start) + timedelta(
+        seconds=horizon if anchor is not None else MAX_HORIZON
+    )
 
     def send(event: Event, at: datetime, kind: str) -> Decision:
         nonlocal state, entities
@@ -361,6 +403,13 @@ def run(
         else:
             send(Tick(), at, STEP_TICK)
         now = at
+        if anchor is None and _settled(state, targets):
+            # The house has stopped arming, however that went. From here the
+            # offsets the operator gave are counted.
+            anchor = at
+            pending += _overrides(config, request, anchor)
+            pending.sort(key=lambda item: item[0])
+            deadline = anchor + timedelta(seconds=horizon)
     truncated = _unfinished(state, pending)
 
     return Simulation(

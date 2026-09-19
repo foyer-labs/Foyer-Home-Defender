@@ -792,3 +792,75 @@ def test_every_action_that_did_not_run_says_why():
         if a.skipped == SKIP_HELD_BY_DELAY
     }
     assert held == {"b", "c"}
+
+
+# --- when a forced zone happens ----------------------------------------------------
+
+
+def test_an_offset_is_counted_from_the_moment_the_house_is_armed():
+    """Zero means what a person means by it.
+
+    The run begins by arming, so an offset counted from the start would put
+    the zone inside the exit delay — and "arming failed, zone open" is a true
+    answer to a question almost nobody was asking.
+    """
+    config = make_house()  # the Night scenario waits 5 s to arm
+    sim = run(
+        config,
+        SimulationRequest(
+            start=START, scenario_id="night", zones=(ZoneOverride("window", "on"),)
+        ),
+        live(config),
+    )
+    armed = step_with(sim, Moment.ARMED)
+    opened = next(step for step in sim.steps if step.kind == "zone")
+    assert armed.at == START + timedelta(seconds=5)
+    assert opened.at == armed.at
+    # And it alarms, rather than failing to arm.
+    assert Moment.TRIGGERED in [m for _, m in moments(sim)]
+    assert Moment.ARM_FAILED not in [m for _, m in moments(sim)]
+
+
+def test_offsets_keep_their_spacing_from_that_moment():
+    config = make_house()
+    sim = run(
+        config,
+        SimulationRequest(
+            start=START,
+            scenario_id="night",
+            zones=(ZoneOverride("window", "on", 0), ZoneOverride("hall", "on", 30)),
+        ),
+        live(config),
+    )
+    zones = [step for step in sim.steps if step.kind == "zone"]
+    assert [z.zone_id for z in zones] == ["window", "hall"]
+    assert zones[1].at - zones[0].at == timedelta(seconds=30)
+
+
+def test_a_disarmed_house_has_no_premise_to_wait_for():
+    """Nothing is being armed, so the offsets start at once."""
+    config = make_house()
+    sim = run(
+        config,
+        SimulationRequest(start=START, zones=(ZoneOverride("tamper", "on"),)),
+        live(config),
+    )
+    opened = next(step for step in sim.steps if step.kind == "zone")
+    assert opened.at == START
+
+
+def test_an_arming_that_was_refused_still_lets_the_run_carry_on():
+    """The premise failed; the question about the zones is still a question,
+    and the trace answers it on the house as it really would be."""
+    config = make_house()
+    entities = {**live(config), WINDOW: EntityState("on", last_reported=START)}
+    sim = run(
+        config,
+        SimulationRequest(
+            start=START, scenario_id="night", zones=(ZoneOverride("hall", "on", 10),)
+        ),
+        entities,
+    )
+    assert any(not step.accepted for step in sim.steps)
+    opened = next(step for step in sim.steps if step.kind == "zone")
+    assert opened.at == START + timedelta(seconds=10)

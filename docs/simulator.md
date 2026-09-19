@@ -103,10 +103,13 @@ bug is a second evaluation path somewhere, never the trace.
 - **A date and time.** This is what a time condition is read against. The same
   configuration at 19:32 and at 23:32 is two different answers, and the field
   is how you check both.
-- **Zones forced into a state**, each at a chosen number of seconds after the
-  start. The offset is not decoration: a verification group reaching two of two,
-  or a second zone joining an incident, are things that happen *in sequence*,
-  and two zones forced at the same instant can never show either.
+- **Zones forced into a state**, each at a chosen number of seconds **after
+  the house has finished arming** — not after the start of the run, because
+  the run begins by arming and an offset from the start would put the zone
+  inside the exit delay. Zero therefore means what you mean by it: armed, and
+  then this happens. The offset exists because a verification group reaching
+  two of two, or a second zone joining an incident, happen *in sequence*, and
+  two zones forced at the same instant can never show either.
 - **Entities used in conditions.** Only the ones your actions actually read —
   "only if nobody is home" can be rehearsed both ways. Leave one empty to use
   what it really says right now.
@@ -206,7 +209,8 @@ answer that includes the run that justified the change.
 
 ### Limits, stated plainly
 
-- **A run is bounded.** Fifteen minutes of simulated time by default, and a
+- **A run is bounded.** Fifteen minutes of simulated time from the moment the
+  house is armed, by default, and a
   cap on how many decisions it may take to get there. When it stops with
   something of its own still running — an area counting down, a sequence a
   delay is holding — it says so rather than ending as though the house had gone
