@@ -31,6 +31,7 @@ from .models import (
     ArmModeRequest,
     ArmRequest,
     BypassZone,
+    CancelAutoAction,
     Decision,
     DisarmRequest,
     Event,
@@ -42,7 +43,9 @@ from .models import (
     Outcome,
     Reason,
     RuntimeState,
+    SetAutoArming,
     SetChime,
+    SetSuspension,
     Startup,
     Tick,
     ZoneStateChanged,
@@ -124,6 +127,19 @@ CATEGORY: dict[Moment, LogCategory] = {
     Moment.WALK_TEST_STARTED: LogCategory.SYSTEM,
     Moment.WALK_TEST_ENDED: LogCategory.SYSTEM,
     Moment.CHIME_SWITCHED: LogCategory.SYSTEM,
+    # Automatic rules (§9.4). What a rule *did* is an `armed` or a `disarmed`
+    # under `arming`, carrying `channel: auto_rule` and the rule's name — the
+    # row §9.4 asks for. These are the rest of the story, and §9.4 files them
+    # under `system` by name: "every rule blocked by a guard is logged under
+    # system, because 'why did it not arm last night?' is a question users
+    # ask". The countdown and its cancellation are there too, so the whole of
+    # one rule's evening reads in one place.
+    Moment.AUTO_PENDING: LogCategory.SYSTEM,
+    Moment.AUTO_CANCELLED: LogCategory.SYSTEM,
+    Moment.AUTO_BLOCKED: LogCategory.SYSTEM,
+    Moment.AUTO_SUSPENSION_SET: LogCategory.SYSTEM,
+    Moment.AUTO_SUSPENSION_CLEARED: LogCategory.SYSTEM,
+    Moment.AUTO_ARMING_SWITCHED: LogCategory.SYSTEM,
     # A test is an action, filed with the actions — and marked (§11.4).
     Moment.ACTION_TESTED: LogCategory.ACTION,
     # A chime sounds exactly when a zone opens unmonitored (§6.6), which is
@@ -170,6 +186,17 @@ SEVERITY: dict[Moment, LogSeverity] = {
     Moment.CHIME_SWITCHED: LogSeverity.INFO,
     Moment.CHIME: LogSeverity.INFO,
     Moment.ACTION_TESTED: LogSeverity.INFO,
+    # The countdown is a warning rather than information: it is the one
+    # moment at which somebody can still stop the house arming itself, and
+    # a contact's quiet hours let a warning through at a threshold they set.
+    Moment.AUTO_PENDING: LogSeverity.WARNING,
+    Moment.AUTO_CANCELLED: LogSeverity.INFO,
+    # "Why did it not arm last night?" — the row that answers it. A warning,
+    # because a house that did not arm when it was meant to is not routine.
+    Moment.AUTO_BLOCKED: LogSeverity.WARNING,
+    Moment.AUTO_SUSPENSION_SET: LogSeverity.INFO,
+    Moment.AUTO_SUSPENSION_CLEARED: LogSeverity.INFO,
+    Moment.AUTO_ARMING_SWITCHED: LogSeverity.INFO,
 }
 
 # Moments whose row is named something else, because the spec names them: the
@@ -215,6 +242,9 @@ REJECTION: dict[type, tuple[str, LogCategory]] = {
     AcknowledgeIncident: ("acknowledge_rejected", LogCategory.ALARM),
     AcknowledgeTechnical: ("acknowledge_rejected", LogCategory.ALARM),
     SetChime: ("chime_rejected", LogCategory.SYSTEM),
+    CancelAutoAction: ("cancel_rejected", LogCategory.SYSTEM),
+    SetAutoArming: ("auto_arming_rejected", LogCategory.SYSTEM),
+    SetSuspension: ("suspension_rejected", LogCategory.SYSTEM),
 }
 
 # Refusals that have already said who and why, under `security`.

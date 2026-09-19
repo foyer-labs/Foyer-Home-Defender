@@ -16,7 +16,9 @@ from custom_components.foyer.core.models import (
     ArmModeRequest,
     ArmPolicy,
     ArmRequest,
+    AutoRule,
     BypassZone,
+    CancelAutoAction,
     CodePolicy,
     Decision,
     DisarmRequest,
@@ -28,10 +30,16 @@ from custom_components.foyer.core.models import (
     Permission,
     ProfileAction,
     ResponseProfile,
+    RuleActionKind,
+    RuleTrigger,
+    RuleTriggerKind,
     RuntimeState,
     Scenario,
+    SetAutoArming,
+    SetSuspension,
     Settings,
     StateTrigger,
+    Suspension,
     SystemSnapshot,
     Tick,
     User,
@@ -122,6 +130,44 @@ def zone(
     )
 
 
+LUCA = "person.luca"
+PARTNER = "person.partner"
+
+
+def rule(
+    rule_id: str = "empty_house",
+    *,
+    kind: RuleTriggerKind = RuleTriggerKind.ABSENCE,
+    entity_ids: tuple[str, ...] = (LUCA, PARTNER),
+    minutes: int = 30,
+    at: str | None = None,
+    weekdays: tuple[int, ...] = (),
+    state: str | None = None,
+    action: RuleActionKind = RuleActionKind.ARM,
+    scenario_id: str | None = "away",
+    area_ids: tuple[str, ...] = (),
+    grace: int = 120,
+    **props,
+) -> AutoRule:
+    return AutoRule(
+        id=rule_id,
+        name=rule_id.replace("_", " ").capitalize(),
+        trigger=RuleTrigger(
+            kind=kind,
+            entity_ids=entity_ids,
+            state=state,
+            minutes=minutes,
+            at=at,
+            weekdays=weekdays,
+        ),
+        action=action,
+        scenario_id=scenario_id,
+        area_ids=area_ids,
+        grace_seconds=grace,
+        **props,
+    )
+
+
 def make_house() -> FoyerConfig:
     """Three areas, two scenarios, one zone of every kind part 1 knows."""
     return FoyerConfig(
@@ -207,12 +253,23 @@ def make_house() -> FoyerConfig:
 
 def closed_entities(config: FoyerConfig, at: datetime = NOW) -> dict[str, EntityState]:
     idle = {"cover": "closed"}
-    return {
+    entities = {
         z.entity_id: EntityState(
-            idle.get(z.entity_id.split(".")[0], "off"), last_reported=at
+            idle.get(z.entity_id.split(".")[0], "off"),
+            last_reported=at,
+            last_changed=at,
         )
         for z in config.zones
     }
+    # The household, at home unless a test says otherwise (§9.4). Their
+    # entities exist even when no rule reads them: a person entity that
+    # cannot be read is not evidence of anything, and a test that forgot to
+    # create one would be testing that rather than the rule.
+    for person in (LUCA, PARTNER):
+        entities.setdefault(
+            person, EntityState("home", last_reported=at, last_changed=at)
+        )
+    return entities
 
 
 class World:
@@ -237,7 +294,9 @@ class World:
         )
         self.entities = closed_entities(self.config)
         for entity_id, value in (entities or {}).items():
-            self.entities[entity_id] = EntityState(value, last_reported=self.now)
+            self.entities[entity_id] = EntityState(
+                value, last_reported=self.now, last_changed=self.now
+            )
         # Start from a world whose zones are already known: the initial open
         # zones count as active, exactly as a running system would have them.
         self.state = self.send(Tick()).state
@@ -257,7 +316,10 @@ class World:
 
     def set(self, entity_id: str, value: str | None, **attributes) -> Decision:
         return self.send(
-            ZoneStateChanged(entity_id, EntityState(value, attributes, self.now))
+            ZoneStateChanged(
+                entity_id,
+                EntityState(value, attributes, self.now, last_changed=self.now),
+            )
         )
 
     def heartbeat(self, entity_id: str) -> None:
@@ -288,6 +350,34 @@ class World:
     def walk_test(self, enable: bool = True, **kwargs) -> Decision:
         duration = kwargs.pop("duration", None)
         return self.send(WalkTestRequest(enable, duration=duration, **_actor(kwargs)))
+
+    # --- automatic rules (§9.4) ---------------------------------------------------
+
+    def cancel(self, pending_id: str | None = None, **kwargs) -> Decision:
+        return self.send(CancelAutoAction(pending_id, **_actor(kwargs)))
+
+    def auto_arming(self, enabled: bool, **kwargs) -> Decision:
+        return self.send(SetAutoArming(enabled, **_actor(kwargs)))
+
+    def suspend(self, suspension: Suspension | None = None, **kwargs) -> Decision:
+        suspension_id = kwargs.pop("suspension_id", None)
+        return self.send(SetSuspension(suspension, suspension_id, **_actor(kwargs)))
+
+    def person(self, entity_id: str, state: str) -> Decision:
+        """Somebody's presence entity changed, which is an ordinary state
+        change: the rules are evaluated on every decision, like everything."""
+        return self.set(entity_id, state)
+
+    def pending(self) -> tuple:
+        return self.state.pending_rules
+
+    def blocked(self) -> list[str]:
+        """The reasons the last decision recorded for a rule that did not act."""
+        return [
+            o.detail.get("reason", "")
+            for o in (self.last.occurrences if self.last else ())
+            if o.moment is Moment.AUTO_BLOCKED
+        ]
 
     # --- reading -----------------------------------------------------------------
 

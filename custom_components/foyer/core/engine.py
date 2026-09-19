@@ -28,7 +28,7 @@ from collections.abc import Container
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
-from . import authz, escalation as escalation_engine
+from . import authz, escalation as escalation_engine, rules as rules_engine
 from .models import (
     CUSTOM_BYPASS,
     ESCALATION_RESTART_GRACE,
@@ -39,6 +39,7 @@ from .models import (
     Acknowledgement,
     AcknowledgeTechnical,
     ActionIntent,
+    ActionKind,
     Activation,
     Actor,
     AreaRuntime,
@@ -48,8 +49,10 @@ from .models import (
     ArmModeRequest,
     ArmPolicy,
     ArmRequest,
+    AutoRule,
     BypassReason,
     BypassZone,
+    CancelAutoAction,
     Channel,
     CodeResult,
     Contributor,
@@ -69,12 +72,21 @@ from .models import (
     Moment,
     Occurrence,
     Operation,
+    PendingRuleAction,
     Reason,
+    RuleActionKind,
+    RuleBlock,
+    RuleRuntime,
+    RuleTriggerKind,
     RuntimeState,
     Scenario,
     ScheduledStep,
+    SetAutoArming,
     SetChime,
+    SetSuspension,
     Startup,
+    Suspension,
+    SuspensionKind,
     SystemSnapshot,
     TechnicalAlarm,
     Tick,
@@ -92,6 +104,7 @@ from .response import (
     effective_profile,
     escalation_intent,
     plan_occurrences,
+    recipients_for,
     resume,
     revert_intent,
     variables,
@@ -109,6 +122,10 @@ from .triggers import (
 from .verification import Verification, all_windows, counter_of, groups
 
 KEY_ZONE_CHANNEL = "key_zone"
+# The channel an automatic rule acts on (§9.4). The engine's own word: §9.1
+# lets a request claim only `api` or `automation`, so nothing outside can
+# arrive wearing this one (decision 84).
+AUTO_RULE_CHANNEL = "auto_rule"
 
 # Why a step did not go out, when it was the restart that swallowed it. The
 # other reasons are response.SKIP_*, which the panel already translates.
@@ -187,6 +204,12 @@ def decide(
         run.set_chime(event.enabled)
     elif isinstance(event, WalkTestRequest):
         outcome = run.walk_test_request(event)
+    elif isinstance(event, CancelAutoAction):
+        outcome = run.cancel_auto_action(event)
+    elif isinstance(event, SetAutoArming):
+        run.set_auto_arming(event.enabled)
+    elif isinstance(event, SetSuspension):
+        outcome = run.set_suspension(event)
     elif isinstance(event, Startup):
         # How long the gap was, measured rather than described: the log grades
         # a configuration reload and an hour with the integration disabled
@@ -208,6 +231,12 @@ def decide(
     elif not isinstance(event, ZoneStateChanged | Tick):
         raise TypeError(f"unsupported event: {event!r}")
 
+    # After the event, so a Cancel arriving in the same instant as a
+    # countdown's deadline stops it (§9.4), and never while Home Assistant is
+    # still starting: half the entities are missing, and "every person is
+    # not_home" would be true of a house full of people.
+    if not snapshot.settling:
+        run.run_rules()
     run.rejoin_closed_bypasses()
     if not snapshot.settling or isinstance(event, Startup):
         run.reconcile_faults()
@@ -320,6 +349,29 @@ def next_wakeup(
     # an alarm nobody answered with nothing due to chase it (INV-3).
     dues.extend(escalation_engine.wakeups(state.escalations, config, now))
     dues.extend(r.until for r in state.running if r.until is not None)
+    # Automatic rules (§9.4): the countdown that is running, the moment a
+    # level trigger's "for N minutes" matures, the next occurrence of a time
+    # rule, the hour an active window opens, and the end of a suspension —
+    # every one of them a moment at which the house may act on its own, and
+    # none of them announced by anything else.
+    dues.extend(p.due for p in state.pending_rules)
+    for suspension in state.suspensions:
+        dues.extend(
+            at
+            for at in (suspension.start, suspension.until)
+            if at is not None and at > now
+        )
+    for rule in config.rules:
+        if not rule.enabled:
+            continue
+        runtime = state.rule(rule.id)
+        for at in (
+            rules_engine.matures_at(rule, runtime),
+            rules_engine.next_occurrence(rule, now, snapshot.timezone),
+            rules_engine.next_window_open(rule, now, snapshot.timezone),
+        ):
+            if at is not None and at > now:
+                dues.append(at)
     windows = all_windows(config)
     for key, activations in state.windows.items():
         if (window := windows.get(key)) is not None:
@@ -346,6 +398,76 @@ class _Outcome:
 
 
 _ACCEPTED = _Outcome(accepted=True)
+
+
+@dataclass(frozen=True, slots=True)
+class _RuleDecision:
+    """What an automatic rule would do now, or what is stopping it (§9.4).
+
+    ``area_ids`` is what the action will actually touch, with any perimeter
+    area already taken out, and ``refused`` is what was taken out — for a
+    ``disarm`` the areas it may not have, and for a ``switch`` the areas that
+    will stay armed instead of being dropped (part 2 decision 6).
+    """
+
+    action: RuleActionKind
+    scenario_id: str | None = None
+    area_ids: tuple[str, ...] = ()
+    refused: tuple[str, ...] = ()
+    suspension: Suspension | None = None
+    substituted: bool = False
+    block: RuleBlock | None = None
+
+    @property
+    def disarms(self) -> bool:
+        """Whether running this would leave part of the house unprotected."""
+        return self.action is RuleActionKind.DISARM or (
+            self.action is RuleActionKind.SWITCH and bool(self.area_ids)
+        )
+
+
+def _spend(
+    rule: AutoRule,
+    runtime: RuleRuntime,
+    occurrence: datetime | None,
+    acted: bool = False,
+) -> RuleRuntime:
+    """Record that this turn of the rule has been dealt with (part 2 decision 4).
+
+    A ``time`` occurrence is spent whatever came of it: 23:00 happens once. A
+    ``presence`` arrival is spent by the arrival itself. A level trigger
+    latches only when it actually acts, so a guard that clears two minutes
+    later still finds a rule willing to arm the house.
+    """
+    if rule.trigger.kind is RuleTriggerKind.TIME:
+        return replace(runtime, last_occurrence=occurrence or runtime.last_occurrence)
+    if rule.trigger.kind is RuleTriggerKind.PRESENCE:
+        return runtime
+    return replace(runtime, latched=True) if acted else runtime
+
+
+def _rule_detail(rt: AreaRuntime) -> dict[str, str]:
+    """Which automatic rule armed this area, for the row written later (§9.4)."""
+    if rt.rule_id is None:
+        return {}
+    return {"rule": rt.rule_name or "", "rule_id": rt.rule_id}
+
+
+def _suspension_detail(suspension: Suspension) -> dict[str, str]:
+    """What a suspension puts on the row that mentions it (§9.4).
+
+    The name travels into the log because the log is what lasts: the object
+    expires, and "Boiler engineer" six months later is the whole reason the
+    expected-visitor window is a first-class thing rather than a checkbox.
+    """
+    return {
+        "suspension": suspension.id,
+        "suspension_kind": suspension.kind.value,
+        "name": suspension.name or "",
+        "rules": ",".join(suspension.rule_ids),
+        "until": suspension.until.isoformat() if suspension.until else "",
+        "reduced": suspension.reduced_scenario_id or "",
+    }
 
 
 def _reject(reason: Reason, blocking: tuple[str, ...] = ()) -> _Outcome:
@@ -443,6 +565,24 @@ class _Run:
             kept = tuple(a for a in activations if a.zone_id in zone_ids)
             if key in self.verifications and kept:
                 self.windows[key] = kept
+        # Automatic arming rules (§9.4). A countdown or a memory belonging to
+        # a rule that has been deleted is dropped: it names nothing, and
+        # firing it would arm the house on an instruction nobody can read.
+        rule_ids = {r.id for r in config.rules}
+        self.auto_arming = state.auto_arming
+        self.pending_rules = [p for p in state.pending_rules if p.rule_id in rule_ids]
+        self.suspensions = [
+            s
+            for s in state.suspensions
+            if not s.rule_ids or any(r in rule_ids for r in s.rule_ids)
+        ]
+        self.rules_runtime: dict[str, RuleRuntime] = {
+            r: rt for r, rt in state.rules.items() if r in rule_ids
+        }
+        self.pending_seq = state.pending_seq
+        # What every row a rule causes carries, so the log can say which rule
+        # armed the house without each call site remembering to add it (§9.4).
+        self.rule_detail: dict[str, str] = {}
 
     # --- world ----------------------------------------------------------------
 
@@ -491,6 +631,12 @@ class _Run:
         if kwargs.get("user_id") and "user_name" not in kwargs:
             named = self.config.user(kwargs["user_id"])
             kwargs["user_name"] = named.name if named else None
+        if self.rule_detail and kwargs.get("channel") == AUTO_RULE_CHANNEL:
+            # Which rule did this, on every row it causes (§9.4). Added here
+            # rather than at each call site, because the rows a rule produces
+            # are written by the ordinary arming and disarming paths, which
+            # know nothing about rules and should not have to.
+            kwargs["detail"] = {**self.rule_detail, **kwargs.get("detail", {})}
         if kwargs.get("channel") == actor.channel and "user_id" not in kwargs:
             if actor.user_id is not None:
                 kwargs["user_id"] = actor.user_id
@@ -2007,6 +2153,8 @@ class _Run:
                 claimed=self.actor.claimed,
                 skipped_exit=skip_exit_delay,
                 causes=(),
+                rule_id=self.rule_detail.get("rule_id"),
+                rule_name=self.rule_detail.get("rule"),
             )
             if delay <= 0:
                 # With no exit delay `arming` is skipped (§5.2), unless an
@@ -2080,6 +2228,7 @@ class _Run:
                 **({"skip_exit_delay": "1"} if rt.skipped_exit else {}),
                 **({"low_battery": ",".join(low)} if low else {}),
                 **(_CLAIMED if rt.claimed else {}),
+                **_rule_detail(rt),
             },
         )
 
@@ -2093,7 +2242,11 @@ class _Run:
             channel=rt.channel,
             user_id=rt.user_id,
             device_id=rt.device_id,
-            detail={"reason": reason.value, **(_CLAIMED if rt.claimed else {})},
+            detail={
+                "reason": reason.value,
+                **(_CLAIMED if rt.claimed else {}),
+                **_rule_detail(rt),
+            },
         )
         self.clear_area(area_id)
 
@@ -2111,7 +2264,12 @@ class _Run:
             )
 
     def arm_scenario(
-        self, scenario: Scenario | None, *, force: bool, skip_exit_delay: bool = False
+        self,
+        scenario: Scenario | None,
+        *,
+        force: bool,
+        skip_exit_delay: bool = False,
+        keep_armed: frozenset[str] = frozenset(),
     ) -> _Outcome:
         """Arm a scenario, or switch to it while armed (decisions 7 and 9).
 
@@ -2119,12 +2277,18 @@ class _Run:
         areas already armed stay armed and now belong to it; areas armed by the
         previous scenario and absent from this one are disarmed. Areas armed on
         their own, outside any scenario, are left exactly as they are.
+
+        ``keep_armed`` names areas this switch may not disarm — the perimeter,
+        when an automatic rule is doing the switching (§9.4 point 3, part 2
+        decision 6). They stay armed and become areas armed on their own, so
+        the master reports ``armed_custom_bypass`` and the house is left more
+        protected than the scenario asked for, never less.
         """
         if scenario is None:
             return _reject(Reason.UNKNOWN_SCENARIO)
         current = self.active_scenario_id
         target = [a for a in scenario.areas if a in self.areas]
-        leaving = [
+        dropping = [
             a
             for a, rt in self.areas.items()
             if current is not None
@@ -2132,9 +2296,11 @@ class _Run:
             and rt.state is not AreaState.DISARMED
             and a not in target
         ]
+        leaving = [a for a in dropping if a not in keep_armed]
+        staying = [a for a in dropping if a in keep_armed]
         in_alarm = [
             a
-            for a in (*target, *leaving)
+            for a in (*target, *dropping)
             if self.areas[a].state in (AreaState.ENTRY, AreaState.TRIGGERED)
         ]
         if in_alarm:
@@ -2161,6 +2327,17 @@ class _Run:
 
         for area_id in leaving:
             self.disarm_area(area_id, self.channel)
+        for area_id in staying:
+            # Armed, and now belonging to nothing: §4.6.1's "areas armed on
+            # their own are left exactly as they are", reached from the other
+            # side. The row says which rule left it armed and why.
+            self.set_area(area_id, scenario_id=None)
+            self.occur(
+                Moment.AUTO_BLOCKED,
+                area_id=area_id,
+                channel=self.channel,
+                detail={"reason": RuleBlock.PERIMETER.value},
+            )
         for area_id in target:
             if area_id not in to_arm:
                 self.set_area(area_id, scenario_id=scenario.id)
@@ -2285,6 +2462,467 @@ class _Run:
         ):
             self.active_scenario_id = None
 
+    # --- automatic arming rules (§9.4) --------------------------------------------
+
+    def run_rules(self) -> None:
+        """Everything §9.4 does on one wake-up, in the one order that works.
+
+        Suspensions expire first, so a window that ended at one o'clock does
+        not hold back the rule evaluated at one o'clock and a second. Then the
+        countdowns whose time is up — after the event has been handled, so a
+        Cancel arriving in the same instant as the deadline cancels. Then the
+        rules themselves.
+        """
+        self.expire_suspensions()
+        self.fire_pending_rules()
+        self.evaluate_rules()
+
+    def expire_suspensions(self) -> None:
+        """A suspension ends on its own, and says so: the row is what a user
+        reads in six months, and "Boiler engineer, 09:00-13:00" is the only
+        form of it that answers anything (part 2 decision 7)."""
+        expired = [s for s in self.suspensions if s.expired(self.now)]
+        for suspension in expired:
+            self.suspensions.remove(suspension)
+            self.occur(
+                Moment.AUTO_SUSPENSION_CLEARED,
+                detail=_suspension_detail(suspension) | {"cause": "expired"},
+            )
+
+    def fire_pending_rules(self) -> None:
+        """Countdowns whose time is up (§9.4).
+
+        The guards are evaluated again here, not only when the countdown
+        started: two minutes is long enough for somebody to come home, and a
+        rule that announced itself and then acted on a world that had changed
+        would be exactly the annoyance the grace period exists to prevent.
+
+        A countdown whose deadline passed while Home Assistant was down fires
+        all the same (part 2 decision 12), and the row says so.
+        """
+        due = [p for p in self.pending_rules if p.due <= self.now]
+        self.pending_rules = [p for p in self.pending_rules if p.due > self.now]
+        for pending in due:
+            rule = self.config.rule(pending.rule_id)
+            if rule is None or not rule.enabled:
+                continue
+            decided = self.rule_decision(rule, scenario_id=pending.scenario_id)
+            if decided.block is not None:
+                self.rule_blocked(rule, decided.block, decided.suspension)
+                self.spend(rule)
+                continue
+            self.rule_act(rule, decided, late=self.restarted)
+
+    def evaluate_rules(self) -> None:
+        for rule in self.config.rules:
+            if not rule.enabled:
+                continue
+            runtime, wants, occurrence = self.rule_wants(rule)
+            if wants and not rules_engine.in_active_window(
+                rule, self.now, self.timezone
+            ):
+                # Outside its window the rule does not exist (§9.4): not
+                # blocked, not suspended, not logged. An edge that happened
+                # there is spent, a condition that still holds is not.
+                runtime = _spend(rule, runtime, occurrence)
+                wants = False
+            if wants and self.pending_rule_for(rule.id) is not None:
+                wants = False  # already counting down
+            if not wants:
+                self.rules_runtime[rule.id] = runtime
+                continue
+            decided = self.rule_decision(rule)
+            if decided.block is not None:
+                self.rules_runtime[rule.id] = _spend(rule, runtime, occurrence)
+                self.rule_blocked(rule, decided.block, decided.suspension)
+                continue
+            self.rules_runtime[rule.id] = replace(
+                _spend(rule, runtime, occurrence, acted=True),
+                blocked=None,
+                last_acted=self.now,
+            )
+            if rule.grace_seconds > 0:
+                self.start_countdown(rule, decided)
+            else:
+                self.rule_act(rule, decided)
+
+    def pending_rule_for(self, rule_id: str) -> PendingRuleAction | None:
+        return next((p for p in self.pending_rules if p.rule_id == rule_id), None)
+
+    def rule_wants(self, rule: AutoRule) -> tuple[RuleRuntime, bool, datetime | None]:
+        """Whether this rule's trigger asks for something now (§9.4).
+
+        The bookkeeping travels with the answer: a level trigger's ``since``
+        is when its condition became true, and an edge trigger's baseline is
+        recorded on the first evaluation so that a rule created while
+        somebody is already at home has not seen them arrive.
+        """
+        runtime = self.rules_runtime.get(rule.id, RuleRuntime())
+        trigger = rule.trigger
+        states = {e: self.entity_state(e).state for e in trigger.entity_ids}
+        if trigger.level:
+            if not rules_engine.condition_holds(rule, states):
+                # The condition went false: the rule is free to act again the
+                # next time it becomes true, and whatever blocked it is over.
+                return (
+                    replace(
+                        runtime, since=None, latched=False, blocked=None, seen=True
+                    ),
+                    False,
+                    None,
+                )
+            runtime = replace(runtime, since=runtime.since or self.now, seen=True)
+            if runtime.latched:
+                return runtime, False, None
+            mature = rules_engine.matures_at(rule, runtime)
+            return runtime, mature is not None and mature <= self.now, None
+        if trigger.kind is RuleTriggerKind.PRESENCE:
+            home = any(state == rules_engine.HOME for state in states.values())
+            if not runtime.seen:
+                return replace(runtime, seen=True, latched=home), False, None
+            if home and not runtime.latched:
+                return replace(runtime, latched=True), True, None
+            return replace(runtime, latched=home), False, None
+        occurrence = rules_engine.occurrence_due(
+            rule, self.now, self.timezone, runtime.last_occurrence
+        )
+        return replace(runtime, seen=True), occurrence is not None, occurrence
+
+    def spend(self, rule: AutoRule) -> None:
+        """After a countdown was stopped at the last moment by a guard.
+
+        A condition that still holds may try again — somebody shut the window
+        and the house is still empty — so a level trigger is unlatched. An
+        edge occurrence was already spent when the countdown started, and one
+        occurrence is all it ever had (part 2 decision 4).
+        """
+        runtime = self.rules_runtime.get(rule.id, RuleRuntime())
+        if rule.trigger.level:
+            self.rules_runtime[rule.id] = replace(runtime, latched=False)
+
+    def rule_decision(
+        self, rule: AutoRule, scenario_id: str | None = None
+    ) -> _RuleDecision:
+        """What this rule would do now, or what is stopping it (§9.4).
+
+        One place, called both when a countdown starts and when it ends, so
+        the second evaluation cannot disagree with the first about what the
+        rules are.
+        """
+        suspension = rules_engine.covering(
+            replace(self.snapshot.state, suspensions=tuple(self.suspensions)),
+            rule,
+            self.now,
+        )
+        substitute = rules_engine.substitute_scenario(suspension)
+        scenario_id = scenario_id or substitute or rule.scenario_id
+        decided = _RuleDecision(
+            action=rule.action,
+            scenario_id=scenario_id,
+            suspension=suspension,
+            substituted=substitute is not None and rule.action is RuleActionKind.ARM,
+        )
+        if not self.auto_arming:
+            return replace(decided, block=RuleBlock.SWITCH_OFF)
+        if self.walk_test is not None:
+            # The house is armed for a test and somebody is walking through
+            # it (part 2 decision 11). Fifteen minutes is a cheap thing to
+            # lose; a prova interrupted half-way is not.
+            return replace(decided, block=RuleBlock.WALK_TEST)
+        if suspension is not None and not decided.substituted:
+            return replace(decided, block=RuleBlock.SUSPENDED)
+
+        target_areas: tuple[str, ...] = ()
+        if rule.action is RuleActionKind.DISARM:
+            allowed, refused = rules_engine.disarm_targets(self.config, rule)
+            decided = replace(decided, area_ids=allowed, refused=refused)
+            if not allowed:
+                # Every area it named is the perimeter, so there is nothing
+                # left for it to do (§9.4 point 3).
+                return replace(
+                    decided,
+                    block=RuleBlock.PERIMETER if refused else RuleBlock.NOT_DISARMED,
+                )
+        else:
+            scenario = self.config.scenario(scenario_id)
+            target_areas = tuple(scenario.areas) if scenario else ()
+            if rule.action is RuleActionKind.SWITCH:
+                dropped, perimeter = rules_engine.switch_drops(
+                    self.config,
+                    replace(self.snapshot.state, areas=self.areas),
+                    scenario_id,
+                )
+                decided = replace(decided, area_ids=dropped, refused=perimeter)
+        if decided.disarms and not self.config.settings.allow_auto_disarm:
+            # §9.4 point 2, enforced rather than documented: a rule that
+            # would leave the house less protected does nothing until
+            # somebody has turned automatic disarming on, having read what it
+            # costs.
+            return replace(decided, block=RuleBlock.AUTO_DISARM_DISABLED)
+        faulted, open_ = self.blockers(target_areas)
+        block = rules_engine.guard_block(
+            rule,
+            disarmed=all(rt.state is AreaState.DISARMED for rt in self.areas.values()),
+            ready=not faulted and not open_,
+            quiet=self.interior_quiet(rule.guards.quiet_minutes),
+        )
+        return replace(decided, block=block)
+
+    def interior_quiet(self, minutes: int | None) -> bool:
+        """Whether the inside of the house has been still for long enough.
+
+        Read from the zones themselves rather than from a memory of its own:
+        a zone that is active now, or whose entity changed inside the window,
+        is somebody moving. Perimeter areas are left out — a front door
+        contact is not evidence that anybody is in.
+        """
+        if minutes is None:
+            return True
+        since = self.now - timedelta(minutes=minutes)
+        for zone_id in rules_engine.interior_zone_ids(self.config):
+            if zone_id in self.active:
+                return False
+            zone = self.config.zone(zone_id)
+            changed = self.entity(zone).last_changed if zone else None
+            if changed is not None and changed > since:
+                return False
+        return True
+
+    def rule_blocked(
+        self, rule: AutoRule, block: RuleBlock, suspension: Suspension | None
+    ) -> None:
+        """Say why a rule did not act — once, at the start of the block.
+
+        §9.4 asks for this row by name, under ``system``: "why did it not arm
+        last night?" is a question users ask. It is written once because a
+        level trigger is re-evaluated at every wake-up, and a row a minute
+        would bury the log it belongs to (part 2 decision 4).
+        """
+        runtime = self.rules_runtime.get(rule.id, RuleRuntime())
+        if runtime.blocked is not block:
+            detail = {"rule": rule.name, "rule_id": rule.id, "reason": block.value}
+            if suspension is not None:
+                detail |= _suspension_detail(suspension)
+            self.occur(Moment.AUTO_BLOCKED, channel=AUTO_RULE_CHANNEL, detail=detail)
+        self.rules_runtime[rule.id] = replace(runtime, blocked=block)
+        if suspension is not None and suspension.kind is SuspensionKind.NEXT:
+            self.consume_suspension(suspension)
+
+    def consume_suspension(self, suspension: Suspension) -> None:
+        """ "Skip the next occurrence" is spent by use, never by the clock."""
+        if suspension in self.suspensions:
+            self.suspensions.remove(suspension)
+            self.occur(
+                Moment.AUTO_SUSPENSION_CLEARED,
+                detail=_suspension_detail(suspension) | {"cause": "used"},
+            )
+
+    def start_countdown(self, rule: AutoRule, decided: _RuleDecision) -> None:
+        """Announce what is about to happen, with a Cancel button (§9.4)."""
+        self.pending_seq += 1
+        pending = PendingRuleAction(
+            id=f"{rule.id}:{self.pending_seq}",
+            rule_id=rule.id,
+            rule_name=rule.name,
+            action=decided.action,
+            due=self.now + timedelta(seconds=rule.grace_seconds),
+            started_at=self.now,
+            scenario_id=decided.scenario_id,
+            area_ids=decided.area_ids,
+            suspension_name=(decided.suspension.name if decided.substituted else None),
+        )
+        self.pending_rules.append(pending)
+        if decided.substituted and decided.suspension is not None:
+            self.consume_suspension(decided.suspension)
+        self.occur(
+            Moment.AUTO_PENDING,
+            channel=AUTO_RULE_CHANNEL,
+            scenario_id=decided.scenario_id,
+            detail={
+                "rule": rule.name,
+                "rule_id": rule.id,
+                "pending_id": pending.id,
+                "action": decided.action.value,
+                "seconds": str(rule.grace_seconds),
+                "due": pending.due.isoformat(),
+                "areas": ",".join(decided.area_ids),
+                "contacts": ",".join(rule.notify_contact_ids),
+            },
+        )
+
+    def cancel_auto_action(self, event: CancelAutoAction) -> _Outcome:
+        """Somebody pressed Cancel (§9.4).
+
+        Its own operation in the code policy, without a code by default
+        (part 2 decision 3): the button travels in a push notification, and
+        no push carries a code. An installation that raises it gets a button
+        that refuses visibly rather than one that lies.
+        """
+        targets = [
+            p
+            for p in self.pending_rules
+            if event.pending_id is None or p.id == event.pending_id
+        ]
+        if not targets:
+            return _reject(Reason.NOTHING_TO_CANCEL)
+        if (reason := self.authorize(Operation.CANCEL_AUTO_ACTION)) is not None:
+            return _reject(reason)
+        for pending in targets:
+            self.pending_rules.remove(pending)
+            self.occur(
+                Moment.AUTO_CANCELLED,
+                channel=self.channel or AUTO_RULE_CHANNEL,
+                scenario_id=pending.scenario_id,
+                detail={
+                    "rule": pending.rule_name,
+                    "rule_id": pending.rule_id,
+                    "pending_id": pending.id,
+                    "action": pending.action.value,
+                    "via": event.via,
+                    "contact": event.contact_id or "",
+                },
+            )
+        return _ACCEPTED
+
+    def set_auto_arming(self, enabled: bool) -> None:
+        """switch.foyer_auto_arming (§9.4): the whole mechanism, off or on.
+
+        Countdowns already running are cancelled with it. A switch that left
+        the announced arming to happen anyway would be a switch that does not
+        do what it says at the one moment somebody reaches for it.
+        """
+        self.auto_arming = enabled
+        self.occur(
+            Moment.AUTO_ARMING_SWITCHED,
+            channel=self.channel,
+            detail={"enabled": "1" if enabled else "0"},
+        )
+        if enabled:
+            return
+        for pending in list(self.pending_rules):
+            self.pending_rules.remove(pending)
+            self.occur(
+                Moment.AUTO_CANCELLED,
+                channel=self.channel,
+                detail={
+                    "rule": pending.rule_name,
+                    "rule_id": pending.rule_id,
+                    "pending_id": pending.id,
+                    "action": pending.action.value,
+                    "via": "switch",
+                },
+            )
+
+    def set_suspension(self, event: SetSuspension) -> _Outcome:
+        """Suspend automatic arming, or lift a suspension (§9.4).
+
+        Runtime state, not configuration (part 2 decision 7): three clicks
+        from the card, and no ``edit_config`` between somebody and the
+        morning the boiler engineer is expected.
+        """
+        if event.suspension is None:
+            found = next(
+                (s for s in self.suspensions if s.id == event.suspension_id), None
+            )
+            if found is None:
+                return _reject(Reason.UNKNOWN_SUSPENSION)
+            self.suspensions.remove(found)
+            self.occur(
+                Moment.AUTO_SUSPENSION_CLEARED,
+                channel=self.channel,
+                user_id=self.actor.user_id,
+                detail=_suspension_detail(found) | {"cause": "lifted"},
+            )
+            return _ACCEPTED
+        suspension = event.suspension
+        if any(
+            rule_id not in {r.id for r in self.config.rules}
+            for rule_id in suspension.rule_ids
+        ):
+            return _reject(Reason.UNKNOWN_RULE)
+        if (
+            suspension.reduced_scenario_id is not None
+            and self.config.scenario(suspension.reduced_scenario_id) is None
+        ):
+            return _reject(Reason.UNKNOWN_SCENARIO)
+        self.suspensions = [s for s in self.suspensions if s.id != suspension.id]
+        self.suspensions.append(suspension)
+        self.occur(
+            Moment.AUTO_SUSPENSION_SET,
+            channel=self.channel,
+            user_id=self.actor.user_id,
+            detail=_suspension_detail(suspension),
+        )
+        return _ACCEPTED
+
+    def rule_act(
+        self, rule: AutoRule, decided: _RuleDecision, *, late: bool = False
+    ) -> None:
+        """The rule acts, as a user would (§9.4).
+
+        The channel is ``auto_rule`` and the actor holds no code: nobody is
+        there to be asked for one, and the authorisation happened earlier,
+        when somebody with ``edit_config`` saved the rule (part 2 decision
+        9). What it does not buy is the perimeter: ``decided.area_ids`` has
+        already had those areas taken out of it.
+        """
+        previous, self.actor = (
+            self.actor,
+            Actor(channel=AUTO_RULE_CHANNEL, token=True),
+        )
+        self.rule_detail = {"rule": rule.name, "rule_id": rule.id}
+        if decided.substituted and decided.suspension is not None:
+            self.rule_detail["suspension"] = decided.suspension.name or ""
+        if late:
+            # It fell due while nothing was running and it is happening now,
+            # which is a thing the log has to say out loud (part 2 decision 12).
+            self.rule_detail["late"] = "1"
+        try:
+            outcome = self.rule_perform(decided)
+        finally:
+            self.actor = previous
+            self.rule_detail = {}
+        if outcome.accepted:
+            return
+        if decided.action is RuleActionKind.DISARM:
+            self.occur(
+                Moment.AUTO_BLOCKED,
+                channel=AUTO_RULE_CHANNEL,
+                detail={
+                    "rule": rule.name,
+                    "rule_id": rule.id,
+                    "reason": outcome.reason.value if outcome.reason else "",
+                },
+            )
+            return
+        if outcome.reason is Reason.INVALID_STATE:
+            # Already armed, or already this scenario: not a failure, and not
+            # worth a warning row every evening.
+            return
+        self.occur(
+            Moment.ARM_FAILED,
+            scenario_id=decided.scenario_id,
+            zone_ids=outcome.blocking,
+            channel=AUTO_RULE_CHANNEL,
+            detail={
+                "rule": rule.name,
+                "rule_id": rule.id,
+                "reason": outcome.reason.value if outcome.reason else "",
+            },
+        )
+
+    def rule_perform(self, decided: _RuleDecision) -> _Outcome:
+        if decided.action is RuleActionKind.DISARM:
+            return self.disarm(decided.area_ids)
+        return self.arm_scenario(
+            self.config.scenario(decided.scenario_id),
+            force=False,
+            # A switch never disarms a perimeter area: those stay armed,
+            # outside any scenario, and the master then reports
+            # armed_custom_bypass (§13, part 2 decision 6).
+            keep_armed=frozenset(decided.refused),
+        )
+
     # --- result -----------------------------------------------------------------
 
     def decision(self, outcome: _Outcome) -> Decision:
@@ -2333,8 +2971,14 @@ class _Run:
             lockouts=self.lockouts,
             walk_test=self.walk_test,
             escalations=tuple(self.escalations),
+            auto_arming=self.auto_arming,
+            pending_rules=tuple(self.pending_rules),
+            suspensions=tuple(self.suspensions),
+            rules=self.rules_runtime,
+            pending_seq=self.pending_seq,
         )
         chime, chime_inhibited = self.chime_intents(occurrences)
+        countdown = self.countdown_intents(occurrences)
         return Decision(
             at=self.now,
             accepted=outcome.accepted,
@@ -2344,7 +2988,7 @@ class _Run:
             bypassed_zones=tuple(self.new_bypasses),
             low_battery_zones=self.low_battery_zones,
             occurrences=occurrences,
-            actions=(*self.extra, *steps, *plan.intents, *chime),
+            actions=(*self.extra, *steps, *plan.intents, *chime, *countdown),
             inhibited=(*plan.inhibited, *chime_inhibited),
             # What is still to come, read off the state this decision
             # produced: never a second prediction of it (§11.2, INV-1).
@@ -2358,6 +3002,62 @@ class _Run:
             if profile is not None:
                 out.extend(escalation_engine.scheduled(current, profile, self.now))
         return tuple(sorted(out, key=lambda step: (step.due, step.index)))
+
+    def countdown_intents(
+        self, occurrences: tuple[Occurrence, ...]
+    ) -> tuple[ActionIntent, ...]:
+        """ "The house will arm in two minutes", with a Cancel button (§9.4).
+
+        The rule names its own contacts (part 2 decision 2), so this is built
+        here rather than by a response profile, and it is built the way the
+        chime is: the Decision carries everything the executor needs and the
+        executor looks nothing up (INV-1).
+
+        A contact inside their quiet hours is held back exactly as they are
+        for anything else at this severity (§7.1). The countdown still runs —
+        what a quiet window buys is silence, not a different decision — and
+        the row records who was not told.
+        """
+        intents: list[ActionIntent] = []
+        for occurrence in occurrences:
+            if occurrence.moment is not Moment.AUTO_PENDING:
+                continue
+            pending_id = occurrence.detail.get("pending_id", "")
+            contact_ids = [
+                c for c in occurrence.detail.get("contacts", "").split(",") if c
+            ]
+            if not contact_ids:
+                continue
+            recipients, quiet = recipients_for(
+                self.config,
+                [{"contact_id": c, "channel_id": None} for c in contact_ids],
+                self.now,
+                self.timezone,
+                Moment.AUTO_PENDING,
+                cancel=pending_id,
+            )
+            if not recipients:
+                continue
+            scenario = self.config.scenario(occurrence.scenario_id)
+            intents.append(
+                ActionIntent(
+                    action_id=f"auto_rule:{pending_id}",
+                    kind=ActionKind.NOTIFY.value,
+                    moment=Moment.AUTO_PENDING,
+                    placeholders={
+                        "rule": occurrence.detail.get("rule", ""),
+                        "scenario": scenario.name if scenario else "",
+                        "seconds": occurrence.detail.get("seconds", ""),
+                    },
+                    variant=occurrence.detail.get("action"),
+                    params={
+                        "recipients": recipients,
+                        "quiet": ",".join(quiet),
+                        "pending_id": pending_id,
+                    },
+                )
+            )
+        return tuple(intents)
 
     def chime_intents(
         self, occurrences: tuple[Occurrence, ...]

@@ -302,6 +302,36 @@ def reachable(
     refs = notify_contacts(action)
     if not refs:
         return (), ()
+    return recipients_for(
+        ctx.config,
+        refs,
+        ctx.now,
+        ctx.tz,
+        moment,
+        ack=moment in ACK_MOMENTS,
+    )
+
+
+def recipients_for(
+    config: FoyerConfig,
+    refs: Sequence[Mapping[str, Any]],
+    now: datetime,
+    tz: tzinfo,
+    moment: Moment,
+    *,
+    ack: bool = False,
+    cancel: str | None = None,
+) -> tuple[tuple[Mapping[str, Any], ...], tuple[str, ...]]:
+    """The contacts a message actually reaches now, and who quiet hours held.
+
+    Shared by an escalation's notification and by an automatic rule's
+    countdown (§9.4), so that "who hears this" is answered in one place and a
+    contact's quiet hours mean the same thing whatever is speaking.
+
+    ``ack`` and ``cancel`` are the two buttons an actionable channel can
+    carry, and they are the same mechanism with a different action id: one
+    stops an escalation, the other stops a house arming itself.
+    """
     # A test really executes: that is the whole of §11.4, and the failure it
     # prevents is discovering during the emergency that the channel was
     # misconfigured. Quiet hours are a rule about alarms, not about whether
@@ -311,14 +341,14 @@ def reachable(
     recipients: list[Mapping[str, Any]] = []
     quiet: list[str] = []
     for ref in refs:
-        contact = ctx.config.contact(ref["contact_id"])
+        contact = config.contact(ref["contact_id"])
         if contact is None or not contact.enabled:
             continue
         if (
             not testing
             and contact.quiet_start
             and contact.quiet_end
-            and in_daily_window(ctx.now, ctx.tz, contact.quiet_start, contact.quiet_end)
+            and in_daily_window(now, tz, contact.quiet_start, contact.quiet_end)
             and loudness < SEVERITY_ORDER.index(contact.quiet_min_severity)
         ):
             quiet.append(contact.id)
@@ -338,8 +368,11 @@ def reachable(
                 # Whether this channel can carry the button that
                 # acknowledges the alarm, and whether there is anything to
                 # acknowledge (§7.2). Decided here, so the executor adds a
-                # button or does not and decides neither.
-                "ack": channel.actionable and moment in ACK_MOMENTS,
+                # button or does not and decides neither. The Cancel button
+                # of §9.4 is the same mechanism, carrying which countdown it
+                # would stop.
+                "ack": channel.actionable and ack,
+                "cancel": cancel if channel.actionable else None,
                 "user_id": contact.linked_user_id,
             }
         )

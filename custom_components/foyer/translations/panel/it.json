@@ -80,7 +80,10 @@
     "user_not_valid": "Questo codice non è valido in questo momento.",
     "area_not_allowed": "Non puoi agire su quell’area.",
     "scenario_not_allowed": "Non puoi usare quello scenario.",
-    "device_not_registered": "Quel dispositivo non è fra i dispositivi di inserimento dell'impianto. Aggiungilo prima in Dispositivi di inserimento."
+    "device_not_registered": "Quel dispositivo non è fra i dispositivi di inserimento dell'impianto. Aggiungilo prima in Dispositivi di inserimento.",
+    "nothing_to_cancel": "Non c'è nessuna azione automatica in conto alla rovescia.",
+    "unknown_rule": "Quella regola non esiste.",
+    "unknown_suspension": "Quella sospensione non esiste."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -1061,7 +1064,44 @@
       "title": "Foyer: notifiche non inviate",
       "message": "Home Assistant era spento quando questi passi di escalation sono scaduti, quindi non sono partiti."
     },
-    "acknowledge": "Prendo atto"
+    "acknowledge": "Prendo atto",
+    "auto_pending": {
+      "title": "Foyer: agisce fra {seconds} s",
+      "message": "La regola «{rule}» sta per agire. Annulla per fermarla."
+    },
+    "auto_pending_arm": {
+      "title": "Foyer: arma fra {seconds} s",
+      "message": "Non sembra esserci nessuno, quindi «{rule}» armerà {scenario}. Annulla per fermarla."
+    },
+    "auto_pending_disarm": {
+      "title": "Foyer: disarma fra {seconds} s",
+      "message": "La regola «{rule}» sta per disarmare. Annulla per fermarla."
+    },
+    "auto_pending_switch": {
+      "title": "Foyer: cambia scenario fra {seconds} s",
+      "message": "La regola «{rule}» passerà a {scenario}. Annulla per fermarla."
+    },
+    "auto_cancelled": {
+      "title": "Foyer: annullata",
+      "message": "L'azione automatica di «{rule}» è stata annullata."
+    },
+    "auto_blocked": {
+      "title": "Foyer: la regola non ha agito",
+      "message": "La regola «{rule}» non ha agito."
+    },
+    "auto_suspension_set": {
+      "title": "Foyer: armatura automatica sospesa",
+      "message": "L'armatura automatica è sospesa."
+    },
+    "auto_suspension_cleared": {
+      "title": "Foyer: sospensione finita",
+      "message": "La sospensione dell'armatura automatica è terminata."
+    },
+    "auto_arming_switched": {
+      "title": "Foyer: regole automatiche",
+      "message": "Le regole automatiche sono state accese o spente."
+    },
+    "cancel": "Annulla"
   },
   "chime_mode": {
     "sound": "Suono singolo",

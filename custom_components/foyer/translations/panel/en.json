@@ -80,7 +80,10 @@
     "user_not_valid": "That code is not valid at the moment.",
     "area_not_allowed": "You are not allowed to act on that area.",
     "scenario_not_allowed": "You are not allowed to use that scenario.",
-    "device_not_registered": "That device is not one of this installation's arming devices. Add it under Arming devices first."
+    "device_not_registered": "That device is not one of this installation's arming devices. Add it under Arming devices first.",
+    "nothing_to_cancel": "There is no automatic action counting down.",
+    "unknown_rule": "That rule does not exist.",
+    "unknown_suspension": "That suspension does not exist."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -1061,7 +1064,44 @@
       "title": "Foyer: notifications were not sent",
       "message": "Home Assistant was down when these escalation steps fell due, so they were not sent."
     },
-    "acknowledge": "Acknowledge"
+    "acknowledge": "Acknowledge",
+    "auto_pending": {
+      "title": "Foyer: acting in {seconds} s",
+      "message": "Rule “{rule}” is about to act. Cancel to stop it."
+    },
+    "auto_pending_arm": {
+      "title": "Foyer: arming in {seconds} s",
+      "message": "Nobody seems to be in, so “{rule}” will arm {scenario}. Cancel to stop it."
+    },
+    "auto_pending_disarm": {
+      "title": "Foyer: disarming in {seconds} s",
+      "message": "Rule “{rule}” will disarm. Cancel to stop it."
+    },
+    "auto_pending_switch": {
+      "title": "Foyer: changing scenario in {seconds} s",
+      "message": "Rule “{rule}” will switch to {scenario}. Cancel to stop it."
+    },
+    "auto_cancelled": {
+      "title": "Foyer: cancelled",
+      "message": "The automatic action of “{rule}” was cancelled."
+    },
+    "auto_blocked": {
+      "title": "Foyer: rule did not act",
+      "message": "Rule “{rule}” did not act."
+    },
+    "auto_suspension_set": {
+      "title": "Foyer: automatic arming suspended",
+      "message": "Automatic arming is suspended."
+    },
+    "auto_suspension_cleared": {
+      "title": "Foyer: suspension over",
+      "message": "The suspension of automatic arming has ended."
+    },
+    "auto_arming_switched": {
+      "title": "Foyer: automatic rules",
+      "message": "Automatic rules were switched on or off."
+    },
+    "cancel": "Cancel"
   },
   "chime_mode": {
     "sound": "Single sound",

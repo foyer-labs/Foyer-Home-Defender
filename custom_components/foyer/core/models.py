@@ -228,6 +228,15 @@ class Operation(StrEnum):
     # is one thing, and half a table is how a setting quietly goes missing.
     WALK_TEST = "walk_test"
     TEST_ACTION = "test_action"
+    # Cancelling an automatic rule's grace countdown (§9.4, part 2 decision
+    # 3). Its own entry, defaulting to no code, for the shape of decision 77:
+    # the button travels in a push and no push carries a code, so demanding
+    # one by default would be a button that never works — but an installation
+    # can raise it, and then the button refuses visibly rather than lying.
+    # The rule itself is outside the policy entirely (part 2 decision 9):
+    # nobody is there to be asked, and the authorisation happened when
+    # somebody with edit_config saved the rule.
+    CANCEL_AUTO_ACTION = "cancel_auto_action"
 
 
 class Permission(StrEnum):
@@ -367,6 +376,19 @@ class Moment(StrEnum):
     # for the steps that are still ahead.
     ESCALATION_SKIPPED = "escalation_skipped"
 
+    # Automatic arming rules (§9.4). None of these is a profile moment and
+    # none is ever offered as one: a rule's announcement goes to the contacts
+    # the rule names (part 2 decision 2), and what the rule *did* is already
+    # an `armed` or a `disarmed` carrying `channel: auto_rule`. These exist so
+    # that the log can answer "why did it not arm last night?", which is the
+    # one question §9.4 says silence must never be the answer to.
+    AUTO_PENDING = "auto_pending"  # the countdown started
+    AUTO_CANCELLED = "auto_cancelled"  # somebody pressed Cancel
+    AUTO_BLOCKED = "auto_blocked"  # a guard, a suspension, the switch
+    AUTO_SUSPENSION_SET = "auto_suspension_set"
+    AUTO_SUSPENSION_CLEARED = "auto_suspension_cleared"
+    AUTO_ARMING_SWITCHED = "auto_arming_switched"
+
 
 class Reason(StrEnum):
     """Why a request was rejected. Stable identifiers: UIs translate them."""
@@ -384,6 +406,12 @@ class Reason(StrEnum):
     ZONE_NOT_BYPASSABLE = "zone_not_bypassable"
     ARM_HOLD_EXPIRED = "arm_hold_expired"
     NOTHING_TO_ACKNOWLEDGE = "nothing_to_acknowledge"
+    # Part 2 of Phase 4: nothing is counting down, or the countdown the
+    # button names has already run or been cancelled. A refusal, not silence:
+    # somebody pressed Cancel and is owed an answer either way.
+    NOTHING_TO_CANCEL = "nothing_to_cancel"
+    UNKNOWN_RULE = "unknown_rule"
+    UNKNOWN_SUSPENSION = "unknown_suspension"
     # Phase 2: identity. BAD_CODE is a code that was supplied and did not
     # match; CODE_REQUIRED is one the policy wanted and nobody supplied.
     # Neither ever says whose code it was, or how close it came.
@@ -436,6 +464,18 @@ DEFAULT_WALK_TEST_TIMEOUT = 900
 MIN_WALK_TEST_TIMEOUT = 60
 MAX_WALK_TEST_TIMEOUT = 3600
 MAX_WALK_TEST_TOTAL = 3 * 3600
+# The cancellable countdown before an automatic rule acts (§9.4). 120 s for
+# an arming, 0 for a disarming — the spec's own defaults, and the reason for
+# the asymmetry is that an arming that surprises somebody is an annoyance they
+# can stop, while a disarming nobody wanted is not improved by a warning.
+DEFAULT_GRACE_SECONDS = 120
+DEFAULT_DISARM_GRACE_SECONDS = 0
+MAX_GRACE_SECONDS = 900
+# How long a rule may hold a condition before acting, and how long a guard
+# looks back for motion (§9.4). Minutes, because that is what the page asks
+# for; the engine works in seconds like everything else.
+MAX_RULE_MINUTES = 1440
+
 # Verification windows: groups, cross-zone and trigger counting (§4.2, §4.8).
 DEFAULT_VERIFICATION_WINDOW = 60
 MIN_VERIFICATION_WINDOW = 1
@@ -493,6 +533,11 @@ CHANNELS: tuple[str, ...] = (
     "api",
     "automation",
     "key_zone",
+    # §9.4: an automatic rule is a channel of its own, because the system is
+    # acting as a user would and the log must be able to say so. It is the
+    # engine's own word and never a claim a caller may make — §9.1 allows a
+    # request to declare only `api` or `automation` (decision 84).
+    "auto_rule",
 )
 IDENTIFYING_CHANNELS: frozenset[str] = frozenset({"ha_ui", "nfc"})
 
@@ -511,6 +556,63 @@ MAX_MQTT_QOS = 2
 # level is a topic nobody can debug.
 MQTT_TOPIC_FORBIDDEN: frozenset[str] = frozenset({"+", "#"})
 MAX_MQTT_TOPIC = 200
+
+
+class RuleTriggerKind(StrEnum):
+    """What an automatic rule watches (SPEC §9.4). A closed set of four.
+
+    ``ABSENCE`` and ``ENTITY`` are conditions that stay true while they hold;
+    ``PRESENCE`` and ``TIME`` happen once. See ``RuleTrigger.level``.
+    """
+
+    ABSENCE = "absence"
+    PRESENCE = "presence"
+    TIME = "time"
+    ENTITY = "entity"
+
+
+class RuleActionKind(StrEnum):
+    """What an automatic rule does (SPEC §9.4). A closed set of three."""
+
+    ARM = "arm"
+    DISARM = "disarm"
+    SWITCH = "switch"
+
+
+class SuspensionKind(StrEnum):
+    """The three ways automatic arming is held back (SPEC §9.4).
+
+    ``UNTIL`` runs to a date and time, ``NEXT`` skips one occurrence of one
+    rule, and ``VISITOR`` is the expected-visitor window: a named period —
+    "09:00-13:00 tomorrow, Boiler engineer" — which may substitute a reduced
+    scenario for the arming it suspends. Mechanically the same suspension; the
+    difference is that in six months the log says *why*.
+    """
+
+    UNTIL = "until"
+    NEXT = "next"
+    VISITOR = "visitor"
+
+
+class RuleBlock(StrEnum):
+    """Why a rule that wanted to act did not (SPEC §9.4). Stable identifiers.
+
+    Every one of these writes a row under ``system``: "why did it not arm last
+    night?" is a question users ask, and silence is the worst possible answer.
+    """
+
+    SWITCH_OFF = "switch_off"  # switch.foyer_auto_arming is off
+    SUSPENDED = "suspended"  # a suspension or a visitor window covers it
+    WALK_TEST = "walk_test"  # a walk test is running (part 2 decision 11)
+    NOT_DISARMED = "not_disarmed"
+    NOT_READY = "not_ready"
+    MOTION = "motion"
+    # The rule would disarm, and automatic disarming has not been enabled
+    # (§9.4 point 2). Not a UI default: the engine refuses it.
+    AUTO_DISARM_DISABLED = "auto_disarm_disabled"
+    # Every area the rule would disarm is a perimeter area (§9.4 point 3),
+    # so there is nothing left for it to do.
+    PERIMETER = "perimeter"
 
 
 class MqttDetail(StrEnum):
@@ -948,6 +1050,103 @@ class Contact:
 
 
 @dataclass(frozen=True, slots=True)
+class RuleTrigger:
+    """What makes an automatic rule want to act (SPEC §9.4).
+
+    A closed set of four, not an automation engine: the same boundary §6.3
+    draws for an action's conditions. ``entity_ids`` are the people for
+    ``absence`` and ``presence`` and the one entity for ``entity``;
+    ``minutes`` is how long the condition must hold, and ``at`` with
+    ``weekdays`` is the wall clock for ``time``.
+
+    ``absence`` and ``entity`` describe a state of the world that stays true,
+    and ``time`` and ``presence`` describe something that happens once. That
+    difference is not cosmetic: it decides whether a rule a guard blocked acts
+    two minutes later or has missed its turn (part 2 decision 4).
+    """
+
+    kind: RuleTriggerKind
+    entity_ids: tuple[str, ...] = ()
+    state: str | None = None  # entity: the state it must hold
+    minutes: int = 0  # absence, entity: for how long
+    at: str | None = None  # time: "HH:MM"
+    weekdays: tuple[int, ...] = ()  # time: 0 = Monday; empty = every day
+
+    @property
+    def level(self) -> bool:
+        """True when this trigger is a condition rather than an instant."""
+        return self.kind in (RuleTriggerKind.ABSENCE, RuleTriggerKind.ENTITY)
+
+
+@dataclass(frozen=True, slots=True)
+class RuleGuards:
+    """The three reasons a rule declines to act (SPEC §9.4).
+
+    Every one of them is a reason a user will ask about the next morning, so a
+    guard that blocks writes a row under ``system`` — once, when the block
+    begins, because a level trigger is re-evaluated at every wake-up and a row
+    per wake-up would bury the log it belongs to (part 2 decision 4).
+    """
+
+    only_when_disarmed: bool = False
+    only_when_ready: bool = False
+    # No interior zone has detected motion for this many minutes. None is off.
+    quiet_minutes: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ActiveWindow:
+    """When a rule exists at all (SPEC §9.4): outside it, it simply does not.
+
+    ``after``/``before`` are "HH:MM" on the installation's own clock and may
+    cross midnight, exactly as an action's time condition does (§6.3).
+    """
+
+    weekdays: tuple[int, ...] = ()  # empty = every day
+    after: str | None = None
+    before: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AutoRule:
+    """One automatic arming rule (SPEC §9.4).
+
+    A table, not a script. ``scenario_id`` is what ``arm`` and ``switch``
+    target; ``area_ids`` is what ``disarm`` names — and never a perimeter
+    area, which the engine enforces rather than the editor (§9.4 point 3).
+
+    ``grace_seconds`` is the cancellable countdown: 120 s for an arming and 0
+    for a disarming, by §9.4's defaults. ``notify_contact_ids`` is who hears
+    the countdown and holds the Cancel button (part 2 decision 2) — the rule
+    carries its own targets, as the chime does (decision 60), because the
+    announcement is a property of the rule rather than the house answering
+    something that happened to it.
+    """
+
+    id: str
+    name: str
+    trigger: RuleTrigger
+    action: RuleActionKind
+    scenario_id: str | None = None
+    area_ids: tuple[str, ...] = ()
+    window: ActiveWindow = field(default_factory=ActiveWindow)
+    guards: RuleGuards = field(default_factory=RuleGuards)
+    grace_seconds: int = DEFAULT_GRACE_SECONDS
+    notify_contact_ids: tuple[str, ...] = ()
+    enabled: bool = True
+
+    @property
+    def disarms(self) -> bool:
+        """Whether this rule can leave the house less protected (§9.4).
+
+        ``switch`` counts: a scenario change disarms the areas only the old
+        scenario armed (§4.6.1, decision 42), so a rule that switches can
+        disarm without an action that says the word (part 2 decision 6).
+        """
+        return self.action in (RuleActionKind.DISARM, RuleActionKind.SWITCH)
+
+
+@dataclass(frozen=True, slots=True)
 class Area:
     id: str
     name: str
@@ -962,6 +1161,11 @@ class Area:
     # disagree the strictest explicit setting wins (decision 80).
     require_code_to_arm: bool | None = None
     require_code_to_disarm: bool | None = None
+    # The outer defence ring (§4.5). An automatic rule never disarms it,
+    # whatever the rule says and whichever action it uses: whoever walks in on
+    # a stolen phone still finds every external door and window protected
+    # (§9.4 point 3). Enforced in the engine, with its own regression test.
+    is_perimeter: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1063,6 +1267,11 @@ class CodePolicy:
     edit_config: bool = True
     walk_test: bool = True
     test_action: bool = True
+    # Cancelling an automatic rule's countdown (§9.4). No code, for the same
+    # reason acknowledging needs none: the button lives in a push
+    # notification, and no push carries a code. An installation may raise it,
+    # and the button then refuses where somebody can see it refuse.
+    cancel_auto_action: bool = False
 
     def requires_code(self, operation: Operation) -> bool:
         return bool(getattr(self, operation.value))
@@ -1143,6 +1352,15 @@ class Settings:
     # the threat is written beside the switch and in
     # docs/notification-channels.md (part 1 decision 6).
     ack_webhook_id: str | None = None
+    # Whether an automatic rule may leave the house less protected (§9.4
+    # point 2). Off until somebody turns it on, and turning it on is where
+    # the panel names the attack: a stolen phone disarms the house, GPS drift
+    # of 200 metres disarms the house, a cloned MAC address on the home
+    # network disarms the house. It gates every disarming action whatever the
+    # trigger (part 2 decision 5), and a switch of scenario counts as one when
+    # it would disarm anything (part 2 decision 6). It never reaches a
+    # perimeter area, which nothing here can enable.
+    allow_auto_disarm: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -1158,6 +1376,10 @@ class FoyerConfig:
     users: tuple[User, ...] = ()
     devices: tuple[ArmingDevice, ...] = ()
     contacts: tuple[Contact, ...] = ()
+    rules: tuple[AutoRule, ...] = ()
+
+    def rule(self, rule_id: str | None) -> AutoRule | None:
+        return next((r for r in self.rules if r.id == rule_id), None)
 
     def contact(self, contact_id: str | None) -> Contact | None:
         return next((c for c in self.contacts if c.id == contact_id), None)
@@ -1273,6 +1495,12 @@ class AreaRuntime:
     # `armed`, and "why did it sound while I was still in the hall?" is a
     # question the log has to be able to answer.
     skipped_exit: bool = False
+    # Which automatic rule armed this area (§9.4), remembered for exactly the
+    # reason the user is: the ``armed`` row is written when the exit delay
+    # ends, and "the rule's name recorded on every event" has to survive the
+    # thirty seconds in between.
+    rule_id: str | None = None
+    rule_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1499,6 +1727,118 @@ class WalkTest:
 
 
 @dataclass(frozen=True, slots=True)
+class PendingRuleAction:
+    """An automatic rule's action, announced and waiting (SPEC §9.4).
+
+    State with a due time, like every other timer this project has (INV-3,
+    part 2 decision 1): a countdown built on ``asyncio.sleep`` would be the
+    first one a restart could lose, and what it would lose is a house arming
+    itself with nobody told.
+
+    ``id`` is what the Cancel button carries back, so pressing the button on
+    yesterday's notification cannot stop today's countdown. ``scenario_id``
+    and ``area_ids`` are resolved when the countdown starts, not when it
+    fires: an expected-visitor window substituting a reduced scenario has
+    already been applied here, and the notification therefore names what will
+    actually happen.
+    """
+
+    id: str
+    rule_id: str
+    rule_name: str
+    action: RuleActionKind
+    due: datetime
+    started_at: datetime
+    scenario_id: str | None = None
+    area_ids: tuple[str, ...] = ()
+    # The suspension that substituted this action, for the log row that
+    # explains it six months later.
+    suspension_name: str | None = None
+
+    @property
+    def seconds(self) -> int:
+        return max(0, int((self.due - self.started_at).total_seconds()))
+
+
+@dataclass(frozen=True, slots=True)
+class Suspension:
+    """Automatic arming held back, by hand (SPEC §9.4).
+
+    Runtime state rather than configuration (part 2 decision 7): it expires
+    like ``bypass_until``, it is an operational act three clicks from the card
+    rather than a configuration edit, and ``core/`` never writes
+    configuration. The ``name`` travels into every log row it explains — the
+    row is what lasts, not the object.
+
+    ``rule_ids`` empty means every rule, which is what an expected-visitor
+    window is: the house is not to arm itself this morning, whichever rule
+    would have done it.
+    """
+
+    id: str
+    kind: SuspensionKind
+    rule_ids: tuple[str, ...] = ()
+    name: str | None = None
+    start: datetime | None = None  # VISITOR: when the window opens
+    until: datetime | None = None  # UNTIL, VISITOR: when it ends
+    # VISITOR only: arm this instead of what the suspended rule would have
+    # armed (§9.4). Nothing happens at the window's edges — it substitutes
+    # (part 2 decision 8).
+    reduced_scenario_id: str | None = None
+    created_at: datetime | None = None
+    user_id: str | None = None
+    user_name: str | None = None
+
+    def active(self, now: datetime) -> bool:
+        """Whether it is covering anything right now."""
+        if self.kind is SuspensionKind.NEXT:
+            return True
+        if self.start is not None and now < self.start:
+            return False
+        return self.until is None or now < self.until
+
+    def covers(self, rule_id: str) -> bool:
+        return not self.rule_ids or rule_id in self.rule_ids
+
+    def expired(self, now: datetime) -> bool:
+        """A NEXT suspension is spent by use, never by the clock."""
+        return (
+            self.kind is not SuspensionKind.NEXT
+            and self.until is not None
+            and now >= self.until
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RuleRuntime:
+    """What the engine remembers about one rule between wake-ups (§9.4).
+
+    ``since`` is when the trigger's condition became true, which is what the
+    "for N minutes" is measured from. ``latched`` is set when a level trigger
+    has acted and cleared when its condition goes false again: without it, an
+    ``absence`` rule that armed the house would ask to arm it again at every
+    wake-up for the rest of the day.
+
+    ``blocked`` is the guard currently holding the rule back, kept so the row
+    is written once at the start of the block rather than at every wake-up
+    (part 2 decision 4). ``last_occurrence`` is the wall-clock instant a
+    ``time`` rule has already handled, so a rule that fires at 23:00 fires
+    once even if the scheduler wakes twice.
+    """
+
+    since: datetime | None = None
+    latched: bool = False
+    blocked: RuleBlock | None = None
+    last_occurrence: datetime | None = None
+    last_acted: datetime | None = None
+    # Whether this rule has been evaluated at least once. The baseline rule
+    # this project applies everywhere else (§4.7, §9.3): a `presence` rule
+    # saved while somebody is already at home has not seen them arrive, and
+    # must not disarm the house the moment it is created.
+    seen: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class Lockout:
     """One channel's failed attempts, and how long it stays shut (§8.4).
 
@@ -1568,9 +1908,24 @@ class RuntimeState:
     # an alarm nobody has answered is still unanswered after a restart, and
     # INV-3 lists escalation progress by name.
     escalations: tuple[Escalation, ...] = ()
+    # Automatic arming (§9.4). ``auto_arming`` is switch.foyer_auto_arming,
+    # the global kill switch, and it is state rather than a setting for the
+    # same reason the chime's switch is: it is turned off for an evening, from
+    # a dashboard or a keypad, not configured. ``pending_rules`` are the
+    # countdowns announced and not yet run, ``suspensions`` what is holding
+    # rules back, and ``rules`` what the engine remembers about each rule
+    # between wake-ups. All additive, all read with a default: an older state
+    # file restores as "nothing pending, nothing suspended, switch on", which
+    # is a house that will announce before it acts.
+    auto_arming: bool = True
+    pending_rules: tuple[PendingRuleAction, ...] = ()
+    suspensions: tuple[Suspension, ...] = ()
+    rules: Mapping[str, RuleRuntime] = field(default_factory=dict)
+    pending_seq: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "areas", _frozen(self.areas))
+        object.__setattr__(self, "rules", _frozen(self.rules))
         object.__setattr__(self, "bypassed", _frozen(self.bypassed))
         object.__setattr__(self, "technical", _frozen(self.technical))
         object.__setattr__(self, "windows", _frozen(self.windows))
@@ -1582,6 +1937,12 @@ class RuntimeState:
 
     def escalation(self, kind: EscalationKind) -> Escalation | None:
         return next((e for e in self.escalations if e.kind is kind), None)
+
+    def rule(self, rule_id: str) -> RuleRuntime:
+        return self.rules.get(rule_id) or RuleRuntime()
+
+    def pending_rule(self, rule_id: str) -> PendingRuleAction | None:
+        return next((p for p in self.pending_rules if p.rule_id == rule_id), None)
 
 
 # --- snapshot ------------------------------------------------------------------
@@ -1826,6 +2187,47 @@ class WalkTestRequest:
     duration: int | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class CancelAutoAction:
+    """Stop an automatic rule's grace countdown (SPEC §9.4).
+
+    ``pending_id`` names which countdown, so the button on a notification
+    from an hour ago cannot stop the one running now; None cancels every
+    countdown in progress, which is what the panel's single button does when
+    only one is running. ``via`` and ``contact_id`` say where the answer came
+    from, exactly as an acknowledgement does: a push can come back with no
+    person attached to it, and then the contact and the channel are the whole
+    of the answer (part 1 decision 7).
+    """
+
+    pending_id: str | None = None
+    actor: Actor = field(default_factory=Actor)
+    via: str = "command"
+    contact_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SetAutoArming:
+    """switch.foyer_auto_arming: the global kill switch (SPEC §9.4, §13)."""
+
+    enabled: bool
+    actor: Actor = field(default_factory=Actor)
+
+
+@dataclass(frozen=True, slots=True)
+class SetSuspension:
+    """Suspend automatic arming, or lift a suspension (SPEC §9.4).
+
+    One event for the three forms, because §9.4 says they are mechanically
+    one thing: until a date and time, skip the next occurrence, or a named
+    expected-visitor window. ``suspension`` None with an ``id`` lifts it.
+    """
+
+    suspension: Suspension | None = None
+    suspension_id: str | None = None
+    actor: Actor = field(default_factory=Actor)
+
+
 Event = (
     ArmRequest
     | ArmModeRequest
@@ -1839,6 +2241,9 @@ Event = (
     | BypassZone
     | SetChime
     | WalkTestRequest
+    | CancelAutoAction
+    | SetAutoArming
+    | SetSuspension
 )
 
 

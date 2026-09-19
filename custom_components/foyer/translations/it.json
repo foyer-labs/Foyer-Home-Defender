@@ -114,7 +114,10 @@
     },
     "rejected_device_not_registered": {
       "message": "Quel dispositivo non è fra i dispositivi di inserimento di questo impianto. Aggiungilo in Dispositivi di inserimento perché possa comandare l'allarme."
-    }
+    },
+    "rejected_nothing_to_cancel": "Non c'è nessuna azione automatica in conto alla rovescia.",
+    "rejected_unknown_rule": "Quella regola di automazione non esiste.",
+    "rejected_unknown_suspension": "Quella sospensione non esiste."
   },
   "entity": {
     "alarm_control_panel": {

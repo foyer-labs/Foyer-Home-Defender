@@ -114,7 +114,10 @@
     },
     "rejected_device_not_registered": {
       "message": "That device is not one of the arming devices of this installation. Add it under Arming devices before it can command the alarm."
-    }
+    },
+    "rejected_nothing_to_cancel": "There is no automatic action counting down.",
+    "rejected_unknown_rule": "That automation rule does not exist.",
+    "rejected_unknown_suspension": "That suspension does not exist."
   },
   "entity": {
     "alarm_control_panel": {
