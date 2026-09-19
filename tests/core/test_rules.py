@@ -589,3 +589,65 @@ def test_next_occurrence_is_the_next_matching_weekday():
     only_friday = rule(kind=RuleTriggerKind.TIME, at="07:00", weekdays=(4,))
     due = rules_engine.next_occurrence(only_friday, NOW, UTC)
     assert due is not None and due.weekday() == 4 and due.hour == 7
+
+
+# --- the document, and what the editor refuses (§9.4, §19) -------------------------
+
+
+def test_a_rule_round_trips_through_the_stored_document():
+    from custom_components.foyer.store.schema import config_from_dict, config_to_dict
+
+    config = house(
+        rule(
+            guards=RuleGuards(only_when_ready=True, quiet_minutes=15),
+            window=ActiveWindow(weekdays=(0, 1, 2), after="22:00", before="06:00"),
+        )
+    )
+    restored = config_from_dict(config_to_dict(config))
+    assert restored.rules == config.rules
+
+
+def test_the_state_of_a_countdown_survives_a_restart():
+    from custom_components.foyer.store.schema import state_from_dict, state_to_dict
+
+    config = house(rule())
+    world = World(config)
+    empty(world)
+    world.advance(30 * 60)
+    restored = state_from_dict(state_to_dict(world.state), config)
+    assert restored.pending_rules == world.state.pending_rules
+    assert restored.rules == world.state.rules
+    assert restored.auto_arming is True
+
+
+def test_validation_refuses_the_rules_that_could_never_act():
+    from custom_components.foyer.core.validation import validate
+
+    def codes(*rules, **kwargs):
+        return {p.code for p in validate(house(*rules, **kwargs))}
+
+    assert "rule_without_people" in codes(rule(entity_ids=()))
+    assert "unknown_scenario" in codes(rule(scenario_id="nope"))
+    assert "rule_without_areas" in codes(
+        rule(action=RuleActionKind.DISARM, scenario_id=None)
+    )
+    assert "rule_countdown_without_contacts" in codes(rule(grace=120))
+    assert "rule_entity_invalid" in codes(rule(entity_ids=("switch.kitchen",)))
+    assert "time_invalid" in codes(rule(kind=RuleTriggerKind.TIME, at="25:00"))
+    assert "window_incomplete" in codes(rule(window=ActiveWindow(after="22:00")))
+
+
+def test_a_disarm_rule_naming_only_the_perimeter_is_refused_at_save_time():
+    """The engine takes those areas out; the editor says so before it does."""
+    from custom_components.foyer.core.validation import validate
+
+    config = perimeter_house(
+        rule(
+            action=RuleActionKind.DISARM,
+            area_ids=("ground",),
+            scenario_id=None,
+            grace=0,
+        ),
+        allow_auto_disarm=True,
+    )
+    assert "rule_only_perimeter" in {p.code for p in validate(config)}

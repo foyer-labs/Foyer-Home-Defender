@@ -41,6 +41,7 @@ from .schema import (
     log_from_dict,
     mqtt_from_dict,
     profile_from_dict,
+    rule_from_dict,
     scenario_from_dict,
     security_from_dict,
     user_from_dict,
@@ -56,6 +57,7 @@ KINDS = (
     "user",
     "device",
     "contact",
+    "rule",
 )
 
 # What a new area is given when the panel does not say. The delays come from
@@ -63,6 +65,11 @@ KINDS = (
 _AREA_DEFAULTS: dict[str, Any] = {
     "ha_state_when_armed": "armed_away",
     "response_profile_id": None,
+    # Not the perimeter until somebody says so (§4.5). Marking every area as
+    # the outer ring would be safer in the abstract and a guess about their
+    # house in practice, and a guess that quietly refuses the first disarm
+    # rule they write is worse than a field they set deliberately.
+    "is_perimeter": False,
 }
 
 
@@ -132,6 +139,34 @@ _CONTACT_DEFAULTS: dict[str, Any] = {
 }
 
 
+# A new automatic rule (§9.4): absence, the arming action, and the grace
+# period §9.4 sets for one — two minutes, announced, cancellable. No guards
+# and no active window, because a guard nobody asked for is a rule that does
+# not act for a reason nobody can see.
+_RULE_DEFAULTS: dict[str, Any] = {
+    "trigger": {
+        "kind": "absence",
+        "entity_ids": [],
+        "state": None,
+        "minutes": 30,
+        "at": None,
+        "weekdays": [],
+    },
+    "action": "arm",
+    "scenario_id": None,
+    "area_ids": [],
+    "window": {"weekdays": [], "after": None, "before": None},
+    "guards": {
+        "only_when_disarmed": False,
+        "only_when_ready": False,
+        "quiet_minutes": None,
+    },
+    "grace_seconds": 120,
+    "notify_contact_ids": [],
+    "enabled": True,
+}
+
+
 _DEVICE_DEFAULTS: dict[str, Any] = {
     "kind": "keypad",
     "ref": None,
@@ -188,6 +223,9 @@ def upsert(
                 channel["id"] = channel.get("id") or new_id()
             obj = contact_from_dict({**_CONTACT_DEFAULTS, **data})
             new = replace(config, contacts=_replace_in(config.contacts, obj))
+        elif kind == "rule":
+            obj = rule_from_dict({**_RULE_DEFAULTS, **data})
+            new = replace(config, rules=_replace_in(config.rules, obj))
         elif kind == "group":
             obj = group_from_dict({**_GROUP_DEFAULTS, **data})
             new = replace(config, groups=_replace_in(config.groups, obj))
@@ -271,6 +309,10 @@ def delete(
         new = replace(
             config, contacts=tuple(c for c in config.contacts if c.id != item_id)
         )
+    elif kind == "rule":
+        if config.rule(item_id) is None:
+            return _fail(Problem("not_found", kind, item_id))
+        new = replace(config, rules=tuple(r for r in config.rules if r.id != item_id))
     elif kind == "device":
         if config.device(item_id) is None:
             return _fail(Problem("not_found", kind, item_id))

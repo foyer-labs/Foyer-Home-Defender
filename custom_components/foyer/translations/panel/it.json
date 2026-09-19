@@ -210,7 +210,17 @@
     "notify_target_ambiguous": "Scegli i contatti oppure un servizio, non entrambi.",
     "notify_target_required": "Indica chi raggiunge questa notifica: dei contatti o un servizio di notifica.",
     "unknown_channel": "Quel contatto non ha più questo canale.",
-    "unknown_contact": "Questo contatto non esiste più."
+    "unknown_contact": "Questo contatto non esiste più.",
+    "rule_without_people": "Scegli almeno una persona da osservare.",
+    "rule_entity_invalid": "Una regola osserva persone: scegli una persona o un device tracker.",
+    "rule_entity_required": "Scegli l'entità che questa regola osserva.",
+    "rule_state_required": "Indica lo stato che l'entità deve mantenere.",
+    "rule_without_areas": "Scegli almeno un'area da disarmare.",
+    "rule_only_perimeter": "Tutte le aree indicate sono perimetrali, e una regola non le disarma mai. La regola non farebbe nulla.",
+    "rule_countdown_without_contacts": "Un conto alla rovescia ha bisogno di qualcuno a cui annunciarsi, o non c'è nessuno che possa annullarlo.",
+    "weekday_invalid": "Scegli giorni della settimana validi.",
+    "window_incomplete": "Imposta entrambi gli estremi della finestra, o nessuno dei due.",
+    "rule_out_of_range": "Quel valore è fuori dall'intervallo ammesso."
   },
   "field": {
     "name": "Nome",
@@ -323,7 +333,14 @@
     "channels": "Canali",
     "contacts": "Contatti",
     "escalation_offset": "Momento del passo",
-    "linked_user_id": "Utente collegato"
+    "linked_user_id": "Utente collegato",
+    "guards": "Condizioni di sicurezza",
+    "window": "Finestra di attività",
+    "grace_seconds": "Periodo di grazia",
+    "notify_contact_ids": "Annuncia a",
+    "area_ids": "Aree",
+    "after": "Dalle",
+    "before": "Alle"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",

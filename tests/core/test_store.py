@@ -731,3 +731,13 @@ def test_migration_into_phase_4_adds_an_empty_address_book_and_no_steps():
         for profile in config.profiles
         for action in profile.actions
     )
+
+
+def test_migration_into_part_2_adds_no_rules_and_no_perimeter():
+    """An installation upgrading arms itself exactly as often as it did:
+    never. Automatic disarming arrives off, which is §9.4 point 2."""
+    config = migrated()
+    assert config.rules == ()
+    assert config.settings.allow_auto_disarm is False
+    assert not any(a.is_perimeter for a in config.areas)
+    assert config.code_policy.cancel_auto_action is False

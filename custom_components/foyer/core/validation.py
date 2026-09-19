@@ -22,11 +22,13 @@ from .models import (
     MAX_ENTRY_DELAY,
     MAX_ESCALATION_OFFSET,
     MAX_EXIT_DELAY,
+    MAX_GRACE_SECONDS,
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
     MAX_LOW_BATTERY_THRESHOLD,
     MAX_MQTT_QOS,
     MAX_MQTT_TOPIC,
+    MAX_RULE_MINUTES,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
@@ -60,6 +62,8 @@ from .models import (
     Permission,
     ProfileAction,
     ResponseProfile,
+    RuleActionKind,
+    RuleTriggerKind,
     RuntimeState,
     StateCondition,
     StateTrigger,
@@ -104,6 +108,11 @@ ZONE_DOMAINS: tuple[str, ...] = (
     "tag",
 )
 EVENT_DOMAINS: frozenset[str] = frozenset({"event", "tag"})
+
+# What an `absence` or `presence` rule may watch (§9.4). Home Assistant's own
+# presence entities and nothing else: a rule reading a switch as if it were a
+# person is a rule whose owner will be surprised exactly once.
+PRESENCE_DOMAINS: frozenset[str] = frozenset({"person", "device_tracker"})
 
 # What a zone's battery entity may be (§4.2): a percentage, or Home
 # Assistant's battery binary_sensor where ``on`` means low. Nothing else can
@@ -313,6 +322,101 @@ def validate(config: FoyerConfig) -> list[Problem]:
                 problems.append(
                     Problem("unknown_profile", kind, obj.id, "response_profile_id")
                 )
+    problems.extend(_rule_problems(config))
+    return problems
+
+
+def _rule_problems(config: FoyerConfig) -> list[Problem]:
+    """Automatic arming rules (SPEC §9.4).
+
+    The closed model is the point, so everything here is a question of
+    whether the rule can act at all: a trigger with nothing to watch, an
+    action with nothing to arm, a disarm naming only the perimeter — each
+    one is a rule that would sit on page 12 looking configured and never do
+    anything, which is the failure mode this whole project is written
+    against.
+
+    What is *not* checked here is whether automatic disarming is enabled:
+    that is a live condition, not a configuration error, and the engine says
+    so at the moment it declines to act (§9.4 point 2).
+    """
+    problems: list[Problem] = []
+    area_ids = {a.id for a in config.areas}
+    scenario_ids = {s.id for s in config.scenarios}
+    contact_ids = {c.id for c in config.contacts}
+    ids = [r.id for r in config.rules]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        problems.append(Problem("duplicate_id", "rule", dup))
+    seen: set[str] = set()
+    for rule in config.rules:
+
+        def add(code: str, field: str | None = None, ref: str = rule.id) -> None:
+            problems.append(Problem(code, "rule", ref, field))
+
+        if not rule.name.strip():
+            add("name_required", "name")
+        slug = _slug(rule.name)
+        if slug and slug in seen:
+            # The rule's name is on every row it writes (§9.4). Two rules
+            # alike would make the log unable to answer which one acted.
+            add("duplicate_name", "name")
+        seen.add(slug)
+
+        trigger = rule.trigger
+        if trigger.kind in (RuleTriggerKind.ABSENCE, RuleTriggerKind.PRESENCE):
+            if not trigger.entity_ids:
+                add("rule_without_people", "trigger")
+            for entity_id in trigger.entity_ids:
+                if _domain(entity_id) not in PRESENCE_DOMAINS:
+                    add("rule_entity_invalid", "trigger")
+        elif trigger.kind is RuleTriggerKind.ENTITY:
+            if len(trigger.entity_ids) != 1 or not trigger.entity_ids[0]:
+                add("rule_entity_required", "trigger")
+            if not (trigger.state or "").strip():
+                add("rule_state_required", "trigger")
+        elif trigger.at is None or parse_hhmm(trigger.at) is None:
+            add("time_invalid", "trigger")
+        if trigger.level and not _in_range(trigger.minutes, 0, MAX_RULE_MINUTES):
+            add("rule_out_of_range", "trigger")
+        for weekdays, field in (
+            (trigger.weekdays, "trigger"),
+            (rule.window.weekdays, "window"),
+        ):
+            if any(day not in range(7) for day in weekdays):
+                add("weekday_invalid", field)
+
+        if rule.action is RuleActionKind.DISARM:
+            if not rule.area_ids:
+                add("rule_without_areas", "area_ids")
+            for area_id in rule.area_ids:
+                if area_id not in area_ids:
+                    add("unknown_area", "area_ids")
+            named = [config.area(a) for a in rule.area_ids]
+            if named and all(a is not None and a.is_perimeter for a in named):
+                # It would never do anything: §9.4 point 3 takes every area
+                # it names out of the action. Better said here, once, than
+                # by a row under `system` every evening.
+                add("rule_only_perimeter", "area_ids")
+        elif rule.scenario_id is None or rule.scenario_id not in scenario_ids:
+            add("unknown_scenario", "scenario_id")
+
+        window = rule.window
+        for value, field in ((window.after, "after"), (window.before, "before")):
+            if value is not None and parse_hhmm(value) is None:
+                add("time_invalid", field)
+        if (window.after is None) != (window.before is None):
+            add("window_incomplete", "before")
+        if not _in_range(rule.guards.quiet_minutes, 1, MAX_RULE_MINUTES):
+            add("rule_out_of_range", "guards")
+        if not _in_range(rule.grace_seconds, 0, MAX_GRACE_SECONDS):
+            add("rule_out_of_range", "grace_seconds")
+        for contact_id in rule.notify_contact_ids:
+            if contact_id not in contact_ids:
+                add("unknown_contact", "notify_contact_ids")
+        if rule.grace_seconds > 0 and not rule.notify_contact_ids:
+            # A countdown nobody is told about is a delay, not a grace
+            # period: the Cancel button of §9.4 has to reach somebody.
+            add("rule_countdown_without_contacts", "notify_contact_ids")
     return problems
 
 

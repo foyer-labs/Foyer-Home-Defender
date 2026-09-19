@@ -210,7 +210,17 @@
     "notify_target_ambiguous": "Choose contacts or a service, not both.",
     "notify_target_required": "Say who this notification reaches: contacts, or a notification service.",
     "unknown_channel": "That contact no longer has this channel.",
-    "unknown_contact": "This contact no longer exists."
+    "unknown_contact": "This contact no longer exists.",
+    "rule_without_people": "Choose at least one person for this rule to watch.",
+    "rule_entity_invalid": "A rule watches people: choose a person or a device tracker.",
+    "rule_entity_required": "Choose the entity this rule watches.",
+    "rule_state_required": "Say which state the entity has to hold.",
+    "rule_without_areas": "Choose at least one area to disarm.",
+    "rule_only_perimeter": "Every area named here is a perimeter area, which a rule never disarms. The rule would do nothing.",
+    "rule_countdown_without_contacts": "A countdown needs somebody to announce it to, or there is nobody to cancel it.",
+    "weekday_invalid": "Choose valid days of the week.",
+    "window_incomplete": "Set both ends of the window, or neither.",
+    "rule_out_of_range": "That value is outside the range this setting allows."
   },
   "field": {
     "name": "Name",
@@ -323,7 +333,14 @@
     "channels": "Channels",
     "contacts": "Contacts",
     "escalation_offset": "Step time",
-    "linked_user_id": "Linked user"
+    "linked_user_id": "Linked user",
+    "guards": "Guards",
+    "window": "Active window",
+    "grace_seconds": "Grace period",
+    "notify_contact_ids": "Announce to",
+    "area_ids": "Areas",
+    "after": "From",
+    "before": "Until"
   },
   "ha_state": {
     "armed_home": "Armed home",

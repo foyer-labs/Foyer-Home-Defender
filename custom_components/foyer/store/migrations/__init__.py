@@ -396,6 +396,30 @@ def _v5_4_to_v6_1(data: Document) -> Document:
     return out
 
 
+def _v6_1_to_v7_1(data: Document) -> Document:
+    """Automatic arming rules, and the perimeter flag they need (§9.4, §4.5).
+
+    An installation upgrading gains no rules: the list is empty, so nothing
+    arms itself until somebody writes one. Automatic disarming arrives off,
+    which is §9.4 point 2 and not a matter of taste — enabling it is where
+    the panel names the attack.
+
+    Every area arrives as *not* the perimeter, and that is the one choice
+    here worth defending. Marking them all as perimeter would be the safer
+    direction in the abstract, but it is a guess about somebody's house, and
+    a guess that quietly refuses the first disarm rule they write is worse
+    than a field they set deliberately. There are no rules yet, so nothing
+    can act on the flag before they have been asked (page 2 asks).
+    """
+    out = copy.deepcopy(data)
+    out["rules"] = []
+    out["settings"]["allow_auto_disarm"] = False
+    out["code_policy"]["cancel_auto_action"] = False
+    for area in out.get("areas", []):
+        area["is_perimeter"] = False
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -422,6 +446,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (5, 2): (_v5_2_to_v5_3, (5, 3)),
     (5, 3): (_v5_3_to_v5_4, (5, 4)),
     (5, 4): (_v5_4_to_v6_1, (6, 1)),
+    (6, 1): (_v6_1_to_v7_1, (7, 1)),
 }
 
 

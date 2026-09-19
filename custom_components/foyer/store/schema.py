@@ -16,12 +16,14 @@ from ..core.models import (
     Acknowledgement,
     ActionKind,
     Activation,
+    ActiveWindow,
     AlarmKind,
     Area,
     AreaRuntime,
     AreaState,
     ArmingDevice,
     ArmPolicy,
+    AutoRule,
     BypassReason,
     Channel,
     ChimeMode,
@@ -56,8 +58,15 @@ from ..core.models import (
     NumericOperator,
     NumericTrigger,
     PendingRun,
+    PendingRuleAction,
     ProfileAction,
     ResponseProfile,
+    RuleActionKind,
+    RuleBlock,
+    RuleGuards,
+    RuleRuntime,
+    RuleTrigger,
+    RuleTriggerKind,
     RunningAction,
     RuntimeState,
     Scenario,
@@ -66,6 +75,8 @@ from ..core.models import (
     StateCondition,
     StateOperator,
     StateTrigger,
+    Suspension,
+    SuspensionKind,
     TechnicalAlarm,
     TimeCondition,
     Timer,
@@ -124,7 +135,14 @@ from ..core.models import (
 # It would also find escalation steps it does not know are steps and run them
 # all at once, which is the phone spam §5.6 exists to prevent. Refusing the
 # file is the only safe downgrade.
-STORAGE_VERSION = 6
+#
+# 7.1 is a major bump, though everything in it is additive, and the reason is
+# decision 58's exactly: a 6.x build reading this document would ignore the
+# automatic rules and never arm the house on its own, and — worse — would not
+# know that an area is the perimeter, so a rule it gained later could disarm
+# the one ring §9.4 says is never disarmed by a rule. Both failures are
+# silent, and refusing the file is the only safe downgrade.
+STORAGE_VERSION = 7
 STORAGE_MINOR_VERSION = 1
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
@@ -158,6 +176,7 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
             users=tuple(user_from_dict(u) for u in data["users"]),
             devices=tuple(device_from_dict(d) for d in data["devices"]),
             contacts=tuple(contact_from_dict(c) for c in data["contacts"]),
+            rules=tuple(rule_from_dict(r) for r in data["rules"]),
         )
     except (KeyError, TypeError, ValueError) as err:
         raise ConfigError(f"invalid Foyer configuration: {err!r}") from err
@@ -173,6 +192,7 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
         "users": [user_to_dict(u) for u in config.users],
         "devices": [device_to_dict(d) for d in config.devices],
         "contacts": [contact_to_dict(c) for c in config.contacts],
+        "rules": [rule_to_dict(r) for r in config.rules],
         "code_policy": {
             field.name: getattr(config.code_policy, field.name)
             for field in fields(CodePolicy)
@@ -198,6 +218,7 @@ def settings_from_dict(s: dict[str, Any]) -> Settings:
         low_battery_threshold=int(s["low_battery_threshold"]),
         walk_test_timeout=int(s["walk_test_timeout"]),
         ack_webhook_id=s.get("ack_webhook_id") or None,
+        allow_auto_disarm=bool(s["allow_auto_disarm"]),
         security=security_from_dict(s["security"]),
         mqtt=mqtt_from_dict(s["mqtt"]),
     )
@@ -219,6 +240,7 @@ def settings_to_dict(s: Settings) -> dict[str, Any]:
         "low_battery_threshold": s.low_battery_threshold,
         "walk_test_timeout": s.walk_test_timeout,
         "ack_webhook_id": s.ack_webhook_id,
+        "allow_auto_disarm": s.allow_auto_disarm,
         "security": security_to_dict(s.security),
         "mqtt": mqtt_to_dict(s.mqtt),
     }
@@ -582,6 +604,7 @@ def area_from_dict(a: dict[str, Any]) -> Area:
         response_profile_id=a.get("response_profile_id") or None,
         require_code_to_arm=_opt_bool(a.get("require_code_to_arm")),
         require_code_to_disarm=_opt_bool(a.get("require_code_to_disarm")),
+        is_perimeter=bool(a["is_perimeter"]),
     )
 
 
@@ -595,6 +618,7 @@ def area_to_dict(a: Area) -> dict[str, Any]:
         "response_profile_id": a.response_profile_id,
         "require_code_to_arm": a.require_code_to_arm,
         "require_code_to_disarm": a.require_code_to_disarm,
+        "is_perimeter": a.is_perimeter,
     }
 
 
@@ -743,6 +767,71 @@ def trigger_to_dict(trigger: TriggerSpec) -> dict[str, Any]:
     return {"kind": "event", "event_type": trigger.event_type}
 
 
+def rule_from_dict(r: dict[str, Any]) -> AutoRule:
+    trigger = r["trigger"]
+    guards = r["guards"]
+    window = r["window"]
+    return AutoRule(
+        id=r["id"],
+        name=r["name"],
+        trigger=RuleTrigger(
+            kind=RuleTriggerKind(trigger["kind"]),
+            entity_ids=tuple(trigger.get("entity_ids", ())),
+            state=trigger.get("state") or None,
+            minutes=int(trigger.get("minutes", 0)),
+            at=trigger.get("at") or None,
+            weekdays=tuple(int(d) for d in trigger.get("weekdays", ())),
+        ),
+        action=RuleActionKind(r["action"]),
+        scenario_id=r.get("scenario_id") or None,
+        area_ids=tuple(r.get("area_ids", ())),
+        window=ActiveWindow(
+            weekdays=tuple(int(d) for d in window.get("weekdays", ())),
+            after=window.get("after") or None,
+            before=window.get("before") or None,
+        ),
+        guards=RuleGuards(
+            only_when_disarmed=bool(guards.get("only_when_disarmed", False)),
+            only_when_ready=bool(guards.get("only_when_ready", False)),
+            quiet_minutes=_opt_int(guards.get("quiet_minutes")),
+        ),
+        grace_seconds=int(r["grace_seconds"]),
+        notify_contact_ids=tuple(r.get("notify_contact_ids", ())),
+        enabled=bool(r["enabled"]),
+    )
+
+
+def rule_to_dict(r: AutoRule) -> dict[str, Any]:
+    return {
+        "id": r.id,
+        "name": r.name,
+        "trigger": {
+            "kind": r.trigger.kind.value,
+            "entity_ids": list(r.trigger.entity_ids),
+            "state": r.trigger.state,
+            "minutes": r.trigger.minutes,
+            "at": r.trigger.at,
+            "weekdays": list(r.trigger.weekdays),
+        },
+        "action": r.action.value,
+        "scenario_id": r.scenario_id,
+        "area_ids": list(r.area_ids),
+        "window": {
+            "weekdays": list(r.window.weekdays),
+            "after": r.window.after,
+            "before": r.window.before,
+        },
+        "guards": {
+            "only_when_disarmed": r.guards.only_when_disarmed,
+            "only_when_ready": r.guards.only_when_ready,
+            "quiet_minutes": r.guards.quiet_minutes,
+        },
+        "grace_seconds": r.grace_seconds,
+        "notify_contact_ids": list(r.notify_contact_ids),
+        "enabled": r.enabled,
+    }
+
+
 # --- runtime state (INV-3) -------------------------------------------------------
 
 
@@ -792,6 +881,8 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "device_id": rt.device_id,
                 "claimed": rt.claimed,
                 "skipped_exit": rt.skipped_exit,
+                "rule_id": rt.rule_id,
+                "rule_name": rt.rule_name,
             }
             for area_id, rt in state.areas.items()
         },
@@ -867,6 +958,51 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
             }
             for e in state.escalations
         ],
+        # Automatic arming (§9.4). The countdown is a timer like any other
+        # and INV-3 persists timers: a restart must not lose an announced
+        # arming, nor the suspension somebody set for tomorrow morning.
+        "auto_arming": state.auto_arming,
+        "pending_rules": [
+            {
+                "id": p.id,
+                "rule_id": p.rule_id,
+                "rule_name": p.rule_name,
+                "action": p.action.value,
+                "due": p.due.isoformat(),
+                "started_at": p.started_at.isoformat(),
+                "scenario_id": p.scenario_id,
+                "area_ids": list(p.area_ids),
+                "suspension_name": p.suspension_name,
+            }
+            for p in state.pending_rules
+        ],
+        "suspensions": [
+            {
+                "id": sus.id,
+                "kind": sus.kind.value,
+                "rule_ids": list(sus.rule_ids),
+                "name": sus.name,
+                "start": _iso(sus.start),
+                "until": _iso(sus.until),
+                "reduced_scenario_id": sus.reduced_scenario_id,
+                "created_at": _iso(sus.created_at),
+                "user_id": sus.user_id,
+                "user_name": sus.user_name,
+            }
+            for sus in state.suspensions
+        ],
+        "rules": {
+            rule_id: {
+                "since": _iso(rt.since),
+                "latched": rt.latched,
+                "blocked": rt.blocked.value if rt.blocked else None,
+                "last_occurrence": _iso(rt.last_occurrence),
+                "last_acted": _iso(rt.last_acted),
+                "seen": rt.seen,
+            }
+            for rule_id, rt in state.rules.items()
+        },
+        "pending_seq": state.pending_seq,
         "lockouts": {
             key: {
                 "failures": [at.isoformat() for at in lock.failures],
@@ -1023,6 +1159,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
         area_ids = {a.id for a in config.areas}
         zone_ids = {z.id for z in config.zones}
         device_ids = {d.id for d in config.devices}
+        rule_ids = {r.id for r in config.rules}
         areas: dict[str, AreaRuntime] = {}
         for area_id, rt in data.get("areas", {}).items():
             if area_id not in area_ids:
@@ -1042,6 +1179,8 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 device_id=rt.get("device_id"),
                 claimed=bool(rt.get("claimed", False)),
                 skipped_exit=bool(rt.get("skipped_exit", False)),
+                rule_id=rt.get("rule_id"),
+                rule_name=rt.get("rule_name"),
             )
         for area_id in area_ids - areas.keys():
             areas[area_id] = AreaRuntime()
@@ -1154,6 +1293,54 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 )
                 for e in data.get("escalations", ())
             ),
+            # Automatic arming (§9.4), all read with a default: a state file
+            # from an older build restores as "switch on, nothing counting
+            # down, nothing suspended", which is a house that will announce
+            # before it acts rather than one that will not.
+            auto_arming=bool(data.get("auto_arming", True)),
+            pending_rules=tuple(
+                PendingRuleAction(
+                    id=p["id"],
+                    rule_id=p["rule_id"],
+                    rule_name=p.get("rule_name", ""),
+                    action=RuleActionKind(p["action"]),
+                    due=_required_dt(p["due"]),
+                    started_at=_required_dt(p["started_at"]),
+                    scenario_id=p.get("scenario_id"),
+                    area_ids=tuple(p.get("area_ids", ())),
+                    suspension_name=p.get("suspension_name"),
+                )
+                for p in data.get("pending_rules", ())
+                if p["rule_id"] in rule_ids
+            ),
+            suspensions=tuple(
+                Suspension(
+                    id=sus["id"],
+                    kind=SuspensionKind(sus["kind"]),
+                    rule_ids=tuple(r for r in sus.get("rule_ids", ()) if r in rule_ids),
+                    name=sus.get("name"),
+                    start=_dt(sus.get("start")),
+                    until=_dt(sus.get("until")),
+                    reduced_scenario_id=sus.get("reduced_scenario_id"),
+                    created_at=_dt(sus.get("created_at")),
+                    user_id=sus.get("user_id"),
+                    user_name=sus.get("user_name"),
+                )
+                for sus in data.get("suspensions", ())
+            ),
+            rules={
+                rule_id: RuleRuntime(
+                    since=_dt(rt.get("since")),
+                    latched=bool(rt.get("latched", False)),
+                    blocked=RuleBlock(rt["blocked"]) if rt.get("blocked") else None,
+                    last_occurrence=_dt(rt.get("last_occurrence")),
+                    last_acted=_dt(rt.get("last_acted")),
+                    seen=bool(rt.get("seen", False)),
+                )
+                for rule_id, rt in data.get("rules", {}).items()
+                if rule_id in rule_ids
+            },
+            pending_seq=int(data.get("pending_seq", 0)),
         )
     except (KeyError, TypeError, ValueError, AssertionError) as err:
         raise ConfigError(f"invalid Foyer runtime state: {err!r}") from err
