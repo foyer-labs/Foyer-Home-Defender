@@ -5,6 +5,50 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.6] — the banner, actually visible
+
+Five defects in yesterday's release, four of them found by looking at the
+walk test page rather than by reading it. No schema change and no migration.
+
+### Fixed
+- **The walk test banner had no CSS at all.** The element §11.3 calls a
+  permanent, unmissable banner — the one standing between "every response is
+  held back" and a household that has forgotten — rendered as bare black text
+  flush against the left edge, with its icon orphaned above it and the end
+  button wrapped underneath. It now has the warning colour behind it, full
+  width, on every page, with what stays live said underneath in the same box.
+  A safeguard that looks like an unstyled error page is a safeguard people
+  learn to scroll past.
+- **The walk test page repeated its own banner.** "Walk test running", the
+  sentence about 24h, tamper, technical and panic zones staying live, and an
+  End button, all twice, in the top third of one screen. The banner owns the
+  warning and the ending; the page owns the instruction.
+- **The missed-zone count had no singular.** It read `1 zone(s) have not
+  reacted yet` in English — parentheses and all, on screen — and
+  `1 zone non hanno ancora reagito` in Italian, in the red box that is the
+  whole point of the page, and in the case that is commonest on a second walk.
+- **The keypad card offered Disarm on a disarmed house.** The `keypad` layout
+  rendered that button unconditionally, where `compact` and `full` both gate
+  it on something being armed, so a wall tablet showed a button whose only
+  possible outcome is `invalid_state`. The same layout also titled itself
+  "Whole house" while a named scenario was running, where the full layout
+  names the scenario — on the one surface where somebody stands and asks what
+  the house is doing.
+- **The event log's writer was asked to stop and never waited for.** On
+  unload, `cancel()` only scheduled the cancellation, so the writer could
+  still be running — and still holding the lock the flush on the next line
+  wants — after the entry had finished unloading. Every configuration save
+  reloads the entry, so this ran several times in an evening of setting a
+  house up.
+
+### Added
+- **A screenshot of the walk test**, in both languages, on both front pages.
+  The two keypad screenshots are recaptured with data belonging to one
+  language at a time; the English one used to show "whole house" beside a
+  scenario named "Notte".
+
+Foyer is not a certified alarm system and is not a fire alarm system.
+
 ## [0.1.0-beta.5] — walk the house, and press the button before the night you need it
 
 Phase 3, part two. The other half of the verification story: you can now find
