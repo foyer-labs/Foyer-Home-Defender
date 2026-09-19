@@ -1067,7 +1067,9 @@
     "switch": "Interruttore",
     "tts": "Messaggio parlato",
     "call_service": "Chiama un servizio",
-    "delay": "Attendi"
+    "delay": "Attendi",
+    "chime": "Segnale di apertura",
+    "revert": "Rimessa a riposo"
   },
   "moment_group": {
     "alarm": "All'allarme",
@@ -1572,7 +1574,8 @@
         "delay": "⏱ il resto di questa sequenza alle {at}",
         "siren": "⏱ taglio della sirena alle {at}"
       },
-      "nothing_configured": "✗ non è configurato nulla per questo momento"
+      "nothing_configured": "✗ non è configurato nulla per questo momento",
+      "a_group": "un gruppo"
     },
     "source": {
       "zone": "dalla zona",

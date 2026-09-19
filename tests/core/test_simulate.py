@@ -705,3 +705,90 @@ def test_an_installation_with_no_codes_rehearses_with_no_code():
     ordinary case asks for nothing."""
     sim = simulate(make_house(), scenario_id="night")
     assert next(s for s in sim.steps if s.kind == "request").accepted
+
+
+def _with_two_delays():
+    """A profile whose sequence is held twice: [A, wait, B, wait, C]."""
+    return replace(
+        make_house(),
+        profiles=(
+            ResponseProfile(
+                "default",
+                "Default",
+                actions=(
+                    ProfileAction("a", ActionKind.LIGHT, frozenset({Moment.TRIGGERED})),
+                    ProfileAction(
+                        "wait1",
+                        ActionKind.DELAY,
+                        frozenset({Moment.TRIGGERED}),
+                        params={"seconds": 30},
+                    ),
+                    ProfileAction("b", ActionKind.LIGHT, frozenset({Moment.TRIGGERED})),
+                    ProfileAction(
+                        "wait2",
+                        ActionKind.DELAY,
+                        frozenset({Moment.TRIGGERED}),
+                        params={"seconds": 30},
+                    ),
+                    ProfileAction("c", ActionKind.LIGHT, frozenset({Moment.TRIGGERED})),
+                ),
+            ),
+        ),
+    )
+
+
+def test_every_action_that_did_not_run_says_why():
+    """The invariant the whole trace rests on (§11.2).
+
+    An action with ``ran`` false and no reason is a line that reads "this did
+    not happen" and stops — which is the one thing the page exists not to do.
+    The scenario is the one that used to break it: a sequence held twice, so
+    that a delay from an earlier decision is still pending, and a second area
+    triggering the same profile while it is. The second batch must explain
+    its own actions with its own delay, not with the one left over.
+    """
+    config = _with_two_delays()
+    sim = run(
+        config,
+        SimulationRequest(
+            start=START,
+            scenario_id="away",
+            zones=(
+                ZoneOverride("window", "on", at=60),  # ground floor
+                ZoneOverride("bath", "on", at=100),  # upstairs, 40 s later
+            ),
+        ),
+        live(config),
+    )
+    silent = [
+        (step.at, action.action_id)
+        for step in sim.steps
+        for batch in step.batches
+        for action in batch.actions
+        if not action.ran and action.skipped is None
+    ]
+    assert silent == []
+    # And the delay itself is not listed as an action that did not run: it
+    # is the waiting, not something that failed to happen.
+    listed = {
+        a.action_id
+        for step in sim.steps
+        for batch in step.batches
+        for a in batch.actions
+    }
+    assert listed == {"a", "b", "c"}
+
+    # And the reason the second batch gives is its own delay, at its own
+    # index: both actions after the first wait are held, not one of them.
+    triggered = [
+        step
+        for step in sim.steps
+        if any(o.moment is Moment.TRIGGERED for o in step.occurrences)
+    ]
+    assert len(triggered) == 2
+    held = {
+        a.action_id
+        for a in batch_for(triggered[1], Moment.TRIGGERED).actions
+        if a.skipped == SKIP_HELD_BY_DELAY
+    }
+    assert held == {"b", "c"}

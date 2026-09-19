@@ -1067,7 +1067,9 @@
     "switch": "Switch",
     "tts": "Spoken message",
     "call_service": "Call a service",
-    "delay": "Wait"
+    "delay": "Wait",
+    "chime": "Chime",
+    "revert": "Switch back off"
   },
   "moment_group": {
     "alarm": "On alarm",
@@ -1572,7 +1574,8 @@
         "delay": "⏱ the rest of this sequence at {at}",
         "siren": "⏱ siren cutoff at {at}"
       },
-      "nothing_configured": "✗ nothing is configured for this moment"
+      "nothing_configured": "✗ nothing is configured for this moment",
+      "a_group": "a group"
     },
     "source": {
       "zone": "zone",

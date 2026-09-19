@@ -66,9 +66,17 @@ response_variable: answer
   "reason": "zone_open",
   "blocking_zones": [{ "id": "…", "name": "Kitchen window" }],
   "bypassed_zones": [],
+  "low_battery_zones": [{ "id": "…", "name": "Garage shutter" }],
   "state": { /* the whole live state, as the panel sees it */ }
 }
 ```
+
+`low_battery_zones` is not a refusal and never blocks: it names the zones this
+arming would put under guard on a battery that is running out, and it is on
+*every* arming attempt rather than once, so an adapter with a display or a
+second beep can pass the warning on. Excluding one is an ordinary
+`foyer.bypass_zone`. An adapter that ignores the field behaves exactly as it
+did before the field existed.
 
 `reason` is a stable identifier, never a sentence: `bad_code`, `code_required`,
 `locked_out`, `zone_open`, `zone_fault`, `not_permitted`, `user_not_valid`,

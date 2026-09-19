@@ -738,6 +738,11 @@ class FoyerPageTest extends LitElement {
     // A verification window carries its own arithmetic (§4.8): the trace must
     // show group state, not just the zone.
     if (occurrence.detail.verification) {
+      // A cross-zone pair is a derived 2-of-2 group whose id says so
+      // (core/verification.cross_zone_id). Telling the two apart by whether
+      // the configuration happens to be loaded would label a real group as a
+      // pair for anyone who may not read the configuration.
+      const pair = occurrence.group_id?.startsWith("cross:") ?? true;
       const group = ctx.config?.groups.find((g) => g.id === occurrence.group_id);
       return html`<div class="key">
         ${t(
@@ -746,7 +751,9 @@ class FoyerPageTest extends LitElement {
             ? "test.trace.group_satisfied"
             : "test.trace.group",
           {
-            group: group?.name ?? t(s, "test.trace.cross_zone"),
+            group:
+              group?.name ??
+              (pair ? t(s, "test.trace.cross_zone") : t(s, "test.trace.a_group")),
             count: occurrence.detail.count,
             n: occurrence.detail.n,
             window: occurrence.detail.window,

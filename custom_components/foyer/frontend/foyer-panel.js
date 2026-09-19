@@ -5115,10 +5115,10 @@ var Ot = class extends I {
 	_renderOccurrence(e, t) {
 		let n = this.ctx;
 		if (t.detail.verification) {
-			let r = n.config?.groups.find((e) => e.id === t.group_id);
+			let r = t.group_id?.startsWith("cross:") ?? !0, i = n.config?.groups.find((e) => e.id === t.group_id);
 			return D`<div class="key">
         ${B(e, t.moment === "verification_satisfied" ? "test.trace.group_satisfied" : "test.trace.group", {
-				group: r?.name ?? B(e, "test.trace.cross_zone"),
+				group: i?.name ?? (r ? B(e, "test.trace.cross_zone") : B(e, "test.trace.a_group")),
 				count: t.detail.count,
 				n: t.detail.n,
 				window: t.detail.window

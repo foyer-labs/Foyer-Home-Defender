@@ -37,6 +37,7 @@ from typing import Any
 from .engine import decide, next_wakeup
 from .models import (
     ActionIntent,
+    ActionKind,
     Actor,
     AreaRuntime,
     AreaState,
@@ -310,6 +311,9 @@ def run(
     def send(event: Event, at: datetime, kind: str) -> Decision:
         nonlocal state, entities
         before = {a: rt.state for a, rt in state.areas.items()}
+        # Which sequences a delay was already holding: anything else the
+        # decision leaves pending, it held back itself.
+        before_runs = frozenset(r.id for r in state.pending_runs)
         snapshot = SystemSnapshot(state, entities, False, request.timezone)
         decision = decide(snapshot, event, config, at)
         state = decision.state
@@ -322,6 +326,7 @@ def run(
                 event,
                 kind,
                 before=before,
+                before_runs=before_runs,
                 entities=entities,
                 request=request,
             )
@@ -389,7 +394,15 @@ def _area_changes(
 def _held_from(
     runs: Sequence[PendingRun], profile_id: str, moment: Moment
 ) -> int | None:
-    """The index a delay stopped this sequence at, if one did."""
+    """The index a delay stopped this sequence at, if one did.
+
+    ``runs`` are the sequences **this** decision held back, never the ones
+    still pending from an earlier one. A trigger thirty seconds after another
+    trigger of the same profile would otherwise find the first one's run and
+    report the second one's actions as held by a delay that has nothing to do
+    with them — the wrong reason, on the one line whose whole job is to give
+    the right one.
+    """
     for run_ in runs:
         if run_.profile_id == profile_id and run_.moment is moment:
             return run_.index
@@ -405,7 +418,9 @@ def _batch(
     answer: Answer,
     group: Sequence[Occurrence],
     decision: Decision,
+    *,
     ctx: PlanContext,
+    before_runs: frozenset[str],
 ) -> PlannedBatch:
     """One run of one profile, and what became of every action in it.
 
@@ -415,6 +430,7 @@ def _batch(
     says so once.
     """
     profile, moment = answer.profile, answer.moment
+    held = [r for r in decision.state.pending_runs if r.id not in before_runs]
     suppressed = (
         frozenset(config.settings.silent_suppresses) if answer.silent else frozenset()
     )
@@ -426,9 +442,17 @@ def _batch(
         for i in decision.actions
         if i.profile_id == profile.id and i.moment is moment
     }
-    held_at = _held_from(decision.state.pending_runs, profile.id, moment)
+    held_at = _held_from(held, profile.id, moment)
     actions = []
     for index, action in enumerate(sequence(profile, moment)):
+        if action.kind is ActionKind.DELAY:
+            # A delay is not an action that ran or was skipped: it is the
+            # waiting itself, and it produces no intent to read a verdict
+            # from. Listing it would put a line in the trace saying "this did
+            # not happen" with nothing after it — the one thing §11.2 is for.
+            # What it did is already said twice: the actions after it are
+            # held back by a delay, and a scheduled line says when they run.
+            continue
         did_run = action.id in ran
         why: str | None = None
         conditions: tuple[str, ...] = ()
@@ -485,11 +509,16 @@ def _unanswered(occurrence: Occurrence) -> PlannedBatch:
 
 
 def _loose(intent: ActionIntent) -> PlannedAction:
-    """A chime or a revert: real, and belonging to no profile (§6.6, §6.2)."""
+    """A chime or a revert: real, and belonging to no profile (§6.6, §6.2).
+
+    ``name`` is left empty on purpose. It is the name the *user* gave an
+    action, and these two were never given one — so the panel translates the
+    kind, as it does for every other word a person reads.
+    """
     return PlannedAction(
         action_id=intent.action_id,
         kind=intent.kind,
-        name=intent.kind,
+        name="",
         moment=intent.moment.value,
         profile_id=None,
         ran=True,
@@ -538,6 +567,7 @@ def _report(
     kind: str,
     *,
     before: Mapping[str, AreaState],
+    before_runs: frozenset[str],
     entities: Mapping[str, EntityState],
     request: SimulationRequest,
 ) -> SimStep:
@@ -559,7 +589,7 @@ def _report(
             continue
         grouped.setdefault(answer.key, (answer, []))[1].append(occurrence)
     batches.extend(
-        _batch(config, answer, group, decision, ctx)
+        _batch(config, answer, group, decision, ctx=ctx, before_runs=before_runs)
         for answer, group in grouped.values()
     )
     known = {i.action_id for b in batches for i in b.actions}
