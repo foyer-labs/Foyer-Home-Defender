@@ -5,7 +5,7 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased] — until somebody answers
+## [0.1.0-beta.7] — until somebody answers
 
 Escalation: a notification that keeps looking for a person instead of firing
 once and hoping. **The stored configuration moves to schema 6.1, a major
