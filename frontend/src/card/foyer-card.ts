@@ -692,7 +692,7 @@ class FoyerCard extends LitElement {
             </button>`,
           )}
           <button
-            class="key wide"
+            class="key word"
             ?disabled=${this._busy || !this._code}
             @click=${() => (this._code = "")}
           >
@@ -703,7 +703,7 @@ class FoyerCard extends LitElement {
           </button>
           ${this._pending
             ? html`<button
-                class="key wide confirm"
+                class="key word confirm"
                 ?disabled=${this._busy || !this._code}
                 @click=${() => this._run(this._pending!)}
               >
@@ -871,7 +871,11 @@ class FoyerCard extends LitElement {
         opacity: 0.5;
         cursor: default;
       }
-      .key.wide {
+      /* A word instead of a digit — "Clear", "Disarm" — so it is set
+         smaller to fit the same square. It does not span two columns, and
+         has never been asked to: the pad is three columns, and with a
+         pending command the last row fills exactly. */
+      .key.word {
         font-size: 14px;
       }
       .key.confirm {
