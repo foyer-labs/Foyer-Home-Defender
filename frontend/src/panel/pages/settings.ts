@@ -113,7 +113,8 @@ class FoyerPageSettings extends LitElement {
     if (!ctx?.config) return nothing;
     return html`${this._renderDefaults(ctx.strings)} ${this._renderResponse(ctx.strings)}
     ${this._renderChime(ctx.strings, this._chime)} ${this._renderLog(ctx.strings)}
-    ${this._renderBackup(ctx.strings)} ${this._renderLanguage(ctx.strings)}`;
+    ${this._renderPrivacy(ctx.strings)} ${this._renderBackup(ctx.strings)}
+    ${this._renderLanguage(ctx.strings)}`;
   }
 
   private _entities(domains: string[]): { id: string; name: string }[] {
@@ -187,6 +188,8 @@ class FoyerPageSettings extends LitElement {
     const [min, max] = ctx.meta?.retention_bounds ?? [1, 3650];
     const change = (changes: Partial<LogSettingsConfig>) => {
       const next: LogSettingsConfig = {
+        ...log,
+        ...changes,
         enabled: { ...log.enabled, ...(changes.enabled ?? {}) },
         retention_days: { ...log.retention_days, ...(changes.retention_days ?? {}) },
       };
@@ -234,6 +237,96 @@ class FoyerPageSettings extends LitElement {
             })}
           </div>
           <p class="hint">${t(s, "settings.log_rows_hint")}</p>
+          <div class="actions">
+            <button
+              class="btn"
+              ?disabled=${this._busy}
+              @click=${() =>
+                change({
+                  retention_days: Object.fromEntries(
+                    (ctx.meta?.named_categories ?? []).map((category) => [
+                      category,
+                      ctx.meta?.short_retention ?? 7,
+                    ]),
+                  ),
+                })}
+            >
+              ${t(s, "settings.short_preset", { days: ctx.meta?.short_retention ?? 7 })}
+            </button>
+          </div>
+          <p class="hint">
+            ${t(s, "settings.short_preset_hint", {
+              days: ctx.meta?.short_retention ?? 7,
+              categories: (ctx.meta?.named_categories ?? [])
+                .map((category) => t(s, `category.${category}`))
+                .join(", "),
+            })}
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- personal data in the log (§10.4) ---------------------------------------------
+
+  /** Timed pseudonymisation, and the question §16 says to ask rather than
+   * guess. Both are here rather than on page 10 because both are settings of
+   * the installation: what page 10 does is act on one person, once. */
+  private _renderPrivacy(s: Strings) {
+    const ctx = this.ctx!;
+    const settings = this._settings ?? ctx.config!.settings;
+    const log = settings.log;
+    const [min, max] = ctx.meta?.pseudonymise_bounds ?? [1, 365];
+    const on = log.pseudonymise_after !== null;
+    const change = (changes: Partial<LogSettingsConfig>) =>
+      void this._saveSettings({ log: { ...log, ...changes } });
+    return html`
+      <div class="card">
+        <div class="card-hd"><h2>${t(s, "settings.privacy_title")}</h2></div>
+        <div class="card-bd">
+          <p class="intro">${t(s, "settings.privacy_intro")}</p>
+          <div class="row">
+            <label class="check">
+              <input
+                type="checkbox"
+                .checked=${on}
+                @change=${(e: Event) =>
+                  change({
+                    pseudonymise_after: (e.target as HTMLInputElement).checked ? 30 : null,
+                  })}
+              />
+              <span>${t(s, "settings.pseudonymise")}</span>
+            </label>
+            <span class="spacer"></span>
+            ${on
+              ? html`<label class="field inline">
+                  <input
+                    type="number"
+                    min=${min}
+                    max=${max}
+                    .value=${String(log.pseudonymise_after ?? 30)}
+                    @change=${(e: Event) => {
+                      const days = Number((e.target as HTMLInputElement).value);
+                      if (Number.isFinite(days)) change({ pseudonymise_after: days });
+                    }}
+                  />
+                  <span class="hint">${t(s, "settings.log_days")}</span>
+                </label>`
+              : nothing}
+          </div>
+          <div class="notice">${t(s, "settings.pseudonymise_warning")}</div>
+          <p class="hint">${t(s, "settings.pseudonymise_hint")}</p>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${log.delete_on_uninstall}
+              @change=${(e: Event) =>
+                change({ delete_on_uninstall: (e.target as HTMLInputElement).checked })}
+            />
+            <span>${t(s, "settings.delete_on_uninstall")}</span>
+          </label>
+          <p class="hint">${t(s, "settings.delete_on_uninstall_hint")}</p>
+          <p class="hint">${t(s, "settings.uninstall_snapshots_hint")}</p>
         </div>
       </div>
     `;

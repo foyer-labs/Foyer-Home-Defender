@@ -8,7 +8,7 @@ import { LitElement, css, html, nothing } from "lit";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
-import type { LogQuery, LogRow } from "../../shared/types";
+import type { LogQuery, LogRow, PersonCounts } from "../../shared/types";
 import { download, type PanelContext } from "../context";
 
 const PAGE_SIZE = 50;
@@ -24,6 +24,11 @@ class FoyerPageLog extends LitElement {
     _error: { state: true },
     _open: { state: true },
     _confirmClear: { state: true },
+    _person: { state: true },
+    _counts: { state: true },
+    _keepPseudonym: { state: true },
+    _confirmErase: { state: true },
+    _erased: { state: true },
   };
 
   ctx?: PanelContext;
@@ -36,6 +41,13 @@ class FoyerPageLog extends LitElement {
   private _open?: number;
   private _confirmClear = false;
   private _loaded = false;
+  // Personal data (§10.4). The person chosen, what an erasure would touch,
+  // and whether this run keeps a stable identifier instead of forgetting.
+  private _person = "";
+  private _counts?: PersonCounts;
+  private _keepPseudonym = false;
+  private _confirmErase = false;
+  private _erased?: number;
 
   override updated(): void {
     // The first load waits for the context, which arrives with the status.
@@ -109,11 +121,177 @@ class FoyerPageLog extends LitElement {
     }
   }
 
+  // --- personal data (§10.4) -------------------------------------------------------
+
+  private async _pick(userId: string): Promise<void> {
+    this._person = userId;
+    this._counts = undefined;
+    this._confirmErase = false;
+    this._erased = undefined;
+    if (!userId || !this.ctx) return;
+    try {
+      this._counts = await this.ctx.previewPerson(userId);
+    } catch (err) {
+      this._error = String((err as { message?: string })?.message ?? err);
+    }
+  }
+
+  private async _exportPerson(format: "csv" | "json"): Promise<void> {
+    if (!this.ctx || !this._person) return;
+    this._busy = true;
+    this._error = undefined;
+    try {
+      const result = await this.ctx.exportPerson(this._person, format);
+      download(
+        result.filename,
+        result.content,
+        format === "csv" ? "text/csv" : "application/json",
+      );
+      if (result.truncated) {
+        this._error = t(this.ctx.strings, "log.truncated", {
+          rows: result.rows,
+          total: result.total,
+        });
+      }
+    } catch (err) {
+      this._error = String((err as { message?: string })?.message ?? err);
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private async _erasePerson(): Promise<void> {
+    if (!this.ctx || !this._person) return;
+    this._confirmErase = false;
+    this._busy = true;
+    this._error = undefined;
+    try {
+      const result = await this.ctx.erasePerson(this._person, this._keepPseudonym);
+      if (result.success) {
+        this._erased = result.removed ?? 0;
+        this._counts = await this.ctx.previewPerson(this._person);
+        await this._load();
+      } else if (result.reason) {
+        this._error = t(this.ctx.strings, `reason.${result.reason}`);
+      }
+    } catch (err) {
+      this._error = String((err as { message?: string })?.message ?? err);
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private _renderPeople(s: Strings) {
+    const ctx = this.ctx!;
+    // The list of people comes from the configuration, which only somebody
+    // who may read it has. Export and erasure are theirs anyway (part 2
+    // decision 3): a subject access request in a household is made to
+    // whoever set the system up, and docs/privacy.md says so plainly.
+    const users = ctx.config?.users;
+    if (!users?.length) return nothing;
+    const counts = this._counts;
+    return html`
+      <div class="card">
+        <div class="card-hd"><h2>${t(s, "log.person_title")}</h2></div>
+        <div class="card-bd">
+          <p class="hint">${t(s, "log.person_intro")}</p>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${t(s, "log.person")}</span>
+              <select
+                .value=${this._person}
+                @change=${(e: Event) =>
+                  void this._pick((e.target as HTMLSelectElement).value)}
+              >
+                <option value="">${t(s, "log.person_none")}</option>
+                ${users.map(
+                  (user) =>
+                    html`<option .value=${user.id!} ?selected=${user.id === this._person}>
+                      ${user.name}
+                    </option>`,
+                )}
+              </select>
+            </label>
+          </div>
+          ${counts
+            ? html`
+                <p class="hint">
+                  ${t(s, "log.person_found", {
+                    total: counts.total,
+                    by_id: counts.by_id,
+                    by_name: counts.by_name,
+                  })}
+                </p>
+                <p class="hint">${t(s, "log.person_export_rows", { rows: counts.wide })}</p>
+                <div class="actions">
+                  <button
+                    class="btn"
+                    ?disabled=${this._busy}
+                    @click=${() => void this._exportPerson("csv")}
+                  >
+                    ${t(s, "log.person_export_csv")}
+                  </button>
+                  <button
+                    class="btn"
+                    ?disabled=${this._busy}
+                    @click=${() => void this._exportPerson("json")}
+                  >
+                    ${t(s, "log.person_export_json")}
+                  </button>
+                  <button
+                    class="btn danger"
+                    ?disabled=${this._busy || counts.total === 0}
+                    @click=${() => (this._confirmErase = true)}
+                  >
+                    ${t(s, "log.person_erase")}
+                  </button>
+                </div>
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    .checked=${this._keepPseudonym}
+                    @change=${(e: Event) =>
+                      (this._keepPseudonym = (e.target as HTMLInputElement).checked)}
+                  />
+                  <span>${t(s, "log.person_keep_pseudonym")}</span>
+                </label>
+                <p class="hint">${t(s, "log.person_keep_pseudonym_hint")}</p>
+              `
+            : nothing}
+          ${this._erased !== undefined
+            ? html`<p class="hint">${t(s, "log.person_erased", { rows: this._erased })}</p>`
+            : nothing}
+          ${this._confirmErase
+            ? html`<div class="problems" role="alert">
+                <p>
+                  ${t(
+                    s,
+                    this._keepPseudonym
+                      ? "log.person_erase_confirm_pseudonym"
+                      : "log.person_erase_confirm",
+                    { rows: counts?.total ?? 0 },
+                  )}
+                </p>
+                <div class="actions">
+                  <button class="btn danger" @click=${() => void this._erasePerson()}>
+                    ${t(s, "log.person_erase_yes")}
+                  </button>
+                  <button class="btn" @click=${() => (this._confirmErase = false)}>
+                    ${t(s, "common.cancel")}
+                  </button>
+                </div>
+              </div>`
+            : nothing}
+        </div>
+      </div>
+    `;
+  }
+
   override render() {
     const ctx = this.ctx;
     if (!ctx) return nothing;
     const s = ctx.strings;
-    return html`${this._renderFilters(s)} ${this._renderRows(s)}`;
+    return html`${this._renderFilters(s)} ${this._renderRows(s)} ${this._renderPeople(s)}`;
   }
 
   // --- filters ---------------------------------------------------------------------

@@ -397,6 +397,19 @@ class FoyerPanel extends LitElement {
         });
         return result;
       },
+      previewPerson: (userId) =>
+        hass.callWS({ type: "foyer/privacy/preview", user_id: userId }),
+      exportPerson: (userId, format) =>
+        hass.callWS({ type: "foyer/privacy/export", user_id: userId, format }),
+      erasePerson: (userId, pseudonymise) =>
+        this._coded((code) =>
+          hass.callWS<{ success: boolean; removed?: number; reason?: string | null }>({
+            type: "foyer/privacy/erase",
+            user_id: userId,
+            pseudonymise,
+            ...withCode(code),
+          }),
+        ),
       diagnostics: () => hass.callWS({ type: "foyer/diagnostics" }),
       simulate: (query) => hass.callWS({ type: "foyer/simulate", ...prune(query) }),
       walkTest: (enable, options) =>

@@ -963,8 +963,45 @@ async def ws_settings_save(
     ) is None:
         return
     result = update_settings(system.config, system.state, msg["settings"])
+    _record_pseudonymisation(system, connection, result)
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="settings"
+    )
+
+
+@callback
+def _record_pseudonymisation(
+    system: FoyerSystem,
+    connection: websocket_api.ActiveConnection,
+    result: EditResult,
+) -> None:
+    """A row of its own when timed pseudonymisation is switched on or off.
+
+    The ordinary settings row says that the log block changed, which is not
+    enough here (part 2 decision 5). This is the one configuration change that
+    destroys the past, and switching it *off* is as much worth recording as
+    switching it on — "who turned the protection off, and when" is a question
+    somebody will ask, and its absence from the record would be the most
+    convenient absence in the file.
+    """
+    if result.config is None:
+        return
+    was = system.config.settings.log.pseudonymise_after
+    now = result.config.settings.log.pseudonymise_after
+    if was == now:
+        return
+    system.async_record(
+        (
+            config_row(
+                dt_util.utcnow(),
+                operation="pseudonymisation",
+                kind="log",
+                user_id=connection.user.id,
+                user_name=connection.user.name,
+                channel=CHANNEL_HA_UI,
+                changes={"from": was, "to": now},
+            ),
+        )
     )
 
 

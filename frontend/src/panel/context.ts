@@ -19,6 +19,7 @@ import type {
   LogPage,
   LogQuery,
   PageId,
+  PersonCounts,
   Problem,
   RadioCandidate,
   SecurityConfig,
@@ -82,6 +83,16 @@ export interface PanelContext {
   queryLog(query: LogQuery): Promise<LogPage>;
   exportLog(query: LogQuery, format: "csv" | "json"): Promise<LogExport>;
   clearLog(): Promise<{ success: boolean; removed: number }>;
+  /** Personal data in the log (§10.4). The preview says what an erasure would
+   * touch before anybody presses the button; the export is one person's rows
+   * for a subject access request; the erasure takes them out of the log and
+   * leaves every event where it is. */
+  previewPerson(userId: string): Promise<PersonCounts>;
+  exportPerson(userId: string, format: "csv" | "json"): Promise<LogExport>;
+  erasePerson(
+    userId: string,
+    pseudonymise: boolean,
+  ): Promise<{ success: boolean; removed?: number; reason?: string | null }>;
   /** Page 9 (§11): both only read, and both are gated as reads — view_log,
    * no code. Nothing here executes anything; the simulator calls the same
    * decide() the runtime calls and never hands the result to the executor. */
