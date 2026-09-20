@@ -233,7 +233,8 @@
     "duplicate_radio_entry": "Un'altra radio usa già quell'integrazione.",
     "radio_entry_required": "Scegli quale integrazione è questa radio.",
     "coordinator_required": "Indica l'entità coordinatore, oppure disattiva questa radio. Senza, Foyer non può distinguere l'interferenza da un coordinatore morto, e non tira a indovinare.",
-    "group_members_disabled": "Ci sono meno membri accesi di quanti ne chiede la soglia, quindi questo gruppo non può mai essere soddisfatto."
+    "group_members_disabled": "Ci sono meno membri accesi di quanti ne chiede la soglia, quindi questo gruppo non può mai essere soddisfatto.",
+    "propose_failed": "Non è stato possibile chiedere a Home Assistant di quell'entità. Riprova fra un momento."
   },
   "field": {
     "name": "Nome",
@@ -1542,7 +1543,16 @@
     "reloaded": "Foyer ricaricato",
     "device_rejected": "Dispositivo rifiutato",
     "config_history_erased": "Storia di una persona cancellata",
-    "config_pseudonymisation": "Pseudonimizzazione a tempo modificata"
+    "config_pseudonymisation": "Pseudonimizzazione a tempo modificata",
+    "duress": "Disinserito sotto costrizione",
+    "auto_pending": "Azione automatica in conto alla rovescia",
+    "auto_cancelled": "Azione automatica annullata",
+    "auto_blocked": "Azione automatica trattenuta",
+    "auto_arming_switched": "Inserimento automatico commutato",
+    "auto_suspension_set": "Inserimento automatico sospeso",
+    "auto_suspension_cleared": "Sospensione revocata",
+    "action_test": "Azione provata",
+    "simulation_run": "Simulazione eseguita"
   },
   "log": {
     "filters": "Filtri",
@@ -1625,7 +1635,7 @@
     "area_text": "Un'area basta per iniziare. Più aree significano più inserimenti parziali più avanti: solo il perimetro, o il piano terra con il cane in casa.",
     "exit_hint": "Quanto tempo hai per uscire dopo l'inserimento.",
     "entry_hint": "Quanto tempo hai per disinserire dopo aver aperto una zona ritardata. Le zone lo ereditano se non dicono altro.",
-    "zones_text": "Hai {have} zone su {want}. Tre bastano per iniziare; le altre possono aspettare.",
+    "zones_text": "Zone mappate: {have} su {want}",
     "add_zone": "Aggiungi una zona",
     "pick_entity": "Scegli un'entità…",
     "proposed": "{entity} adesso legge {state}. Foyer propone una zona {type}, in allarme su: {states}.",
@@ -1659,7 +1669,10 @@
     "user": "Utente",
     "security": "Codici e blocco",
     "health": "Salute di sistema",
-    "radio": "Radio"
+    "radio": "Radio",
+    "devices": "Dispositivo di inserimento",
+    "contacts": "Contatto",
+    "rules": "Regola"
   },
   "detail": {
     "skip_exit_delay": "Inserito senza ritardo d'uscita",
@@ -1691,7 +1704,25 @@
     "state": "Stato",
     "attributed": "Attribuzione",
     "rows": "Righe",
-    "pseudonymised": "Pseudonimo mantenuto"
+    "pseudonymised": "Pseudonimo mantenuto",
+    "rule": "Regola",
+    "rule_id": "Regola",
+    "pending_id": "Conto alla rovescia",
+    "suspension": "Sospensione",
+    "strike": "Numero del blocco",
+    "never_detected": "Mai rilevata",
+    "radio": "Radio",
+    "threshold": "Soglia",
+    "failures": "Fallimenti",
+    "service": "Servizio",
+    "contact": "Contatto",
+    "channel_id": "Canale",
+    "steps": "Passi",
+    "until": "Fino a",
+    "entity_id": "Entità",
+    "test": "Prova",
+    "contact_id": "Contatto",
+    "over_contact_id": "Annunciato a"
   },
   "code": {
     "title": "Codice",
@@ -1931,7 +1962,8 @@
       "silent": "questa zona è silenziosa e la sopprime",
       "already_running": "già in corso per questo incidente, non riavviata",
       "held_by_delay": "trattenuta da un ritardo precedente nella sequenza",
-      "quiet_hours": "ogni contatto che nomina è nelle sue ore di silenzio, o non ha più un canale"
+      "quiet_hours": "ogni contatto che nomina è nelle sue ore di silenzio, o non ha più un canale",
+      "walk_test": "È in corso un walk test, quindi non è stato eseguito niente"
     },
     "timer": {
       "exit": "ritardo d'uscita",
@@ -2175,7 +2207,8 @@
     "block_refused": "L'ultimo tentativo è stato rifiutato",
     "because": " · {name}",
     "block_alarm_in_progress": "C'è un allarme in corso",
-    "block_missed": "Persa: Home Assistant era spento"
+    "block_missed": "Persa: Home Assistant era spento",
+    "block_unknown_area": "Un'area che nomina non esiste più"
   },
   "health": {
     "settings": "Impostazioni di salute di sistema",
@@ -2241,7 +2274,7 @@
     "faults": "Guasti aperti",
     "faults_sub": "segnalati anche come problemi di Home Assistant",
     "no_faults": "Nessun guasto.",
-    "days": "{n} giorni",
+    "days": "giorni: {n}",
     "recent": "Da poco",
     "diagnostics": "Diagnostici",
     "diagnostics_hint": "Un dump anonimizzato della configurazione e dello stato: niente codici, niente hash, niente nomi di persone, niente URL, e gli id delle entità ridotti a segnaposto stabili. È ciò che trasforma una segnalazione in qualcosa a cui si può rispondere.",

@@ -585,7 +585,7 @@ class FoyerPageLog extends LitElement {
                     <dd>${line}</dd>`,
                 )}
                 ${this._plainDetail(row).map(
-                  ([key, value]) => html`<dt>${t(s, `detail.${key}`)}</dt>
+                  ([key, value]) => html`<dt>${this._detailLabel(s, key)}</dt>
                     <dd class="mono">${value}</dd>`,
                 )}
               </dl>
@@ -714,6 +714,15 @@ class FoyerPageLog extends LitElement {
       return value.length ? value.map((v) => this._value(s, v)).join(", ") : "—";
     }
     return String(value);
+  }
+
+  /** A detail key's label, or the key itself. Every sibling helper here
+   * falls back to the raw name and this one did not, so a key the
+   * translations had not caught up with printed as `detail.rule` (found in
+   * review). A bare word is a poor label; `detail.rule` is not a label. */
+  private _detailLabel(s: Strings, key: string): string {
+    const label = t(s, `detail.${key}`);
+    return label === `detail.${key}` ? key : label;
   }
 
   /** Everything else in the detail, as it is: one line per key, so a row is

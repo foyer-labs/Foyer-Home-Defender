@@ -732,6 +732,54 @@ o`
     font-size: 13.5px;
     margin: 12px 0 0;
   }
+  /* Classes the pages have been using without a rule behind them (found in
+     review). Each one rendered as nothing at all: a "small" button at full
+     size, an editor footer flush against the card edge, a separator that
+     separated nothing. They live here rather than in one page because
+     several pages use each of them. */
+  .btn.sm,
+  .btn.small {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+  .card-ft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-top: 1px solid var(--divider-color);
+  }
+  .hr {
+    height: 1px;
+    background: var(--divider-color);
+    border: 0;
+    margin: 16px 0;
+  }
+  .note {
+    color: var(--secondary-text-color);
+    font-size: 13px;
+    margin: 6px 0 0;
+  }
+  .sub {
+    color: var(--secondary-text-color);
+    font-size: 12.5px;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .wide,
+  .span {
+    grid-column: 1 / -1;
+  }
+  /* The singular spelling of the problems bar, used by the contact editor. */
+  .problem {
+    padding: 10px 14px;
+    border-left: 3px solid var(--error-color, #d32f2f);
+    background: var(--secondary-background-color);
+    border-radius: 6px;
+    font-size: 13.5px;
+  }
   .tag {
     display: inline-block;
     padding: 1px 8px;

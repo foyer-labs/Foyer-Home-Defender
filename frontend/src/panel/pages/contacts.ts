@@ -598,7 +598,7 @@ class FoyerPageContacts extends LitElement {
                             )}
                           </div>
                           <div class="mono">
-                            ${t(s, "contacts.step_number")} ${index} ·
+                            ${t(s, "contacts.step_number")} ${index + 1} ·
                             ${t(s, `moment.${action.moments[0]}`)}
                           </div>
                         </div>

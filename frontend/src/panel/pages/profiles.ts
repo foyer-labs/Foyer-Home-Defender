@@ -51,6 +51,11 @@ const MOMENT_GROUPS: Record<string, string[]> = {
     "code_rejected",
     "lockout",
     "chime_switched",
+    // A disarm with a duress code (§8.1). It was left out of this list, so
+    // the one moment whose whole purpose is to reach somebody quietly could
+    // not be answered from the panel at all — while the backend dispatched
+    // it and both translation files carried its message (found in review).
+    "duress",
   ],
   system: [
     "zone_fault",

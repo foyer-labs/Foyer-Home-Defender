@@ -887,6 +887,22 @@ class _Run:
             zone_ids=rt.causes,
         )
         self.stop_running(area_id, Moment.SIREN_CUTOFF)
+        # And what a delay was still holding for this alarm. §6.2 says a
+        # siren never sounds beyond the cutoff and that the cutoff stops what
+        # it started — a sequence whose `delay` outlasted the cutoff started
+        # the bell afterwards, on an armed house, for its whole duration
+        # (found in review). The technical channel keeps its own, as it keeps
+        # everything else (§5.5).
+        incident = self.incident
+        self.pending_runs = [
+            r
+            for r in self.pending_runs
+            if r.moment in TECHNICAL_MOMENTS
+            or not (
+                r.area_id == area_id
+                or (incident is not None and r.incident_id == incident.id)
+            )
+        ]
         resume = rt.resume or AreaState.ARMED
         if resume is AreaState.DISARMED:
             self.set_area(
@@ -2270,6 +2286,12 @@ class _Run:
         incident = self.incident
         if incident is None or incident.acknowledged:
             return
+        if incident.escalation_exhausted:
+            # Everybody on the list has been tried for this incident. A
+            # louder zone joining now updates the notification text, as every
+            # join does, and does not start the climb again (found in
+            # review).
+            return
         profile = escalation_engine.policy_for(self.config, incident)
         if profile is None:
             return
@@ -2410,6 +2432,18 @@ class _Run:
                         if advanced.kind is EscalationKind.INCIDENT
                         else None,
                     )
+                    if (
+                        advanced.kind is EscalationKind.INCIDENT
+                        and self.incident is not None
+                        and self.incident.id == advanced.reference
+                    ):
+                        # Remembered on the incident, because the escalation
+                        # itself is about to be dropped: otherwise the next
+                        # zone to join finds none running and starts the whole
+                        # list over (found in review).
+                        self.incident = replace(
+                            self.incident, escalation_exhausted=True
+                        )
                 continue
             surviving.append(advanced)
         self.escalations = surviving

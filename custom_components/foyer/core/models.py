@@ -1858,6 +1858,12 @@ class Incident:
     acknowledged: bool = False
     acknowledgements: tuple[Acknowledgement, ...] = ()
     actions_started: tuple[str, ...] = ()
+    # The escalation for this incident has run to its last step. Recorded
+    # here because the Escalation itself is dropped when it is exhausted, so
+    # without it the next zone to join found no escalation running and
+    # started the whole list again — push, SMS, the neighbour, the voice call
+    # — once per further zone of the same break-in (found in review).
+    escalation_exhausted: bool = False
 
     @property
     def area_ids(self) -> tuple[str, ...]:

@@ -233,7 +233,8 @@
     "duplicate_radio_entry": "Another radio already uses that integration.",
     "radio_entry_required": "Choose which integration this radio is.",
     "coordinator_required": "Name the coordinator entity, or switch this radio off. Without it Foyer cannot tell interference from a dead coordinator, and will not guess.",
-    "group_members_disabled": "Fewer members are switched on than the threshold needs, so this group can never be satisfied."
+    "group_members_disabled": "Fewer members are switched on than the threshold needs, so this group can never be satisfied.",
+    "propose_failed": "Home Assistant could not be asked about that entity. Try again in a moment."
   },
   "field": {
     "name": "Name",
@@ -1542,7 +1543,16 @@
     "reloaded": "Foyer reloaded",
     "device_rejected": "Device refused",
     "config_history_erased": "History of a person erased",
-    "config_pseudonymisation": "Timed pseudonymisation changed"
+    "config_pseudonymisation": "Timed pseudonymisation changed",
+    "duress": "Disarmed under duress",
+    "auto_pending": "Automatic action counting down",
+    "auto_cancelled": "Automatic action cancelled",
+    "auto_blocked": "Automatic action held back",
+    "auto_arming_switched": "Automatic arming switched",
+    "auto_suspension_set": "Automatic arming suspended",
+    "auto_suspension_cleared": "Suspension lifted",
+    "action_test": "Action tested",
+    "simulation_run": "Simulation run"
   },
   "log": {
     "filters": "Filters",
@@ -1625,7 +1635,7 @@
     "area_text": "One area is enough to start. More areas mean more partial arming later — the perimeter alone, or the ground floor with the dog at home.",
     "exit_hint": "How long you have to leave after arming.",
     "entry_hint": "How long you have to disarm after opening a delayed zone. Zones inherit this unless they say otherwise.",
-    "zones_text": "You have {have} of {want} zones. Three is plenty to start with; the rest can wait.",
+    "zones_text": "Zones mapped: {have} of {want}",
     "add_zone": "Add a zone",
     "pick_entity": "Choose an entity…",
     "proposed": "{entity} reads {state} right now. Foyer proposes a {type} zone, triggered on: {states}.",
@@ -1659,7 +1669,10 @@
     "user": "User",
     "security": "Codes and lockout",
     "health": "System health",
-    "radio": "Radio"
+    "radio": "Radio",
+    "devices": "Arming device",
+    "contacts": "Contact",
+    "rules": "Rule"
   },
   "detail": {
     "skip_exit_delay": "Armed with no exit delay",
@@ -1691,7 +1704,25 @@
     "state": "State",
     "attributed": "Attribution",
     "rows": "Rows",
-    "pseudonymised": "Kept a pseudonym"
+    "pseudonymised": "Kept a pseudonym",
+    "rule": "Rule",
+    "rule_id": "Rule",
+    "pending_id": "Countdown",
+    "suspension": "Suspension",
+    "strike": "Lockout number",
+    "never_detected": "Never detected",
+    "radio": "Radio",
+    "threshold": "Threshold",
+    "failures": "Failures",
+    "service": "Service",
+    "contact": "Contact",
+    "channel_id": "Channel",
+    "steps": "Steps",
+    "until": "Until",
+    "entity_id": "Entity",
+    "test": "Test",
+    "contact_id": "Contact",
+    "over_contact_id": "Announced to"
   },
   "code": {
     "title": "Code",
@@ -1931,7 +1962,8 @@
       "silent": "this zone is silent and suppresses it",
       "already_running": "already running for this incident, not restarted",
       "held_by_delay": "held back by a delay earlier in the sequence",
-      "quiet_hours": "every contact it names is inside their quiet hours, or has no channel left"
+      "quiet_hours": "every contact it names is inside their quiet hours, or has no channel left",
+      "walk_test": "A walk test is running, so nothing was executed"
     },
     "timer": {
       "exit": "exit delay",
@@ -2175,7 +2207,8 @@
     "block_refused": "The last attempt was refused",
     "because": " · {name}",
     "block_alarm_in_progress": "An alarm is in progress",
-    "block_missed": "Missed: Home Assistant was down"
+    "block_missed": "Missed: Home Assistant was down",
+    "block_unknown_area": "An area it names no longer exists"
   },
   "health": {
     "settings": "System health settings",
@@ -2241,7 +2274,7 @@
     "faults": "Open faults",
     "faults_sub": "also raised as Home Assistant repair issues",
     "no_faults": "Nothing is in fault.",
-    "days": "{n} days",
+    "days": "days: {n}",
     "recent": "Recently",
     "diagnostics": "Diagnostics",
     "diagnostics_hint": "An anonymised dump of the configuration and the state: no codes, no hashes, no personal names, no URLs, and entity ids reduced to stable placeholders. It is what turns a bug report into something answerable.",

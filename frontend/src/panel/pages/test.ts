@@ -84,9 +84,11 @@ function conditionEntities(ctx: PanelContext): string[] {
   return [...seen].sort();
 }
 
-function hhmm(iso: string): string {
+/** The language is the Home Assistant user's, not the browser's (found in
+ * review): every other page on this panel follows the first. */
+function hhmm(iso: string, language?: string): string {
   const date = new Date(iso);
-  return date.toLocaleTimeString(undefined, {
+  return date.toLocaleTimeString(language, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -289,7 +291,7 @@ class FoyerPageTest extends LitElement {
               </span>`}
         </td>
         <td class="mono">
-          ${zone.last_changed ? hhmm(zone.last_changed) : "—"}
+          ${zone.last_changed ? hhmm(zone.last_changed, this.ctx?.hass.language) : "—"}
         </td>
         <td>
           ${!zone.enabled
@@ -363,7 +365,7 @@ class FoyerPageTest extends LitElement {
                       <td class="mono">${device.entity_id ?? "—"}</td>
                       <td class="mono">${device.state ?? "—"}</td>
                       <td class="mono">
-                        ${device.last_changed ? hhmm(device.last_changed) : "—"}
+                        ${device.last_changed ? hhmm(device.last_changed, this.ctx?.hass.language) : "—"}
                       </td>
                       <td>
                         ${!device.enabled
@@ -675,7 +677,7 @@ class FoyerPageTest extends LitElement {
       : "";
     return html`
       <li class="step">
-        <div class="when mono">${hhmm(step.at)}</div>
+        <div class="when mono">${hhmm(step.at, this.ctx?.hass.language)}</div>
         <div class="what">
           ${step.kind === "zone"
             ? html`<div>
@@ -721,7 +723,7 @@ class FoyerPageTest extends LitElement {
                   ? html`<span class="muted">
                       ${t(s, "test.trace.timer", {
                         kind: t(s, `test.timer.${change.timer_kind}`),
-                        at: hhmm(change.timer_due),
+                        at: hhmm(change.timer_due, this.ctx?.hass.language),
                       })}
                     </span>`
                   : nothing}
@@ -749,7 +751,7 @@ class FoyerPageTest extends LitElement {
             .filter((item) => this._firstMention(item))
             .map(
               (item) => html`<div class="wait">
-                ${t(s, `test.trace.later.${item.kind}`, { at: hhmm(item.at) })}
+                ${t(s, `test.trace.later.${item.kind}`, { at: hhmm(item.at, this.ctx?.hass.language) })}
               </div>`,
             )}
           ${step.scheduled

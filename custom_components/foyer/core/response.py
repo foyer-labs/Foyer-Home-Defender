@@ -86,6 +86,12 @@ UNION_MOMENTS: frozenset[Moment] = frozenset(
     }
 )
 
+# The incident's own moments: they name no zone, so what a silent zone
+# suppresses is read from everything that has joined (see `_silent`).
+INCIDENT_MOMENTS: frozenset[Moment] = frozenset(
+    {Moment.INCIDENT_OPENED, Moment.INCIDENT_JOINED}
+)
+
 # What an acknowledgement can stop, and therefore what an actionable button
 # may offer to stop (§7.2). Two things escalate, and these are the moments
 # that start them; a button on an "armed" notification would acknowledge
@@ -907,6 +913,27 @@ class Answer:
         )
 
 
+def _silent(ctx: PlanContext, occurrence: Occurrence, zone: Zone | None) -> bool:
+    """Whether this batch runs without the sounders a silent zone suppresses.
+
+    A zone's own alarm is silent when the zone is (§4.2, decision 66). An
+    *incident* occurrence names no zone, so the question is whether every
+    zone that has joined it is silent — "another zone contributing to the
+    same incident still sounds" is the rule, and its other half is that an
+    incident of silent zones alone stays silent. Read only from the zone,
+    this was the sounder on `incident_opened` running for a silent zone,
+    which is the natural place to put one siren per incident (found in
+    review).
+    """
+    if occurrence.moment in ZONE_MOMENTS:
+        return bool(zone and zone.silent)
+    if occurrence.moment in INCIDENT_MOMENTS and ctx.incident is not None:
+        zones = [ctx.config.zone(z) for z in ctx.incident.zone_ids]
+        joined = [z for z in zones if z is not None]
+        return bool(joined) and all(z.silent for z in joined)
+    return False
+
+
 def answer_for(ctx: PlanContext, occurrence: Occurrence) -> Answer | None:
     """The profile that answers this occurrence, or None when none does."""
     zone = ctx.config.zone(occurrence.zone_id)
@@ -925,7 +952,7 @@ def answer_for(ctx: PlanContext, occurrence: Occurrence) -> Answer | None:
     return Answer(
         profile=profile,
         source=source,
-        silent=bool(zone and zone.silent and occurrence.moment in ZONE_MOMENTS),
+        silent=_silent(ctx, occurrence, zone),
         incident_id=occurrence.incident_id,
         moment=occurrence.moment,
         inhibited=inhibits(ctx, occurrence),

@@ -786,6 +786,54 @@ var z = o`
     font-size: 13.5px;
     margin: 12px 0 0;
   }
+  /* Classes the pages have been using without a rule behind them (found in
+     review). Each one rendered as nothing at all: a "small" button at full
+     size, an editor footer flush against the card edge, a separator that
+     separated nothing. They live here rather than in one page because
+     several pages use each of them. */
+  .btn.sm,
+  .btn.small {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+  .card-ft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-top: 1px solid var(--divider-color);
+  }
+  .hr {
+    height: 1px;
+    background: var(--divider-color);
+    border: 0;
+    margin: 16px 0;
+  }
+  .note {
+    color: var(--secondary-text-color);
+    font-size: 13px;
+    margin: 6px 0 0;
+  }
+  .sub {
+    color: var(--secondary-text-color);
+    font-size: 12.5px;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .wide,
+  .span {
+    grid-column: 1 / -1;
+  }
+  /* The singular spelling of the problems bar, used by the contact editor. */
+  .problem {
+    padding: 10px 14px;
+    border-left: 3px solid var(--error-color, #d32f2f);
+    background: var(--secondary-background-color);
+    border-radius: 6px;
+    font-size: 13.5px;
+  }
   .tag {
     display: inline-block;
     padding: 1px 8px;
@@ -1835,10 +1883,21 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
 	async _propose(e, t) {
 		let n = this.ctx;
 		if (!n || !e) return;
-		let r = await n.hass.callWS({
-			type: "foyer/zone/propose",
-			entity_id: e
-		});
+		let r;
+		try {
+			r = await n.hass.callWS({
+				type: "foyer/zone/propose",
+				entity_id: e
+			});
+		} catch {
+			this._problems = [{
+				code: "propose_failed",
+				kind: "zone",
+				ref: null,
+				field: "entity_id"
+			}];
+			return;
+		}
 		if (this._proposal = r, !t || !this._draft) return;
 		let i = r.trigger_kind === "event" ? {
 			kind: "event",
@@ -2189,7 +2248,10 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
         <input
           type="checkbox"
           .checked=${!!t[n]}
-          @change=${(e) => this._set(n, e.target.checked)}
+          @change=${(e) => {
+			let t = e.target.checked;
+			this._set(n, t), n === "always_on" && t && this._set("chime", !1);
+		}}
         />
         <span>
           ${R(e, `field.${n}`)}
@@ -2803,7 +2865,8 @@ var dt = {
 		"zone_rejoined",
 		"code_rejected",
 		"lockout",
-		"chime_switched"
+		"chime_switched",
+		"duress"
 	],
 	system: [
 		"zone_fault",
@@ -4831,8 +4894,8 @@ function Mt(e) {
 	for (let n of e.config?.rules ?? []) if (n.enabled) for (let e of n.trigger.entity_ids) t.add(e);
 	return [...t].sort();
 }
-function J(e) {
-	return new Date(e).toLocaleTimeString(void 0, {
+function J(e, t) {
+	return new Date(e).toLocaleTimeString(t, {
 		hour: "2-digit",
 		minute: "2-digit",
 		second: "2-digit"
@@ -4977,7 +5040,7 @@ var Nt = class extends P {
               </span>`}
         </td>
         <td class="mono">
-          ${t.last_changed ? J(t.last_changed) : "—"}
+          ${t.last_changed ? J(t.last_changed, this.ctx?.hass.language) : "—"}
         </td>
         <td>
           ${t.enabled ? t.fault ? E`<span class="state fault">${R(e, `fault.${t.fault}`)}</span>` : E`<span class="state closed">${R(e, "test.ok")}</span>` : E`<span class="state disabled">${R(e, "test.disabled")}</span>`}
@@ -5034,7 +5097,7 @@ var Nt = class extends P {
                       <td class="mono">${t.entity_id ?? "—"}</td>
                       <td class="mono">${t.state ?? "—"}</td>
                       <td class="mono">
-                        ${t.last_changed ? J(t.last_changed) : "—"}
+                        ${t.last_changed ? J(t.last_changed, this.ctx?.hass.language) : "—"}
                       </td>
                       <td>
                         ${t.enabled ? t.watchable ? t.available ? E`<span class="state closed">${R(e, "test.ok")}</span>` : E`<span class="state fault"
@@ -5265,7 +5328,7 @@ var Nt = class extends P {
 		let n = this.ctx, r = t.zone_id ? n.status.zones.find((e) => e.id === t.zone_id)?.name ?? t.zone_id : "";
 		return E`
       <li class="step">
-        <div class="when mono">${J(t.at)}</div>
+        <div class="when mono">${J(t.at, this.ctx?.hass.language)}</div>
         <div class="what">
           ${t.kind === "zone" ? E`<div>
                 ${R(e, "test.trace.zone", { zone: r })}
@@ -5287,7 +5350,7 @@ var Nt = class extends P {
                 ${t.timer_due ? E`<span class="muted">
                       ${R(e, "test.trace.timer", {
 			kind: R(e, `test.timer.${t.timer_kind}`),
-			at: J(t.timer_due)
+			at: J(t.timer_due, this.ctx?.hass.language)
 		})}
                     </span>` : O}
               </div>
@@ -5303,7 +5366,7 @@ var Nt = class extends P {
                   ${R(e, "test.trace.ran", { action: R(e, `action_kind.${t.kind}`) })}
                 </div>`)}
           ${t.scheduled.filter((e) => e.kind === "delay" || e.kind === "siren").filter((e) => this._firstMention(e)).map((t) => E`<div class="wait">
-                ${R(e, `test.trace.later.${t.kind}`, { at: J(t.at) })}
+                ${R(e, `test.trace.later.${t.kind}`, { at: J(t.at, this.ctx?.hass.language) })}
               </div>`)}
           ${t.scheduled.filter((e) => e.kind === "escalation_step").map((t) => E`<div class="wait">
                 ${R(e, "test.trace.later.escalation_step", {
@@ -6173,7 +6236,7 @@ var Bt = class extends P {
 		}).join(" · ") || String(t.params.service ?? "")}
                           </div>
                           <div class="mono">
-                            ${R(e, "contacts.step_number")} ${r} ·
+                            ${R(e, "contacts.step_number")} ${r + 1} ·
                             ${R(e, `moment.${t.moments[0]}`)}
                           </div>
                         </div>
@@ -6329,8 +6392,8 @@ var Vt = [
 	5,
 	6
 ];
-function Y(e) {
-	return e ? new Date(e).toLocaleString(void 0, {
+function Y(e, t) {
+	return e ? new Date(e).toLocaleString(t, {
 		dateStyle: "short",
 		timeStyle: "short"
 	}) : "";
@@ -6462,12 +6525,12 @@ var Ut = class extends P {
 			start: t.start ? new Date(t.start).toISOString() : null,
 			until: new Date(t.until).toISOString(),
 			reduced_scenario_id: t.reduced_scenario_id
-		})), this._visitor = {
+		})), this._error || (this._visitor = {
 			name: "",
 			start: "",
 			until: "",
 			reduced_scenario_id: null
-		});
+		}));
 	}
 	render() {
 		let e = this.ctx;
@@ -6506,7 +6569,7 @@ var Ut = class extends P {
         ${r ? R(e, `rules.next_${r.action}`, {
 			rule: r.rule_name,
 			scenario: this._scenarioName(r.scenario_id),
-			when: Y(r.at)
+			when: Y(r.at, t.hass.language)
 		}) : R(e, "rules.next_none")}
       </div>
       <span class="spacer"></span>
@@ -6891,7 +6954,7 @@ var Ut = class extends P {
                         ${t.name ?? R(e, `rules.suspension_${t.kind}`)}
                       </div>
                       <div class="hint mono">
-                        ${t.kind === "next" ? R(e, "rules.suspension_next_hint") : `${Y(t.start)} – ${Y(t.until)}`}
+                        ${t.kind === "next" ? R(e, "rules.suspension_next_hint") : `${Y(t.start, n.hass.language)} – ${Y(t.until, n.hass.language)}`}
                         ${t.rule_ids.length ? ` · ${t.rule_ids.map((e) => r.find((t) => t.id === e)?.name ?? e).join(", ")}` : ` · ${R(e, "rules.every_rule")}`}
                         ${t.reduced_scenario_id ? ` · ${R(e, "rules.instead", { scenario: this._scenarioName(t.reduced_scenario_id) })}` : ""}
                       </div>
@@ -7531,7 +7594,7 @@ var X = 50, Wt = class extends P {
                       <dd>${Kt(e, t.channel)}</dd>` : O}
                 ${this._changeLines(e, t).map((t, n) => E`<dt>${n ? "" : R(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
-                ${this._plainDetail(t).map(([t, n]) => E`<dt>${R(e, `detail.${t}`)}</dt>
+                ${this._plainDetail(t).map(([t, n]) => E`<dt>${this._detailLabel(e, t)}</dt>
                     <dd class="mono">${n}</dd>`)}
               </dl>
             </td>
@@ -7585,6 +7648,10 @@ var X = 50, Wt = class extends P {
 	}
 	_value(e, t) {
 		return t == null || t === "" ? "—" : typeof t == "boolean" ? R(e, t ? "common.yes" : "common.no") : Array.isArray(t) ? t.length ? t.map((t) => this._value(e, t)).join(", ") : "—" : String(t);
+	}
+	_detailLabel(e, t) {
+		let n = R(e, `detail.${t}`);
+		return n === `detail.${t}` ? t : n;
 	}
 	_plainDetail(e) {
 		let t = /* @__PURE__ */ new Set([
@@ -7673,7 +7740,7 @@ function qt(e) {
 customElements.get("foyer-page-log") || customElements.define("foyer-page-log", Wt);
 //#endregion
 //#region src/panel/pages/settings.ts
-var Jt = ["en", "it"], Yt = {
+var Jt = 30, Yt = ["en", "it"], Xt = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -7682,7 +7749,7 @@ var Jt = ["en", "it"], Yt = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, Xt = class extends P {
+}, Zt = class extends P {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1;
 	}
@@ -7699,7 +7766,7 @@ var Jt = ["en", "it"], Yt = {
 		};
 	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Yt);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Xt);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -7904,7 +7971,7 @@ var Jt = ["en", "it"], Yt = {
                   <button
                     class="btn danger"
                     @click=${() => {
-			this._confirmPseudonymise = !1, o({ pseudonymise_after: 30 });
+			this._confirmPseudonymise = !1, o({ pseudonymise_after: Jt });
 		}}
                   >
                     ${R(e, "settings.pseudonymise_yes")}
@@ -7999,7 +8066,7 @@ var Jt = ["en", "it"], Yt = {
               <option value="" ?selected=${!n.language}>
                 ${R(e, "settings.language_system")}
               </option>
-              ${Jt.map((t) => E`<option .value=${t} ?selected=${t === n.language}>
+              ${Yt.map((t) => E`<option .value=${t} ?selected=${t === n.language}>
                     ${R(e, `language.${t}`)}
                   </option>`)}
             </select>
@@ -8257,13 +8324,13 @@ var Jt = ["en", "it"], Yt = {
     `];
 	}
 };
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Xt);
+customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Zt);
 //#endregion
 //#region src/panel/pages/health.ts
-function Zt(e, t) {
+function Qt(e, t) {
 	return t ? new Date(t).toLocaleString(e.hass.language) : "—";
 }
-var Qt = class extends P {
+var $t = class extends P {
 	constructor(...e) {
 		super(...e), this._candidates = [], this._problems = [], this._busy = !1, this._error = "";
 	}
@@ -8426,7 +8493,7 @@ var Qt = class extends P {
                         ${t.fault ? R(e, `health.fault_${t.fault}`) : t.checked ? R(e, "health.healthy") : R(e, "health.untested")}
                       </span>
                     </td>
-                    <td>${Zt(this.ctx, t.since ?? t.last_ok)}</td>
+                    <td>${Qt(this.ctx, t.since ?? t.last_ok)}</td>
                   </tr>`)}
               </tbody>
             </table>
@@ -8803,7 +8870,7 @@ var Qt = class extends P {
 		];
 	}
 };
-customElements.get("foyer-page-health") || customElements.define("foyer-page-health", Qt);
+customElements.get("foyer-page-health") || customElements.define("foyer-page-health", $t);
 //#endregion
 //#region src/panel/wizard.ts
 var Z = [
@@ -8812,7 +8879,7 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], $t = 3, en = class extends P {
+], en = 3, tn = class extends P {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -8970,7 +9037,7 @@ var Z = [
 		return E`
       <p>${R(e, "wizard.zones_text", {
 			have: n.length,
-			want: $t
+			want: en
 		})}</p>
       <ul class="zones">
         ${n.map((t) => E`<li>
@@ -9307,10 +9374,10 @@ var Z = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", en);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", tn);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var tn = [
+var nn = [
 	"overview",
 	"areas",
 	"zones",
@@ -9325,7 +9392,7 @@ var tn = [
 	"log",
 	"health",
 	"settings"
-], nn = [
+], rn = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -9336,7 +9403,7 @@ var tn = [
 	"contacts",
 	"rules",
 	"settings"
-], rn = {
+], an = {
 	overview: [
 		"area",
 		"master",
@@ -9453,7 +9520,7 @@ var tn = [
 		"coordinator",
 		"diagnostics"
 	]
-}, an = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", on = {
+}, on = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", sn = {
 	devices: "keypads.md",
 	contacts: "notification-channels.md",
 	rules: "automation-rules.md",
@@ -9466,7 +9533,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var sn = class extends P {
+var cn = class extends P {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._offset = 0;
 	}
@@ -9807,7 +9874,7 @@ var sn = class extends P {
     `;
 	}
 	_renderTabs(e) {
-		let t = this._canConfigure ? tn : tn.filter((e) => !nn.includes(e));
+		let t = this._canConfigure ? nn : nn.filter((e) => !rn.includes(e));
 		return t.length < 2 ? O : E`
       <nav class="tabs" role="tablist">
         ${t.map((t) => E`
@@ -9870,14 +9937,14 @@ var sn = class extends P {
         ${r ? E`<div class="help-body">
               <p>${R(e, `${n}.intro`)}</p>
               <dl>
-                ${rn[t].map((t) => E`
+                ${an[t].map((t) => E`
                     <dt>${R(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${R(e, `${n}.items.${t}.text`)}</dd>
                   `)}
               </dl>
-              ${on[t] ? E`<a
+              ${sn[t] ? E`<a
                     class="learn-more"
-                    href=${`${an}/${on[t]}`}
+                    href=${`${on}/${sn[t]}`}
                     target="_blank"
                     rel="noreferrer noopener"
                     >${R(e, "help.learn_more")}</a
@@ -10127,5 +10194,5 @@ var sn = class extends P {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", sn);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", cn);
 //#endregion

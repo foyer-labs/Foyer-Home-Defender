@@ -17,6 +17,11 @@ import { chimeTargets, entityTargets } from "../ha-targets";
 
 // The languages the panel itself ships (translations/panel/). Foyer's own
 // messages can only be sent in one it actually has.
+// What the switch starts at when somebody turns it on. Thirty days is the
+// retention every category has by default, so names age out with the rows
+// rather than before them.
+const DEFAULT_PSEUDONYMISE_DAYS = 30;
+
 const LANGUAGES = ["en", "it"];
 
 const NO_CHIME: ChimeConfig = {
@@ -333,7 +338,7 @@ class FoyerPageSettings extends LitElement {
                     class="btn danger"
                     @click=${() => {
                       this._confirmPseudonymise = false;
-                      change({ pseudonymise_after: 30 });
+                      change({ pseudonymise_after: DEFAULT_PSEUDONYMISE_DAYS });
                     }}
                   >
                     ${t(s, "settings.pseudonymise_yes")}

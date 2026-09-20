@@ -25,11 +25,15 @@ import { optionalNumber, problemText, type PanelContext } from "../context";
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
-/** A date and time as the reader's own locale writes it, to the minute. The
- * seconds a raw toLocaleString adds are noise on a window that lasts hours. */
-function when(value: string | null | undefined): string {
+/** A date and time as the reader writes it, to the minute. The seconds a raw
+ * toLocaleString adds are noise on a window that lasts hours.
+ *
+ * The language is the Home Assistant user's, not the browser's: the panel
+ * follows each user's own setting everywhere else, and the browser's would
+ * print 9:30 PM beside 21:30 on the next page (found in review). */
+function when(value: string | null | undefined, language?: string): string {
   if (!value) return "";
-  return new Date(value).toLocaleString(undefined, {
+  return new Date(value).toLocaleString(language, {
     dateStyle: "short",
     timeStyle: "short",
   });
@@ -189,7 +193,12 @@ class FoyerPageRules extends LitElement {
         reduced_scenario_id: draft.reduced_scenario_id,
       }),
     );
-    this._visitor = { name: "", start: "", until: "", reduced_scenario_id: null };
+    // Only once it worked. A refusal — or a code prompt somebody cancelled —
+    // used to wipe the name and both dates, so the way to find out it had
+    // failed was that everything you had typed was gone (found in review).
+    if (!this._error) {
+      this._visitor = { name: "", start: "", until: "", reduced_scenario_id: null };
+    }
   }
 
   // --- rendering -----------------------------------------------------------------
@@ -261,7 +270,7 @@ class FoyerPageRules extends LitElement {
           ? t(s, `rules.next_${next.action}`, {
               rule: next.rule_name,
               scenario: this._scenarioName(next.scenario_id),
-              when: when(next.at),
+              when: when(next.at, ctx.hass.language),
             })
           : t(s, "rules.next_none")}
       </div>
@@ -780,7 +789,7 @@ class FoyerPageRules extends LitElement {
                       <div class="hint mono">
                         ${item.kind === "next"
                           ? t(s, "rules.suspension_next_hint")
-                          : `${when(item.start)} – ${when(item.until)}`}
+                          : `${when(item.start, ctx.hass.language)} – ${when(item.until, ctx.hass.language)}`}
                         ${item.rule_ids.length
                           ? ` · ${item.rule_ids
                               .map((id) => rules.find((r) => r.id === id)?.name ?? id)

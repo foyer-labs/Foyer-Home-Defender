@@ -1343,6 +1343,7 @@ def _incident_to(incident: Incident | None) -> dict[str, Any] | None:
             for a in incident.acknowledgements
         ],
         "actions_started": list(incident.actions_started),
+        "escalation_exhausted": incident.escalation_exhausted,
     }
 
 
@@ -1388,6 +1389,9 @@ def _incident_from(data: dict[str, Any] | None) -> Incident | None:
         acknowledged=bool(data.get("acknowledged", False)),
         acknowledgements=tuple(acknowledgements),
         actions_started=tuple(data.get("actions_started", ())),
+        # Additive, read with a default: an older file restores as "not yet
+        # exhausted", which is what it meant before this existed.
+        escalation_exhausted=bool(data.get("escalation_exhausted", False)),
     )
 
 

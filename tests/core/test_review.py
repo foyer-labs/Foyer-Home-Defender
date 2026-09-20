@@ -38,7 +38,7 @@ from custom_components.foyer.store.schema import (
     state_to_dict,
 )
 
-from .helpers import NOW, World, make_house, zone
+from .helpers import NOW, WINDOW, World, make_house, zone
 
 # --- the perimeter a rule may never disarm (§9.4 point 3) --------------------------
 
@@ -279,3 +279,63 @@ def test_disarming_does_not_stop_a_technical_sounder():
         "disarming silenced the smoke sounder"
     )
     assert "smoke" in world.state.technical
+
+
+# --- what a delay was still holding, and who escalates again (§5.6, §6.2) --------
+
+
+def test_a_sequence_held_by_a_delay_does_not_outlive_the_siren_cutoff():
+    """§6.2: a siren never sounds beyond the cutoff, and the cutoff stops what
+    it started. A sequence whose delay outlasted the cutoff used to start the
+    bell afterwards, on a house that was armed again, for its whole duration.
+    """
+    config = make_house()
+    profile = ResponseProfile(
+        id="late",
+        name="Late",
+        severity=5,
+        actions=(
+            ProfileAction(
+                id="wait",
+                kind=ActionKind.DELAY,
+                moments=(Moment.TRIGGERED,),
+                params={"seconds": 300},
+            ),
+            ProfileAction(
+                id="bell",
+                kind=ActionKind.SIREN,
+                moments=(Moment.TRIGGERED,),
+                params={"entity_ids": ["siren.bell"], "duration": 180},
+            ),
+        ),
+    )
+    config = replace(
+        config,
+        profiles=(*config.profiles, profile),
+        settings=replace(
+            config.settings, default_profile_id="late", siren_duration=180
+        ),
+    )
+    world = World(config)
+    world.arm("away")
+    world.advance(31)
+    world.set(WINDOW, "on")
+    assert world.state.pending_runs, "the delay should be holding the rest"
+
+    world.advance(181)  # past the siren cutoff
+    assert not world.state.pending_runs, "the cutoff left a siren still to come"
+
+
+def test_an_exhausted_escalation_is_not_started_again_by_the_next_zone():
+    """Every further zone of one break-in used to re-run the whole list —
+    push, SMS, the neighbour — because the escalation is dropped when it is
+    exhausted and nothing on the incident remembered it (§5.6)."""
+    from custom_components.foyer.core.models import Incident
+
+    incident = Incident(id="i1", opened_at=NOW, escalation_exhausted=True)
+    # The flag is what `adopt_escalation` reads, and it survives a restart.
+    restored = state_from_dict(
+        state_to_dict(RuntimeState(incident=incident)), make_house()
+    )
+    assert restored.incident is not None
+    assert restored.incident.escalation_exhausted is True

@@ -120,10 +120,21 @@ class FoyerPageZones extends LitElement {
   private async _propose(entityId: string, apply: boolean): Promise<void> {
     const ctx = this.ctx;
     if (!ctx || !entityId) return;
-    const proposal = await ctx.hass.callWS<ZoneProposal>({
-      type: "foyer/zone/propose",
-      entity_id: entityId,
-    });
+    let proposal: ZoneProposal;
+    try {
+      proposal = await ctx.hass.callWS<ZoneProposal>({
+        type: "foyer/zone/propose",
+        entity_id: entityId,
+      });
+    } catch (err) {
+      // Refused, or the integration is mid-reload. Said out loud: unhandled,
+      // picking an entity simply did nothing and the draft kept the old one
+      // (found in review).
+      this._problems = [
+        { code: "propose_failed", kind: "zone", ref: null, field: "entity_id" },
+      ];
+      return;
+    }
     this._proposal = proposal;
     if (!apply || !this._draft) return;
     // A proposal is a starting point, never a decision (INV-5).
@@ -554,8 +565,15 @@ class FoyerPageZones extends LitElement {
         <input
           type="checkbox"
           .checked=${Boolean(draft[key])}
-          @change=${(e: Event) =>
-            this._set(key, (e.target as HTMLInputElement).checked as never)}
+          @change=${(e: Event) => {
+            const on = (e.target as HTMLInputElement).checked;
+            this._set(key, on as never);
+            // An always-on zone has no chime (validation refuses the pair),
+            // and the checkbox disappears when this one is ticked — so a
+            // zone that had it on was refused for a field no longer on
+            // screen (found in review).
+            if (key === "always_on" && on) this._set("chime", false as never);
+          }}
         />
         <span>
           ${t(s, `field.${key}`)}
