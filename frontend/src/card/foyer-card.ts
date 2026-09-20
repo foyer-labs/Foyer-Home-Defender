@@ -23,6 +23,7 @@ import type {
   CommandResult,
   FoyerStatus,
   HomeAssistant,
+  PendingRuleAction,
   StatusArea,
 } from "../shared/types";
 
@@ -139,7 +140,7 @@ class FoyerCard extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this._timer = window.setInterval(() => {
-      if (this._area?.timer || this._isMaster) this._tick += 1;
+      if (this._area?.timer || this._isMaster || this._pendingAuto) this._tick += 1;
     }, 1000);
   }
 
@@ -274,6 +275,7 @@ class FoyerCard extends LitElement {
     const counting = master
       ? status.areas.find((a) => a.timer && a.timer.kind !== "siren")
       : area;
+    const auto = this._pendingAuto;
     const timer = counting?.timer;
     const label =
       timer && timer.kind !== "siren"
@@ -303,6 +305,20 @@ class FoyerCard extends LitElement {
         ${status.walk_test
           ? html`<span class="state walk-chip" title=${t(s, "walk.badge_title")}
               >${t(s, "walk.badge")}</span
+            >`
+          : nothing}
+        ${auto
+          ? html`<span
+              class="state auto-chip"
+              title=${t(s, `rules.counting_${auto.action}`, {
+                rule: auto.rule_name,
+                scenario:
+                  status.scenarios.find((sc) => sc.id === auto.scenario_id)?.name ?? "",
+                seconds: secondsUntil(auto.due, this._offset),
+              })}
+              >${t(s, "card.auto_badge", {
+                seconds: secondsUntil(auto.due, this._offset),
+              })}</span
             >`
           : nothing}
       </div>
@@ -342,7 +358,7 @@ class FoyerCard extends LitElement {
     return html`
       <ha-card>
         <div class="content compact">
-          ${this._walkBanner(s)}
+          ${this._walkBanner(s)} ${this._autoBanner(s)}
           <div class="head">
             <div class="name">${name}</div>
             <span class="state ${state}">${t(s, `state.${state}`)}</span>
@@ -587,6 +603,56 @@ class FoyerCard extends LitElement {
     `;
   }
 
+  /** The automatic rule that is counting down, or undefined (§9.4).
+   *
+   * The earliest of them: two rules can be counting at once and the card has
+   * room for one line, so it shows the one that is about to happen. The
+   * button cancels **that** countdown by id, never "whatever is running",
+   * because the next one is a different decision.
+   *
+   * It is not filtered by the entity this card is bound to. A rule arms a
+   * scenario, which is several areas, and a card on the hall panel that
+   * stayed silent while the house was about to arm itself would be the most
+   * misleading thing on the wall — the same reasoning that puts the walk
+   * test banner on every layout.
+   */
+  private get _pendingAuto(): PendingRuleAction | undefined {
+    const pending = this._status?.auto?.pending ?? [];
+    return [...pending].sort((a, b) => a.due.localeCompare(b.due))[0];
+  }
+
+  /** "The house will arm in two minutes", with the Cancel button (§9.4).
+   *
+   * The card transmits and never decides: cancelling is a command the engine
+   * resolves against the code policy like any other, so an installation that
+   * asks for a code here gets the pad, exactly as it does for a disarm
+   * (INV-2).
+   */
+  private _autoBanner(s: Strings) {
+    const pending = this._pendingAuto;
+    if (!pending) return nothing;
+    const scenario = this._status?.scenarios.find((sc) => sc.id === pending.scenario_id);
+    const left = secondsUntil(pending.due, this._offset);
+    return html`
+      <div class="alert auto" role="alert">
+        <span>
+          ${t(s, `rules.counting_${pending.action}`, {
+            rule: pending.rule_name,
+            scenario: scenario?.name ?? "",
+            seconds: left,
+          })}
+        </span>
+        <button
+          ?disabled=${this._busy}
+          @click=${() =>
+            this._run({ type: "foyer/auto/cancel", pending_id: pending.id })}
+        >
+          ${t(s, "rules.cancel_now")}
+        </button>
+      </div>
+    `;
+  }
+
   private _renderAlerts(s: Strings) {
     const status = this._status;
     if (!status) return nothing;
@@ -594,7 +660,7 @@ class FoyerCard extends LitElement {
     const technical = status.technical ?? [];
     const incident = status.incident;
     return html`
-      ${this._walkBanner(s)}
+      ${this._walkBanner(s)} ${this._autoBanner(s)}
       ${technical.length
         ? html`<div class="alert technical" role="alert">
             <span>${t(s, "card.technical", { zones: technical.map((a) => a.name).join(", ") })}</span>
@@ -1063,6 +1129,17 @@ class FoyerCard extends LitElement {
       .alert.walk {
         border-left-color: var(--warning-color, #c77700);
         background: color-mix(in srgb, var(--warning-color, #c77700) 14%, transparent);
+      }
+      /* A house about to arm itself is not an alarm and not a warning
+         either: it is the two minutes in which somebody can still say no. */
+      .alert.auto {
+        border-left-color: var(--primary-color);
+        background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      }
+      .state.auto-chip {
+        background: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+        font-weight: 600;
       }
       .state.walk-chip {
         background: var(--warning-color, #c77700);

@@ -565,7 +565,8 @@
     "code_entered": "Code entered",
     "code_show": "Enter a code",
     "code_hide": "Hide the keypad",
-    "low_battery": "Low battery: {zones}"
+    "low_battery": "Low battery: {zones}",
+    "auto_badge": "arming in {seconds} s"
   },
   "help": {
     "toggle": "About this section",

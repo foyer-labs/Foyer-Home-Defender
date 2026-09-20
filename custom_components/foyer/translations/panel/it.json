@@ -565,7 +565,8 @@
     "code_entered": "Codice inserito",
     "code_show": "Inserisci un codice",
     "code_hide": "Nascondi il tastierino",
-    "low_battery": "Batteria scarica: {zones}"
+    "low_battery": "Batteria scarica: {zones}",
+    "auto_badge": "arma fra {seconds} s"
   },
   "help": {
     "toggle": "Informazioni su questa sezione",

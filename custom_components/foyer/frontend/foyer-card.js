@@ -781,12 +781,12 @@ function ve(e) {
 	let t = Math.max(0, Math.round(e));
 	return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 }
-function ye(e, t = 0) {
+function Q(e, t = 0) {
 	return Math.max(0, Math.round((Date.parse(e) - (Date.now() + t)) / 1e3));
 }
 //#endregion
 //#region src/card/foyer-card.ts
-var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), xe = /* @__PURE__ */ new Set(["code_required", "bad_code"]), Se = class extends J {
+var ye = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), xe = /* @__PURE__ */ new Set(["code_required", "bad_code"]), Se = class extends J {
 	constructor(...e) {
 		super(...e), this._busy = !1, this._code = "", this._padOpen = !1, this._tick = 0, this._offset = 0;
 	}
@@ -805,7 +805,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
 		};
 	}
 	static getStubConfig(e) {
-		let t = Object.keys(e.states).filter((e) => e.startsWith(Q));
+		let t = Object.keys(e.states).filter((e) => e.startsWith(ye));
 		return {
 			type: "custom:foyer-card",
 			entity: t.includes($) ? $ : t[0],
@@ -836,7 +836,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._timer = window.setInterval(() => {
-			(this._area?.timer || this._isMaster) && (this._tick += 1);
+			(this._area?.timer || this._isMaster || this._pendingAuto) && (this._tick += 1);
 		}, 1e3);
 	}
 	disconnectedCallback() {
@@ -889,7 +889,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
 	_renderBadge(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
-		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = (r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n)?.timer, l = c && c.kind !== "siren" ? Z(e, `timer.${c.kind}`, { seconds: Math.max(0, Math.round((Date.parse(c.due) - (Date.now() + this._offset)) / 1e3)) }) : Z(e, `state.${i}`);
+		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n, l = this._pendingAuto, u = c?.timer, d = u && u.kind !== "siren" ? Z(e, `timer.${u.kind}`, { seconds: Math.max(0, Math.round((Date.parse(u.due) - (Date.now() + this._offset)) / 1e3)) }) : Z(e, `state.${i}`);
 		return L`
       <div
         class="badge"
@@ -902,10 +902,19 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
 		}}
       >
         <span class="badge-name">${s}</span>
-        <span class="state ${i}">${l}</span>
+        <span class="state ${i}">${d}</span>
         ${a ? L`<span class="state memory">${Z(e, "overview.memory")}</span>` : z}
         ${t.walk_test ? L`<span class="state walk-chip" title=${Z(e, "walk.badge_title")}
               >${Z(e, "walk.badge")}</span
+            >` : z}
+        ${l ? L`<span
+              class="state auto-chip"
+              title=${Z(e, `rules.counting_${l.action}`, {
+			rule: l.rule_name,
+			scenario: t.scenarios.find((e) => e.id === l.scenario_id)?.name ?? "",
+			seconds: Q(l.due, this._offset)
+		})}
+              >${Z(e, "card.auto_badge", { seconds: Q(l.due, this._offset) })}</span
             >` : z}
       </div>
     `;
@@ -925,7 +934,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
 		return L`
       <ha-card>
         <div class="content compact">
-          ${this._walkBanner(e)}
+          ${this._walkBanner(e)} ${this._autoBanner(e)}
           <div class="head">
             <div class="name">${s}</div>
             <span class="state ${i}">${Z(e, `state.${i}`)}</span>
@@ -1106,7 +1115,7 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
 	_walkBanner(e) {
 		let t = this._status?.walk_test;
 		if (!t) return z;
-		let n = ye(t.deadline, this._offset);
+		let n = Q(t.deadline, this._offset);
 		return L`
       <div class="alert walk" role="alert">
         <span>
@@ -1125,12 +1134,40 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
       </div>
     `;
 	}
+	get _pendingAuto() {
+		return [...this._status?.auto?.pending ?? []].sort((e, t) => e.due.localeCompare(t.due))[0];
+	}
+	_autoBanner(e) {
+		let t = this._pendingAuto;
+		if (!t) return z;
+		let n = this._status?.scenarios.find((e) => e.id === t.scenario_id), r = Q(t.due, this._offset);
+		return L`
+      <div class="alert auto" role="alert">
+        <span>
+          ${Z(e, `rules.counting_${t.action}`, {
+			rule: t.rule_name,
+			scenario: n?.name ?? "",
+			seconds: r
+		})}
+        </span>
+        <button
+          ?disabled=${this._busy}
+          @click=${() => this._run({
+			type: "foyer/auto/cancel",
+			pending_id: t.id
+		})}
+        >
+          ${Z(e, "rules.cancel_now")}
+        </button>
+      </div>
+    `;
+	}
 	_renderAlerts(e) {
 		let t = this._status;
 		if (!t) return z;
 		let n = new Map(t.zones.map((e) => [e.id, e.name])), r = t.technical ?? [], i = t.incident;
 		return L`
-      ${this._walkBanner(e)}
+      ${this._walkBanner(e)} ${this._autoBanner(e)}
       ${r.length ? L`<div class="alert technical" role="alert">
             <span>${Z(e, "card.technical", { zones: r.map((e) => e.name).join(", ") })}</span>
             ${r.some((e) => !e.acknowledged) ? L`<button
@@ -1542,6 +1579,17 @@ var Q = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", be
         border-left-color: var(--warning-color, #c77700);
         background: color-mix(in srgb, var(--warning-color, #c77700) 14%, transparent);
       }
+      /* A house about to arm itself is not an alarm and not a warning
+         either: it is the two minutes in which somebody can still say no. */
+      .alert.auto {
+        border-left-color: var(--primary-color);
+        background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      }
+      .state.auto-chip {
+        background: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+        font-weight: 600;
+      }
       .state.walk-chip {
         background: var(--warning-color, #c77700);
         color: var(--text-primary-color, #fff);
@@ -1581,7 +1629,7 @@ var Ce = class extends J {
 	render() {
 		let e = this._strings;
 		if (!e || !this.hass) return z;
-		let t = Object.keys(this.hass.states).filter((e) => e.startsWith(Q)).sort();
+		let t = Object.keys(this.hass.states).filter((e) => e.startsWith(ye)).sort();
 		return L`
       <div class="editor">
         <label>
