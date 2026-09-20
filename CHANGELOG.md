@@ -5,6 +5,72 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.10] — the log is about people, and leaving takes what it brought
+
+Privacy tooling (§10.4) and clean uninstall (§16): the second part of Phase 5.
+**The stored configuration moves to schema 7.3, a minor step** — everything in
+it is additive, and a 7.2 build reading this document is a build that never
+pseudonymises an old row and never takes the log database with it, which is
+exactly what it did yesterday. Upgrading changes nothing until somebody
+switches something on.
+
+The reason this part exists is one sentence in §10.4: the log records who was
+in the house, when they arrived and when they left. In a family that is
+nobody's business but yours. It stops being that the moment the log records
+the cleaner, the boiler engineer or the babysitter — and it never was that for
+a B&B, a holiday let or a small office.
+
+### Added
+- **Export one person's rows** (§10.4), on page 10, as CSV or JSON, in a file
+  named after them. The selection is wide on purpose: what they did, plus the
+  rows where they are the subject rather than the actor — a tag of theirs
+  refused, an escalation that reached them. It is a second caller of the
+  export of §10.3, not a second export.
+- **Erase one person's history**, which is deliberately not "delete a user".
+  Deleting a user leaves the history of what they did, because the name is
+  copied into every row precisely so that it does. Erasing empties the name,
+  the account, the channel and the device on their rows, and takes their name
+  out of the JSON detail — and leaves every event exactly where it was. The
+  log still answers "what happened on the night of the fourteenth" and no
+  longer answers "who". A preview says how many rows each key found before
+  anybody presses anything, and the erasure records itself without naming the
+  person it erased.
+- **Timed pseudonymisation**, off by default. After N days a row keeps a
+  stable opaque identifier instead of a name. The panel says, before you
+  switch it on and again in the confirmation, that this trades away the answer
+  to "who disarmed that night" for every older row — which is the very
+  question the log exists to answer. It runs beside the retention purge, never
+  on the alarm path, and switching it on and switching it off are both
+  recorded.
+- **A seven-day retention preset** for installations with domestic staff,
+  touching only the categories that name people and leaving actions, faults
+  and door states where they are.
+- **Clean uninstall** (§16). Removing the integration now takes its entities
+  and devices out of both registries, the sidebar panel, its repair issues,
+  the notifications it put up, and **the retained MQTT message** — which
+  otherwise outlives the integration and goes on telling whoever connects to
+  that broker next what the house was doing. The log database goes only if a
+  switch on page 11 says so; it is off, because §16 says to ask rather than
+  guess and keeping is the answer that destroys nothing. Camera snapshots are
+  never deleted and are named in the documentation instead.
+- **`docs/privacy.md`**: what a row contains, where the household exemption
+  stops, and what to do about it. Practical information, and it says so.
+
+### Changed
+- The configuration schema moves from 7.2 to 7.3, additively. Every person
+  gains a stable identifier, minted once and never recomputed.
+- **A configuration row now records the Foyer person** behind the Home
+  Assistant account that saved it, when the two are linked. They were two
+  different namespaces, so a question about a person could not reach anything
+  they had ever changed from the panel.
+- Both READMEs say where this came from — most people who arrive already own
+  the sensors — and `SECURITY.md` opens with what this is: an integration that
+  does what an alarm does, not a certified alarm system.
+- Every screenshot in both READMEs is recaptured from one configuration, in
+  each language's own words.
+- The rules page no longer says "1 people away for 10 min", and the code
+  policy no longer lists `operation.cancel_auto_action` untranslated.
+
 ## [0.1.0-beta.9] — an alarm that can say it has stopped working
 
 System health (§12): the first part of Phase 5. **The stored configuration
