@@ -23,6 +23,7 @@ from custom_components.foyer.core.models import (
     Startup,
     Suspension,
     SuspensionKind,
+    Tick,
 )
 
 from .helpers import LUCA, NOW, PARTNER, World, closed_entities, make_house, rule
@@ -728,3 +729,246 @@ def test_a_countdown_left_running_makes_the_trace_say_it_was_cut_short():
     simulation = run(config, request, closed_entities(config, request.start))
     assert simulation.final.pending_rules
     assert simulation.truncated
+
+
+def test_stopping_the_mechanism_asks_the_same_policy_entry_as_cancel():
+    """The kill switch and a suspension both stop the house arming itself,
+    so an installation that raised the policy for Cancel has raised it for
+    both. With no code held by anybody the policy is inert (decision 78)."""
+    from dataclasses import replace as _replace
+
+    from custom_components.foyer.core.models import CodePolicy, CodeResult
+
+    from .helpers import user
+
+    config = house(rule())
+    config = _replace(
+        config,
+        users=(user(),),
+        code_policy=CodePolicy(cancel_auto_action=True),
+    )
+    world = World(config)
+    refused = world.auto_arming(False, user_id="luca", channel="ha_ui")
+    assert not refused.accepted
+    assert refused.reason.value == "code_required"
+    assert refused.state.auto_arming is True
+
+    accepted = world.auto_arming(
+        False, user_id="luca", channel="ha_ui", code=CodeResult.VALID
+    )
+    assert accepted.accepted
+    assert accepted.state.auto_arming is False
+
+
+def test_the_house_going_quiet_is_a_wake_up_of_its_own():
+    """Nothing else announces a hall that stops moving: without this the
+    rule would wait for an unrelated entity to change."""
+    config = house(rule(guards=RuleGuards(quiet_minutes=10)))
+    world = World(config)
+    empty(world)
+    world.advance(29 * 60)
+    world.set("binary_sensor.hall_pir", "on")
+    world.set("binary_sensor.hall_pir", "off")
+    world.advance(60)
+    assert not world.state.pending_rules
+
+    due = next_wakeup(world.snapshot(), config, world.now)
+    assert due == world.now + timedelta(minutes=9)
+    world.now = due
+    assert world.send(Tick()).state.pending_rules
+
+
+def test_a_visitor_window_lasts_the_morning_not_one_substitution():
+    """The engineer is there until one. A window spent by its first
+    substitution would arm the house around them at the second rule."""
+    world = World(house(rule(), rule("second", minutes=45)))
+    world.suspend(visitor(reduced_scenario_id="night"))
+    empty(world)
+    world.advance(30 * 60)
+    assert world.state.pending_rules[0].scenario_id == "night"
+    assert world.state.suspensions  # still covering the rest of the morning
+    world.cancel()
+    world.advance(20 * 60)
+    assert world.state.pending_rules[0].scenario_id == "night"
+
+
+def test_every_blocked_occurrence_of_a_time_rule_is_logged():
+    """Monday's row is not an answer to Tuesday's silence."""
+    config = house(
+        rule(
+            kind=RuleTriggerKind.TIME,
+            at="23:00",
+            entity_ids=(),
+            guards=RuleGuards(only_when_ready=True),
+            grace=0,
+        )
+    )
+    world = World(config)
+    world.now = datetime(2026, 9, 14, 22, 30, tzinfo=UTC)
+    world.set("binary_sensor.kitchen_window", "on")
+    rows = 0
+    for night in range(3):  # three nights, the window open on each
+        # 22:30 -> 23:15, then the same hour on the next two days.
+        world.advance(45 * 60 if night == 0 else 24 * 3600)
+        rows += sum(1 for r in world.blocked() if r == RuleBlock.NOT_READY.value)
+    assert rows == 3
+
+
+def test_a_rehearsal_knows_what_is_suspended_and_whether_the_switch_is_on():
+    """ "Would it arm tomorrow morning, with the engineer expected?" is the
+    question, and it cannot be answered by a run that starts from nothing."""
+    from dataclasses import replace as _replace
+
+    from custom_components.foyer.core.models import RuntimeState
+    from custom_components.foyer.core.simulate import SimulationRequest, run as sim_run
+
+    config = house(rule(minutes=1, grace=0))
+    request = SimulationRequest(
+        start=NOW,
+        scenario_id=None,
+        entities={LUCA: "not_home", PARTNER: "not_home"},
+        horizon=600,
+    )
+    live = closed_entities(config, NOW)
+
+    covered = sim_run(
+        config,
+        request,
+        live,
+        carry=RuntimeState(suspensions=(visitor(),)),
+    )
+    assert covered.final.area("ground").state is AreaState.DISARMED
+
+    switched_off = sim_run(config, request, live, carry=RuntimeState(auto_arming=False))
+    assert switched_off.final.area("ground").state is AreaState.DISARMED
+    assert _replace(switched_off.final, auto_arming=True) is not None
+
+    free = sim_run(config, request, live)
+    assert free.final.area("ground").state is not AreaState.DISARMED
+
+
+# --- what the review of the pure engine found (all of it, asserted) ----------------
+
+
+def test_an_arm_rule_cannot_disarm_the_perimeter_by_switching_scenario():
+    """`arm Night` on a house running Away is a scenario switch (§4.6.1), so
+    it meets the same two gates a `switch` meets — or "arm" would be the way
+    round both of them."""
+    config = perimeter_house(rule("to_night", scenario_id="night", grace=0))
+    world = World(config)
+    world.arm("away")
+    world.advance(30)
+    empty(world)
+    decision = world.advance(30 * 60)
+    assert RuleBlock.AUTO_DISARM_DISABLED.value in [
+        o.detail.get("reason") for o in decision.occurrences
+    ]
+    assert decision.state.active_scenario_id == "away"
+    assert decision.state.area("ground").state is AreaState.ARMED
+
+
+def test_an_arming_that_was_refused_tries_again_when_the_window_shuts():
+    world = World(house(rule(grace=0)))
+    world.set("binary_sensor.kitchen_window", "on")
+    empty(world)
+    decision = world.advance(30 * 60)
+    assert Moment.ARM_FAILED in decision.moments
+    assert world.states()["ground"] == "disarmed"
+
+    decision = world.set("binary_sensor.kitchen_window", "off")
+    assert world.states()["ground"] == "arming"
+
+
+def test_a_tracker_that_lost_the_network_has_not_come_home():
+    """An unreadable person is not an arrival — INV-4, applied to people."""
+    config = house(
+        rule(
+            "welcome",
+            kind=RuleTriggerKind.PRESENCE,
+            entity_ids=(LUCA,),
+            action=RuleActionKind.DISARM,
+            area_ids=("upstairs",),
+            scenario_id=None,
+            grace=0,
+        ),
+        allow_auto_disarm=True,
+    )
+    world = World(config)
+    world.arm("away")
+    world.advance(30)
+    world.person(LUCA, "unavailable")
+    world.person(LUCA, "home")
+    assert world.states()["upstairs"] == "armed"
+
+
+def test_skip_the_next_occurrence_skips_the_occurrence_not_one_evaluation():
+    world = World(house(rule()))
+    world.suspend(
+        Suspension(id="once", kind=SuspensionKind.NEXT, rule_ids=("empty_house",))
+    )
+    empty(world)
+    world.advance(30 * 60)
+    assert not world.state.pending_rules
+    for _ in range(3):
+        world.advance(60)
+    assert not world.state.pending_rules
+
+
+def test_a_walk_test_does_not_spend_the_skip_somebody_asked_for():
+    world = World(house(rule(minutes=2)))
+    world.suspend(Suspension(id="once", kind=SuspensionKind.NEXT))
+    empty(world)
+    world.walk_test(True)
+    world.advance(3 * 60)
+    assert world.state.suspensions  # the walk test blocked it, not the skip
+
+
+def test_a_suspension_that_loses_every_rule_it_named_is_dropped():
+    """An empty rule list means *every* rule, so filtering must never empty
+    one: a suspension of one deleted rule would become a month of silence."""
+    from custom_components.foyer.store.schema import state_from_dict, state_to_dict
+
+    config = house(rule())
+    world = World(config)
+    world.suspend(Suspension(id="x", kind=SuspensionKind.UNTIL, rule_ids=("gone",)))
+    restored = state_from_dict(state_to_dict(world.state), config)
+    assert restored.suspensions == ()
+
+
+def test_the_sensor_does_not_announce_a_rule_that_has_had_its_turn():
+    config = house(rule(grace=0))
+    world = World(config)
+    empty(world)
+    world.advance(30 * 60)
+    world.advance(60)
+    upcoming = rules_engine.next_action(config, world.state, world.now, UTC)
+    assert upcoming is None
+
+
+def test_a_countdown_whose_rule_was_deleted_says_so():
+    from dataclasses import replace as _replace
+
+    config = house(rule())
+    world = World(config)
+    empty(world)
+    world.advance(30 * 60)
+    assert world.state.pending_rules
+
+    world.config = _replace(config, rules=())
+    decision = world.advance(30)
+    assert not decision.state.pending_rules
+    assert Moment.AUTO_CANCELLED in decision.moments
+
+
+def test_a_suspension_with_no_end_is_refused():
+    """Three forms, and every one of them ends (§9.4). One that did not
+    would be the kill switch under a name nobody would look for."""
+    world = World(house(rule()))
+    endless = world.suspend(Suspension(id="x", kind=SuspensionKind.UNTIL))
+    assert not endless.accepted
+    assert not world.state.suspensions
+
+    named = world.suspend(
+        Suspension(id="y", kind=SuspensionKind.VISITOR, name="Boiler engineer")
+    )
+    assert not named.accepted

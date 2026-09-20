@@ -32,6 +32,7 @@ from . import authz, escalation as escalation_engine, rules as rules_engine
 from .models import (
     CUSTOM_BYPASS,
     ESCALATION_RESTART_GRACE,
+    FAULT_STATES,
     MAX_WALK_TEST_TIMEOUT,
     MAX_WALK_TEST_TOTAL,
     MIN_WALK_TEST_TIMEOUT,
@@ -207,7 +208,7 @@ def decide(
     elif isinstance(event, CancelAutoAction):
         outcome = run.cancel_auto_action(event)
     elif isinstance(event, SetAutoArming):
-        run.set_auto_arming(event.enabled)
+        outcome = run.set_auto_arming(event.enabled)
     elif isinstance(event, SetSuspension):
         outcome = run.set_suspension(event)
     elif isinstance(event, Startup):
@@ -361,6 +362,15 @@ def next_wakeup(
             for at in (suspension.start, suspension.until)
             if at is not None and at > now
         )
+    quiet_since = rules_engine.last_interior_motion(
+        config,
+        state.active_zones,
+        {
+            zone.id: snapshot.entity(zone.entity_id).last_changed
+            for zone in config.zones
+        },
+        now,
+    )
     for rule in config.rules:
         if not rule.enabled:
             continue
@@ -369,6 +379,9 @@ def next_wakeup(
             rules_engine.matures_at(rule, runtime),
             rules_engine.next_occurrence(rule, now, snapshot.timezone),
             rules_engine.next_window_open(rule, now, snapshot.timezone),
+            # The house going quiet is the one guard nothing else announces:
+            # a hall that stops moving raises no event at all.
+            rules_engine.quiet_at(config, rule, quiet_since),
         ):
             if at is not None and at > now:
                 dues.append(at)
@@ -420,10 +433,14 @@ class _RuleDecision:
 
     @property
     def disarms(self) -> bool:
-        """Whether running this would leave part of the house unprotected."""
-        return self.action is RuleActionKind.DISARM or (
-            self.action is RuleActionKind.SWITCH and bool(self.area_ids)
-        )
+        """Whether running this would leave part of the house unprotected.
+
+        Read off ``area_ids`` — what the action would actually disarm — and
+        not off the word on the rule. An ``arm`` action is the same call as a
+        ``switch`` (``arm_scenario``), so with a scenario already running it
+        drops the areas the new one does not name just the same (§4.6.1).
+        """
+        return bool(self.area_ids)
 
 
 def _spend(
@@ -570,7 +587,9 @@ class _Run:
         # firing it would arm the house on an instruction nobody can read.
         rule_ids = {r.id for r in config.rules}
         self.auto_arming = state.auto_arming
-        self.pending_rules = [p for p in state.pending_rules if p.rule_id in rule_ids]
+        # Kept even when the rule has gone: run_rules cancels it with a row
+        # rather than letting it disappear between two restarts.
+        self.pending_rules = list(state.pending_rules)
         self.suspensions = [
             s
             for s in state.suspensions
@@ -2474,8 +2493,34 @@ class _Run:
         rules themselves.
         """
         self.expire_suspensions()
+        self.drop_orphan_countdowns()
         self.fire_pending_rules()
         self.evaluate_rules()
+
+    def drop_orphan_countdowns(self) -> None:
+        """A countdown whose rule was deleted or switched off is cancelled.
+
+        With a row: the card is showing "arming in two minutes" and it is
+        about to stop doing so, and a countdown that vanishes with nothing in
+        the log is the kind of silence this section exists against.
+        """
+        for pending in list(self.pending_rules):
+            rule = self.config.rule(pending.rule_id)
+            if rule is not None and rule.enabled:
+                continue
+            self.pending_rules.remove(pending)
+            self.occur(
+                Moment.AUTO_CANCELLED,
+                channel=AUTO_RULE_CHANNEL,
+                scenario_id=pending.scenario_id,
+                detail={
+                    "rule": pending.rule_name,
+                    "rule_id": pending.rule_id,
+                    "pending_id": pending.id,
+                    "action": pending.action.value,
+                    "via": "rule_removed",
+                },
+            )
 
     def expire_suspensions(self) -> None:
         """A suspension ends on its own, and says so: the row is what a user
@@ -2582,7 +2627,15 @@ class _Run:
                 return replace(runtime, seen=True, latched=home), False, None
             if home and not runtime.latched:
                 return replace(runtime, latched=True), True, None
-            return replace(runtime, latched=home), False, None
+            if home:
+                return runtime, False, None
+            if any(state in (None, *FAULT_STATES) for state in states.values()):
+                # A tracker that restarted, a phone off the network: not a
+                # departure, so the latch stays as it is. Clearing it here
+                # would make the next readable `home` an arrival — and that
+                # arrival can disarm a house (INV-4 applied to people).
+                return runtime, False, None
+            return replace(runtime, latched=False), False, None
         occurrence = rules_engine.occurrence_due(
             rule, self.now, self.timezone, runtime.last_occurrence
         )
@@ -2635,24 +2688,37 @@ class _Run:
         target_areas: tuple[str, ...] = ()
         if rule.action is RuleActionKind.DISARM:
             allowed, refused = rules_engine.disarm_targets(self.config, rule)
+            if not rule.area_ids or any(
+                self.config.area(a) is None for a in rule.area_ids
+            ):
+                return replace(decided, block=RuleBlock.UNKNOWN_AREA)
             decided = replace(decided, area_ids=allowed, refused=refused)
             if not allowed:
                 # Every area it named is the perimeter, so there is nothing
                 # left for it to do (§9.4 point 3).
-                return replace(
-                    decided,
-                    block=RuleBlock.PERIMETER if refused else RuleBlock.NOT_DISARMED,
-                )
+                return replace(decided, block=RuleBlock.PERIMETER)
         else:
             scenario = self.config.scenario(scenario_id)
             target_areas = tuple(scenario.areas) if scenario else ()
-            if rule.action is RuleActionKind.SWITCH:
-                dropped, perimeter = rules_engine.switch_drops(
-                    self.config,
-                    replace(self.snapshot.state, areas=self.areas),
-                    scenario_id,
-                )
-                decided = replace(decided, area_ids=dropped, refused=perimeter)
+            # An `arm` action and a `switch` action are the same call
+            # (`arm_scenario`), and with a scenario already running they do
+            # the same thing: the areas only the old scenario armed are
+            # disarmed (§4.6.1). So both are read the same way here. Reading
+            # only the word on the rule would leave "arm Night" as a way of
+            # disarming the perimeter without ever asking (part 2 decision 6).
+            dropped, perimeter = rules_engine.switch_drops(
+                self.config,
+                replace(self.snapshot.state, areas=self.areas),
+                scenario_id,
+            )
+            # What it would actually disarm, with the perimeter taken out: a
+            # switch whose only dropped area is the perimeter disarms
+            # nothing, and must not be refused for a consequence it has not.
+            decided = replace(
+                decided,
+                area_ids=tuple(a for a in dropped if a not in perimeter),
+                refused=perimeter,
+            )
         if decided.disarms and not self.config.settings.allow_auto_disarm:
             # §9.4 point 2, enforced rather than documented: a rule that
             # would leave the house less protected does nothing until
@@ -2678,15 +2744,13 @@ class _Run:
         """
         if minutes is None:
             return True
-        since = self.now - timedelta(minutes=minutes)
-        for zone_id in rules_engine.interior_zone_ids(self.config):
-            if zone_id in self.active:
-                return False
-            zone = self.config.zone(zone_id)
-            changed = self.entity(zone).last_changed if zone else None
-            if changed is not None and changed > since:
-                return False
-        return True
+        last = rules_engine.last_interior_motion(
+            self.config,
+            frozenset(self.active),
+            {zone.id: self.entity(zone).last_changed for zone in self.config.zones},
+            self.now,
+        )
+        return last is None or last <= self.now - timedelta(minutes=minutes)
 
     def rule_blocked(
         self, rule: AutoRule, block: RuleBlock, suspension: Suspension | None
@@ -2694,18 +2758,37 @@ class _Run:
         """Say why a rule did not act — once, at the start of the block.
 
         §9.4 asks for this row by name, under ``system``: "why did it not arm
-        last night?" is a question users ask. It is written once because a
-        level trigger is re-evaluated at every wake-up, and a row a minute
-        would bury the log it belongs to (part 2 decision 4).
+        last night?" is a question users ask.
+
+        For a **level** trigger the row is written once, when the block
+        begins: the rule is re-evaluated at every wake-up and a row a minute
+        would bury the log it belongs to (part 2 decision 4). For an **edge**
+        trigger every occurrence is its own event, so every blocked 23:00
+        gets its own row — otherwise a rule blocked on Monday would spend the
+        rest of the week not arming in silence, which is the failure this
+        row exists to prevent.
         """
         runtime = self.rules_runtime.get(rule.id, RuleRuntime())
-        if runtime.blocked is not block:
+        if runtime.blocked is not block or not rule.trigger.level:
             detail = {"rule": rule.name, "rule_id": rule.id, "reason": block.value}
             if suspension is not None:
                 detail |= _suspension_detail(suspension)
             self.occur(Moment.AUTO_BLOCKED, channel=AUTO_RULE_CHANNEL, detail=detail)
-        self.rules_runtime[rule.id] = replace(runtime, blocked=block)
-        if suspension is not None and suspension.kind is SuspensionKind.NEXT:
+        skipped = (
+            block is RuleBlock.SUSPENDED
+            and suspension is not None
+            and suspension.kind is SuspensionKind.NEXT
+        )
+        self.rules_runtime[rule.id] = replace(
+            runtime,
+            blocked=block,
+            # For a level trigger an "occurrence" is the whole time its
+            # condition holds: latching it is what makes the skip last until
+            # somebody comes home, rather than until the next wake-up sixty
+            # seconds later.
+            latched=runtime.latched or (skipped and rule.trigger.level),
+        )
+        if skipped and suspension is not None:
             self.consume_suspension(suspension)
 
     def consume_suspension(self, suspension: Suspension) -> None:
@@ -2732,7 +2815,15 @@ class _Run:
             suspension_name=(decided.suspension.name if decided.substituted else None),
         )
         self.pending_rules.append(pending)
-        if decided.substituted and decided.suspension is not None:
+        if (
+            decided.substituted
+            and decided.suspension is not None
+            and decided.suspension.kind is SuspensionKind.NEXT
+        ):
+            # Only "skip the next occurrence" is spent by use. A visitor
+            # window runs until its end: the engineer is there all morning,
+            # and a window that ended at the first substitution would arm the
+            # house around them at the second rule of the day.
             self.consume_suspension(decided.suspension)
         self.occur(
             Moment.AUTO_PENDING,
@@ -2784,13 +2875,20 @@ class _Run:
             )
         return _ACCEPTED
 
-    def set_auto_arming(self, enabled: bool) -> None:
+    def set_auto_arming(self, enabled: bool) -> _Outcome:
         """switch.foyer_auto_arming (§9.4): the whole mechanism, off or on.
 
         Countdowns already running are cancelled with it. A switch that left
         the announced arming to happen anyway would be a switch that does not
         do what it says at the one moment somebody reaches for it.
+
+        It goes through the same policy entry as Cancel, and for the same
+        reason: both stop the house arming itself, one for two minutes and
+        one for as long as it stays off. No code by default (part 2
+        decision 3), and an installation that raises that entry raises both.
         """
+        if (reason := self.authorize(Operation.CANCEL_AUTO_ACTION)) is not None:
+            return _reject(reason)
         self.auto_arming = enabled
         self.occur(
             Moment.AUTO_ARMING_SWITCHED,
@@ -2798,7 +2896,7 @@ class _Run:
             detail={"enabled": "1" if enabled else "0"},
         )
         if enabled:
-            return
+            return _ACCEPTED
         for pending in list(self.pending_rules):
             self.pending_rules.remove(pending)
             self.occur(
@@ -2812,14 +2910,19 @@ class _Run:
                     "via": "switch",
                 },
             )
+        return _ACCEPTED
 
     def set_suspension(self, event: SetSuspension) -> _Outcome:
         """Suspend automatic arming, or lift a suspension (§9.4).
 
         Runtime state, not configuration (part 2 decision 7): three clicks
         from the card, and no ``edit_config`` between somebody and the
-        morning the boiler engineer is expected.
+        morning the boiler engineer is expected. It is still an operation,
+        though — suspending every rule is the kill switch with a date on it —
+        so it asks the same policy entry Cancel asks.
         """
+        if (reason := self.authorize(Operation.CANCEL_AUTO_ACTION)) is not None:
+            return _reject(reason)
         if event.suspension is None:
             found = next(
                 (s for s in self.suspensions if s.id == event.suspension_id), None
@@ -2835,6 +2938,12 @@ class _Run:
             )
             return _ACCEPTED
         suspension = event.suspension
+        if suspension.kind is not SuspensionKind.NEXT and suspension.until is None:
+            # §9.4 offers three forms and every one of them ends: until a
+            # date, for one occurrence, or a named window. One with no end
+            # would be the kill switch wearing a name nobody would think to
+            # look for — and `expired()` would never remove it.
+            return _reject(Reason.INVALID_STATE)
         if any(
             rule_id not in {r.id for r in self.config.rules}
             for rule_id in suspension.rule_ids
@@ -2895,6 +3004,12 @@ class _Run:
                 },
             )
             return
+        # It did not happen, so the rule has not had its turn: a level
+        # trigger is unlatched and tries again when the world changes —
+        # which is exactly when somebody shuts the window that stopped it.
+        # Without this the commonest rule of all (absence, guards off) is
+        # dead for the rest of the day after one open window.
+        self.spend(rule)
         if outcome.reason is Reason.INVALID_STATE:
             # Already armed, or already this scenario: not a failure, and not
             # worth a warning row every evening.

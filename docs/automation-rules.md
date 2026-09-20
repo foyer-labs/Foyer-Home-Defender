@@ -13,6 +13,14 @@ are worth reading before writing a rule:
 - **A rule acts as a user would.** It goes through the same arming path a
   person goes through: the same preconditions, the same refusals, the same log.
   Every row it writes carries the rule's name and the channel `auto_rule`.
+- **A rule is outside the code policy, deliberately.** An installation that
+  requires a code to arm or disarm still has its rules act: nobody is standing
+  there to be asked, and the authorisation happened earlier, when somebody
+  with `edit_config` saved the rule. What restrains a rule is the switch, the
+  guards and the perimeter constraint below — never a code no rule can type.
+  Stopping the rules, though, *is* an operation: cancelling a countdown,
+  suspending, and the kill switch all ask the same policy entry, which needs
+  no code by default and can be raised.
 - **Automatic arming and automatic disarming are not equally safe**, and Foyer
   does not pretend they are. The asymmetry is enforced in the engine rather
   than written on a screen. It has [its own section](#why-automatic-disarming-is-restricted)
@@ -28,7 +36,7 @@ are worth reading before writing a rule:
 | **Action** | arm a scenario · disarm named areas · switch to another scenario |
 | **Active window** | weekdays plus a time range; outside it the rule does not exist |
 | **Guards** | only if currently disarmed · only if every zone is ready · only if no interior zone has moved for N minutes |
-| **Grace period** | an actionable notification with a countdown and a **Cancel** button before the action runs |
+| **Grace period** | an actionable notification with a countdown and a **Cancel** button before the action runs. 120 s for an arming, 0 for a disarming, up to 900 s |
 | **Suspension** | until a date and time · skip the next occurrence · a named expected-visitor window · the global switch |
 
 ### Presence-based arming, from the start
@@ -36,15 +44,19 @@ are worth reading before writing a rule:
 The common rule, and the one worth building first:
 
 1. Create a contact on page 6 with the Companion app as an **actionable**
-   channel. Without one, nobody gets the countdown and nobody can cancel it —
-   which is why the editor refuses to save a countdown that reaches nobody.
+   channel. The editor refuses to save a countdown that names no contact at
+   all; what it cannot check is whether the contact's channel can carry a
+   button. An SMS-only contact hears the countdown and cannot stop it from
+   the message — the panel's Cancel button still works.
 2. On page 12, add a rule: trigger **Absence**, the people it watches, and a
    number of minutes. Five is enough for a phone that loses the network at the
    end of the drive; thirty is enough that nobody's afternoon nap arms the
    house around them.
 3. Choose the scenario it arms.
-4. Leave the guards on. Each of them is a reason not to arm, and each one
-   answers a real evening.
+4. Leave the first two guards on — a new rule has them on already. The
+   third, "no interior motion for N minutes", is a number you type and is off
+   until you do: it is the one that catches somebody asleep upstairs with a
+   flat phone, so it is worth typing.
 5. Leave the grace period at 120 s and name the contacts it announces to.
 
 What happens then, in order:
@@ -89,11 +101,17 @@ finally shut" would be a different rule from the one somebody wrote.
 The third one reads the zones themselves — an interior zone that is active
 now, or whose entity changed inside the window. Areas marked as the perimeter
 are left out of it: a front door contact is not evidence that anybody is in.
+**With no area marked as the perimeter, every intrusion zone counts as
+interior**, so the front door opening holds the guard for N minutes. Mark the
+perimeter on page 2 and the guard reads what it is meant to read.
 
 **A blocked rule is always logged**, under `system`, with the guard that
 blocked it. "Why did it not arm last night?" is a question people ask, and
-silence is the worst possible answer. The row is written once, when the block
-begins, rather than at every evaluation.
+silence is the worst possible answer. For a condition — `absence`, `entity` —
+the row is written once, when the block begins, because the rule is
+re-evaluated at every wake-up and a row a minute would bury the log. For a
+`time` or an arrival, every blocked occurrence gets its own row: Monday's is
+not an answer to Tuesday's.
 
 ### The active window
 
@@ -182,8 +200,10 @@ Two consequences worth knowing:
   switch turned on — and a perimeter area it would have dropped simply stays
   armed, outside any scenario, which the master panel then reports as
   `armed_custom_bypass`.
-- **A rule that names only perimeter areas is refused when you save it**,
-  because it could never do anything.
+- **A `disarm` rule that names only perimeter areas is refused when you save
+  it**, because it could never do anything. A `switch` or an `arm` that would
+  drop only perimeter areas is not refused at save time — what it would drop
+  depends on what is armed at the time — and simply drops nothing.
 
 A `time` rule that disarms — "open the bedrooms at 07:00 on weekdays" —
 carries none of the phone-shaped risk above. It is still behind the same
@@ -214,7 +234,8 @@ What the log records:
 | `auto_cancelled` | `system` | Somebody pressed Cancel, with who and through which path |
 | `auto_blocked` | `system` | A guard, a suspension or the switch stopped a rule |
 | `auto_suspension_set` / `auto_suspension_cleared` | `system` | A suspension was created, used, lifted or expired |
-| `arm_failed`, `channel: auto_rule` | `arming` | The rule acted and the arming itself was refused — an open window with the "ready" guard off |
+| `auto_arming_switched` | `system` | The kill switch moved, whoever moved it |
+| `arm_failed`, `channel: auto_rule` | `arming` | An arming or a switch the rule asked for was refused — an open window with the "ready" guard off. A refused **disarm** writes `auto_blocked` instead, and a rule asking for something already true (the house is already in that scenario) writes nothing |
 
 ---
 
@@ -247,7 +268,17 @@ What the log records:
 
 Page 9's simulator takes a hypothetical date and time. A rule that fires at
 23:00 on weekdays can be rehearsed at eleven on a Monday morning: set the
-clock, override the people to `not_home`, and read the trace.
+clock, override the people to `not_home` — they are offered in the entity
+overrides beside the entities an action's conditions read — and read the
+trace.
+
+Two things to know about a rehearsal. The house always starts **disarmed**,
+because the question is hypothetical; but the kill switch and the suspensions
+in force are real and come with it, so "would it arm tomorrow morning, with
+the engineer expected?" has an answer. And the horizon is at most an hour: a
+rule that waits longer than that for its condition cannot mature inside a
+trace, so rehearse it with a shorter number of minutes and put the real one
+back afterwards.
 
 What the trace shows about a rule — that it would act, that a guard would
 block it, that a suspension covers it — is read off the same `Decision` the

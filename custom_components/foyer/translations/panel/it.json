@@ -952,7 +952,7 @@
       "items": {
         "trigger": {
           "term": "Attivazione",
-          "text": "L'assenza e lo stato di un'entità sono condizioni che restano vere, quindi una regola bloccata agisce appena la condizione si libera. Un orario o un arrivo accadono una volta: se bloccati, quell'occasione è persa."
+          "text": "L'assenza e lo stato di un'entità sono condizioni che restano vere, quindi una regola agisce appena si libera la condizione di sicurezza che l'aveva fermata. Un orario o un arrivo accadono una volta: se bloccati, quell'occasione è persa."
         },
         "guards": {
           "term": "Condizioni di sicurezza",
@@ -1144,12 +1144,12 @@
       "message": "La regola «{rule}» non ha agito."
     },
     "auto_suspension_set": {
-      "title": "Foyer: armatura automatica sospesa",
-      "message": "L'armatura automatica è sospesa."
+      "title": "Foyer: inserimento automatico sospesa",
+      "message": "L'inserimento automatico è sospesa."
     },
     "auto_suspension_cleared": {
       "title": "Foyer: sospensione finita",
-      "message": "La sospensione dell'armatura automatica è terminata."
+      "message": "La sospensione dell'inserimento automatico è terminata."
     },
     "auto_arming_switched": {
       "title": "Foyer: regole automatiche",
@@ -1975,7 +1975,7 @@
     "notify_hint": "Chi sente il conto alla rovescia e ha il bottone Annulla. Le loro ore di quiete valgono comunque.",
     "never_disarmed": "mai disarmata da una regola",
     "suspensions": "Sospensioni",
-    "visitor_intro": "Una finestra con un nome sospende l'armatura automatica — e fra sei mesi il log dice perché, cosa che una sospensione anonima non farà mai.",
+    "visitor_intro": "Una finestra con un nome sospende l'inserimento automatico — e fra sei mesi il log dice perché, cosa che una sospensione anonima non farà mai.",
     "suspension_until": "Sospesa fino a",
     "suspension_next": "Salta la prossima occasione",
     "suspension_visitor": "Visita prevista",

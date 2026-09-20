@@ -340,6 +340,7 @@ def run(
     config: FoyerConfig,
     request: SimulationRequest,
     live: Mapping[str, EntityState] | None = None,
+    carry: RuntimeState | None = None,
 ) -> Simulation:
     """Rehearse the configuration. Executes nothing, ever (§11.2, INV-1).
 
@@ -347,10 +348,23 @@ def run(
     runtime because reading Home Assistant is the runtime's job. The house
     starts **disarmed** whatever it is really doing: the question is
     hypothetical, and inheriting a real alarm in progress would answer a
-    different one.
+    different one. ``carry`` is the running state, for the two things about
+    automatic arming that are not hypothetical — the kill switch and the
+    suspensions in force.
     """
     entities = _initial(request, live or {})
-    state = RuntimeState(areas={a.id: AreaRuntime() for a in config.areas})
+    state = RuntimeState(
+        areas={a.id: AreaRuntime() for a in config.areas},
+        # Two things the house is really doing come with it: whether
+        # automatic rules are switched on at all, and what is suspended
+        # (§9.4). Everything else starts from a disarmed house — the
+        # question is hypothetical — but a rehearsal that ignored the kill
+        # switch would show rules acting on an installation where nothing
+        # can, and one that ignored the boiler engineer could not answer
+        # "would it arm tomorrow morning?", which is the question.
+        auto_arming=carry.auto_arming if carry is not None else True,
+        suspensions=carry.suspensions if carry is not None else (),
+    )
     now = request.start
     horizon = max(0, min(request.horizon, MAX_HORIZON))
     steps: list[SimStep] = []

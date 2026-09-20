@@ -240,8 +240,9 @@ does, and the log says which rule armed the house.
 The guards are the part worth configuring. A rule blocked by one is written to
 the log under `system`, because *"why did it not arm last night?"* is a
 question people ask and silence is the worst possible answer. And the morning
-somebody is expected, a named window — "Boiler engineer, 09:00–13:00" —
-suspends the arming and optionally arms the perimeter alone instead.
+somebody is expected, a named window — "Boiler engineer, 09:00–13:00" — holds
+the rules back, and can put the perimeter alone in place of what they would
+have armed.
 
 **Arming and disarming are not treated as equally safe.** Automatic disarming
 exists, is off until you turn it on, and can never act on an area you marked

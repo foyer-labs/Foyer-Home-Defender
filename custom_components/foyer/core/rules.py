@@ -26,8 +26,9 @@ Two distinctions carry most of the weight:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta, tzinfo
+from datetime import datetime, time, timedelta, tzinfo
 
 from .clock import in_daily_window, parse_hhmm
 from .models import (
@@ -95,22 +96,6 @@ def condition_holds(rule: AutoRule, states: dict[str, str | None]) -> bool:
     return False
 
 
-def arrived(
-    rule: AutoRule, before: dict[str, str | None], states: dict[str, str | None]
-) -> bool:
-    """``presence``: one of the chosen people has just come home.
-
-    An edge, read from the two states around the change: somebody who was
-    already at home when Home Assistant restarted has not arrived.
-    """
-    if rule.trigger.kind is not RuleTriggerKind.PRESENCE:
-        return False
-    return any(
-        states.get(e) == HOME and before.get(e) not in (None, HOME)
-        for e in rule.trigger.entity_ids
-    )
-
-
 def occurrence_due(
     rule: AutoRule, now: datetime, tz: tzinfo, last: datetime | None
 ) -> datetime | None:
@@ -164,9 +149,11 @@ def next_window_open(rule: AutoRule, now: datetime, tz: tzinfo) -> datetime | No
     not what anybody configured.
     """
     window = rule.window
-    if window.after is None or in_active_window(rule, now, tz):
+    if in_active_window(rule, now, tz):
         return None
-    at = parse_hhmm(window.after)
+    # A window of weekdays with no hours opens at midnight on the next of
+    # them, and nothing else would wake the engine there.
+    at = parse_hhmm(window.after) if window.after else time(0, 0)
     if at is None:
         return None
     local = now.astimezone(tz)
@@ -272,9 +259,17 @@ def next_action(
         # cancelled by the switch, so nothing is scheduled at all.
         return min(candidates, key=_when) if candidates else None
     for rule in config.rules:
+        runtime = state.rule(rule.id)
         if not rule.enabled or rule.id in counting:
             continue
-        at = matures_at(rule, state.rule(rule.id)) or next_occurrence(rule, now, tz)
+        if runtime.latched:
+            # It has had its turn and cannot act again until its condition
+            # goes false — somebody has to come home before "the house is
+            # empty" is news. Announcing it as due now, for ever, would be
+            # the read model contradicting the scheduler, which is the one
+            # thing this function exists to prevent.
+            continue
+        at = matures_at(rule, runtime) or next_occurrence(rule, now, tz)
         if at is None:
             continue
         candidates.append(
@@ -299,6 +294,26 @@ def _when(candidate: NextAction) -> datetime:
 # --- guards (§9.4) ----------------------------------------------------------------
 
 
+def last_interior_motion(
+    config: FoyerConfig,
+    active_zones: frozenset[str],
+    changed: Mapping[str, datetime | None],
+    now: datetime,
+) -> datetime | None:
+    """When the inside of the house last moved, as the quiet guard reads it.
+
+    ``now`` for a zone that is active at this instant — it is moving, and the
+    window starts when it stops. Otherwise the most recent state change among
+    the interior zones. None when nothing is known, which is the quiet answer.
+    """
+    latest: datetime | None = None
+    for zone_id in interior_zone_ids(config):
+        at = now if zone_id in active_zones else changed.get(zone_id)
+        if at is not None and (latest is None or at > latest):
+            latest = at
+    return latest
+
+
 def interior_zone_ids(config: FoyerConfig) -> tuple[str, ...]:
     """The zones the quiet guard watches.
 
@@ -317,6 +332,24 @@ def interior_zone_ids(config: FoyerConfig) -> tuple[str, ...]:
         and not z.always_on
         and z.area_id not in perimeter
     )
+
+
+def quiet_at(
+    config: FoyerConfig,
+    rule: AutoRule,
+    last_motion: datetime | None,
+) -> datetime | None:
+    """When the quiet guard will be satisfied, if motion is what blocks it.
+
+    The scheduler needs this one as much as it needs a timer: nothing else
+    happens when a hall stops moving. Without it a rule blocked by motion
+    would wait for some unrelated entity to change, and "the rule acts as
+    soon as the guard clears" would be true of every guard but this one.
+    """
+    minutes = rule.guards.quiet_minutes
+    if minutes is None or last_motion is None:
+        return None
+    return last_motion + timedelta(minutes=minutes)
 
 
 def guard_block(

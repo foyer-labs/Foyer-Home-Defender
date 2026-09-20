@@ -551,7 +551,9 @@ class FoyerSystem:
         the Decisions never reach the executor and never reach ``self.state``.
         """
         snapshot = self._snapshot()
-        simulation = simulate_run(self.config, request, snapshot.entities)
+        simulation = simulate_run(
+            self.config, request, snapshot.entities, carry=self.state
+        )
         return simulation_dict(simulation, self.config)
 
     async def async_test_action(

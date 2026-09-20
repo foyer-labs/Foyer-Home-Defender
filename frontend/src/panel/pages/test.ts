@@ -62,9 +62,12 @@ function triggerStates(ctx: PanelContext, zoneId: string): string[] {
   return zone.trigger.kind === "state" ? zone.trigger.states : [];
 }
 
-/** Every entity an action's condition reads (§6.3). These are what the
- * simulator lets you override, and the list is exactly the configuration's:
- * offering every entity in Home Assistant would bury the three that matter. */
+/** Every entity the configuration reads and the simulator can therefore be
+ * asked about: an action's conditions (§6.3) and the people an automatic
+ * rule watches (§9.4). The list is exactly the configuration's — offering
+ * every entity in Home Assistant would bury the three that matter — and
+ * without the rules in it, "would it arm tomorrow with everybody out?" is a
+ * question the page cannot ask. */
 function conditionEntities(ctx: PanelContext): string[] {
   const seen = new Set<string>();
   for (const profile of ctx.config?.profiles ?? []) {
@@ -73,6 +76,10 @@ function conditionEntities(ctx: PanelContext): string[] {
         if (condition.kind === "state") seen.add(condition.entity_id);
       }
     }
+  }
+  for (const rule of ctx.config?.rules ?? []) {
+    if (!rule.enabled) continue;
+    for (const entityId of rule.trigger.entity_ids) seen.add(entityId);
   }
   return [...seen].sort();
 }

@@ -1313,6 +1313,10 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 for p in data.get("pending_rules", ())
                 if p["rule_id"] in rule_ids
             ),
+            # A suspension that named rules and has lost every one of them
+            # is dropped rather than filtered: an empty ``rule_ids`` means
+            # *every* rule, so narrowing it to nothing would widen it to all
+            # of them and suspend the whole house for a month.
             suspensions=tuple(
                 Suspension(
                     id=sus["id"],
@@ -1327,6 +1331,8 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     user_name=sus.get("user_name"),
                 )
                 for sus in data.get("suspensions", ())
+                if not sus.get("rule_ids")
+                or any(r in rule_ids for r in sus["rule_ids"])
             ),
             rules={
                 rule_id: RuleRuntime(

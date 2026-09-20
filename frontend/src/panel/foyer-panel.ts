@@ -155,7 +155,14 @@ class FoyerPanel extends LitElement {
     if (this.hass) this._start();
     // Countdowns move once a second; nothing else needs a clock.
     this._timer = window.setInterval(() => {
-      if (this._status?.areas.some((a) => a.timer) || this._status?.walk_test) {
+      if (
+        this._status?.areas.some((a) => a.timer) ||
+        this._status?.walk_test ||
+        // An automatic rule's grace countdown is neither an area timer nor a
+        // walk test, and it is the one number on the screen somebody is
+        // watching while they decide whether to press Cancel (§9.4).
+        this._status?.auto?.pending?.length
+      ) {
         this._tick += 1;
       }
     }, 1000);

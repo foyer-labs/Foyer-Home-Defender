@@ -128,11 +128,17 @@ def async_listen_cancel(hass: HomeAssistant, system) -> Any:
     """Cancel an automatic rule from the button in its countdown (§9.4).
 
     The same Companion app event the acknowledgement listens for, with a
-    different action id: one mechanism, two buttons. The countdown's id
-    travels on the button, so pressing yesterday's notification cannot stop
-    what is running now — and an answer that arrives without one cancels
-    whatever is counting down, because the person pressed a button that said
-    the house was about to arm.
+    different action id: one mechanism, two buttons.
+
+    The countdown's id travels on the button, and when it comes back the
+    cancellation is exactly that countdown's. When it does not — the app
+    echoes what it echoes, and iOS and Android do not agree about it — the
+    answer cancels whatever is counting down. That is the honest reading of
+    somebody pressing a button that said the house was about to arm, and it
+    is the same fallback the acknowledgement makes for the same reason
+    (part 1 decision 7). What it costs is that a stale notification can stop
+    a countdown that is not the one it announced; what the alternative costs
+    is a Cancel button that does nothing on half the phones.
 
     It carries no code. That is the shape of §8.2's entry for it (part 2
     decision 3): no push carries a code, so demanding one by default would be

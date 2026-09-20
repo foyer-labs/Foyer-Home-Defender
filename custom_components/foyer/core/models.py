@@ -613,6 +613,9 @@ class RuleBlock(StrEnum):
     # Every area the rule would disarm is a perimeter area (§9.4 point 3),
     # so there is nothing left for it to do.
     PERIMETER = "perimeter"
+    # A disarm rule naming an area that no longer exists. Validation catches
+    # it at save time, so this is what a deleted area leaves behind.
+    UNKNOWN_AREA = "unknown_area"
 
 
 class MqttDetail(StrEnum):

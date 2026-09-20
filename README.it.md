@@ -269,8 +269,8 @@ Le condizioni di sicurezza sono la parte che vale la pena configurare. Una
 regola fermata da una di loro finisce nel log sotto `system`, perché *«perché
 non si è armata ieri sera?»* è una domanda che la gente fa, e il silenzio è la
 peggior risposta possibile. E la mattina che aspetti qualcuno, una finestra
-con un nome — «Tecnico della caldaia, 09:00–13:00» — sospende l'inserimento e,
-se vuoi, arma al suo posto il solo perimetro.
+con un nome — «Tecnico della caldaia, 09:00–13:00» — tiene ferme le regole e,
+se vuoi, mette il solo perimetro al posto di quello che avrebbero inserito.
 
 **Inserire e disinserire non sono trattati come ugualmente sicuri.** Il
 disarmo automatico esiste, è spento finché non lo accendi, e non può mai agire

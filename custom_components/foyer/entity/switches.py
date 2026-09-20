@@ -170,7 +170,11 @@ class FoyerAutoArmingSwitch(FoyerEntity, SwitchEntity):
         if enabled == self.is_on:
             return
         actor = await actor_of(self.hass, self._system, self._context)
-        await self._system.async_handle(SetAutoArming(enabled, actor))
+        decision = await self._system.async_handle(SetAutoArming(enabled, actor))
+        # An installation that asks for a code here gets a switch that
+        # refuses where somebody can see it, rather than one that appears to
+        # work and changes nothing (the shape of decision 77).
+        raise_if_rejected(self._system, decision)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._set(True)

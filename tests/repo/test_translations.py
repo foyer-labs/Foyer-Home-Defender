@@ -202,6 +202,18 @@ def test_every_rejection_reason_has_an_exception_message():
             assert f"rejected_{reason.value}" in exceptions, (language, reason)
 
 
+def test_every_exception_is_a_mapping_with_a_message():
+    """Home Assistant validates `exceptions` as {slug: {message}}, and a bare
+    string there is a key hassfest rejects and `async_get_exception_message`
+    cannot read. The key-set test above passes happily while both languages
+    are wrong in the same way, so this asserts the shape."""
+    for language in LANGUAGES:
+        exceptions = load(TRANSLATIONS, language)["exceptions"]
+        for key, value in exceptions.items():
+            assert isinstance(value, dict), (language, key)
+            assert isinstance(value.get("message"), str), (language, key)
+
+
 def test_every_moment_has_a_notification():
     """Any moment an action may list can be announced in every language."""
     for language in LANGUAGES:

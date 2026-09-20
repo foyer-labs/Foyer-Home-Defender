@@ -108,6 +108,23 @@ class FoyerPageRules extends LitElement {
     }
   }
 
+  /** §9.4's defaults: 120 s before an arming, 0 before a disarming. The
+   * asymmetry is the spec's own — an arming that surprises somebody is
+   * something they can stop, and a disarming nobody wanted is not improved
+   * by two minutes' warning. Only the other default is replaced, so a number
+   * somebody typed is never overwritten. */
+  private _setAction(action: RuleActionKind): void {
+    const draft = this._draft;
+    if (!draft) return;
+    const grace =
+      action === "disarm" && draft.grace_seconds === 120
+        ? 0
+        : action !== "disarm" && draft.grace_seconds === 0
+          ? 120
+          : draft.grace_seconds;
+    this._draft = { ...draft, action, grace_seconds: grace };
+  }
+
   private _setGuard<K extends keyof RuleConfig["guards"]>(
     key: K,
     value: RuleConfig["guards"][K],
@@ -507,7 +524,7 @@ class FoyerPageRules extends LitElement {
               <span class="lbl">${t(s, "rules.action")}</span>
               <select
                 @change=${(e: Event) =>
-                  this._set("action", (e.target as HTMLSelectElement).value as RuleActionKind)}
+                  this._setAction((e.target as HTMLSelectElement).value as RuleActionKind)}
               >
                 ${(ctx.meta?.rule_actions ?? []).map(
                   (kind) =>

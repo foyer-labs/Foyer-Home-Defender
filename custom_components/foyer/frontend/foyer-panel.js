@@ -4816,6 +4816,7 @@ function At(e, t) {
 function jt(e) {
 	let t = /* @__PURE__ */ new Set();
 	for (let n of e.config?.profiles ?? []) for (let e of n.actions) for (let n of e.conditions) n.kind === "state" && t.add(n.entity_id);
+	for (let n of e.config?.rules ?? []) if (n.enabled) for (let e of n.trigger.entity_ids) t.add(e);
 	return [...t].sort();
 }
 function Y(e) {
@@ -6366,6 +6367,16 @@ var Ut = class extends I {
 			[e]: t
 		});
 	}
+	_setAction(e) {
+		let t = this._draft;
+		if (!t) return;
+		let n = e === "disarm" && t.grace_seconds === 120 ? 0 : e !== "disarm" && t.grace_seconds === 0 ? 120 : t.grace_seconds;
+		this._draft = {
+			...t,
+			action: e,
+			grace_seconds: n
+		};
+	}
 	_setGuard(e, t) {
 		this._draft && this._set("guards", {
 			...this._draft.guards,
@@ -6658,7 +6669,7 @@ var Ut = class extends I {
             <label class="field">
               <span class="lbl">${B(e, "rules.action")}</span>
               <select
-                @change=${(e) => this._set("action", e.target.value)}
+                @change=${(e) => this._setAction(e.target.value)}
               >
                 ${(n.meta?.rule_actions ?? []).map((n) => D`<option .value=${n} ?selected=${n === t.action}>
                       ${B(e, `rules.action_kind_${n}`)}
@@ -8662,7 +8673,7 @@ var nn = class extends I {
 	}
 	connectedCallback() {
 		super.connectedCallback(), this.hass && this._start(), this._timer = window.setInterval(() => {
-			(this._status?.areas.some((e) => e.timer) || this._status?.walk_test) && (this._tick += 1);
+			(this._status?.areas.some((e) => e.timer) || this._status?.walk_test || this._status?.auto?.pending?.length) && (this._tick += 1);
 		}, 1e3);
 	}
 	disconnectedCallback() {

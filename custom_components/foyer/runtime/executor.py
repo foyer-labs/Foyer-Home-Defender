@@ -260,6 +260,17 @@ class Executor:
             strings = await self.hass.async_add_executor_job(
                 i18n.load_strings, self.language
             )
+            if "actions" in extra:
+                # This channel configures its own actions, so the button
+                # would be dropped. Said out loud rather than swallowed: a
+                # countdown nobody can stop from the notification is the
+                # whole feature missing, quietly (§11.4's reasoning).
+                _LOGGER.warning(
+                    "Foyer: %s carries its own notification actions, so the "
+                    "Cancel button was not added; the countdown can still be "
+                    "stopped from the panel",
+                    recipient.get("service"),
+                )
             extra.setdefault(
                 "actions",
                 [
