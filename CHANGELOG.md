@@ -5,6 +5,109 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.11] — what a full review found
+
+No new features. Five reviewers read the whole repository — the pure engine,
+the Home Assistant layer, the API and its authorisation, the stored documents
+and their migrations, the panel — and this is the result. **Take this one.**
+Three of the defects below break something the specification calls
+non-negotiable, and one of them made a shipped feature impossible to turn on.
+
+### Fixed — the three that mattered most
+- **An automatic rule could disarm a perimeter area** (§9.4 point 3). The
+  guard that keeps a rule off the perimeter works out what a scenario switch
+  would drop, and it was reading the areas as they are now against the active
+  scenario as it was when the decision began. Anything that switched scenario
+  earlier in the same turn left it finding nothing to refuse, and the arming
+  that followed disarmed the perimeter itself. This is the constraint the
+  specification says is enforced in the engine rather than in the UI.
+- **Disarming silenced the technical channel** (§5.5). A smoke, gas or flood
+  response carries the area of the zone that raised it, so disarming that
+  area — or the intrusion siren cutoff — stopped its sounder and abandoned the
+  rest of its sequence. Disarming is an intrusion command and has no authority
+  there; a running action now knows which channel it belongs to.
+- **A satisfied verification group's profile never reached the incident**
+  (§4.8, §5.6). The group was resolved and then ignored, so the incident
+  adopted a quiet member profile's escalation — or none at all, when the
+  member profile had no steps. The graduated response the feature exists for
+  was not happening.
+
+### Fixed — settings that unmade themselves
+- **Automatic disarming could never be switched on.** Every settings save
+  rebuilt the settings object field by field, and this one was not in the
+  list, so it fell back to `False` — and any unrelated save turned it off
+  again.
+- A partial **code policy** or **log settings** payload reset every field it
+  did not mention, including retentions the household had lengthened.
+- A configuration document written by a newer **minor** version — additive by
+  contract — failed to load at all instead of ignoring the one key it did not
+  know. A rollback bricked the integration rather than surviving it.
+
+### Fixed — the alarm itself
+- An **exhausted escalation** started again from step 0 every time another
+  zone joined the same break-in: push, SMS, the neighbour, once per zone.
+- A sequence held by a **delay** outlived the siren cutoff and started the
+  bell afterwards, on a house that was armed again, for its whole duration.
+- A **silent zone** was not silent on `incident_opened` or `incident_joined`,
+  which is the natural place to put one siren per incident. An incident is
+  silent when every zone that has joined it is.
+- A verification **group whose members are switched off** can never be
+  satisfied; a suppressing one held back every alarm its survivors raised, for
+  ever. It now suppresses nothing, and page 13 says the group is incomplete.
+- `unavailable` and `unknown` satisfied an `is not` condition. An entity that
+  cannot be read satisfies nothing (INV-4).
+- **Low batteries are persisted**, so a flat cell is announced once rather
+  than at every restart and every configuration save.
+- Retention bounds are checked where a **restored backup** passes as well: nought
+  days is not a short retention, it is a purge that empties a category daily.
+
+### Fixed — the Home Assistant layer
+- **Half the entities the engine reads were subscribed to by nobody**: the
+  mains sensor, every zone's battery entity, each radio's coordinator and
+  every entity an action's condition reads. A power cut was noticed at the
+  next door opening.
+- A wrong code on a **configuration or log command** counted towards no
+  lockout and left no row — an unlimited, silent oracle over the code space.
+  It now spends the same counter, and raises the same `lockout` moment a
+  response profile can answer, as a code typed on a keypad.
+- A backup no longer carries the **acknowledgement webhook id** or the
+  **watchdog URL** out, and a restored document can no longer choose either.
+  Both are credentials: the first is an unauthenticated URL that stops an
+  alarm, the second keeps a dead installation looking alive.
+- Saving an **arming device of kind "tag"** now asks for `manage_users`. A tag
+  carries no code and commands as whoever it names, so minting one was a way
+  for `edit_config` to become `disarm`.
+- A request that raced an entry reload was answered **success** while nothing
+  happened; a pending automatic rule spun the scheduler through startup; a
+  save from an unloaded instance could land on its replacement's state; an
+  entity whose property raised took the state save and the log rows with it;
+  and a wake-up that raised stopped the scheduler permanently.
+- The pseudonymisation sweep of §10.4 reached no configuration rows, because a
+  row records the Home Assistant account and the sweep searched for the Foyer
+  one.
+
+### Fixed — the panel
+- Nine event types printed as their own identifier, `duress` among them, and
+  every automatic-arming, lockout and walk-test row printed `detail.rule`,
+  `detail.strike`, `detail.pending_id`. A detail with no label now reads as
+  its own name.
+- Eleven CSS classes were used with no rule behind them: every "small" button
+  rendered full size, editor footers sat flush against the card edge,
+  separators separated nothing.
+- The first escalation step is Step 1. A zone gaining "always on" loses the
+  chime the same tick hides. The `duress` moment can be answered from the
+  profile editor at all. A refused entity proposal says so. A refused visitor
+  window keeps what was typed. Two pages print times in the Home Assistant
+  user's language rather than the browser's.
+
+### Raised, not changed
+Two contradictions between what the code does and what the project says it
+does. Both are decisions rather than defects, and the README and this
+changelog will say which way they went once they are settled: whether an
+unlinked Home Assistant administrator should be asked for a code, and whether
+a `user_id` a service call merely claims should carry that person's
+permissions.
+
 ## [0.1.0-beta.10] — the log is about people, and leaving takes what it brought
 
 Privacy tooling (§10.4) and clean uninstall (§16): the second part of Phase 5.
