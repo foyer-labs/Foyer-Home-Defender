@@ -66,8 +66,22 @@ needs a coordinator entity named per radio.
 
 ### Changed
 - The configuration schema moves from 7.1 to 7.2, additively.
+- **The default response profile gains four moments on upgrade**: the power
+  going out, a channel breaking, the watchdog going deaf and interference
+  being suspected. This is the one thing the migration changes about an
+  existing configuration, and it is decision 71's precedent — an installation
+  upgrading into this phase would otherwise gain a power cut it is never told
+  about. They are ordinary ticks on page 5 and a household that finds them
+  noisy unticks them.
 - The `notify` executor now reports, per contact channel, whether each send
   succeeded, which is what channel health counts.
+- A broken channel now appears on the Contacts page as well as page 14, and
+  the message that says a channel is broken is never routed through it.
+  Everything else still tries a channel Foyer believes is broken: two failed
+  sends can be a provider with a hiccup, and being wrong about a channel must
+  never be the reason an alarm reached nobody.
+- Every help panel gains the "Learn more" link §15.2 has asked for since
+  Phase 1, on the five pages whose document exists.
 
 ## [0.1.0-beta.8] — the house arms itself, and says so first
 

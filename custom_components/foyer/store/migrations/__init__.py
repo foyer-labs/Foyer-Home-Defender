@@ -437,6 +437,27 @@ def _v7_1_to_v7_2(data: Document) -> Document:
     one thing it would miss, it was already missing.
     """
     out = copy.deepcopy(data)
+    # The four moments that must not be silent, added to whatever the
+    # default profile already announces with a persistent notification —
+    # decision 71's precedent exactly, and for the same reason: an
+    # installation upgrading into this phase would otherwise gain a power
+    # cut it is never told about. Only that one action is touched, and only
+    # if it is there.
+    default = data.get("settings", {}).get("default_profile_id")
+    for profile in out.get("profiles", []):
+        if profile.get("id") != default:
+            continue
+        for action in profile.get("actions", []):
+            if action.get("kind") == "persistent_notification":
+                action["moments"] = sorted(
+                    {
+                        *action.get("moments", []),
+                        "system_power_lost",
+                        "notification_channel_down",
+                        "watchdog_unreachable",
+                        "rf_interference_suspected",
+                    }
+                )
     out["health"] = {
         "mains_entity_id": None,
         "mains_lost_states": ["on"],

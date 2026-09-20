@@ -1854,7 +1854,10 @@ class _Run:
                     "radio": radio.name,
                     "radio_id": radio.id,
                     "entity_id": radio.coordinator_entity_id or "",
-                    "zones": str(
+                    # Not "zones": response.variables() owns that name for
+                    # the zone *names* of the batch, and this occurrence
+                    # carries none — so the message rendered "its  zones".
+                    "radio_zones": str(
                         len(health_engine.zones_on(self.config, self.world(), radio))
                     ),
                 },

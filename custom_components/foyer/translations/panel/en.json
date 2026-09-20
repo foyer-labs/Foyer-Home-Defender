@@ -1005,7 +1005,7 @@
     },
     "health": {
       "title": "What system health watches",
-      "intro": "An alarm that cannot tell you it has stopped working has stopped working. This page is the answer to the four failures that silently defeat a DIY alarm: the power goes out, the notification channel breaks, the radio goes quiet, or Home Assistant dies. None of it is an intrusion, and none of it ever reaches the alarm panel.",
+      "intro": "An alarm that cannot tell you it has stopped working has stopped working. This page is the answer to the four failures that silently defeat a DIY alarm: the power goes out, the notification channel breaks, the radio goes quiet, or Home Assistant dies. None of it is an intrusion, and the one thing that ever reaches the alarm panel is interference confirmed on an armed house — which professional panels treat as tamper.",
       "items": {
         "mains": {
           "term": "Mains power",
@@ -1013,7 +1013,7 @@
         },
         "channels": {
           "term": "Channel health",
-          "text": "Checked periodically and after every real send. A broken channel is announced over a different one."
+          "text": "The service is checked periodically; only a real send proves it delivers. A broken channel is announced over a different one."
         },
         "watchdog": {
           "term": "External watchdog",
@@ -1240,7 +1240,7 @@
     },
     "rf_interference_suspected": {
       "title": "Foyer: radio interference suspected",
-      "message": "{count} of {of} zones on {radio} went quiet at once and the coordinator is still answering. Suspected, not proven: a coordinator crash, a firmware update or a power cut to a room of routers looks the same. Not used, because they are on that radio: {skipped}"
+      "message": "{count} of {of} zones on {radio} went quiet at once and the coordinator is still answering. Suspected, not proven: a coordinator crash, a firmware update or a power cut to a room of routers looks the same."
     },
     "rf_interference_cleared": {
       "title": "Foyer: radio interference over",
@@ -1248,11 +1248,15 @@
     },
     "radio_coordinator_down": {
       "title": "Foyer: radio coordinator unreachable",
-      "message": "The coordinator of {radio} cannot be reached, so its {zones} zones are not being watched. This is not interference — it is the coordinator, its power or its network."
+      "message": "The coordinator of {radio} cannot be reached, so its {radio_zones} zones are not being watched. This is not interference — it is the coordinator, its power or its network."
     },
     "radio_coordinator_up": {
       "title": "Foyer: radio coordinator back",
       "message": "The coordinator of {radio} is answering again."
+    },
+    "rf_interference_suspected_skipped": {
+      "title": "Foyer: radio interference suspected",
+      "message": "{count} of {of} zones on {radio} went quiet at once and the coordinator is still answering. Suspected, not proven: a coordinator crash, a firmware update or a power cut to a room of routers looks the same. Not used, because they are on that radio: {skipped}"
     }
   },
   "chime_mode": {
@@ -2162,13 +2166,13 @@
     "channels": "Notification channels",
     "channels_ok": "{n} healthy",
     "channels_broken": "{n} failing",
-    "channels_meta": "{n} never exercised",
+    "channels_meta": "{n} never used",
     "channels_note": "A broken channel is announced through a different one: warning you about a dead channel over the dead channel is the joke that writes itself. Send a test from the Contacts page.",
     "channels_note_none": "No contacts configured yet.",
     "no_channels": "No notification channels are configured.",
     "sweep_every": "checked every {minutes} min",
     "healthy": "Healthy",
-    "untested": "Untested",
+    "untested": "Never used",
     "fault_missing_service": "Service missing",
     "fault_send_failed": "Sends failing",
     "since": "Since",
@@ -2177,7 +2181,7 @@
     "radios_hint": "A radio is one integration's config entry: every zone of one ZHA, Z-Wave JS or Zigbee2MQTT installation shares it, so naming the entry once assigns forty zones.",
     "radios_note": "Many zones on one radio going quiet within seconds is the signature of jamming — and of a coordinator crash, a firmware update, a channel change and a power cut to a room of mains-powered routers. That is why the event is called suspected.",
     "add_radio": "Add a radio",
-    "candidate": "{title} · {zones} zones",
+    "candidate": "{title} · zones: {zones}",
     "entry_hint": "Only integrations that back at least one of your zones.",
     "coordinator_placeholder": "sensor.zigbee_coordinator",
     "coordinator_hint": "The gate that makes this worth having: zones going quiet while the coordinator answers is interference, zones going quiet with the coordinator gone is a dead coordinator. Without one, Foyer raises nothing on this radio rather than guessing.",

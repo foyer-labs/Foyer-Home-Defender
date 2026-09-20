@@ -43,9 +43,11 @@ the mains has failed; a power sensor is usually `off`. A default that guessed
 would produce an installation that never reports a power cut, discovered on
 the night it mattered — the same reasoning as the trigger state on every zone.
 
-When the mains fails, Foyer raises `system_power_lost`, notifies immediately,
-logs it under `system` at alarm severity, and a response profile can act on
-it. When it comes back, `system_power_restored` says how long it was gone.
+When the mains fails, Foyer raises `system_power_lost`, logs it under
+`system` at alarm severity, and the default response profile announces it —
+as it does a broken channel, a deaf watchdog and suspected interference.
+Attach the moment to a profile of your own to send it anywhere else. When the
+power comes back, `system_power_restored` says how long it was gone.
 
 If the entity itself cannot be read, Foyer says *that* instead — the page
 shows "cannot be read" and the health sensor carries `mains_unknown`. It is
@@ -87,10 +89,17 @@ response profile on page 5 and name the contacts. Without that, the fact is
 still on page 14, on `binary_sensor.foyer_system_health` and in Settings — it
 simply does not ring anybody's phone.
 
-**A channel that has never been exercised shows as untested rather than
-healthy.** Foyer can see that a service exists; only a send proves it
-delivers. The test button on page 6 really sends, and it is what turns
-"untested" into an answer.
+**A channel that has never been used shows as never used, not as healthy.**
+Foyer can see that a service exists; only a send proves it delivers, so the
+sweep can rule a channel out and never rule one in. The test button on page 6
+really sends, and it is what turns "never used" into an answer.
+
+**A channel Foyer believes is broken is still tried**, for everything except
+the message saying it is broken. Two failed sends can be a provider with a
+hiccup, and being wrong about a channel must never be the reason an alarm
+reached nobody. The one exception is §12.2's own rule, and it is enforced
+rather than described: the warning about a dead channel is never routed
+through it.
 
 ---
 
@@ -170,7 +179,7 @@ then raise rf_interference_suspected
 
 | Parameter | Default | Notes |
 |---|---|---|
-| Zones | 4, or 40% of that radio's zones if that is lower | Never fewer than two |
+| Zones | 4, or 40% of that radio's zones if that is lower | Never fewer than two, so a radio with two or three zones raises when both or two of them go |
 | Window | 60 s | How close together the silences began |
 | Confirmation | 60 s | It has to still be true after this |
 | Scope | per radio | A Zigbee outage says nothing about Z-Wave |
@@ -179,6 +188,26 @@ then raise rf_interference_suspected
 notion of a radio, and the config entry is the closest honest thing: every
 entity of one ZHA, Z-Wave JS or Zigbee2MQTT installation shares it. Name the
 entry once on page 14 and the zones assign themselves.
+
+One caveat worth knowing if you use Zigbee2MQTT: its entities come from the
+MQTT integration's config entry, which also carries every other MQTT device
+in the house. Foyer will count those as being on the same "radio". The
+coordinator gate and the threshold usually absorb it, but if you run a lot of
+unrelated MQTT devices, set that radio's own zone count deliberately.
+
+**A zone that is already unreadable when Foyer starts watching it is not
+counted** until it has been readable again. At a restart, battery-powered end
+devices are unavailable until they have been interviewed while the
+mains-powered coordinator answers at once — the signature above exactly,
+produced by nothing but a reboot. The cost is a jamming attempt that begins
+while Foyer is down and never lets its zones back: those zones stay
+uncounted. Every one of them is a fault the whole time, which blocks arming
+and is announced on each, so nothing about it is silent.
+
+The same applies after a coordinator outage: while the coordinator was gone,
+a zone's silence said nothing about that zone, so those zones have to be
+heard again before they can count. Without it a coordinator on a failing
+switch would produce one alarm per flap.
 
 ### The coordinator entity is the whole feature
 
@@ -212,6 +241,10 @@ during which the radio was already deaf.
 | Armed | Alarm-grade. An incident opens, exactly as a tamper condition does in a professional panel, and the areas with zones on that radio go to `triggered`. |
 
 The incident carries no zone, because no zone did this — the radio did.
+
+**A walk test never sounds for this.** A walk test arms every area itself, so
+"the house is armed" there is not the household's arming: the moment is still
+raised and still logged, and no incident opens.
 
 ### The rule that defeats the feature if it is missed
 
@@ -252,15 +285,15 @@ Home Assistant user meets them without ever opening the Foyer panel:
 |---|---|
 | A zone has not been seen | It has been unreadable for two days |
 | A notification channel is broken | As soon as it is known |
-| The watchdog has never answered | It is switched on and has never once succeeded |
-| The watchdog has stopped answering | Three failed pings in a row |
+| The watchdog has never answered | It has failed three times in a row and has never once succeeded |
+| The watchdog has stopped answering | Three failed pings in a row, having worked before |
 | Radio interference is suspected | The event above is confirmed |
 | A radio's coordinator is unreachable | It has been gone for an hour |
 | The house is running without mains power | The mains has been out for an hour |
 
-Every one of them can be marked as seen, which dismisses the card. Fixing the
-problem removes it on its own; marking it as seen is for the case where the
-problem has already cleared and you want the record that somebody looked.
+Every one of them can be marked as seen, which dismisses the card until the
+problem has cleared and come back. Fixing the problem removes it on its own.
+Removing Foyer takes its cards with it.
 
 ---
 

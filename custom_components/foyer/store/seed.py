@@ -44,6 +44,15 @@ SEED_MOMENTS = frozenset(
         # only reaches whoever configured it is not one.
         Moment.WALK_TEST_STARTED,
         Moment.WALK_TEST_ENDED,
+        # System health (§12). The same reasoning as the alarm above: a
+        # house that loses its power, its radio or its only way of speaking
+        # and says nothing about it has failed in the way this whole
+        # section exists to prevent. All four are announced by the default
+        # profile, and a household that finds them noisy unticks them.
+        Moment.SYSTEM_POWER_LOST,
+        Moment.NOTIFICATION_CHANNEL_DOWN,
+        Moment.WATCHDOG_UNREACHABLE,
+        Moment.RF_INTERFERENCE_SUSPECTED,
     }
 )
 

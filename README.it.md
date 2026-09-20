@@ -360,7 +360,7 @@ canale di notifica, la radio ammutolisce, oppure Home Assistant muore.
 
 Niente di tutto questo è un'intrusione, quindi niente tocca mai un
 `alarm_control_panel` — con un'eccezione: a casa inserita, un'interferenza
-confermata apre un incidente, come il jamming in un centrale professionale. I
+confermata apre un incidente, come il jamming in una centrale professionale. I
 problemi persistenti diventano anche problemi di Home Assistant, in
 Impostazioni, dove qualcuno li incontra senza aprire il pannello di Foyer.
 

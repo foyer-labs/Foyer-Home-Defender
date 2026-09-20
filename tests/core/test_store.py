@@ -198,6 +198,13 @@ def test_migration_moves_the_code_policy_to_the_documented_defaults():
         # the end of a walk test one of the safeguards that are not optional
         Moment.WALK_TEST_STARTED,
         Moment.WALK_TEST_ENDED,
+        # added by 7.1 -> 7.2, on decision 71's precedent: an installation
+        # upgrading into Phase 5 would otherwise gain a power cut, a dead
+        # channel, a deaf watchdog and a jammed radio it is never told about
+        Moment.SYSTEM_POWER_LOST,
+        Moment.NOTIFICATION_CHANNEL_DOWN,
+        Moment.WATCHDOG_UNREACHABLE,
+        Moment.RF_INTERFERENCE_SUSPECTED,
     }
 
 
@@ -424,6 +431,13 @@ def test_alpha_3_document_migrates_to_part_2_changing_nothing_that_works():
         Moment.TRIGGERED,
         Moment.WALK_TEST_STARTED,
         Moment.WALK_TEST_ENDED,
+        # added by 7.1 -> 7.2, on decision 71's precedent: an installation
+        # upgrading into Phase 5 would otherwise gain a power cut, a dead
+        # channel, a deaf watchdog and a jammed radio it is never told about
+        Moment.SYSTEM_POWER_LOST,
+        Moment.NOTIFICATION_CHANNEL_DOWN,
+        Moment.WATCHDOG_UNREACHABLE,
+        Moment.RF_INTERFERENCE_SUSPECTED,
     }
     assert config_from_dict(config_to_dict(config)) == config
 

@@ -836,7 +836,11 @@ class FoyerSystem:
                     "since": _iso(state.channel(key).since),
                     "failures": state.channel(key).failures,
                     "last_ok": _iso(state.channel(key).last_ok),
-                    "checked": state.channel(key).present is not None,
+                    # A send, not a sweep. Foyer can see that a service
+                    # exists; only a send proves it delivers, and a channel
+                    # nobody has ever used is exactly the one somebody
+                    # should press the test button on (§11.4).
+                    "checked": state.channel(key).last_ok is not None,
                 }
                 for contact in self.config.contacts
                 if contact.enabled

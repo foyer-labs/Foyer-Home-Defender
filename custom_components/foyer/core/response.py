@@ -494,6 +494,7 @@ def variables(ctx: PlanContext, group: Sequence[Occurrence]) -> dict[str, str]:
         "radio": detail.get("radio", ""),
         "count": detail.get("count", ""),
         "of": detail.get("of", ""),
+        "radio_zones": detail.get("radio_zones", ""),
         "service": detail.get("service", ""),
         "contact": _names(
             [detail.get("contact_id")], {c.id: c.name for c in config.contacts}
@@ -623,6 +624,23 @@ def _drop_impaired(params: dict[str, Any], ctx: PlanContext) -> None:
         params["skipped_entity_ids"] = list(dict.fromkeys(dropped))
 
 
+def _variant(moment: Moment, values: Mapping[str, str], skipped: bool) -> str | None:
+    """Which wording of this moment's built-in message to use.
+
+    ``area`` is an area armed outside any scenario, which has no scenario
+    name to show. ``skipped`` is a response that could not use some of its
+    targets because they sit on the affected radio (§12.5): the sentence
+    naming them only belongs in the message when there is something to
+    name, and a message ending in a colon and nothing is worse than one
+    that does not mention it.
+    """
+    if skipped:
+        return "skipped"
+    if moment is Moment.ARMED and not values.get("scenario"):
+        return "area"
+    return None
+
+
 def _emptied(action: ProfileAction, params: Mapping[str, Any]) -> bool:
     """The impaired-radio filter left this action with nothing to act on.
 
@@ -682,7 +700,9 @@ def run_sequence(
     suppressed = (
         frozenset(ctx.config.settings.silent_suppresses) if silent else frozenset()
     )
+    skipped_variant = False
     if ctx.impaired and (dropped := _on_impaired_radio(ctx, actions)):
+        skipped_variant = True
         # Said in plain words rather than left to be discovered: the message
         # that reports the interference also names what this response will
         # not be able to do because of it (part 1 decision 9). Not a §6.4
@@ -736,9 +756,7 @@ def run_sequence(
             moment=moment,
             profile_id=profile.id,
             placeholders=dict(values),
-            variant="area"
-            if moment is Moment.ARMED and not values.get("scenario")
-            else None,
+            variant=_variant(moment, values, skipped_variant),
             params=params,
         )
         if why == SKIP_WALK_TEST:

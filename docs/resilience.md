@@ -124,8 +124,9 @@ a different radio, is what is left.
 | A channel breaks | Found by the sweep or by a failed send, shown on the Contacts page, and announced over a channel that still works. |
 | The radio goes quiet | Reported, and not answered through that radio. |
 
-All of it is on [page 14](system-health.md), and none of it touches the
-intrusion state machine.
+All of it is on [page 14](system-health.md). None of it touches the intrusion
+state machine, with one exception: interference confirmed on an armed house
+opens an incident, as jamming does in a professional panel.
 
 ---
 

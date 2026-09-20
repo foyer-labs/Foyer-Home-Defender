@@ -1005,7 +1005,7 @@
     },
     "health": {
       "title": "Che cosa sorveglia la salute di sistema",
-      "intro": "Un allarme che non sa dirti che ha smesso di funzionare ha smesso di funzionare. Questa pagina è la risposta ai quattro guasti che sconfiggono in silenzio un allarme fai-da-te: manca la corrente, si rompe il canale di notifica, la radio ammutolisce, o Home Assistant muore. Niente di tutto questo è un'intrusione, e niente arriva mai al pannello d'allarme.",
+      "intro": "Un allarme che non sa dirti che ha smesso di funzionare ha smesso di funzionare. Questa pagina è la risposta ai quattro guasti che sconfiggono in silenzio un allarme fai-da-te: manca la corrente, si rompe il canale di notifica, la radio ammutolisce, o Home Assistant muore. Niente di tutto questo è un'intrusione, e l'unica cosa che arriva al pannello d'allarme è un'interferenza confermata a casa inserita — che i centrali professionali trattano come manomissione.",
       "items": {
         "mains": {
           "term": "Rete elettrica",
@@ -1013,7 +1013,7 @@
         },
         "channels": {
           "term": "Salute dei canali",
-          "text": "Controllati periodicamente e dopo ogni invio reale. Un canale rotto viene annunciato su un altro."
+          "text": "Il servizio è controllato periodicamente; solo un invio reale dimostra che arriva. Un canale rotto viene annunciato su un altro."
         },
         "watchdog": {
           "term": "Watchdog esterno",
@@ -1240,7 +1240,7 @@
     },
     "rf_interference_suspected": {
       "title": "Foyer: sospetta interferenza radio",
-      "message": "{count} zone su {of} di {radio} sono ammutolite insieme e il coordinatore risponde ancora. Sospetta, non dimostrata: un crash del coordinatore, un aggiornamento firmware o un black-out in una stanza piena di router hanno lo stesso aspetto. Non usati, perché su quella radio: {skipped}"
+      "message": "{count} zone su {of} di {radio} sono ammutolite insieme e il coordinatore risponde ancora. Sospetta, non dimostrata: un crash del coordinatore, un aggiornamento firmware o un black-out in una stanza piena di router hanno lo stesso aspetto."
     },
     "rf_interference_cleared": {
       "title": "Foyer: interferenza radio rientrata",
@@ -1248,11 +1248,15 @@
     },
     "radio_coordinator_down": {
       "title": "Foyer: coordinatore radio irraggiungibile",
-      "message": "Il coordinatore di {radio} non è raggiungibile, quindi le sue {zones} zone non sono sorvegliate. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete."
+      "message": "Il coordinatore di {radio} non è raggiungibile, quindi le sue {radio_zones} zone non sono sorvegliate. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete."
     },
     "radio_coordinator_up": {
       "title": "Foyer: coordinatore radio tornato",
       "message": "Il coordinatore di {radio} risponde di nuovo."
+    },
+    "rf_interference_suspected_skipped": {
+      "title": "Foyer: sospetta interferenza radio",
+      "message": "{count} zone su {of} di {radio} sono ammutolite insieme e il coordinatore risponde ancora. Sospetta, non dimostrata: un crash del coordinatore, un aggiornamento firmware o un black-out in una stanza piena di router hanno lo stesso aspetto. Non usati, perché su quella radio: {skipped}"
     }
   },
   "chime_mode": {
@@ -2138,7 +2142,7 @@
     "mains_lost": "Assente",
     "mains_pick": "Nessuna entità scelta",
     "mains_placeholder": "binary_sensor.ups_on_battery",
-    "mains_hint": "Un UPS via NUT o una presa smart te ne danno già una. Se è anche una zona di tipo tecnico, mantiene il suo allarme e il suo riconoscimento: qui dici soltanto a Foyer quale è la rete elettrica.",
+    "mains_hint": "Un UPS via NUT o una presa smart te ne danno già una. Se è anche una zona di tipo tecnico, mantiene il suo allarme e il suo riconoscimento: qui dici soltanto a Foyer qual è la rete elettrica.",
     "mains_states_hint": "Quali stati significano rete assente, separati da virgole. Un binary sensor di un UPS di solito è “on” quando la rete manca, un sensore di potenza “off”: una risposta sbagliata qui è un allarme che non suona mai.",
     "not_configured": "Non configurata",
     "unreadable": "Non leggibile",
@@ -2154,7 +2158,7 @@
     "watchdog_note": "Foyer sorveglia anche il watchdog: i fallimenti ripetuti nel raggiungere questo endpoint sono segnalati qui, perché non riuscire a raggiungere internet significa che nemmeno una notifica via internet uscirebbe.",
     "url_placeholder": "https://hc-ping.com/…",
     "url_hint": "healthchecks.io, Uptime Kuma, Cronitor, o qualunque cosa risponda. Se Home Assistant muore i ping si fermano e quel servizio dà l'allarme: è l'unica risposta al fatto che un sistema morto non può annunciare la propria morte.",
-    "interval_hint": "Secondi fra un ping e l'altro. Più corto significa che fuori casa si accorgono prima che Home Assistant è morto.",
+    "interval_hint": "Secondi fra un ping e l'altro. Più corto significa che fuori casa si accorgono prima che Home Assistant sia morto.",
     "failures_hint": "Quanti ping consecutivi devono fallire prima che Foyer lo dica qui.",
     "payload": "Includi lo stato della casa nel ping",
     "payload_hint": "Spento di default.",
@@ -2168,7 +2172,7 @@
     "no_channels": "Nessun canale di notifica configurato.",
     "sweep_every": "controllati ogni {minutes} min",
     "healthy": "Sano",
-    "untested": "Mai provato",
+    "untested": "Mai usato",
     "fault_missing_service": "Servizio assente",
     "fault_send_failed": "Invii falliti",
     "since": "Da",
@@ -2177,7 +2181,7 @@
     "radios_hint": "Una radio è il config entry di un'integrazione: tutte le zone di una stessa installazione ZHA, Z-Wave JS o Zigbee2MQTT lo condividono, quindi indicarlo una volta assegna quaranta zone.",
     "radios_note": "Molte zone di una stessa radio che ammutoliscono in pochi secondi sono la firma del jamming — e anche di un crash del coordinatore, di un aggiornamento firmware, di un cambio di canale e di un black-out in una stanza piena di router alimentati a rete. Per questo l'evento si chiama sospetto.",
     "add_radio": "Aggiungi una radio",
-    "candidate": "{title} · {zones} zone",
+    "candidate": "{title} · zone: {zones}",
     "entry_hint": "Solo le integrazioni da cui proviene almeno una delle tue zone.",
     "coordinator_placeholder": "sensor.zigbee_coordinator",
     "coordinator_hint": "È il controllo che rende utile tutto il resto: zone che ammutoliscono mentre il coordinatore risponde sono interferenza, zone che ammutoliscono con il coordinatore sparito sono un coordinatore morto. Senza, Foyer non segnala niente su questa radio invece di tirare a indovinare.",
