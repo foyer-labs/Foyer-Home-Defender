@@ -6,7 +6,7 @@
 
 <h1 align="center">Foyer Home Defender</h1>
 
-<p align="center"><em>A real intruder alarm panel for Home Assistant: areas with a state each, arming scenarios you define yourself, zones that say what "triggered" means for them — and a simulator that tells you what the alarm would do, before you find out the hard way.</em></p>
+<p align="center"><em>An alarm panel for the sensors you already have. Areas with a state each, arming scenarios you define yourself, zones that say what "triggered" means for them — and a simulator that tells you what would happen, before you find out the hard way.</em></p>
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=version" alt="Latest version"></a>
@@ -17,16 +17,15 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml"><img src="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
 </p>
 
-> ### Status: beta. The alarm core works, and you can ask it what it would do before you trust it.
+> ### Status: beta. It works, it guards the author's house, and you can ask it what it would do before you trust it.
 >
-> It can protect a house, and it is protecting the author's. Three things tell
-> you what it would do before you have to trust it: the **simulator**, which
-> rehearses a decision without anything happening; the **walk test**, which
-> arms the house for real, holds every response back and tells you which zones
-> never saw you walk past them; and the **action test**, which really sounds
-> the siren, so a misconfigured emergency channel is something you find out now
-> rather than during the emergency. A walk test never silences a smoke detector
-> — 24h, tamper, technical and panic zones stay fully live.
+> Three things answer that question for you. The **simulator** rehearses a
+> decision with nothing actually happening. The **walk test** arms the house
+> for real, holds every response back, and tells you which zones never saw you
+> walk past them. The **action test** really does sound the siren, so a
+> misconfigured emergency channel is something you find out on a Tuesday
+> afternoon rather than at three in the morning. (A walk test never silences a
+> smoke detector: 24h, tamper, technical and panic zones stay fully live.)
 >
 > The rest — codes and users, keypads and tags, escalation until somebody
 > answers, and the house arming itself when everybody leaves — is in the
@@ -49,6 +48,40 @@ outbound connection of Foyer's own.
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-en.png" alt="The Foyer panel: two areas armed by one scenario, one counting down its entry delay, the zones that are not ready, and the last few events" width="900">
 </p>
+
+## Where this came from
+
+Most people who end up here already have the hardware and do not know it.
+
+You put a contact on the front door because you wanted the hall light to come
+on. You put one on the bedroom window because you wanted to be told you had
+left it open before the rain started. You put a PIR in the corridor for the
+night light, and another in the kitchen because the extractor fan should
+notice somebody is cooking. Two winters later the house is full of exactly the
+sensors a burglar alarm is made of, and they are being used to switch lamps.
+
+Then you ask what an alarm costs. Somebody comes round, quotes a figure that
+makes you blink, and proposes to drill holes for a contact on the front door
+and a PIR in the hall — which is to say, for the two sensors already screwed
+to your doorframe. And then there is a monthly subscription, because the
+keypad has to phone somebody.
+
+So the thing that is missing is not the hardware. It is the discipline around
+it: areas that arm separately instead of one all-or-nothing switch, an entry
+delay that survives a restart, a zone that declares what "open" means for it
+rather than assuming `on`, one incident instead of nine notifications at once,
+a log you can still read in three weeks, and some way to check the whole lot
+without setting anything off at two in the morning.
+
+That is what this is. It costs an evening of configuration, and if you already
+own the sensors you have already paid for most of it.
+
+**What it is honestly not:** a certified system, a monitored one, or
+professional hardware. Nobody is watching, no grade is met, and detection is
+only as good as the sensors somebody bought for a light switch. What it can be
+— with a UPS on the router, one notification channel that survives the fibre
+being cut, and a second sensor where a single one would be lonely — is a very
+good result for the money, on a house that is already smart.
 
 ## What it does
 
@@ -95,6 +128,11 @@ outbound connection of Foyer's own.
 - **An event log in a database of its own**, which the recorder's ten-day purge
   cannot touch: what happened, where, through which channel, whether each
   action actually worked, and who changed what.
+- **The log is about people, and it can let one go.** Hand somebody every row
+  that names them, as a file. Take a person out of the log without losing a
+  single event — the record of *what happened* survives the removal of *who*.
+  Shorten retention on the categories that name people, or let names age out
+  on their own, having been told plainly what that costs.
 - **A simulator that answers "what would happen if…" without anything
   happening.** Pick a scenario and an hour, force a window open a minute in,
   and read the whole decision, including the actions that would *not* have run
@@ -235,7 +273,7 @@ to stop it."* Two minutes. Press Cancel and it does not; press nothing and it
 does, and the log says which rule armed the house.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-en.png" alt="The Automation rules page: three rules with their triggers, guards and grace periods, an expected-visitor window for the boiler engineer, and the automatic disarming card naming the attack it protects against" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-en.png" alt="The Automation rules page: a rule that arms when everybody has been away for ten minutes, with its guards and its two-minute grace period, an expected-visitor window for the boiler engineer, and the automatic disarming card naming the attack it protects against and the perimeter area a rule may never disarm" width="900">
 </p>
 
 The guards are the part worth configuring. A rule blocked by one is written to
@@ -270,7 +308,7 @@ reporting is marked as a fault beside them, which is the one case of the three
 the list can tell apart for you.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the three zones that never reacted at the top of the table — the garage PIR, which is also faulted for going silent too long, a landing PIR that saw nobody although the bedroom window on the same floor was opened at 21:12, and a window nobody opened" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the zone that never reacted at the top of the table while the three that did carry the time they first saw somebody" width="900">
 </p>
 
 Three things about it that are not optional, because for as long as it runs a
@@ -306,7 +344,7 @@ house looks perfectly quiet: the power goes out, the notification channel
 breaks, the radio goes quiet, or Home Assistant dies.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting with an empty payload, one notification channel failing since a fortnight ago, and a Zigbee radio where four of four zones went quiet while the coordinator kept answering" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting every fifteen minutes with an empty payload, and every notification channel with the outcome of its last real send" width="900">
 </p>
 
 - **Mains power.** Name your UPS sensor and which of its states means failure —
@@ -342,6 +380,42 @@ has the detail and states the heuristic as a heuristic;
 is the shorter and more uncomfortable one: what survives when somebody cuts
 the power, why a UPS on the router is the highest-value thing you can buy, and
 why a local GSM channel is the only one that survives the fibre being cut.
+
+## The log is about people
+
+The log records who was in the house, when they arrived and when they left. In
+a family that is nobody's business but yours — the GDPR's household exemption
+covers it and there is nothing to do. **It stops covering it the moment the log
+records somebody else**: the cleaner whose arrivals are kept for a month, the
+boiler engineer, the babysitter. And it does not apply at all to the B&B, the
+holiday let or the small office.
+
+So, on page 10, beside the log itself:
+
+- **Export one person's rows** as CSV or JSON, in a file named after them.
+  Wide on purpose: what they did, plus what the house did to them — their tag
+  refused, an escalation that reached them.
+- **Erase one person**, which is not the same as deleting their user. Deleting
+  a user leaves the history of what they did, because the name is copied into
+  every row precisely so that it does. Erasing empties the name, the account,
+  the channel and the device on their rows and leaves every event where it
+  was: the log still answers *what happened on the night of the fourteenth*,
+  and no longer answers *who*. It is itself recorded, without naming them.
+
+And on page 11:
+
+- **A seven-day retention preset** that touches only the categories naming
+  people, leaving actions, faults and door states alone — those name nobody and
+  are what you read when a sensor did not react three weeks ago.
+- **Timed pseudonymisation**, off by default, which after N days replaces names
+  with a stable identifier. The panel says before you switch it on that it
+  trades away the answer to *who disarmed that night* for every older row —
+  which is the very question the log exists to answer. A real trade, not a
+  free safety feature, and it cannot be undone by switching it off again.
+
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+is the practical version: what a row contains, where the exemption stops, and
+what to do about it. It is information, not legal advice.
 
 ## Arming from the wall
 
@@ -420,9 +494,6 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No privacy tooling yet.** Deleting one person's history, timed
-  pseudonymisation and a per-person export are the next thing, and the log
-  keeps names for thirty days until they land. *Next.*
 - **No ESPHome keypad of our own.** DIY builds fit the contract like anything
   else, but this project does not maintain one in v1.
 
@@ -500,16 +571,20 @@ All three verification tools, and how to read what they tell you:
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-users-en.png" alt="Users and codes: two people with their permissions, scope and validity, and the table of which operations ask for a code" width="900">
 </p>
 
-## Security model
+## What the codes are for, and what they are not
 
-Foyer's codes protect against household members, guests, cleaners, non-admin
-Home Assistant users and anyone who finds an unlocked wall tablet. They do **not** protect against a Home Assistant administrator, who can
-read `.storage`, disable the integration or call any service directly. The
-event log is audit-*useful*, not tamper-*proof*, for the same reason.
+Foyer's codes are there to stop the people who are *in* your house from
+disarming it: household members, guests, the cleaner, a non-admin Home
+Assistant user, whoever picks up the wall tablet you left unlocked. They are
+not there to stop **you**. A Home Assistant administrator can read `.storage`,
+disable the integration or call any service directly, so no code in Foyer means
+anything to them — and the event log is audit-*useful* rather than
+tamper-*proof* for exactly the same reason.
 
-**Foyer is not a certified alarm system.** EN 50131 grade compliance is
-explicitly out of scope, and it does not replace a monitored professional
-installation.
+That is the honest boundary, and it is worth knowing before you rely on it.
+Foyer is an integration that does what an alarm does; it is not a certified
+alarm system, it does not meet EN 50131 or any equivalent grade, and it does
+not replace a monitored professional installation.
 
 **The acknowledgement webhook, if you switch it on, is an unauthenticated
 URL.** It exists so a voice provider can feed back the key somebody pressed
@@ -520,8 +595,12 @@ arm, disarm, read the log or change anything. It does not exist until you
 switch it on, the id is generated and random, and switching it off forgets it.
 [The details](docs/notification-channels.md#twilio-voice-call).
 
-**Foyer is not a fire alarm system.** A smoke detector wired into Home
-Assistant does not replace certified, interconnected smoke alarms.
+**And it is not a fire alarm system.** The technical channel is genuinely
+useful — it is live whether the house is armed or not, and disarming has no
+authority over it — but a smoke detector wired into Home Assistant does not
+replace certified, interconnected smoke alarms. Buy those separately. They are
+not expensive, and this is the one item on the page where being wrong is not
+about a burglary.
 
 ## What you need
 
@@ -599,11 +678,11 @@ sends a command and renders the answer, including the name of the zone that
 refused it and the way past it.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts: every area with its state, the entry delay counting down, and the scenarios to arm" width="620">
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet: the whole house disarmed, a code half typed, and the four arming scenarios underneath — with the same pad opened inside the full layout beside it" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet: three digits of a code typed, the entry delay running, and the button that ends it" width="620">
 </p>
 
 ## Questions people ask
@@ -655,10 +734,22 @@ something.
 <details>
 <summary>What happens if I remove the integration?</summary>
 
-Its configuration, its saved alarm state and its entities go with it. The event
-log database is deliberately left on disk: whether to delete thirty days of
-history is a question you should be asked, and being asked it properly is on
-the roadmap.
+Its configuration, its saved alarm state, every entity and device it created,
+the sidebar panel, its repair issues, the notifications it put up and its
+retained MQTT message — a retained message outlives the integration and would
+keep telling whoever connects to that broker next what the house was doing.
+
+The event log database goes only if you said so, with a switch on page 11 that
+is off by default. Home Assistant's own confirmation is the last dialogue
+there is, so the question is asked in advance, and keeping thirty days of
+history is the only answer that cannot destroy something nobody meant to
+destroy. The file is `foyer-log.db` in your configuration directory.
+
+Camera snapshots are never deleted. They are photographs of the inside of your
+house, in a folder you chose, which may hold files that were never Foyer's —
+so removing them is left to you.
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+says all of this again, in the place somebody looks for it.
 
 </details>
 

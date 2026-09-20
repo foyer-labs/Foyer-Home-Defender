@@ -19,6 +19,7 @@ from custom_components.foyer.core.models import (
     Moment,
     NumericOperator,
     NumericTrigger,
+    User,
     Zone,
     ZoneType,
 )
@@ -755,3 +756,53 @@ def test_migration_into_part_2_adds_no_rules_and_no_perimeter():
     assert config.settings.allow_auto_disarm is False
     assert not any(a.is_perimeter for a in config.areas)
     assert config.code_policy.cancel_auto_action is False
+
+
+def test_migration_into_part_2_leaves_the_privacy_tooling_off():
+    """§10.4 arrives switched off, and §16's question arrives unanswered but
+    answered safely: an installation that upgrades keeps every name it had
+    and keeps its log database if somebody removes the integration."""
+    config = migrated()
+    assert config.settings.log.pseudonymise_after is None
+    assert config.settings.log.delete_on_uninstall is False
+
+
+def test_every_person_gains_a_pseudonym_before_the_first_sweep():
+    """It has to exist before the first row is pseudonymised, or the
+    identifier is not stable from the beginning — which is the whole of what
+    makes it worth having (part 2 decision 4)."""
+    from dataclasses import replace
+
+    config = migrated()
+    config = replace(
+        config,
+        users=(
+            User(id="u1", name="Luca", code_hash="$2b$12$x"),
+            User(id="u2", name="Ana", code_hash="$2b$12$y"),
+        ),
+    )
+    document = config_to_dict(config)
+    # As a 7.2 document would have looked: no pseudonym anywhere.
+    for user in document["users"]:
+        user.pop("pseudonym")
+    document["settings"]["log"].pop("pseudonymise_after")
+    document["settings"]["log"].pop("delete_on_uninstall")
+    upgraded = config_from_dict(migrate((7, 2), CURRENT, document))
+    pseudonyms = {u.pseudonym for u in upgraded.users}
+    assert all(p and p.startswith("person-") for p in pseudonyms)
+    # One each, and no two people sharing one.
+    assert len(pseudonyms) == 2
+    # And it does not say who they are.
+    assert not any("luca" in p.lower() or "ana" in p.lower() for p in pseudonyms)
+
+
+def test_a_pseudonym_round_trips_through_the_document():
+    from dataclasses import replace
+
+    config = migrated()
+    config = replace(
+        config, users=(User(id="u1", name="Luca", pseudonym="person-abc123"),)
+    )
+    assert (
+        config_from_dict(config_to_dict(config)).users[0].pseudonym == "person-abc123"
+    )

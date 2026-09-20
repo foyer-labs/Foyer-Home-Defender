@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 from typing import Any
+import uuid
 
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
@@ -22,6 +23,7 @@ from homeassistant.util import dt as dt_util
 from ..const import DOMAIN
 from ..core.journal import config_row
 from ..core.models import FoyerConfig, User
+from ..core.privacy import new_pseudonym
 from ..core.validation import Problem, edit_conflicts, validate
 from ..runtime.system import FoyerSystem
 from ..store.config_store import ConfigStore
@@ -61,6 +63,12 @@ def public_user(user: User) -> dict[str, Any]:
         "valid_until": user.valid_until.isoformat() if user.valid_until else None,
         "code_exempt_when_identified": user.code_exempt_when_identified,
         "enabled": user.enabled,
+        # The stable opaque identifier a pseudonymised log row carries instead
+        # of this name (§10.4). Not a credential and not a secret — it says
+        # nothing about the person — and it travels with a backup on purpose:
+        # a restore that minted new ones would detach every row already
+        # pseudonymised from every row written afterwards.
+        "pseudonym": user.pseudonym,
     }
 
 
@@ -124,6 +132,22 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
             for user in config.users
         ),
     )
+    # A document that arrives with no pseudonym — hand-edited, or written by a
+    # build that had none — would leave that person out of every sweep for
+    # ever, silently, while the setting reported success. One that arrives
+    # with the *same* pseudonym on two people is worse: the sweep stamps both
+    # histories with one identifier, and an erasure or an export then crosses
+    # between two people (both found in review). Either way a fresh one is
+    # minted here.
+    seen: set[str] = set()
+    users = []
+    for user in config.users:
+        pseudonym = user.pseudonym
+        if not pseudonym or pseudonym in seen:
+            pseudonym = new_pseudonym(uuid.uuid4().hex)
+        seen.add(pseudonym)
+        users.append(replace(user, pseudonym=pseudonym))
+    config = replace(config, users=tuple(users))
     problems = validate(config) + edit_conflicts(system.config, config, system.state)
     return EditResult(None if problems else config, tuple(problems))
 

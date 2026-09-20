@@ -364,7 +364,8 @@
     "n_zones": "Zone prima del sospetto",
     "rf_zones": "Zone prima del sospetto",
     "rf_window": "Entro",
-    "rf_confirm": "Finestra di conferma"
+    "rf_confirm": "Finestra di conferma",
+    "pseudonymise_after": "Ritardo di pseudonimizzazione"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -770,6 +771,10 @@
         "language": {
           "term": "Lingua dei messaggi",
           "text": "La lingua di ciò che Foyer manda fuori: notifiche, nome della zona pronunciato. Questo pannello segue già la lingua di ogni utente di Home Assistant."
+        },
+        "privacy": {
+          "term": "Dati personali nel registro",
+          "text": "Sostituisci i nomi nelle righe più vecchie di un certo numero di giorni, e decidi da adesso se rimuovere Foyer debba portarsi via il database del registro. La prima cosa ti costa la risposta a «chi ha disinserito quella notte»."
         }
       }
     },
@@ -817,11 +822,15 @@
         },
         "user": {
           "term": "Chi",
-          "text": "La persona viene scritta nella riga, non referenziata: cancellare un utente non cancella la storia di ciò che ha fatto. Gli utenti arrivano nella fase successiva; fino ad allora le righe portano il canale."
+          "text": "La persona viene scritta dentro la riga invece che referenziata, così cancellare un utente non cancella la storia di quello che ha fatto. Togliere una persona dal registro è un'operazione a parte, su questa pagina."
         },
         "export": {
           "term": "Esportazione",
           "text": "CSV o JSON esattamente delle righe che i filtri qui sopra stanno mostrando, non dell'intero archivio."
+        },
+        "personal": {
+          "term": "I dati di una persona",
+          "text": "Esporta ogni riga che riguarda qualcuno, oppure toglilo dal registro senza perdere un solo evento. Cancellare una persona non è come cancellare il suo utente: l'utente se ne va, la storia di quello che ha fatto resta."
         }
       }
     },
@@ -1327,7 +1336,19 @@
     "language_system": "Come Home Assistant",
     "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le notifiche, e il nome della zona pronunciato dal campanello.",
     "low_battery_hint": "Per cento. Sotto questo valore una batteria numerica è considerata scarica. Un sensore binario di batteria è invece letto dal suo «on».",
-    "walk_test_hint": "Secondi per cui un walk test resta attivo senza rilevazioni prima di chiudersi da solo. Ogni rilevazione lo rimanda, e un tetto assoluto lo chiude comunque: §5.3 rende obbligatoria l'uscita automatica, quindi qui non c'è un valore che la disattivi."
+    "walk_test_hint": "Secondi per cui un walk test resta attivo senza rilevazioni prima di chiudersi da solo. Ogni rilevazione lo rimanda, e un tetto assoluto lo chiude comunque: §5.3 rende obbligatoria l'uscita automatica, quindi qui non c'è un valore che la disattivi.",
+    "short_preset": "Accorcia a {days} giorni",
+    "short_preset_hint": "Porta {categories} a {days} giorni e lascia stare il resto. È pensato per le installazioni con personale domestico: quelle sono le categorie che nominano persone, e le altre portano guasti e stati delle porte, che non nominano nessuno e sono quello che si legge quando un sensore non ha reagito tre settimane fa.",
+    "privacy_title": "Dati personali nel registro",
+    "privacy_intro": "Il registro parla di persone, e non solo di chi ha installato il sistema. Queste due impostazioni sono dell'installazione; cancellare o esportare le righe di una singola persona si fa dalla pagina del registro.",
+    "pseudonymise": "Sostituisci i nomi nelle righe più vecchie",
+    "pseudonymise_warning": "Questo rinuncia alla possibilità di rispondere a «chi ha disinserito quella notte» per ogni riga più vecchia del ritardo — che è esattamente la domanda per cui il registro esiste. È uno scambio vero, non una sicurezza gratuita. Gira una volta al giorno e non si torna indietro: spegnerlo dopo non riporta nessun nome.",
+    "pseudonymise_hint": "Le righe più vecchie di questo tengono un identificatore stabile invece di un nome, così la forma delle notti sopravvive e i nomi no. L'accensione e lo spegnimento vengono registrati entrambi.",
+    "delete_on_uninstall": "Cancella il database del registro se Foyer viene rimosso",
+    "delete_on_uninstall_hint": "Spento, rimuovere Foyer lascia il database dov'è, nella cartella di configurazione, come foyer-log.db. La conferma di Home Assistant è l'ultima finestra che c'è, quindi è qui che si risponde alla domanda — e tenere è la risposta che non distrugge niente.",
+    "uninstall_snapshots_hint": "Gli scatti delle telecamere non vengono mai cancellati insieme. Sono fotografie dell'interno della casa, in una cartella che hai scelto tu e che può contenere file che non sono di Foyer — rimuoverli sta a te.",
+    "pseudonymise_confirm": "Dal prossimo avvio — e salvare una qualsiasi impostazione è un avvio — ogni riga più vecchia di {days} giorni perde il nome che porta, e il nome dentro il suo dettaglio. Non si torna indietro rispegnendo questo interruttore. Il registro non risponderà più a chi ha disinserito quelle notti.",
+    "pseudonymise_yes": "Accendi"
   },
   "action_kind": {
     "notify": "Notifica",
@@ -1517,7 +1538,9 @@
     "action_chime": "Campanello",
     "action_revert": "Riportato a riposo",
     "reloaded": "Foyer ricaricato",
-    "device_rejected": "Dispositivo rifiutato"
+    "device_rejected": "Dispositivo rifiutato",
+    "config_history_erased": "Storia di una persona cancellata",
+    "config_pseudonymisation": "Pseudonimizzazione a tempo modificata"
   },
   "log": {
     "filters": "Filtri",
@@ -1560,7 +1583,22 @@
     "changed": "modificato",
     "and_more": "e altre {count}",
     "gap_short": "{seconds} s",
-    "claimed": "(dichiarato)"
+    "claimed": "(dichiarato)",
+    "person_title": "I dati di una persona",
+    "person_intro": "Il registro racconta chi era in casa e quando, per tutto il tempo che la conservazione tiene. L'esportazione consegna a qualcuno ogni riga che la riguarda; la cancellazione la toglie dal registro e lascia ogni evento dov'è, così il racconto di cosa è successo sopravvive alla rimozione di chi.",
+    "person": "Persona",
+    "person_none": "Scegli una persona",
+    "person_found": "Righe che verrebbero cancellate: {total} — {by_id} trovate dal suo account, {by_name} dal solo nome (scritte prima che fosse un utente Foyer, o sotto un nome che ha poi cambiato), {about} sul suo account.",
+    "person_export_rows": "Righe nell'esportazione: {rows} — quello che ha fatto, più quello che la casa ha fatto a lei: il suo tag rifiutato, un'escalation che l'ha raggiunta.",
+    "person_export_csv": "Esporta le sue righe (CSV)",
+    "person_export_json": "Esporta le sue righe (JSON)",
+    "person_erase": "Cancella la sua storia",
+    "person_erase_yes": "Cancella",
+    "person_erase_confirm": "Questo svuota il nome, l'account, il canale e il dispositivo su tutte le righe trovate — {rows} — per sempre. Gli eventi restano: il registro continuerà a dire cosa è successo quella notte, e non dirà più chi. La cancellazione stessa viene registrata, senza nominarla.",
+    "person_erase_confirm_pseudonym": "Questo sostituisce il nome su tutte le righe trovate — {rows} — con un identificatore stabile, per sempre. Il registro continuerà a dire che la stessa persona ha agito in due notti diverse, che non è la stessa cosa che dimenticarla. La cancellazione stessa viene registrata, senza nominarla.",
+    "person_keep_pseudonym": "Tieni un identificatore stabile invece di dimenticare",
+    "person_keep_pseudonym_hint": "Spento, le righe perdono la persona del tutto. Acceso, tengono un identificatore opaco che non dice nulla di lei ma continua a legare le sue righe fra loro. Chi chiede di essere dimenticato di solito chiede la prima.",
+    "person_erased": "Righe che non nominano più nessuno: {rows}."
   },
   "language": {
     "en": "English",
@@ -1649,7 +1687,9 @@
     "zone": "Zona",
     "scenario": "Scenario",
     "state": "Stato",
-    "attributed": "Attribuzione"
+    "attributed": "Attribuzione",
+    "rows": "Righe",
+    "pseudonymised": "Pseudonimo mantenuto"
   },
   "code": {
     "title": "Codice",
@@ -1684,7 +1724,8 @@
     "bypass_zone": "Esclusione di una zona",
     "edit_config": "Modifica della configurazione",
     "walk_test": "Ingresso in walk test",
-    "test_action": "Prova reale di un’azione"
+    "test_action": "Prova reale di un’azione",
+    "cancel_auto_action": "Annullare un'azione automatica"
   },
   "users": {
     "title": "Utenti",
@@ -2053,8 +2094,8 @@
     "next_disarm": "Prossima: {rule} disarma, {when}.",
     "next_switch": "Prossima: {rule} passa a {scenario}, {when}.",
     "next_none": "Non è programmato nulla.",
-    "trigger_absence": "{n} persone assenti da {minutes} min",
-    "trigger_presence": "una di {n} persone arriva",
+    "trigger_absence": "Tutti assenti da {minutes} min · persone osservate: {n}",
+    "trigger_presence": "Arriva qualcuno · persone osservate: {n}",
     "trigger_time": "alle {at}, {days}",
     "trigger_entity": "{entity} è {state} da {minutes} min",
     "every_day": "tutti i giorni",

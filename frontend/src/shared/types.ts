@@ -513,6 +513,25 @@ export interface SecurityConfig {
 export interface LogSettingsConfig {
   enabled: Record<string, boolean>;
   retention_days: Record<string, number>;
+  /** After how many days a row keeps a stable identifier instead of a name
+   * (§10.4). null is off, and off is the default: it trades away the ability
+   * to answer "who disarmed that night" for rows older than this. */
+  pseudonymise_after: number | null;
+  /** Whether removing the integration takes the log database with it (§16).
+   * Off, so an installation that never answered keeps its history. */
+  delete_on_uninstall: boolean;
+}
+
+/** How many rows an erasure would touch, and which key found them (§10.4).
+ * `by_name` counts the rows a rename or a row written before this person was
+ * a Foyer user leaves behind; `wide` is what an export would carry. */
+export interface PersonCounts {
+  by_id: number;
+  by_name: number;
+  /** Configuration rows about their account, written by whoever edited it. */
+  about: number;
+  total: number;
+  wide: number;
 }
 
 /** How much the retained MQTT state message says (§9.2, part 2 decision 3). */
@@ -728,6 +747,12 @@ export interface ConfigMeta {
   log_severities: string[];
   outcomes: string[];
   retention_bounds: [number, number];
+  /** The bounds of the pseudonymisation delay, and the short retention preset
+   * §10.4 offers to installations with domestic staff, with the categories it
+   * touches — the ones that name people. */
+  pseudonymise_bounds: [number, number];
+  short_retention: number;
+  named_categories: string[];
   /** What page 12 needs to build a rule without knowing §9.4 by heart. */
   rule_triggers: RuleTriggerKind[];
   rule_actions: RuleActionKind[];

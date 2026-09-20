@@ -166,8 +166,19 @@ from ..core.models import (
 # document is a build with no watchdog, no mains entity and no radios — which
 # is exactly what it was yesterday. Nothing it would have protected goes
 # unprotected, and the only thing it loses is a warning it never had.
+#
+# 7.3 is a *minor* step for the same reason as 7.2, and it is worth saying what
+# a 7.2 build reading this document loses: it never pseudonymises an old row
+# and it never takes the log database with it when somebody removes the
+# integration — which is exactly what it did yesterday. Nothing it would have
+# protected goes unprotected. The one thing to know about the downgrade is
+# that a 7.2 build writing the document back drops each person's stored
+# pseudonym, so a later upgrade mints new ones: rows already pseudonymised
+# keep the identifier they were written with and stop linking to rows written
+# afterwards. The alternative was deriving the pseudonym from the name, which
+# §12.4 refused for the diagnostics dump and this module refuses again.
 STORAGE_VERSION = 7
-STORAGE_MINOR_VERSION = 2
+STORAGE_MINOR_VERSION = 3
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -487,6 +498,7 @@ def user_from_dict(u: dict[str, Any]) -> User:
         valid_until=_dt(u.get("valid_until")),
         code_exempt_when_identified=bool(u.get("code_exempt_when_identified", False)),
         enabled=bool(u.get("enabled", True)),
+        pseudonym=u.get("pseudonym") or None,
     )
 
 
@@ -508,6 +520,7 @@ def user_to_dict(u: User) -> dict[str, Any]:
         "valid_until": _iso(u.valid_until),
         "code_exempt_when_identified": u.code_exempt_when_identified,
         "enabled": u.enabled,
+        "pseudonym": u.pseudonym,
     }
 
 
@@ -521,6 +534,7 @@ def log_from_dict(data: dict[str, Any]) -> LogSettings:
     """
     known = {c.value for c in LogCategory}
     default = LogSettings()
+    after = data.get("pseudonymise_after")
     return LogSettings(
         enabled={
             k: bool(v)
@@ -532,6 +546,8 @@ def log_from_dict(data: dict[str, Any]) -> LogSettings:
             for k, v in (data.get("retention_days") or {}).items()
             if k in known and int(v) != default.retention(k)
         },
+        pseudonymise_after=None if after in (None, "", 0) else int(after),
+        delete_on_uninstall=bool(data.get("delete_on_uninstall", False)),
     )
 
 
@@ -541,6 +557,8 @@ def log_to_dict(log: LogSettings) -> dict[str, Any]:
     return {
         "enabled": {c.value: log.is_enabled(c.value) for c in LogCategory},
         "retention_days": {c.value: log.retention(c.value) for c in LogCategory},
+        "pseudonymise_after": log.pseudonymise_after,
+        "delete_on_uninstall": log.delete_on_uninstall,
     }
 
 

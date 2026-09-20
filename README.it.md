@@ -6,7 +6,7 @@
 
 <h1 align="center">Foyer Home Defender</h1>
 
-<p align="center"><em>Una vera centrale d'allarme per Home Assistant: aree con uno stato ciascuna, scenari di inserimento definiti da te, zone che dichiarano cosa le fa scattare — e un simulatore che ti dice cosa farebbe l'allarme, prima che tu lo scopra nel modo peggiore.</em></p>
+<p align="center"><em>Una centrale d'allarme per i sensori che hai già. Aree con uno stato ciascuna, scenari di inserimento definiti da te, zone che dichiarano cosa le fa scattare — e un simulatore che ti dice cosa succederebbe, prima che tu lo scopra nel modo peggiore.</em></p>
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=versione" alt="Ultima versione"></a>
@@ -17,16 +17,15 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml"><img src="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
 </p>
 
-> ### Stato: beta. Il nucleo dell'allarme funziona, e puoi chiedergli cosa farebbe prima di fidartene.
+> ### Stato: beta. Funziona, protegge la casa di chi lo scrive, e puoi chiedergli cosa farebbe prima di fidartene.
 >
-> Protegge la casa di chi lo scrive. Tre strumenti ti dicono cosa farebbe
-> prima che tu debba fidartene: il **simulatore**, che prova una decisione
-> senza che succeda nulla; il **walk test**, che inserisce l'impianto per
-> davvero trattenendo ogni risposta e ti dice quali zone non ti hanno mai
-> visto passare; e la **prova delle azioni**, che fa suonare la sirena sul
-> serio, così un canale d'emergenza configurato male lo scopri adesso e non
-> durante l'emergenza. Un walk test non silenzia mai un rivelatore di fumo:
-> le zone 24h, tamper, tecniche e panico restano completamente attive.
+> A quella domanda rispondono tre strumenti. Il **simulatore** prova una
+> decisione senza che succeda niente. Il **walk test** inserisce l'impianto
+> per davvero, trattiene ogni risposta e ti dice quali zone non ti hanno mai
+> visto passare. La **prova delle azioni** fa suonare la sirena sul serio,
+> così un canale d'emergenza configurato male lo scopri un martedì pomeriggio
+> e non alle tre di notte. (Un walk test non silenzia mai un rivelatore di
+> fumo: le zone 24h, tamper, tecniche e panico restano completamente attive.)
 >
 > Il resto — utenti e codici, tastiere e tag, l'escalation finché qualcuno non
 > risponde, e la casa che si inserisce da sola quando esce l'ultima persona —
@@ -52,6 +51,43 @@ e nessuna connessione verso l'esterno che parta da Foyer.
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-it.png" alt="Il pannello di Foyer: due aree inserite da un solo scenario, una in conto alla rovescia sul ritardo d'ingresso, le zone non pronte e gli ultimi eventi" width="900">
 </p>
+
+## Da dove nasce
+
+Quasi tutti quelli che arrivano qui hanno già l'hardware e non lo sanno.
+
+Hai messo un contatto sulla porta d'ingresso perché volevi che si accendesse
+la luce del corridoio. Ne hai messo uno sulla finestra della camera perché
+volevi che qualcuno ti dicesse che l'avevi lasciata aperta prima che
+piovesse. Hai messo un sensore di movimento in corridoio per la luce di
+notte, e un altro in cucina perché la cappa dovrebbe accorgersi che stai
+cucinando. Due inverni dopo la casa è piena esattamente dei sensori di cui è
+fatto un antifurto, e li stai usando per accendere lampadine.
+
+Poi chiedi quanto costa un antifurto. Viene qualcuno, ti fa un preventivo che
+ti fa sbattere le palpebre, e propone di forare il muro per un contatto sulla
+porta d'ingresso e un sensore in corridoio — cioè per i due sensori già
+avvitati sullo stipite di casa tua. E poi c'è l'abbonamento mensile, perché
+la tastiera deve telefonare a qualcuno.
+
+Quindi quello che manca non è l'hardware. È la disciplina intorno:
+aree che si inseriscono separatamente invece di un unico interruttore
+tutto-o-niente, un tempo di ingresso che sopravvive a un riavvio, una zona
+che dichiara cosa vuol dire "aperta" per lei invece di dare per scontato
+`on`, un incidente solo invece di nove notifiche insieme, un registro ancora
+leggibile fra tre settimane, e un modo di verificare tutto senza far partire
+niente alle due di notte.
+
+Questo è quello che trovi qui. Costa una serata di configurazione, e se i
+sensori li hai già, la parte cara l'hai già pagata.
+
+**Cosa onestamente non è:** un sistema certificato, né sorvegliato, né
+hardware professionale. Non guarda nessuno, non è di nessun grado, e la
+rilevazione vale quanto valgono sensori comprati per un interruttore della
+luce. Quello che può essere — con un UPS sul router, un canale di notifica
+che sopravvive al taglio della fibra, e un secondo sensore dove uno solo
+sarebbe solo — è un ottimo risultato per quello che costa, su una casa che è
+già intelligente.
 
 ## Cosa fa
 
@@ -99,6 +135,12 @@ e nessuna connessione verso l'esterno che parta da Foyer.
 - **Un registro eventi in un archivio tutto suo**, che la cancellazione dopo
   dieci giorni del recorder non può toccare: cosa è successo, dove, attraverso
   quale canale, se ogni azione ha davvero funzionato, e chi ha cambiato cosa.
+- **Il registro parla di persone, e sa lasciarne andare una.** Consegna a
+  qualcuno ogni riga che lo nomina, come file. Togli una persona dal registro
+  senza perdere un solo evento — il racconto di *cosa è successo* sopravvive
+  alla rimozione di *chi*. Accorcia la conservazione sulle categorie che
+  nominano persone, oppure lascia che i nomi invecchino da soli, dopo che ti è
+  stato detto chiaramente quanto costa.
 - **Un simulatore che risponde a «cosa succederebbe se…» senza che succeda
   niente.** Scegli uno scenario e un'ora, forza l'apertura di una finestra un
   minuto dopo, e leggi tutta la decisione, comprese le azioni che *non*
@@ -264,7 +306,7 @@ Annulla non succede; se non premi niente succede, e il log dice quale regola
 ha inserito la casa.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-it.png" alt="La pagina Regole automatiche: tre regole con attivazione, condizioni di sicurezza e periodo di grazia, una finestra per il tecnico della caldaia e il riquadro del disarmo automatico che nomina l'attacco da cui protegge" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-it.png" alt="La pagina Regole automatiche: una regola che inserisce quando tutti sono via da dieci minuti, con le sue condizioni di sicurezza e i due minuti di grazia, una finestra per il tecnico della caldaia, e il riquadro del disarmo automatico che nomina l'attacco da cui protegge e l'area perimetrale che nessuna regola può disinserire" width="900">
 </p>
 
 Le condizioni di sicurezza sono la parte che vale la pena configurare. Una
@@ -300,7 +342,7 @@ sentire viene segnato come guasto lì accanto, ed è l'unico dei tre casi che
 l'elenco sa distinguere da solo.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-it.png" alt="Un walk test in corso: un banner dice che ogni risposta è trattenuta e che cosa resta attivo, e in cima alla tabella ci sono le tre zone che non hanno mai reagito — il PIR del garage, che è anche in guasto perché è rimasto muto troppo a lungo, un PIR del disimpegno che non ha visto nessuno benché la finestra della camera sullo stesso piano sia stata aperta alle 21:12, e una finestra che nessuno ha aperto" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-it.png" alt="Un walk test in corso: un banner dice che ogni risposta è trattenuta e che cosa resta attivo, e in cima alla tabella c'è la zona che non ha mai reagito, mentre le tre che hanno reagito portano l'ora in cui ti hanno visto per la prima volta" width="900">
 </p>
 
 Tre cose non sono facoltative, perché finché la prova è attiva un'intrusione
@@ -337,7 +379,7 @@ tutti e quattro la casa sembra tranquillissima: manca la corrente, si rompe il
 canale di notifica, la radio ammutolisce, oppure Home Assistant muore.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-it.png" alt="La pagina Salute di sistema: rete elettrica presente, il watchdog che riporta con payload vuoto, un canale di notifica non funzionante da due settimane, e una radio Zigbee dove quattro zone su quattro sono ammutolite mentre il coordinatore continuava a rispondere" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-it.png" alt="La pagina Salute di sistema: rete elettrica presente, il watchdog che riporta ogni quindici minuti con payload vuoto, e ogni canale di notifica con l'esito del suo ultimo invio vero" width="900">
 </p>
 
 - **Rete elettrica.** Indichi il sensore dell'UPS e quale suo stato significa
@@ -376,6 +418,46 @@ ha il dettaglio e chiama l'euristica con il suo nome;
 corrente, perché un UPS sul router è la cosa che rende di più fra quelle che
 puoi comprare, e perché un canale GSM locale è l'unico che sopravvive al
 taglio della fibra.
+
+## Il registro parla di persone
+
+Il registro racconta chi era in casa, quando è arrivato e quando è uscito. In
+una famiglia non sono affari di nessun altro — l'esenzione domestica del GDPR
+lo copre e non c'è niente da fare. **Smette di coprirlo nel momento in cui il
+registro scrive qualcun altro**: la signora delle pulizie le cui entrate
+restano per un mese, il tecnico della caldaia, la babysitter. E non si applica
+affatto al B&B, alla casa vacanze o al piccolo ufficio.
+
+Così, su pagina 10, accanto al registro stesso:
+
+- **Esporta le righe di una persona** in CSV o JSON, in un file che porta il
+  suo nome. Largo apposta: quello che ha fatto, più quello che la casa ha fatto
+  a lei — il suo tag rifiutato, un'escalation che l'ha raggiunta.
+- **Cancella una persona**, che non è la stessa cosa che cancellare il suo
+  utente. Cancellare un utente lascia la storia di quello che ha fatto, perché
+  il nome è copiato dentro ogni riga proprio perché resti. La cancellazione
+  svuota il nome, l'account, il canale e il dispositivo sulle sue righe e
+  lascia ogni evento dov'era: il registro continua a rispondere a *cosa è
+  successo la notte del quattordici*, e non risponde più a *chi*. Viene
+  registrata a sua volta, senza nominarla.
+
+E su pagina 11:
+
+- **Un preset di conservazione a sette giorni** che tocca solo le categorie che
+  nominano persone, e lascia stare azioni, guasti e stati delle porte — quelli
+  non nominano nessuno e sono quello che leggi quando un sensore non ha reagito
+  tre settimane fa.
+- **La pseudonimizzazione a tempo**, spenta per default, che dopo N giorni
+  sostituisce i nomi con un identificatore stabile. Il pannello dice, prima che
+  tu la accenda, che rinuncia alla risposta a *chi ha disinserito quella notte*
+  per ogni riga più vecchia — che è esattamente la domanda per cui il registro
+  esiste. Uno scambio vero, non una sicurezza gratuita, e non si torna indietro
+  rispegnendola.
+
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+è la versione pratica: cosa contiene una riga, dove finisce l'esenzione, e cosa
+farci. È informazione, non consulenza legale — ed è in inglese, come tutta la
+documentazione tecnica.
 
 ## Tastiere, tag e telecomandi
 
@@ -447,10 +529,6 @@ card.
 
 ## Cosa manca ancora, e conta
 
-- **Nessuno strumento per la privacy, ancora.** Cancellare la storia di una
-  sola persona, la pseudonimizzazione a tempo e l'esportazione per persona
-  sono la prossima cosa, e fino ad allora il registro tiene i nomi per trenta
-  giorni. *La prossima.*
 - **Nessuna tastiera ESPHome nostra.** Una costruzione fai-da-te rientra nel
   contratto come qualunque altra, ma questo progetto non ne mantiene una
   in v1.
@@ -534,19 +612,20 @@ fidarsi di una configurazione:
 [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md)
 (in inglese).
 
-## Modello di sicurezza
+## A cosa servono i codici, e a cosa no
 
-I codici di Foyer proteggono da familiari, ospiti,
-personale domestico, utenti non amministratori di Home Assistant e da chiunque
-trovi un tablet a muro sbloccato. **Non** proteggono da un amministratore di
-Home Assistant, che può leggere `.storage`, disattivare l'integrazione o
-chiamare qualunque servizio. Per lo stesso motivo il registro eventi è *utile*
-come traccia, non *inalterabile*.
+I codici di Foyer servono a impedire che disinserisca chi è *dentro* casa tua:
+familiari, ospiti, personale domestico, utenti non amministratori di Home
+Assistant, chiunque prenda in mano il tablet a muro che hai lasciato sbloccato.
+Non servono a fermare **te**. Un amministratore di Home Assistant può leggere
+`.storage`, disattivare l'integrazione o chiamare qualunque servizio, quindi
+per lui nessun codice di Foyer vuol dire niente — e per lo stesso identico
+motivo il registro eventi è *utile* come traccia, non *inalterabile*.
 
-**Foyer non è un impianto d'allarme certificato.** La conformità EN 50131 è
-dichiaratamente fuori ambito: non soddisfa i requisiti CEI 79-3 / EN 50131 e
-non sostituisce un impianto certificato dove una polizza assicurativa o un
-capitolato lo richiedano.
+Questo è il confine onesto, e vale la pena conoscerlo prima di appoggiarcisi.
+Foyer è un'integrazione che fa quello che fa un allarme; non è un impianto
+certificato, non soddisfa CEI 79-3 / EN 50131 o equivalenti, e non sostituisce
+un impianto certificato dove una polizza o un capitolato lo richiedano.
 
 **Il webhook di presa d'atto, se lo accendi, è un URL non autenticato.**
 Esiste perché un provider vocale possa rimandare il tasto premuto durante una
@@ -558,8 +637,12 @@ niente. Non esiste finché non lo accendi, l'id è generato a caso, e
 spegnendolo viene dimenticato.
 [I dettagli](docs/notification-channels.md#twilio-voice-call) (in inglese).
 
-**Foyer non è un sistema antincendio.** Un rivelatore di fumo collegato a Home
-Assistant non sostituisce rivelatori certificati e interconnessi.
+**E non è un sistema antincendio.** Il canale tecnico è davvero utile — è
+attivo che la casa sia inserita o no, e disinserire non ha nessuna autorità su
+di lui — ma un rivelatore di fumo collegato a Home Assistant non sostituisce
+rivelatori certificati e interconnessi. Quelli comprali a parte: non costano
+molto, e sono l'unica voce di questa pagina in cui sbagliarsi non riguarda un
+furto.
 
 ## Cosa ti serve
 
@@ -653,7 +736,7 @@ rifiutato e la via per superarla.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-it.png" alt="Il layout a tastierino per un tablet a muro: tutta la casa disinserita, un codice digitato a metà e i quattro scenari di inserimento sotto — e accanto lo stesso tastierino aperto dentro il layout completo" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-it.png" alt="Il layout a tastierino per un tablet a muro: tre cifre di un codice digitate, il tempo di ingresso che scorre, e il pulsante che lo chiude" width="620">
 </p>
 
 ## Domande che vengono fatte
@@ -706,10 +789,25 @@ non capisce potrebbe smettere in silenzio di proteggere qualcosa.
 <details>
 <summary>Cosa succede se rimuovo l'integrazione?</summary>
 
-Se ne vanno la sua configurazione, lo stato dell'allarme salvato e le sue
-entità. L'archivio del registro eventi resta apposta sul disco: se cancellare
-trenta giorni di storia è una domanda che va fatta a te, e farla per bene è
-nella tabella di marcia.
+Se ne vanno la sua configurazione, lo stato dell'allarme salvato, ogni entità e
+dispositivo che ha creato, il pannello nella barra laterale, le sue
+segnalazioni in Impostazioni, le notifiche che aveva messo su e il messaggio
+MQTT ritenuto — un messaggio ritenuto sopravvive all'integrazione e
+continuerebbe a raccontare a chiunque si colleghi dopo cosa stava facendo la
+casa.
+
+L'archivio del registro eventi se ne va solo se lo hai detto tu, con un
+interruttore su pagina 11 che è spento per default. La conferma di Home
+Assistant è l'ultima finestra che c'è, quindi la domanda si fa prima — e
+tenere trenta giorni di storia è l'unica risposta che non può distruggere
+qualcosa che nessuno voleva distruggere. Il file è `foyer-log.db` nella
+cartella di configurazione.
+
+Gli scatti delle telecamere non vengono mai cancellati. Sono fotografie
+dell'interno di casa tua, in una cartella che hai scelto tu e che può contenere
+file che non sono mai stati di Foyer — rimuoverli sta a te.
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+lo ripete tutto, nel posto dove uno lo va a cercare.
 
 </details>
 

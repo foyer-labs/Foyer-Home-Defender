@@ -82,14 +82,55 @@ def default_prefix(install_id: str) -> str:
     return f"foyer/{install_id}"
 
 
-def topics(system: FoyerSystem, install_id: str) -> tuple[str, str]:
+def topic_names(config: Any, install_id: str) -> tuple[str, str]:
     """(command, state), each configured or each defaulted (§9.2)."""
-    settings = system.config.settings.mqtt
+    settings = config.settings.mqtt
     prefix = default_prefix(install_id)
     return (
         settings.command_topic or f"{prefix}/command",
         settings.state_topic or f"{prefix}/state",
     )
+
+
+def topics(system: FoyerSystem, install_id: str) -> tuple[str, str]:
+    return topic_names(system.config, install_id)
+
+
+async def async_clear_retained(
+    hass: HomeAssistant, config: Any, install_id: str
+) -> bool:
+    """Empty the retained state topic, because leaving has to be leaving (§16).
+
+    A retained message outlives the integration that published it. Unsubscribing
+    takes Foyer off the broker and leaves behind a message telling whoever
+    connects next what the house was doing when Foyer last spoke — which is
+    decision 83's own reasoning applied to the moment Foyer is no longer there
+    to correct it. An empty payload published retained is what removes one.
+
+    Best effort, and deliberately so: the broker may be down, MQTT may have
+    been removed first, and none of that may stop an integration from being
+    removed. What it must not do is fail silently in the code — the caller
+    logs when it did not work, because a message left on somebody's broker is
+    something they would want to know to go and clear themselves.
+    """
+    settings = config.settings.mqtt
+    if not settings.enabled:
+        return False
+    try:
+        from homeassistant.components import mqtt
+    except ImportError:  # pragma: no cover - MQTT is an optional dependency
+        return False
+    if not await mqtt.async_wait_for_mqtt_client(hass):
+        return False
+    _, state_topic = topic_names(config, install_id)
+    # At least once, whatever this installation publishes its state at: a
+    # fire-and-forget clear that the broker dropped would return True and
+    # suppress the warning telling the household to go and clear the retained
+    # message by hand (found in review).
+    await mqtt.async_publish(
+        hass, state_topic, "", qos=max(1, settings.qos), retain=True
+    )
+    return True
 
 
 def result_of(decision: Decision) -> tuple[str, str | None]:

@@ -364,7 +364,8 @@
     "n_zones": "Zones before suspecting",
     "rf_zones": "Zones before suspecting",
     "rf_window": "Within",
-    "rf_confirm": "Confirmation window"
+    "rf_confirm": "Confirmation window",
+    "pseudonymise_after": "Pseudonymisation delay"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -770,6 +771,10 @@
         "language": {
           "term": "Language of messages",
           "text": "The language of what Foyer sends out — notifications, the spoken zone name. This panel already follows each Home Assistant user's own language."
+        },
+        "privacy": {
+          "term": "Personal data in the log",
+          "text": "Replace names in rows older than a chosen number of days, and decide now whether removing Foyer should take the log database with it. The first costs you the answer to “who disarmed that night”."
         }
       }
     },
@@ -817,11 +822,15 @@
         },
         "user": {
           "term": "Who",
-          "text": "The person is written into the row rather than referenced, so deleting a user later does not erase the history of what they did. Users arrive in the next phase; until then rows carry the channel."
+          "text": "The person is written into the row rather than referenced, so deleting a user later does not erase the history of what they did. Taking a person out of the log is a separate operation, on this page."
         },
         "export": {
           "term": "Export",
           "text": "CSV or JSON of exactly the rows the filters above are showing — not of the whole database."
+        },
+        "personal": {
+          "term": "One person's data",
+          "text": "Export every row about somebody, or take them out of the log without losing a single event. Erasing a person is not the same as deleting their account: the account goes, the history of what they did stays."
         }
       }
     },
@@ -1327,7 +1336,19 @@
     "language_system": "As Home Assistant",
     "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: notifications, and the zone name the chime speaks.",
     "low_battery_hint": "Per cent. Below this a numeric battery counts as low. A battery binary sensor is read by its own “on” instead.",
-    "walk_test_hint": "Seconds a walk test runs without a detection before it ends itself. Each detection pushes it back, and an absolute cap ends it whatever happens: §5.3 makes the auto-exit mandatory, so there is no value here that switches it off."
+    "walk_test_hint": "Seconds a walk test runs without a detection before it ends itself. Each detection pushes it back, and an absolute cap ends it whatever happens: §5.3 makes the auto-exit mandatory, so there is no value here that switches it off.",
+    "short_preset": "Shorten to {days} days",
+    "short_preset_hint": "Sets {categories} to {days} days and leaves the rest alone. Offered for installations with domestic staff: those are the categories that name people, and the others carry faults and door states, which name nobody and are what you read when a sensor did not react three weeks ago.",
+    "privacy_title": "Personal data in the log",
+    "privacy_intro": "The log is about people, and not only about whoever installed the system. These two settings are the installation's; erasing or exporting one person's rows is done on the log page.",
+    "pseudonymise": "Replace names in older rows",
+    "pseudonymise_warning": "This trades away the ability to answer “who disarmed that night” for every row older than the delay — which is the very question the log exists to answer. It is a real trade, not a free safety feature. It runs once a day and cannot be undone: switching it off later brings no name back.",
+    "pseudonymise_hint": "Rows older than this keep a stable identifier instead of a name, so the shape of the nights survives and the names do not. Switching it on and switching it off are both recorded.",
+    "delete_on_uninstall": "Delete the log database if Foyer is removed",
+    "delete_on_uninstall_hint": "Off, removing Foyer leaves the database where it is, in the configuration directory, as foyer-log.db. Home Assistant's own confirmation is the last dialogue there is, so this is where the question gets answered — and keeping is the answer that destroys nothing.",
+    "uninstall_snapshots_hint": "Camera snapshots are never deleted with it. They are pictures of the inside of the house, in a folder you chose, which may hold files that are not Foyer's — so removing them is yours to do.",
+    "pseudonymise_confirm": "From the next start — and saving any setting is a start — every row older than {days} days loses the name on it, and the name inside its detail. It cannot be undone by switching this off again. The log will no longer answer who disarmed on those nights.",
+    "pseudonymise_yes": "Switch it on"
   },
   "action_kind": {
     "notify": "Notification",
@@ -1517,7 +1538,9 @@
     "action_chime": "Chime",
     "action_revert": "Switched off again",
     "reloaded": "Foyer reloaded",
-    "device_rejected": "Device refused"
+    "device_rejected": "Device refused",
+    "config_history_erased": "History of a person erased",
+    "config_pseudonymisation": "Timed pseudonymisation changed"
   },
   "log": {
     "filters": "Filters",
@@ -1560,7 +1583,22 @@
     "changed": "changed",
     "and_more": "and {count} more",
     "gap_short": "{seconds} s",
-    "claimed": "(claimed)"
+    "claimed": "(claimed)",
+    "person_title": "One person's data",
+    "person_intro": "The log records who was in the house and when, for as long as retention keeps it. Export hands somebody every row that is about them; erasing takes them out of the log and leaves every event where it is, so the record of what happened survives the removal of who.",
+    "person": "Person",
+    "person_none": "Choose a person",
+    "person_found": "Rows that would be erased: {total} — {by_id} found by their account, {by_name} by name alone (written before they were a Foyer user, or under a name they have since changed), {about} about their account.",
+    "person_export_rows": "Rows in an export: {rows} — what they did, plus what the house did to them: their tag refused, an escalation that reached them.",
+    "person_export_csv": "Export their rows (CSV)",
+    "person_export_json": "Export their rows (JSON)",
+    "person_erase": "Erase their history",
+    "person_erase_yes": "Erase",
+    "person_erase_confirm": "This empties the name, the account, the channel and the device on every row found — {rows} of them — for good. The events stay: the log will still say what happened that night, and will no longer say who. The erasure itself is recorded, without naming them.",
+    "person_erase_confirm_pseudonym": "This replaces the name on every row found — {rows} of them — with a stable identifier, for good. The log will still say that the same person acted on two different nights, which is not the same as forgetting them. The erasure itself is recorded, without naming them.",
+    "person_keep_pseudonym": "Keep a stable identifier instead of forgetting",
+    "person_keep_pseudonym_hint": "Off, the rows lose the person entirely. On, they keep an opaque identifier that says nothing about them but still links their rows to each other. Somebody asking to be forgotten is usually asking for the first.",
+    "person_erased": "Rows that no longer name anybody: {rows}."
   },
   "language": {
     "en": "English",
@@ -1649,7 +1687,9 @@
     "zone": "Zone",
     "scenario": "Scenario",
     "state": "State",
-    "attributed": "Attribution"
+    "attributed": "Attribution",
+    "rows": "Rows",
+    "pseudonymised": "Kept a pseudonym"
   },
   "code": {
     "title": "Code",
@@ -1684,7 +1724,8 @@
     "bypass_zone": "Exclude a zone",
     "edit_config": "Edit the configuration",
     "walk_test": "Enter walk test",
-    "test_action": "Run a real action test"
+    "test_action": "Run a real action test",
+    "cancel_auto_action": "Cancelling an automatic action"
   },
   "users": {
     "title": "Users",
@@ -2053,8 +2094,8 @@
     "next_disarm": "Next: {rule} disarms, {when}.",
     "next_switch": "Next: {rule} switches to {scenario}, {when}.",
     "next_none": "Nothing is scheduled.",
-    "trigger_absence": "{n} people away for {minutes} min",
-    "trigger_presence": "one of {n} people arrives",
+    "trigger_absence": "Everyone away for {minutes} min · people watched: {n}",
+    "trigger_presence": "Somebody arrives · people watched: {n}",
     "trigger_time": "at {at}, {days}",
     "trigger_entity": "{entity} is {state} for {minutes} min",
     "every_day": "every day",

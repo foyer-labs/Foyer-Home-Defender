@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import copy
 from typing import Any
+import uuid
 
 Document = dict[str, Any]
 Version = tuple[int, int]
@@ -480,6 +481,31 @@ def _v7_1_to_v7_2(data: Document) -> Document:
     return out
 
 
+def _v7_2_to_v7_3(data: Document) -> Document:
+    """Phase 5 part 2: the privacy tooling of §10.4, and leaving cleanly.
+
+    Three additions, none of which changes what an installation does. Timed
+    pseudonymisation is off, because it trades away "who disarmed that night"
+    and nobody has asked for that trade; removing the integration keeps the
+    log database, because §16 says to ask rather than guess and keeping is
+    the only answer that destroys nothing.
+
+    Every existing person gains a pseudonym here rather than when they are
+    next saved. It has to exist *before* the first sweep runs, or the first
+    pseudonymised rows would carry nothing and the identifier would not be
+    stable from the beginning — which is the whole of what makes it worth
+    having.
+    """
+    out = copy.deepcopy(data)
+    for user in out.get("users", []):
+        if not user.get("pseudonym"):
+            user["pseudonym"] = f"person-{uuid.uuid4().hex[:12]}"
+    log = out.setdefault("settings", {}).setdefault("log", {})
+    log.setdefault("pseudonymise_after", None)
+    log.setdefault("delete_on_uninstall", False)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -508,6 +534,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (5, 4): (_v5_4_to_v6_1, (6, 1)),
     (6, 1): (_v6_1_to_v7_1, (7, 1)),
     (7, 1): (_v7_1_to_v7_2, (7, 2)),
+    (7, 2): (_v7_2_to_v7_3, (7, 3)),
 }
 
 

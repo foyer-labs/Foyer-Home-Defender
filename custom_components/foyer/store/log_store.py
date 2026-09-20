@@ -42,8 +42,19 @@ from homeassistant.util import dt as dt_util
 
 from ..core.journal import LogRow
 from ..core.models import LogCategory, LogSettings
+from ..core.privacy import (
+    ERASED_COLUMNS,
+    PersonRef,
+    redact_detail,
+    unlink_detail,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class LogUnavailable(Exception):
+    """The database is not open. Raised rather than answered with zero."""
+
 
 DB_FILENAME = "foyer-log.db"
 EVENT_FOYER = "foyer_event"
@@ -53,6 +64,11 @@ EVENT_FOYER = "foyer_event"
 # cross the WebSocket in one message.
 DEFAULT_LIMIT = 200
 MAX_LIMIT = 1000
+
+# How many rows one person's export may carry. The same order as the
+# filtered export of §10.3, because it is the same export: a subject
+# access request that came back cut short says so, as that one does.
+PERSON_EXPORT_ROWS = 10000
 
 # The schema of SPEC §10.1, plus ``incident_id``: §5.6 requires the incident
 # id on every related row, and a row buried in the JSON detail cannot be
@@ -163,6 +179,37 @@ def _stored_to_dict(record: sqlite3.Row) -> dict[str, Any]:
         "outcome": record["outcome"],
         "detail": json.loads(detail) if detail else {},
     }
+
+
+async def async_delete_database(hass: HomeAssistant, path: str | None = None) -> bool:
+    """Delete the log database, with the two files SQLite keeps beside it.
+
+    Called when somebody removes the integration and the installation said to
+    take the log with it (§16, part 2 decision 9). The write-ahead log and the
+    shared-memory file are not optional extras: leaving a ``-wal`` behind is
+    leaving the last rows of the history in the configuration directory, which
+    is precisely what the person asking for this did not want.
+    """
+    target = path or hass.config.path(DB_FILENAME)
+
+    def _delete() -> bool:
+        import os
+
+        ok = True
+        for suffix in ("", "-wal", "-shm"):
+            try:
+                os.unlink(target + suffix)
+            except FileNotFoundError:
+                continue
+            except OSError:
+                # False, not "something went", so the caller can say so. A
+                # -wal left behind holds the last rows of the history, which
+                # is exactly what somebody asking for this did not want.
+                _LOGGER.exception("Foyer could not delete %s", target + suffix)
+                ok = False
+        return ok
+
+    return await hass.async_add_executor_job(_delete)
 
 
 class LogStore:
@@ -405,6 +452,340 @@ class LogStore:
                 removed += cursor.rowcount
             self._connection.commit()
         return removed
+
+    # --- personal data (SPEC 10.4) -------------------------------------------
+
+    # Two different things a row can be, and the difference decides what may
+    # be done to it (found in review, and it is the sharpest edge in this
+    # file).
+    #
+    # A row the person **acted on** carries them in the user columns. Erasing
+    # empties those columns; the sweep replaces them with an identifier.
+    #
+    # A configuration row **about** them carries their id in the JSON detail
+    # and somebody *else* in the user columns — whoever created or edited the
+    # account. Blanking those columns would destroy the audit record of a
+    # third party who asked for nothing, and writing this person's pseudonym
+    # into them would say that they edited their own account, which is not
+    # minimisation but a false attribution. So an "about" row only ever loses
+    # the link and the name inside its detail.
+
+    def _actor_expr(self, ref: PersonRef) -> tuple[str, list[Any]]:
+        """Rows this person acted on, as a bare SQL condition."""
+        clauses: list[str] = []
+        params: list[Any] = []
+        # Every id that has ever stood for this person in a row: the Foyer
+        # account, the Home Assistant account a configuration row records
+        # instead, and the identifier the sweep may already have written in
+        # place of both — without which an erasure after a sweep would find
+        # none of the rows it is being asked to erase (both found in review).
+        accounts = [a for a in (ref.user_id, ref.ha_user_id, ref.pseudonym) if a]
+        if accounts:
+            marks = ", ".join("?" for _ in accounts)
+            clauses.append(f"user_id IN ({marks})")
+            params.extend(accounts)
+        for name in ref.names:
+            # The name alone finds a row written before this person was a
+            # Foyer user, which is the case §10.4 cares about. It is qualified
+            # by the account so that two people who share a display name are
+            # not merged: a row naming *another* account is not this person's,
+            # whatever it is called (found in review).
+            qualifier = "user_id IS NULL"
+            if accounts:
+                marks = ", ".join("?" for _ in accounts)
+                qualifier = f"(user_id IS NULL OR user_id IN ({marks}))"
+            clauses.append(
+                f"(user_name IS NOT NULL AND lower(user_name) = lower(?) "
+                f"AND {qualifier})"
+            )
+            params.append(name)
+            if accounts:
+                params.extend(accounts)
+        if not clauses:
+            return "0", []
+        return " OR ".join(f"({c})" for c in clauses), params
+
+    def _about_expr(self, ref: PersonRef) -> tuple[str, list[Any]]:
+        """Configuration rows about this person's account.
+
+        Matched on the text this module itself wrote, which is why the
+        fragment is spelled the way ``json.dumps`` spells it.
+        """
+        if not ref.item_id:
+            return "0", []
+        return (
+            "(category = 'config' AND instr(detail, ?) > 0)",
+            ['"item_id": "' + ref.item_id + '"'],
+        )
+
+    def _wide_expr(self, ref: PersonRef) -> tuple[str, list[Any]]:
+        """Everything that is about this person, for an export (decision 7).
+
+        A subject access request is about personal data, not about the rows
+        whose ``user_id`` matches, so this also takes the rows naming a tag
+        that is theirs and a contact linked to them — the rows where they are
+        the subject rather than the actor.
+        """
+        actor, params = self._actor_expr(ref)
+        clauses = [actor]
+        about, about_params = self._about_expr(ref)
+        clauses.append(about)
+        params = [*params, *about_params]
+        if ref.device_ids:
+            marks = ", ".join("?" for _ in ref.device_ids)
+            clauses.append(f"(device_id IN ({marks}))")
+            params.extend(ref.device_ids)
+        for contact_id in ref.contact_ids:
+            clauses.append("(instr(detail, ?) > 0)")
+            params.append('"contact_id": "' + contact_id + '"')
+        return " OR ".join(clauses), params
+
+    def _person_expr(self, ref: PersonRef) -> tuple[str, list[Any]]:
+        """What an erasure acts on: what they did, and what is about them."""
+        actor, params = self._actor_expr(ref)
+        about, about_params = self._about_expr(ref)
+        return f"({actor}) OR ({about})", [*params, *about_params]
+
+    async def async_person_count(self, ref: PersonRef) -> dict[str, int]:
+        """How many rows each key finds, before anybody presses the button.
+
+        The panel shows this: whoever is about to erase somebody sees what is
+        about to happen instead of trusting it (part 2 decision 12).
+        """
+        await self.async_flush()
+        return await self.hass.async_add_executor_job(self._person_count, ref)
+
+    def _person_count(self, ref: PersonRef) -> dict[str, int]:
+        empty = {"by_id": 0, "by_name": 0, "about": 0, "total": 0, "wide": 0}
+        with self._lock:
+            connection = self._connection
+            if connection is None:
+                return empty
+
+            def count(expr: str, params: Sequence[Any]) -> int:
+                return int(
+                    connection.execute(
+                        "SELECT COUNT(*) FROM events WHERE " + expr, tuple(params)
+                    ).fetchone()[0]
+                )
+
+            accounts = [a for a in (ref.user_id, ref.ha_user_id, ref.pseudonym) if a]
+            marks = ", ".join("?" for _ in accounts)
+            by_id = count(f"user_id IN ({marks})", accounts) if accounts else 0
+            # Rows carrying the name and no account at all. The three numbers
+            # the panel shows partition the total, and they are counted that
+            # way rather than asserted to be (found in review).
+            by_name = sum(
+                count(
+                    "user_name IS NOT NULL AND lower(user_name) = lower(?) "
+                    "AND user_id IS NULL",
+                    [name],
+                )
+                for name in ref.names
+            )
+            actor, actor_params = self._actor_expr(ref)
+            about, about_params = self._about_expr(ref)
+            # Excluding what the actor clause already counted, so a person who
+            # edited their own account is counted once.
+            about_only = (
+                count(f"({about}) AND NOT ({actor})", [*about_params, *actor_params])
+                if ref.item_id
+                else 0
+            )
+            total, total_params = self._person_expr(ref)
+            wide, wide_params = self._wide_expr(ref)
+            return {
+                "by_id": by_id,
+                "by_name": by_name,
+                "about": about_only,
+                "total": count(total, total_params),
+                "wide": count(wide, wide_params),
+            }
+
+    async def async_person_rows(
+        self, ref: PersonRef, *, limit: int = PERSON_EXPORT_ROWS
+    ) -> dict[str, Any]:
+        """Every row that is about this person, for a subject access request."""
+        await self.async_flush()
+        return await self.hass.async_add_executor_job(
+            self._person_rows, ref, int(limit)
+        )
+
+    def _person_rows(self, ref: PersonRef, limit: int) -> dict[str, Any]:
+        where, params = self._wide_expr(ref)
+        limit = max(1, min(int(limit), PERSON_EXPORT_ROWS))
+        with self._lock:
+            if self._connection is None:
+                return {"rows": [], "total": 0}
+            total = self._connection.execute(
+                "SELECT COUNT(*) FROM events WHERE " + where, tuple(params)
+            ).fetchone()[0]
+            records = self._connection.execute(
+                "SELECT * FROM events WHERE "
+                + where
+                + " ORDER BY ts DESC, id DESC LIMIT ?",
+                (*params, limit),
+            ).fetchall()
+        return {
+            "rows": [_stored_to_dict(record) for record in records],
+            "total": int(total),
+        }
+
+    async def async_erase_person(
+        self, ref: PersonRef, *, pseudonym: str | None = None
+    ) -> int:
+        """Take a person out of the log, leaving every event where it is.
+
+        This is the distinction §10.4 exists for: ``user_name`` is denormalised
+        so that deleting a *user* does not erase the history of what they did,
+        which is right for audit and wrong for erasure. So the two operations
+        are separate, and this is the other one.
+        """
+        await self.async_flush()
+        return await self.hass.async_add_executor_job(
+            self._erase_person, ref, pseudonym
+        )
+
+    def _erase_person(self, ref: PersonRef, pseudonym: str | None) -> int:
+        if ref.empty:
+            return 0
+        actor, actor_params = self._actor_expr(ref)
+        about, about_params = self._about_expr(ref)
+        columns = ", ".join(column + " = ?" for column in ERASED_COLUMNS)
+        values: list[Any] = [None for _ in ERASED_COLUMNS]
+        if pseudonym:
+            values[0] = values[1] = pseudonym
+        with self._lock:
+            if self._connection is None:
+                # Raised, never reported as "nothing to erase": a
+                # configuration save reloads the entry and closes this
+                # connection, and an erasure that answered success while doing
+                # nothing would be recorded as having happened (found in
+                # review).
+                raise LogUnavailable("the event log is closed")
+            # The detail is rewritten row by row, because what has to come out
+            # of it — a name, and the id that links the row back to the
+            # account — is inside a JSON document and no UPDATE can see it.
+            # Counted first: `unlink_detail` below removes the very id the
+            # about clause matches on, so asking afterwards would answer zero
+            # and the erasure would report a number that left those rows out
+            # (found in review).
+            about_only = 0
+            if about != "0":
+                about_only = self._connection.execute(
+                    f"SELECT COUNT(*) FROM events WHERE ({about}) AND NOT ({actor})",
+                    (*about_params, *actor_params),
+                ).fetchone()[0]
+            records = self._connection.execute(
+                f"SELECT id, detail, ({about}) AS is_about FROM events "
+                f"WHERE (({actor}) OR ({about})) AND detail IS NOT NULL",
+                (*about_params, *actor_params, *about_params),
+            ).fetchall()
+            rewritten = []
+            for record in records:
+                try:
+                    detail = json.loads(record["detail"])
+                except ValueError:  # pragma: no cover - written by this module
+                    continue
+                clean = redact_detail(detail, ref.names)
+                if record["is_about"] and ref.user_id:
+                    clean = unlink_detail(clean, ref.user_id)
+                if clean != detail:
+                    rewritten.append((json.dumps(clean, default=str), record["id"]))
+            if rewritten:
+                self._connection.executemany(
+                    "UPDATE events SET detail = ? WHERE id = ?", rewritten
+                )
+            # The user columns, on the rows this person acted on only. An
+            # "about" row's columns name whoever did the editing.
+            changed = 0
+            if actor != "0":
+                changed = self._connection.execute(
+                    "UPDATE events SET " + columns + " WHERE " + actor,
+                    (*values, *actor_params),
+                ).rowcount
+            self._connection.commit()
+            # The old page images go with it. An erasure that leaves the name
+            # readable in the file is weaker than what it says it is, and this
+            # module already treats a leftover -wal as a privacy problem.
+            #
+            # It rewrites the whole database under the write lock, which is
+            # acceptable here and nowhere else: an erasure is a rare,
+            # deliberate, human-initiated operation, and the alarm path never
+            # takes this lock — it hands rows to a queue and returns. What
+            # waits is a log write, which is what this module is allowed to
+            # make wait.
+            self._connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            self._connection.execute("VACUUM")
+        return int(changed) + int(about_only)
+
+    async def async_pseudonymise(
+        self, people: Sequence[PersonRef], before: datetime
+    ) -> int:
+        """The daily sweep: rows older than the cutoff keep an identifier.
+
+        Beside the purge and never on the write path, for the reason this
+        module exists to respect — a log operation must not delay the alarm by
+        a millisecond. It is idempotent by construction: a row already carrying
+        a pseudonym no longer matches the id or the name it was written with.
+        """
+        await self.async_flush()
+        return await self.hass.async_add_executor_job(
+            self._pseudonymise, people, _epoch_ms(before)
+        )
+
+    def _pseudonymise(self, people: Sequence[PersonRef], before: int) -> int:
+        changed = 0
+        with self._lock:
+            if self._connection is None:
+                return 0
+            for ref in people:
+                if not ref.pseudonym or ref.empty:
+                    continue
+                # Rows they acted on, and only those: a configuration row
+                # about their account was written by somebody else, and
+                # stamping this person's identifier on it would say they
+                # edited themselves.
+                actor, params = self._actor_expr(
+                    # Without the pseudonym, or every swept row would match
+                    # again tomorrow and the sweep would never settle.
+                    PersonRef(
+                        user_id=ref.user_id,
+                        names=ref.names,
+                        item_id=ref.item_id,
+                    )
+                )
+                if actor == "0":
+                    continue
+                # The name is in the detail as well as in the columns, and a
+                # pseudonymisation that left it there would not have replaced
+                # the name at all (found in review).
+                records = self._connection.execute(
+                    f"SELECT id, detail FROM events WHERE ({actor}) AND ts < ? "
+                    "AND detail IS NOT NULL",
+                    (*params, before),
+                ).fetchall()
+                rewritten = []
+                for record in records:
+                    try:
+                        detail = json.loads(record["detail"])
+                    except ValueError:  # pragma: no cover
+                        continue
+                    clean = redact_detail(detail, ref.names)
+                    if clean != detail:
+                        rewritten.append((json.dumps(clean, default=str), record["id"]))
+                if rewritten:
+                    self._connection.executemany(
+                        "UPDATE events SET detail = ? WHERE id = ?", rewritten
+                    )
+                cursor = self._connection.execute(
+                    f"UPDATE events SET user_id = ?, user_name = ? WHERE ({actor}) "
+                    "AND ts < ?",
+                    (ref.pseudonym, ref.pseudonym, *params, before),
+                )
+                changed += cursor.rowcount
+            self._connection.commit()
+        return changed
 
     async def async_clear(self) -> int:
         """Empty the log. An edit_config operation, and itself logged (§10.3)."""

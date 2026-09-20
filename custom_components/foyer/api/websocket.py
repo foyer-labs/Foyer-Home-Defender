@@ -101,6 +101,14 @@ from ..core.models import (
     ZoneType,
 )
 from ..core.presets import UNAVAILABLE_TYPES, preset
+from ..core.privacy import (
+    MAX_PSEUDONYMISE_DAYS,
+    MIN_PSEUDONYMISE_DAYS,
+    NAMED_CATEGORIES,
+    SHORT_RETENTION_DAYS,
+    PersonRef,
+    person_ref,
+)
 from ..core.proposals import propose_zone
 from ..core.simulate import (
     DEFAULT_HORIZON,
@@ -135,7 +143,7 @@ from ..store.editing import (
     update_settings,
     upsert,
 )
-from ..store.log_store import export_csv, export_json
+from ..store.log_store import LogUnavailable, export_csv, export_json
 from ..store.schema import (
     STORAGE_MINOR_VERSION,
     STORAGE_VERSION,
@@ -296,6 +304,19 @@ async def _gate(
     return None
 
 
+def _me(
+    system: FoyerSystem, connection: websocket_api.ActiveConnection
+) -> tuple[str, str]:
+    """Who to record for something done from the panel (§10.1).
+
+    The Foyer person linked to this Home Assistant account when there is one,
+    so every row in the log names people from one namespace and a question
+    about a person can reach all of them.
+    """
+    me = system.config.user_of_ha(connection.user.id)
+    return (me.id, me.name) if me else (connection.user.id, connection.user.name)
+
+
 def _public_config(config) -> dict[str, Any]:
     """The configuration as the panel may see it: no hashes, ever (§8.1).
 
@@ -336,6 +357,9 @@ def async_register(hass: HomeAssistant) -> None:
         ws_log_query,
         ws_log_export,
         ws_log_clear,
+        ws_privacy_preview,
+        ws_privacy_export,
+        ws_privacy_erase,
         ws_config_export,
         ws_config_import,
         ws_diagnostics,
@@ -751,6 +775,13 @@ def _meta() -> dict[str, Any]:
         "log_severities": [s.value for s in LogSeverity],
         "outcomes": [o.value for o in Outcome],
         "retention_bounds": [MIN_RETENTION_DAYS, MAX_RETENTION_DAYS],
+        # Timed pseudonymisation and the short preset §10.4 asks for, both
+        # here rather than written into the page: the panel must not offer a
+        # number the backend would refuse, or a preset that touches a
+        # category this file does not agree names anybody.
+        "pseudonymise_bounds": [MIN_PSEUDONYMISE_DAYS, MAX_PSEUDONYMISE_DAYS],
+        "short_retention": SHORT_RETENTION_DAYS,
+        "named_categories": list(NAMED_CATEGORIES),
         # What page 7 needs to build the permission list and the policy table
         # without knowing §8.2 and §8.3 by heart.
         "permissions": [p.value for p in Permission],
@@ -815,6 +846,12 @@ async def _apply(
     kind: str = "config",
 ) -> None:
     """Store a validated edit and reload, or return its problems untouched."""
+    # The Foyer person behind this Home Assistant account, when one is
+    # linked. Written in preference to the Home Assistant id because every
+    # other row in the log carries the Foyer one, and a `config` row in a
+    # different namespace is a row no question about a person can reach —
+    # including the erasure of §10.4 (found in review).
+    me = system.config.user_of_ha(connection.user.id)
     answer = await async_write(
         hass,
         system,
@@ -822,8 +859,8 @@ async def _apply(
         operation=operation,
         kind=kind,
         channel=CHANNEL_HA_UI,
-        user_id=connection.user.id,
-        user_name=connection.user.name,
+        user_id=me.id if me else connection.user.id,
+        user_name=me.name if me else connection.user.name,
     )
     connection.send_result(msg_id, answer)
 
@@ -945,8 +982,45 @@ async def ws_settings_save(
     ) is None:
         return
     result = update_settings(system.config, system.state, msg["settings"])
+    _record_pseudonymisation(system, connection, result)
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="settings"
+    )
+
+
+@callback
+def _record_pseudonymisation(
+    system: FoyerSystem,
+    connection: websocket_api.ActiveConnection,
+    result: EditResult,
+) -> None:
+    """A row of its own when timed pseudonymisation is switched on or off.
+
+    The ordinary settings row says that the log block changed, which is not
+    enough here (part 2 decision 5). This is the one configuration change that
+    destroys the past, and switching it *off* is as much worth recording as
+    switching it on — "who turned the protection off, and when" is a question
+    somebody will ask, and its absence from the record would be the most
+    convenient absence in the file.
+    """
+    if result.config is None:
+        return
+    was = system.config.settings.log.pseudonymise_after
+    now = result.config.settings.log.pseudonymise_after
+    if was == now:
+        return
+    system.async_record(
+        (
+            config_row(
+                dt_util.utcnow(),
+                operation="pseudonymisation",
+                kind="log",
+                user_id=_me(system, connection)[0],
+                user_name=_me(system, connection)[1],
+                channel=CHANNEL_HA_UI,
+                changes={"from": was, "to": now},
+            ),
+        )
     )
 
 
@@ -1540,10 +1614,223 @@ async def ws_log_clear(
                 dt_util.utcnow(),
                 operation="log_cleared",
                 kind="log",
-                user_id=connection.user.id,
-                user_name=connection.user.name,
+                user_id=_me(system, connection)[0],
+                user_name=_me(system, connection)[1],
                 channel=CHANNEL_HA_UI,
                 changes={"removed": removed},
+            ),
+        )
+    )
+    connection.send_result(msg["id"], {"success": True, "removed": removed})
+
+
+# --- personal data in the log (SPEC §10.4) -----------------------------------
+
+# The three commands of §10.4, and they are not equally weighted (part 2
+# decision 3). Export is a read of the log and asks for `view_log`; erasing a
+# person's history is an operation on people and asks for `manage_users` and a
+# code; switching timed pseudonymisation on is a change to the installation and
+# goes through the settings, with `edit_config` and a code, like every other.
+#
+# What follows from that, and what `docs/privacy.md` says in as many words: a
+# subject access request made by somebody who is not an administrator of this
+# installation goes through whoever is. In a household that is the person who
+# set it up; in a B&B or a small office it is an arrangement somebody has to
+# make, and the documentation is where that is said rather than left to be
+# discovered.
+
+
+def _person(
+    system: FoyerSystem,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> PersonRef | None:
+    ref = person_ref(system.config, msg["user_id"])
+    if ref is None:
+        connection.send_error(msg["id"], "unknown_user", "no such person")
+        return None
+    return ref
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/privacy/preview",
+        vol.Required("user_id"): str,
+    }
+)
+@websocket_api.async_response
+async def ws_privacy_preview(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """How many rows an erasure would touch, and which key found them.
+
+    Shown before anybody presses the button (part 2 decision 12): a row
+    written before this person was a Foyer user, or under a name they have
+    since changed, is found by the name and not by the id, and whoever is
+    about to erase somebody should see that rather than trust it.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.MANAGE_USERS,
+            need_code=False,
+        )
+    ) is None:
+        return
+    if system.log is None:
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
+    if (ref := _person(system, connection, msg)) is None:
+        return
+    counts = await system.log.async_person_count(ref)
+    connection.send_result(msg["id"], counts)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/privacy/export",
+        vol.Required("user_id"): str,
+        vol.Required("format"): vol.In(["csv", "json"]),
+    }
+)
+@websocket_api.async_response
+async def ws_privacy_export(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """One person's rows, in a readable format, for a subject access request.
+
+    A second caller of the export of §10.3, not a second export: the same two
+    formats, the same columns, the same "this came back cut short" answer. What
+    differs is the selection, which is wide on purpose (part 2 decision 7) —
+    the rows where this person is the subject rather than the actor are their
+    personal data too.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.VIEW_LOG,
+            need_code=False,
+        )
+    ) is None:
+        return
+    if system.log is None:
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
+    if (ref := _person(system, connection, msg)) is None:
+        return
+    result = await system.log.async_person_rows(ref)
+    rows = result["rows"]
+    content = export_csv(rows) if msg["format"] == "csv" else export_json(rows)
+    stamp = dt_util.now().strftime("%Y%m%d-%H%M")
+    connection.send_result(
+        msg["id"],
+        {
+            # Named after the person, because the file is handed to them and a
+            # folder of "foyer-log-20260920" files is a file nobody can give
+            # to anybody.
+            "filename": f"foyer-{_slug(system.config.user(ref.user_id))}-{stamp}"
+            f".{msg['format']}",
+            "content": content,
+            "rows": len(rows),
+            "total": result["total"],
+            "truncated": result["total"] > len(rows),
+        },
+    )
+
+
+def _slug(user: User | None) -> str:
+    name = (user.name if user else "") or "person"
+    kept = "".join(c if c.isalnum() else "-" for c in name.lower()).strip("-")
+    return kept or "person"
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/privacy/erase",
+        vol.Required("user_id"): str,
+        # Erasing is erasing unless whoever performs it asks for the other
+        # thing (part 2 decision 1): a stable identifier keeps "the same
+        # person on both nights" and is therefore not forgetting them.
+        vol.Optional("pseudonymise", default=False): bool,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_privacy_erase(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Take a person out of the log, leaving every event where it is.
+
+    The operation §10.4 exists for, and the one it insists is *not* deleting a
+    user: ``user_name`` is denormalised precisely so that deleting a user does
+    not erase the history of what they did, which is right for audit and wrong
+    for erasure.
+
+    It is itself recorded, and the row does not name the person (part 2
+    decision 2). Deleting the whole log is an ``edit_config`` operation and is
+    logged (§10.3), and the same rule here would produce a row that names the
+    person who was just erased — an erasure that leaves the name it removed
+    has not happened.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        actor := await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.MANAGE_USERS,
+        )
+    ) is None:
+        return
+    if system.log is None:
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
+    if (ref := _person(system, connection, msg)) is None:
+        return
+    pseudonym = ref.pseudonym if msg["pseudonymise"] else None
+    try:
+        removed = await system.log.async_erase_person(ref, pseudonym=pseudonym)
+    except LogUnavailable:
+        # A configuration save reloads the entry and closes the database. Say
+        # so, rather than answer success and record an erasure that did not
+        # happen.
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
+    system.async_record(
+        (
+            config_row(
+                dt_util.utcnow(),
+                operation="history_erased",
+                kind="log",
+                # No item_id and no name: both would point straight back at
+                # the person this row exists because of.
+                user_id=actor.user_id,
+                user_name=(
+                    named.name if (named := system.config.user(actor.user_id)) else None
+                ),
+                channel=CHANNEL_HA_UI,
+                changes={"rows": removed, "pseudonymised": bool(pseudonym)},
             ),
         )
     )
