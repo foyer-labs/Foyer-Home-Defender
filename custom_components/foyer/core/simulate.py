@@ -329,6 +329,10 @@ def _unfinished(state: RuntimeState, pending: Sequence[object]) -> bool:
         or any(rt.timer is not None for rt in state.areas.values())
         or bool(state.pending_runs)
         or any(r.until is not None for r in state.running)
+        # A rule announced something and the run ended before it happened
+        # (§9.4). "And then it was over" would be the wrong end to a trace
+        # whose last line is the house saying it is about to arm itself.
+        or bool(state.pending_rules)
     )
 
 

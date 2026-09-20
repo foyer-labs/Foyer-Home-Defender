@@ -25,7 +25,7 @@ from custom_components.foyer.core.models import (
     SuspensionKind,
 )
 
-from .helpers import LUCA, NOW, PARTNER, World, make_house, rule
+from .helpers import LUCA, NOW, PARTNER, World, closed_entities, make_house, rule
 
 
 def house(*rules, **settings_kwargs):
@@ -651,3 +651,80 @@ def test_a_disarm_rule_naming_only_the_perimeter_is_refused_at_save_time():
         allow_auto_disarm=True,
     )
     assert "rule_only_perimeter" in {p.code for p in validate(config)}
+
+
+# --- the simulator reaches the rules (§11.2) ---------------------------------------
+
+
+def test_the_simulator_rehearses_a_rule_at_a_hypothetical_hour():
+    """§11.2 lets the operator pick a date and time. A rule that fires at
+    23:00 on weekdays is exactly what somebody wants to rehearse at 11:00 on
+    a Monday — and what the trace shows is read off the Decision, never
+    predicted beside it (INV-1)."""
+    from custom_components.foyer.core.simulate import SimulationRequest, run
+
+    config = house(
+        rule(
+            "at_eleven",
+            kind=RuleTriggerKind.TIME,
+            at="23:00",
+            entity_ids=(),
+            grace=0,
+        )
+    )
+    request = SimulationRequest(
+        start=datetime(2026, 9, 14, 22, 55, tzinfo=UTC),
+        scenario_id=None,  # a disarmed house: the rule is what arms it
+        horizon=3600,
+    )
+    simulation = run(config, request, closed_entities(config, request.start))
+    moments = [o.moment for step in simulation.steps for o in step.occurrences]
+    assert Moment.ARMED in moments or simulation.final.area("ground").state in (
+        AreaState.ARMING,
+        AreaState.ARMED,
+    )
+
+
+def test_the_trace_shows_the_guard_that_blocked_a_rule():
+    from custom_components.foyer.core.simulate import SimulationRequest, run
+
+    config = house(
+        rule(
+            "at_eleven",
+            kind=RuleTriggerKind.TIME,
+            at="23:00",
+            entity_ids=(),
+            guards=RuleGuards(only_when_ready=True),
+            grace=0,
+        )
+    )
+    request = SimulationRequest(
+        start=datetime(2026, 9, 14, 22, 55, tzinfo=UTC),
+        scenario_id=None,
+        entities={"binary_sensor.kitchen_window": "on"},
+        horizon=3600,
+    )
+    simulation = run(config, request, closed_entities(config, request.start))
+    blocked = [
+        o
+        for step in simulation.steps
+        for o in step.occurrences
+        if o.moment is Moment.AUTO_BLOCKED
+    ]
+    assert blocked and blocked[0].detail["reason"] == RuleBlock.NOT_READY.value
+    assert simulation.final.area("ground").state is AreaState.DISARMED
+
+
+def test_a_countdown_left_running_makes_the_trace_say_it_was_cut_short():
+    from custom_components.foyer.core.simulate import SimulationRequest, run
+
+    config = house(rule(minutes=1))
+    request = SimulationRequest(
+        start=NOW,
+        scenario_id=None,
+        entities={LUCA: "not_home", PARTNER: "not_home"},
+        horizon=120,
+    )
+    simulation = run(config, request, closed_entities(config, request.start))
+    assert simulation.final.pending_rules
+    assert simulation.truncated
