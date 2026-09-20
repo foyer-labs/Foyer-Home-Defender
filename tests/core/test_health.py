@@ -19,6 +19,7 @@ from custom_components.foyer.core.models import (
     ActionKind,
     AreaState,
     ChannelFault,
+    CodeResult,
     Contact,
     ContactChannel,
     ContactChannelKind,
@@ -30,6 +31,7 @@ from custom_components.foyer.core.models import (
     Radio,
     ResponseProfile,
     Settings,
+    Startup,
     WatchdogSettings,
     channel_key,
 )
@@ -338,8 +340,12 @@ def test_a_coordinator_that_goes_during_a_suspicion_withdraws_it():
     assert Moment.RADIO_COORDINATOR_DOWN in moments(world)
 
 
-def test_zones_spread_across_two_radios_are_not_one_event():
-    """A Zigbee outage says nothing about Z-Wave (§12.5)."""
+def test_a_zigbee_outage_says_nothing_about_z_wave():
+    """Counted per radio integration (§12.5), and only per radio.
+
+    Every zone of one radio going quiet is that radio's event; the radio
+    beside it, whose own zones are answering, is not in it.
+    """
     config = house_with_health(
         radios=(
             Radio("zigbee", "Zigbee", "entry1", COORDINATOR),
@@ -351,7 +357,24 @@ def test_zones_spread_across_two_radios_are_not_one_event():
     world.entities["sensor.zwave_controller"] = EntityState("ok", last_reported=NOW)
     world.on_radio("zigbee", *(config.zone(z).entity_id for z in RADIO_ZONES[:2]))
     world.on_radio("zwave", *(config.zone(z).entity_id for z in RADIO_ZONES[2:]))
-    silence(world, RADIO_ZONES)
+    silence(world, RADIO_ZONES[:2])
+    world.advance(61)
+
+    row = next(
+        o
+        for o in world.last.occurrences
+        if o.moment is Moment.RF_INTERFERENCE_SUSPECTED
+    )
+    assert row.detail["radio"] == "Zigbee"
+    assert world.state.health.radio("zigbee").confirmed
+    assert world.state.health.radio("zwave").confirmed is False
+
+
+def test_one_zone_of_several_going_quiet_is_a_flat_battery():
+    """§12.5 opens with this sentence, and the threshold is what keeps it
+    true: four zones on a radio raise at two, not at one."""
+    world = zigbee_world()
+    silence(world, RADIO_ZONES[:1])
     world.advance(61)
     assert Moment.RF_INTERFERENCE_SUSPECTED not in moments(world)
 
@@ -655,3 +678,195 @@ def test_an_ordinary_alarm_still_tries_a_channel_believed_broken():
 
     intent = next(i for i in world.last.actions if i.kind == "notify")
     assert [r["channel_id"] for r in intent.params["recipients"]] == ["push"]
+
+
+# --- what the review pass found (the regressions, one per finding) ----------------
+
+
+def test_a_restart_of_an_armed_house_does_not_raise_a_false_alarm():
+    """The worst thing this feature could do, and it did it.
+
+    At a restart, battery-powered end devices are unavailable until they
+    have been interviewed while the mains-powered coordinator answers at
+    once. That is the §12.5 burst signature exactly, produced by nothing
+    but a reboot — into an armed house.
+    """
+    world = zigbee_world()
+    world.arm("away")
+    world.advance(31)
+    world.now += timedelta(seconds=90)
+    for zone_id in RADIO_ZONES:
+        world.entities[world.config.zone(zone_id).entity_id] = EntityState(
+            "unavailable", last_reported=world.now
+        )
+    world.send(Startup(down_since=world.now - timedelta(seconds=80), cause="ha_start"))
+    world.advance(61)
+
+    assert Moment.RF_INTERFERENCE_SUSPECTED not in moments(world)
+    assert world.state.incident is None
+    assert world.state.health.unknown_zones == frozenset(RADIO_ZONES)
+    # And they are all faults the whole time, which is what is not silent.
+    assert world.state.faults == frozenset(RADIO_ZONES)
+
+
+def test_a_zone_that_comes_back_after_a_restart_is_countable_again():
+    world = zigbee_world()
+    for zone_id in RADIO_ZONES:
+        world.entities[world.config.zone(zone_id).entity_id] = EntityState(
+            "unavailable", last_reported=world.now
+        )
+    world.send(Startup(down_since=None, cause="ha_start"))
+    assert world.state.health.unknown_zones == frozenset(RADIO_ZONES)
+
+    for zone_id in RADIO_ZONES:
+        world.set(world.config.zone(zone_id).entity_id, "off")
+    assert world.state.health.unknown_zones == frozenset()
+
+    silence(world, RADIO_ZONES)
+    world.advance(61)
+    assert Moment.RF_INTERFERENCE_SUSPECTED in moments(world)
+
+
+def test_a_walk_test_never_sounds_the_siren_for_a_radio_event():
+    """A walk test arms every area itself (§11.3), so the armed house here
+    is not the household's arming — and §11.3 says all actions are
+    inhibited and means it."""
+    world = zigbee_world()
+    world.walk_test(True, code=CodeResult.VALID, user_id="luca")
+    silence(world, RADIO_ZONES)
+    world.advance(61)
+
+    assert Moment.RF_INTERFERENCE_SUSPECTED in moments(world)
+    assert world.state.incident is None
+    assert all(rt.state is not AreaState.TRIGGERED for rt in world.state.areas.values())
+
+
+def test_a_dead_coordinator_is_not_announced_through_its_own_radio():
+    siren = "siren.zigbee_indoor"
+    other = "siren.wired_outdoor"
+    config = replace(
+        house_with_health(radios=(Radio("zigbee", "Zigbee", "entry1", COORDINATOR),)),
+        profiles=(
+            ResponseProfile(
+                "default",
+                "Default",
+                actions=(
+                    ProfileAction(
+                        "sirens",
+                        ActionKind.SIREN,
+                        frozenset({Moment.RADIO_COORDINATOR_DOWN}),
+                        params={"entity_ids": [siren, other]},
+                    ),
+                ),
+            ),
+        ),
+        settings=Settings(default_profile_id="default"),
+    )
+    world = World(config)
+    world.on_radio("zigbee", *(config.zone(z).entity_id for z in RADIO_ZONES), siren)
+    world.entities[COORDINATOR] = EntityState("ok", last_reported=NOW)
+    world.advance(1)
+    world.set(COORDINATOR, "unavailable")
+
+    intent = next(i for i in world.last.actions if i.kind == "siren")
+    assert intent.params["entity_ids"] == [other]
+
+
+def test_a_call_service_action_is_filtered_too():
+    """§6.2 calls call_service the escape hatch for everything Foyer does
+    not model natively, which is what somebody reaches for exactly when the
+    native siren action does not fit."""
+    config = replace(
+        house_with_health(radios=(Radio("zigbee", "Zigbee", "entry1", COORDINATOR),)),
+        profiles=(
+            ResponseProfile(
+                "default",
+                "Default",
+                actions=(
+                    ProfileAction(
+                        "shout",
+                        ActionKind.CALL_SERVICE,
+                        frozenset({Moment.RF_INTERFERENCE_SUSPECTED}),
+                        params={
+                            "domain": "siren",
+                            "service": "turn_on",
+                            "target": {
+                                "entity_id": ["siren.zigbee_indoor", "siren.wired"]
+                            },
+                        },
+                    ),
+                ),
+            ),
+        ),
+        settings=Settings(default_profile_id="default"),
+    )
+    world = World(config)
+    world.on_radio(
+        "zigbee",
+        *(config.zone(z).entity_id for z in RADIO_ZONES),
+        "siren.zigbee_indoor",
+    )
+    world.entities[COORDINATOR] = EntityState("ok", last_reported=NOW)
+    silence(world, RADIO_ZONES)
+    world.advance(61)
+
+    intent = next(i for i in world.last.actions if i.kind == "call_service")
+    assert intent.params["target"]["entity_id"] == ["siren.wired"]
+    assert intent.params["skipped_entity_ids"] == ["siren.zigbee_indoor"]
+
+
+def test_a_flapping_coordinator_sounds_the_alarm_once_not_once_per_flap():
+    """A coordinator on a failing switch is the fault class §12.5 insists
+    must not be reported as interference at all."""
+    world = zigbee_world()
+    world.arm("away")
+    world.advance(31)
+    silence(world, RADIO_ZONES)
+    world.advance(61)
+    assert Moment.RF_INTERFERENCE_SUSPECTED in moments(world)
+    world.disarm(code=CodeResult.VALID, user_id="luca")
+
+    for _ in range(3):
+        world.set(COORDINATOR, "unavailable")
+        world.advance(5)
+        world.set(COORDINATOR, "ok")
+        world.advance(120)
+        assert Moment.RF_INTERFERENCE_SUSPECTED not in moments(world)
+
+
+def test_deleting_a_radio_says_what_it_was_reporting_is_over():
+    world = zigbee_world()
+    silence(world, RADIO_ZONES)
+    world.advance(61)
+    assert world.state.health.radio("zigbee").confirmed
+
+    world.config = replace(world.config, health=HealthSettings())
+    world.advance(1)
+    assert Moment.RF_INTERFERENCE_CLEARED in moments(world)
+    assert world.state.health.radios == {}
+
+
+def test_clearing_the_mains_picker_does_not_claim_the_power_came_back():
+    world = World(house_with_health(mains_entity_id=MAINS))
+    world.set(MAINS, "on")
+    assert Moment.SYSTEM_POWER_LOST in moments(world)
+
+    world.config = replace(
+        world.config, health=replace(world.config.health, mains_entity_id=None)
+    )
+    world.advance(1)
+    assert Moment.SYSTEM_POWER_RESTORED not in moments(world)
+    assert world.state.health.mains_lost_since is None
+
+
+def test_the_ups_dying_with_the_power_does_not_withdraw_the_power_cut():
+    """The realistic case: the NUT server and the router die with the mains,
+    which is the scenario §12.3 closes on."""
+    world = World(house_with_health(mains_entity_id=MAINS))
+    world.set(MAINS, "on")
+    world.set(MAINS, "unavailable")
+
+    assert Moment.SYSTEM_POWER_RESTORED not in moments(world)
+    causes = health.causes(world.state.health, world.config, world.snapshot())
+    assert HealthCause.MAINS_LOST in causes
+    assert HealthCause.MAINS_UNKNOWN in causes

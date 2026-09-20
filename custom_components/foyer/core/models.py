@@ -1210,8 +1210,12 @@ class HealthSettings:
         the sentence §12.5 opens with.
         """
         configured = radio.n_zones if radio.n_zones is not None else self.rf_zones
-        fraction = int(zones_on_radio * RF_ZONE_FRACTION)
-        return max(MIN_RF_ZONES, min(configured, fraction) if fraction else configured)
+        # The floor applies to the fraction, not to the answer: without it a
+        # radio with exactly two zones falls back to the configured four and
+        # can never raise anything, which is the one size where two zones
+        # dying together is the whole radio.
+        fraction = max(MIN_RF_ZONES, int(zones_on_radio * RF_ZONE_FRACTION))
+        return min(configured, fraction)
 
     def rf_window_of(self, radio: Radio) -> int:
         return radio.window if radio.window is not None else self.rf_window
@@ -2163,6 +2167,17 @@ class SystemHealth:
     watchdog: WatchdogHealth = field(default_factory=WatchdogHealth)
     radios: Mapping[str, RadioHealth] = field(default_factory=dict)
     quiet_since: Mapping[str, datetime] = field(default_factory=dict)
+    # Zones that are unreadable and whose silence began before Foyer was
+    # watching: at a restart, or on a radio whose coordinator was gone. They
+    # are NOT counted towards a burst, because "how long has this been
+    # quiet" has no answer for them — and a battery device that has not been
+    # interviewed yet looks exactly like a jammed one. A zone leaves this
+    # set the moment it is readable again, and is countable from then on.
+    #
+    # It is the same rule §4.7 already applies to every zone's first reading
+    # and decision 56 applies to the technical channel: what Foyer did not
+    # see happen, it does not claim to have seen.
+    unknown_zones: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "channels", _frozen(self.channels))
@@ -2177,12 +2192,18 @@ class SystemHealth:
 
     @property
     def impaired_radios(self) -> frozenset[str]:
-        """Radios whose interference is confirmed right now (§12.5).
+        """Radios Foyer must not act through right now (§12.5).
 
-        What "do not notify over the affected radio" reads: an action whose
-        target sits on one of these is not run, and the notification says so.
+        Confirmed interference, and a coordinator that is itself gone: the
+        second is the *more* certain blackout of the two, and announcing a
+        Zigbee outage through a Zigbee siren is not a notification whichever
+        of the two caused it.
         """
-        return frozenset(r for r, h in self.radios.items() if h.confirmed)
+        return frozenset(
+            r
+            for r, h in self.radios.items()
+            if h.confirmed or h.coordinator_down_since is not None
+        )
 
 
 def channel_key(contact_id: str, channel_id: str) -> str:

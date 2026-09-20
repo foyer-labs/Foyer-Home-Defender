@@ -1005,6 +1005,10 @@ def _health_from(
                 coordinator_announced=bool(r.get("coordinator_announced", False)),
             )
             for radio_id, r in (data.get("radios") or {}).items()
+            # Disabled radios keep their health here so the engine can end
+            # what they were reporting with a row on the next call, but a
+            # radio the configuration has dropped entirely is handled the
+            # same way — the engine, not this function, writes that ending.
             if radio_id in radio_ids
         },
         quiet_since={
@@ -1012,6 +1016,9 @@ def _health_from(
             for zone_id, at in (data.get("quiet_since") or {}).items()
             if zone_id in zone_ids
         },
+        unknown_zones=frozenset(
+            z for z in (data.get("unknown_zones") or ()) if z in zone_ids
+        ),
     )
 
 
@@ -1201,6 +1208,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 zone_id: at.isoformat()
                 for zone_id, at in state.health.quiet_since.items()
             },
+            "unknown_zones": sorted(state.health.unknown_zones),
         },
         "lockouts": {
             key: {

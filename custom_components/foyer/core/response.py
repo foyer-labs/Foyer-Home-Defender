@@ -545,20 +545,8 @@ def _params(
         recipients, quiet = reachable(ctx, action, moment)
         params["recipients"] = recipients
         params["quiet"] = quiet
-    if ctx.impaired and (targets := _entity_ids(params)):
-        kept = tuple(
-            entity_id
-            for entity_id in targets
-            if ctx.snapshot.radio_of(entity_id) not in ctx.impaired
-        )
-        if len(kept) != len(targets):
-            dropped = tuple(e for e in targets if e not in kept)
-            if "entity_ids" in params:
-                params["entity_ids"] = list(kept)
-            else:
-                params["entity_id"] = list(kept)
-            params["skipped_entity_ids"] = list(dropped)
-            params["_all_targets_impaired"] = not kept
+    if ctx.impaired:
+        _drop_impaired(params, ctx)
     if action.kind is ActionKind.NOTIFY and params.get("camera_entity_id"):
         # A notification that has to write the picture to a file writes it
         # where every other camera file goes, and the choice is made here so
@@ -567,11 +555,84 @@ def _params(
     return params
 
 
-def _entity_ids(params: Mapping[str, Any]) -> tuple[str, ...]:
-    value = params.get("entity_ids") or params.get("entity_id") or ()
+# Every key an action can put an entity in, because "do not act through
+# the affected radio" (§12.5) is the rule that defeats the whole feature if
+# it is missed — and it is missed by reading only the obvious one. A siren
+# names ``entity_ids``, a tts action names its media players, and
+# ``call_service`` — §6.2's escape hatch, which is exactly what somebody
+# reaches for when the native action does not fit — puts its targets inside
+# ``target`` or ``data``.
+_TARGET_KEYS = ("entity_ids", "entity_id", "media_player_entity_ids")
+_NESTED_TARGETS = ("target", "data")
+
+
+def _as_list(value: Any) -> tuple[str, ...]:
     if isinstance(value, str):
         return (value,)
-    return tuple(str(v) for v in value)
+    if isinstance(value, list | tuple):
+        return tuple(str(v) for v in value)
+    return ()
+
+
+def _entity_ids(params: Mapping[str, Any]) -> tuple[str, ...]:
+    """Every entity this action would act on, wherever it names them."""
+    found: list[str] = []
+    for key in _TARGET_KEYS:
+        found.extend(_as_list(params.get(key)))
+    for key in _NESTED_TARGETS:
+        nested = params.get(key)
+        if isinstance(nested, Mapping):
+            found.extend(_as_list(nested.get("entity_id")))
+            found.extend(_as_list(nested.get("entity_ids")))
+    return tuple(dict.fromkeys(found))
+
+
+def _drop_impaired(params: dict[str, Any], ctx: PlanContext) -> None:
+    """Remove every target that sits on a radio Foyer must not act through.
+
+    In place, and across all the shapes above. What was dropped travels on
+    the intent so the message can say the siren did not sound, rather than
+    leaving somebody to find out afterwards.
+    """
+
+    def keep(value: Any) -> tuple[Any, tuple[str, ...]]:
+        ids = _as_list(value)
+        kept = [e for e in ids if ctx.snapshot.radio_of(e) not in ctx.impaired]
+        dropped = tuple(e for e in ids if e not in kept)
+        if not dropped:
+            return value, ()
+        return (kept[0] if kept else "") if isinstance(value, str) else kept, dropped
+
+    dropped: list[str] = []
+    for key in _TARGET_KEYS:
+        if key in params:
+            params[key], gone = keep(params[key])
+            dropped.extend(gone)
+    for key in _NESTED_TARGETS:
+        nested = params.get(key)
+        if not isinstance(nested, Mapping):
+            continue
+        updated = dict(nested)
+        for inner in ("entity_id", "entity_ids"):
+            if inner in updated:
+                updated[inner], gone = keep(updated[inner])
+                dropped.extend(gone)
+        if dropped:
+            params[key] = updated
+    if dropped:
+        params["skipped_entity_ids"] = list(dict.fromkeys(dropped))
+
+
+def _emptied(action: ProfileAction, params: Mapping[str, Any]) -> bool:
+    """The impaired-radio filter left this action with nothing to act on.
+
+    Asked of the result rather than flagged during the filtering, so every
+    caller of ``_params`` gets the same answer — an escalation step whose
+    only siren is on the jammed radio must be skipped exactly as an
+    immediate one is, and a marker riding in the params is a marker one
+    call site forgets to read.
+    """
+    return bool(_entity_ids(action.params)) and not _entity_ids(params)
 
 
 def _on_impaired_radio(
@@ -662,11 +723,12 @@ def run_sequence(
         if why is not None and why != SKIP_WALK_TEST:
             continue
         params = _params(action, values, ctx, area_id, moment)
-        if params.pop("_all_targets_impaired", False):
-            # Every target of this action is on the affected radio, so there
-            # is nothing left to run. Skipped rather than run empty: an
-            # action with no targets is a service call that either errors or
-            # does nothing, and neither is an honest record of what happened.
+        if _emptied(action, params):
+            # Every target of this action was on the affected radio, so
+            # there is nothing left to run. Skipped rather than run empty:
+            # an action with no targets is a service call that either errors
+            # or does nothing, and neither is an honest record of what
+            # happened.
             continue
         intent = ActionIntent(
             action_id=action.id,

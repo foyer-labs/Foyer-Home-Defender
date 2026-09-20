@@ -55,7 +55,7 @@ def mains_state(config: FoyerConfig, snapshot: SystemSnapshot) -> bool | None:
     """
     entity_id = config.health.mains_entity_id
     if not entity_id:
-        return False
+        return False  # nothing configured: not a failure, and not unreadable
     entity = snapshot.entity(entity_id)
     if is_unreadable(entity):
         return None
@@ -267,9 +267,14 @@ def causes(
     if snapshot.state.faults:
         found.append(HealthCause.ZONE_FAULT)
     mains = mains_state(config, snapshot)
-    if mains is True:
+    # A failure already established stands even when the entity stops
+    # answering — which is the realistic case, because the NUT server and
+    # the router die with the mains (§12.3). Withdrawing a fault because
+    # the thing reporting it went with the power is the "quiet night" §12.1
+    # says this must never be confused with.
+    if mains is True or health.mains_lost_since is not None:
         found.append(HealthCause.MAINS_LOST)
-    elif mains is None:
+    if mains is None:
         found.append(HealthCause.MAINS_UNKNOWN)
     if broken_channels(health, config):
         found.append(HealthCause.CHANNEL_DOWN)

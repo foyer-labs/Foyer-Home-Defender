@@ -652,6 +652,15 @@ class _Run:
             for zone_id, at in health.quiet_since.items()
             if zone_id in zone_ids
         }
+        self.unknown_zones = set(health.unknown_zones & zone_ids)
+        # Radios the configuration no longer has, kept for one more call so
+        # reconcile_radios can end what they were reporting with a row. A
+        # suspicion that simply disappeared from the log would be the one row
+        # somebody looks for afterwards, and deleting a radio must not be a
+        # quieter way of doing what disabling one announces.
+        self.gone_radios = {
+            key: value for key, value in health.radios.items() if key not in radio_ids
+        }
 
     # --- world ----------------------------------------------------------------
 
@@ -1647,6 +1656,13 @@ class _Run:
 
     def reconcile_mains(self) -> None:
         """A mains failure notifies at once and is never a quiet night (§12.1)."""
+        if not self.config.health.mains_entity_id:
+            # The picker was cleared. Nothing about the house changed, so
+            # nothing is announced: a "power restored" row for an entity
+            # somebody unconfigured is the log saying something that did not
+            # happen.
+            self.mains_lost_since = None
+            return
         lost = health_engine.mains_state(self.config, self.world())
         if lost is True and self.mains_lost_since is None:
             self.mains_lost_since = self.now
@@ -1753,27 +1769,12 @@ class _Run:
         """
         self.track_quiet_zones()
         settings = self.config.health
+        for radio_id, gone in self.gone_radios.items():
+            self.end_radio(Radio(radio_id, radio_id), gone, "radio_removed")
+        self.gone_radios = {}
         for radio in settings.radios:
             if not radio.enabled:
-                # Switching a radio off ends whatever it was reporting, and
-                # says so: every moment raised here has the one that says it
-                # is over, and a suspicion that simply disappeared from the
-                # log would be the one row somebody looks for afterwards.
-                current = self.radios.pop(radio.id, None)
-                if current is not None and current.confirmed:
-                    self.occur(
-                        Moment.RF_INTERFERENCE_CLEARED,
-                        detail={
-                            "radio": radio.name,
-                            "radio_id": radio.id,
-                            "cause": "radio_disabled",
-                        },
-                    )
-                if current is not None and current.coordinator_announced:
-                    self.occur(
-                        Moment.RADIO_COORDINATOR_UP,
-                        detail={"radio": radio.name, "radio_id": radio.id},
-                    )
+                self.end_radio(radio, self.radios.pop(radio.id, None), "radio_disabled")
                 continue
             current = self.radios.get(radio.id) or RadioHealth()
             answering = health_engine.coordinator_answering(radio, self.world())
@@ -1793,11 +1794,42 @@ class _Run:
             if answering is None:
                 # No coordinator named: the gate cannot be applied, so
                 # nothing is raised. Page 14 says so beside the radio.
+                if current.confirmed:
+                    self.occur(
+                        Moment.RF_INTERFERENCE_CLEARED,
+                        detail={
+                            "radio": radio.name,
+                            "radio_id": radio.id,
+                            "cause": "coordinator_unset",
+                        },
+                    )
                 self.radios[radio.id] = replace(
                     current, suspected_since=None, confirmed=False, zone_ids=()
                 )
                 continue
             self.radios[radio.id] = self.evaluate_radio(radio, current)
+
+    def end_radio(self, radio: Radio, current: RadioHealth | None, cause: str) -> None:
+        """A radio stops being watched: say what it was reporting is over.
+
+        Switching one off and deleting one are the same fact to whoever
+        reads the log afterwards, so they write the same rows. Every moment
+        system health raises has the one that says it is over, and a
+        suspicion that simply disappeared would be the row somebody looks
+        for the next morning.
+        """
+        if current is None:
+            return
+        if current.confirmed:
+            self.occur(
+                Moment.RF_INTERFERENCE_CLEARED,
+                detail={"radio": radio.name, "radio_id": radio.id, "cause": cause},
+            )
+        if current.coordinator_announced:
+            self.occur(
+                Moment.RADIO_COORDINATOR_UP,
+                detail={"radio": radio.name, "radio_id": radio.id, "cause": cause},
+            )
 
     def coordinator_lost(self, radio: Radio, current: RadioHealth) -> RadioHealth:
         if current.confirmed:
@@ -1823,6 +1855,16 @@ class _Run:
                     ),
                 },
             )
+        # While the coordinator was gone, a zone's silence said nothing
+        # about that zone: nobody was there to hear it. So the clock is not
+        # merely reset — the zones become uncounted until they are readable
+        # again, exactly as they are at a restart. Without this, a
+        # coordinator on a failing switch produces one confirmed
+        # interference, one incident and one siren per flap, which is the
+        # fault class §12.5 insists must not be reported as interference.
+        for zone_id in health_engine.zones_on(self.config, self.world(), radio):
+            if self.quiet_since.pop(zone_id, None) is not None:
+                self.unknown_zones.add(zone_id)
         return RadioHealth(
             coordinator_down_since=current.coordinator_down_since or self.now,
             coordinator_announced=True,
@@ -1876,6 +1918,15 @@ class _Run:
                 if (zone := self.config.zone(zone_id)) is not None
             )
         )
+        if self.inhibiting:
+            # A walk test arms every area itself (§11.3), so "the house is
+            # armed" here is not the household's arming — and §11.3 says all
+            # actions are inhibited and means it. The moment is still
+            # raised, for the log and for the live page; the incident is
+            # not, because response.inhibits exempts anything belonging to
+            # an open incident, on the stated assumption that during a walk
+            # test only an always_on zone can have opened one.
+            armed = ()
         detail = {
             "radio": radio.name,
             "radio_id": radio.id,
@@ -1898,15 +1949,37 @@ class _Run:
         can be configured after its zones have already gone quiet, and a
         count that started only at that moment would miss the burst that
         prompted somebody to configure it.
+
+        A zone that is *already* unreadable when Foyer starts watching it
+        gets no timestamp at all, and is not counted until it has been
+        readable again. That is the rule this whole heuristic stands on. At
+        a restart, battery-powered end devices are unavailable until they
+        are interviewed while the mains-powered coordinator answers at
+        once — which is the §12.5 burst signature exactly, produced by
+        nothing but a reboot. §12.1 guards the mains against the identical
+        hazard, and §4.7 already says a zone's first reading is a baseline
+        rather than an event. What Foyer did not see happen, it does not
+        claim to have seen.
+
+        The cost is a jamming attempt that begins while Foyer is down and
+        never lets its zones back: those zones stay uncounted. Every one of
+        them is in fault the whole time (INV-4), which blocks arming and
+        raises ``zone_fault`` on each, so nothing about it is silent.
         """
         for zone in self.config.zones:
-            if not zone.enabled:
+            readable = zone.enabled and not health_engine.is_unreadable(
+                self.entity(zone)
+            )
+            if readable or not zone.enabled:
                 self.quiet_since.pop(zone.id, None)
+                self.unknown_zones.discard(zone.id)
                 continue
-            if health_engine.is_unreadable(self.entity(zone)):
-                self.quiet_since.setdefault(zone.id, self.now)
+            if zone.id in self.quiet_since or zone.id in self.unknown_zones:
+                continue
+            if self.restarted or zone.id not in self.seen:
+                self.unknown_zones.add(zone.id)
             else:
-                self.quiet_since.pop(zone.id, None)
+                self.quiet_since[zone.id] = self.now
 
     # --- alarm transitions ------------------------------------------------------
 
@@ -3535,7 +3608,7 @@ class _Run:
             # whose target sits on a radio currently suspected of being
             # jammed is not run, because announcing a Zigbee blackout
             # through a Zigbee siren is not a notification.
-            impaired=frozenset(r for r, h in self.radios.items() if h.confirmed),
+            impaired=SystemHealth(radios=self.radios).impaired_radios,
             broken_channels=frozenset(
                 key for key, health in self.channels.items() if health.fault is not None
             ),
@@ -3587,6 +3660,7 @@ class _Run:
                 watchdog=self.watchdog,
                 radios=self.radios,
                 quiet_since=self.quiet_since,
+                unknown_zones=frozenset(self.unknown_zones),
             ),
         )
         chime, chime_inhibited = self.chime_intents(occurrences)
