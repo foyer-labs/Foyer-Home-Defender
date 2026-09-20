@@ -14,43 +14,40 @@
   <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5" alt="Home Assistant 2025.1 o successivo">
   <img src="https://img.shields.io/badge/HACS-repository%20personalizzato-41BDF5" alt="Repository personalizzato HACS">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
-</p>
-
-<p align="center">
-  <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
+  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml"><img src="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
 </p>
 
 > ### Stato: beta. Il nucleo dell'allarme funziona, e puoi chiedergli cosa farebbe prima di fidartene.
 >
-> Protegge la casa di chi lo scrive. Con questa versione è completa la parte
-> che serve a verificarlo prima di fidarsene: il simulatore, che prova una
-> decisione senza che succeda nulla; il **walk test** — la prova di percorso —
-> che inserisce l'impianto per davvero trattenendo ogni risposta e ti dice
-> quali zone non ti hanno mai visto passare; e la **prova delle azioni**, che
-> fa suonare la sirena sul serio, così un canale d'emergenza configurato male
-> lo scopri adesso e non durante l'emergenza. Un walk test non
-> silenzia mai un rivelatore di fumo: le zone 24h, tamper, tecniche e panico
-> restano completamente attive. Prima di queste era arrivato l'inserimento
-> fisico — tastiere Ring e Zigbee, tag NFC, badge e telecomandi, il contratto
-> `foyer.*` e MQTT nelle due direzioni — e prima ancora utenti, codici per
-> persona e permessi. **Ora è arrivata anche l'escalation delle notifiche**: una
-> rubrica di persone con i canali in ordine di priorità, una notifica che sale
-> da push a SMS a una seconda persona finché qualcuno non risponde, e quattro
-> modi per fermarla. **E ora la casa si inserisce da sola**: regole sulla
-> presenza, su un orario o su un'entità, ognuna annunciata da una push con
-> dentro un pulsante Annulla, e la mattina che aspetti il tecnico della
-> caldaia tenuta aperta da una finestra che lo dice.
+> Protegge la casa di chi lo scrive. Tre strumenti ti dicono cosa farebbe
+> prima che tu debba fidartene: il **simulatore**, che prova una decisione
+> senza che succeda nulla; il **walk test**, che inserisce l'impianto per
+> davvero trattenendo ogni risposta e ti dice quali zone non ti hanno mai
+> visto passare; e la **prova delle azioni**, che fa suonare la sirena sul
+> serio, così un canale d'emergenza configurato male lo scopri adesso e non
+> durante l'emergenza. Un walk test non silenzia mai un rivelatore di fumo:
+> le zone 24h, tamper, tecniche e panico restano completamente attive.
+>
+> Il resto — utenti e codici, tastiere e tag, l'escalation finché qualcuno non
+> risponde, e la casa che si inserisce da sola quando esce l'ultima persona —
+> è nel
+> [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md).
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
 cartella di automazioni, preferisci controllare una configurazione invece di
 sperare che sia giusta, e vuoi inserire e disinserire da una tastiera, un tag
-o un badge con un registro che dice chi è stato.
+o un badge con un registro che dice chi è stato, e sei disposto a far girare
+una beta su una casa che ha anche altre serrature.
 
 **Non ancora, se** non vuoi far girare su casa tua una beta con
 pochi mesi di vita: [Alarmo](https://github.com/nielsfaber/alarmo) ha anni di
 installazioni alle spalle, e per un impianto che deve semplicemente funzionare
 oggi è la scelta prudente.
+
+**Cosa ti serve:** Home Assistant 2025.1, un sensore che già funziona e un
+servizio `notify.*`. Nessun account cloud, nessun broker se non lo chiedi tu,
+e nessuna connessione verso l'esterno che parta da Foyer.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-it.png" alt="Il pannello di Foyer: due aree inserite da un solo scenario, una in conto alla rovescia sul ritardo d'ingresso, le zone non pronte e gli ultimi eventi" width="900">
@@ -442,6 +439,13 @@ usa Alarmo.
 
 ## Come puoi verificarlo invece di fidarti
 
+Tre di queste cose puoi farle stasera: provare una notte nel
+[simulatore](#chiedere-cosa-succederebbe-senza-che-succeda-niente),
+[camminare per casa](#camminare-per-casa-e-premere-il-pulsante) e vedere quali
+zone non si sono accorte di te, e premere il pulsante di prova accanto alla
+tua sirena. Le altre sono strutturali, ed è per quelle che vale la pena
+credere alle prime tre.
+
 - **La parte che decide è una funzione pura.** «Questa zona si è aperta, questa
   area è inserita, e adesso?» viene deciso da codice che non può raggiungere
   Home Assistant, non ha un orologio suo e non può eseguire nessuna azione; è
@@ -718,6 +722,25 @@ Il progetto completo, comprese le ragioni dietro le decisioni che sembrano
 arbitrarie finché non si sa perché, è in
 [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md)
 (in inglese, come tutto il codice e la documentazione tecnica).
+
+## Segnalare un problema di sicurezza
+
+Un modo per disinserire senza codice, un modo per far restare zitto l'allarme,
+un modo per leggere il registro di qualcun altro: sono cose da dire all'autore
+prima che siano pubbliche. Su questo repository è attiva la **segnalazione
+privata di vulnerabilità** di GitHub:
+[apri un advisory privato](https://github.com/foyer-labs/Foyer-Home-Defender/security/advisories/new).
+Tutto ciò che non è una vulnerabilità sta meglio in una issue normale, dove
+più persone possono aiutare.
+
+[SECURITY.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/SECURITY.md)
+dice cosa rientra e cosa no: un amministratore del tuo Home Assistant può
+leggere `.storage`, disabilitare l'integrazione e chiamare qualunque servizio,
+e nessuna versione di Foyer si difenderà da questo.
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
+</p>
 
 ## Licenza
 

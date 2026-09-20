@@ -45,6 +45,11 @@ perimeter until you mark one.
   the rule and any suspension as attributes. It reports what is *scheduled*,
   not what will certainly happen: the guards are evaluated when the rule acts.
 - **`is_perimeter` on an area** (page 2). The outer defence ring.
+- **The countdown on the card, with its Cancel button** — on every layout
+  that can be pressed, and on the badge, which presses nothing, as a chip
+  with the seconds on it. A card bound to one area still shows it: a rule
+  arms a scenario, and a hall panel that stayed quiet while the house armed
+  itself would be the silence the walk-test banner is everywhere to avoid.
 - **The simulator reaches the rules.** Pick a hypothetical Tuesday at 23:00,
   override the people a rule watches, and read the trace. The kill switch and
   the suspensions in force come with it, so "would it arm tomorrow morning,

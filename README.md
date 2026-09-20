@@ -14,38 +14,37 @@
   <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5" alt="Home Assistant 2025.1 or later">
   <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5" alt="HACS custom repository">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Apache-2.0"></a>
-</p>
-
-<p align="center">
-  <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
+  <a href="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml"><img src="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
 </p>
 
 > ### Status: beta. The alarm core works, and you can ask it what it would do before you trust it.
 >
-> It can protect a house, and it is protecting the author's. **The whole
-> verification story has landed**: the simulator, which rehearses a decision
-> without anything happening; the **walk test**, which arms the house for real,
-> holds every response back and tells you which zones never saw you walk past
-> them; and the **action test**, which really sounds the siren so you find out
-> now rather than during the emergency. A walk test never silences a smoke
-> detector — 24h, tamper, technical and panic zones stay fully live. Before
-> these came physical arming — keypads, NFC tags, badges, the `foyer.*` service
-> contract and MQTT in both directions — and before that, codes, users and
-> permissions. **Escalation has now landed too**: an address book with
-> prioritised channels, a notification that climbs from push to SMS to a second
-> person until somebody acknowledges, and four ways to stop it. **And the house
-> now arms itself**: rules on presence, a time or an entity, each one
-> announced by a push with a Cancel button in it, with the morning the boiler
-> engineer is expected kept open by a window that says so.
+> It can protect a house, and it is protecting the author's. Three things tell
+> you what it would do before you have to trust it: the **simulator**, which
+> rehearses a decision without anything happening; the **walk test**, which
+> arms the house for real, holds every response back and tells you which zones
+> never saw you walk past them; and the **action test**, which really sounds
+> the siren, so a misconfigured emergency channel is something you find out now
+> rather than during the emergency. A walk test never silences a smoke detector
+> — 24h, tamper, technical and panic zones stay fully live.
+>
+> The rest — codes and users, keypads and tags, escalation until somebody
+> answers, and the house arming itself when everybody leaves — is in the
+> [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md).
 
 **Try it if** you already have door, window or motion sensors in Home
 Assistant, you want one panel with arming scenarios of your own instead of a
 folder of automations, you would rather check a configuration than hope it is
 right, and you are willing to run a beta on a house that has other locks on it.
 
-**Not yet, if** you want something finished — [Alarmo](https://github.com/nielsfaber/alarmo)
-has years of use behind it, and a large installed base is a kind of testing this
-project has not had yet.
+**Not yet, if** you want something that has been shaken out on thousands of
+houses rather than a few — [Alarmo](https://github.com/nielsfaber/alarmo) has
+years of use behind it, and for an installation that simply has to work today
+it is the prudent choice.
+
+**What it needs:** Home Assistant 2025.1, one sensor that already works, and a
+`notify.*` service. No cloud account, no broker unless you ask for one, and no
+outbound connection of Foyer's own.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-en.png" alt="The Foyer panel: two areas armed by one scenario, one counting down its entry delay, the zones that are not ready, and the last few events" width="900">
@@ -179,10 +178,8 @@ project has not had yet.
 
 The simulator calls the same decision engine the alarm calls, with a made-up
 world and a made-up clock, and then never hands the result to the part that
-would run the sirens. That is a structural guarantee rather than a promise: the
-engine is a pure function, so "run it and throw the answer away" is the whole of
-the implementation, and a test asserts that the simulator and the running alarm
-reach an identical decision from identical inputs.
+would run the sirens — a structural guarantee rather than a promise, for
+[the reason set out below](#how-you-can-check-it-rather-than-trust-it).
 
 Pick a scenario and an hour, force zones into a state at chosen offsets, and
 read what would happen — including the actions that would *not* have run, each
@@ -392,19 +389,22 @@ its code. Where they differ today:
 
 | | Foyer | Alarmo |
 |---|---|---|
-| **Escalation until somebody answers** | Contacts with channels in priority order, steps at times you choose, stopped by any of four acknowledgements | Notifications, no escalation |
+| **Escalation until somebody answers** | Contacts with channels in priority order, steps at times you choose, stopped by any of four acknowledgements | Notifications and actions with delays; nothing that tries a second person, and nothing to acknowledge |
 | **Arming itself, safely** | Rules with guards and a cancellable countdown; disarming off by default, and never on an area you marked as the perimeter | Arming and disarming on presence, via automations |
 | **Simulator** | Yes: the same engine, a made-up world and a made-up clock, and a trace saying why each action would or would not have run | — |
 | **Walk test** | Yes: really armed, every response held back, and the zones that never reacted listed first. 24h, tamper, technical and panic zones stay live | — |
 | **Action test** | Yes: really sounds the siren or sends the message, with confirmation, and logged as a test | — |
 | **Arming scenarios** | Any number, each arming a chosen set of areas | Home Assistant's four fixed modes |
 | **Areas with independent state** | Yes: one `alarm_control_panel` each, plus a master | One panel, sensors grouped per mode |
-| **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Ordinary sensors |
+| **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Can be always-on, but on the same panel: smoke puts the alarm entity into `triggered`, which means *burglary* to HomeKit |
+| **A sensor that goes `unavailable`** | A fault: it blocks arming, shows in diagnostics and is in the log. Never read as "all quiet" | Read as whatever state it last had |
+| **State across a restart** | Areas, timers mid-delay, escalation progress and the gap itself, all recorded | Arming state |
 | **One incident per break-in** | Yes, with one acknowledgement | An alarm per sensor |
 | **Users, codes, permissions** | Yes: one code each, per-operation policy, duress code, lockout | Yes, per-user codes |
 | **Keypads, MQTT** | Yes, and a refused command comes back with a stable reason and the blocking zones by name, so a keypad can sound different for *wrong code* and *kitchen window open* | Yes |
 | **NFC tags and remotes** | Native, declared on a page and bound to a person, with no automation to write | Via automations |
 | **Verification groups (N of M)** | Yes, with the members keeping their own response | — |
+| **Installing it** | HACS custom repository | The default HACS store |
 | **Maturity** | Beta. One author, months old | Years of use, a large installed base |
 
 If you need an alarm that thousands of houses have already shaken the bugs out
@@ -672,6 +672,24 @@ the fix is the code, never the test.
 The whole design, including the reasoning behind decisions that look arbitrary
 until you know why, is in
 [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md).
+
+## Reporting a security problem
+
+A way to disarm without a code, a way to make the alarm stay quiet, a way to
+read somebody's log — those are worth telling the author about before they are
+public. GitHub's **private vulnerability reporting** is open on this
+repository: [open a private advisory](https://github.com/foyer-labs/Foyer-Home-Defender/security/advisories/new).
+Anything that is not a vulnerability belongs in an ordinary issue, where more
+people can help.
+
+[SECURITY.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/SECURITY.md)
+says what is in scope, and what is deliberately out of it: an administrator of
+your Home Assistant can read `.storage`, disable the integration and call any
+service, and no version of Foyer will defend against that.
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
+</p>
 
 ## Licence
 
