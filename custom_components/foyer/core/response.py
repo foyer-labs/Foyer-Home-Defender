@@ -128,6 +128,12 @@ class PlanContext:
     # travels on the intent, so the message can say the siren did not sound
     # rather than leaving somebody to find out later.
     impaired: frozenset[str] = frozenset()
+    # The contact channels Foyer currently believes are broken (§12.2),
+    # keyed "<contact_id>:<channel_id>". Given rather than read off the
+    # snapshot because the decision that discovered the breakage is the one
+    # planning the message about it: the snapshot still holds the state the
+    # call began with.
+    broken_channels: frozenset[str] = frozenset()
 
     @property
     def tz(self) -> tzinfo:
@@ -316,6 +322,16 @@ def reachable(
         ctx.tz,
         moment,
         ack=moment in ACK_MOMENTS,
+        # §12.2, and only here: the message that says a channel is broken
+        # does not go over that channel. Every other message still tries
+        # one Foyer believes is broken — two failed sends can be a provider
+        # with a hiccup, and being wrong about a channel must never be the
+        # reason an alarm reached nobody.
+        avoid=(
+            ctx.broken_channels
+            if moment is Moment.NOTIFICATION_CHANNEL_DOWN
+            else frozenset()
+        ),
     )
 
 
@@ -328,6 +344,7 @@ def recipients_for(
     *,
     ack: bool = False,
     cancel: str | None = None,
+    avoid: frozenset[str] = frozenset(),
 ) -> tuple[tuple[Mapping[str, Any], ...], tuple[str, ...]]:
     """The contacts a message actually reaches now, and who quiet hours held.
 
@@ -362,6 +379,11 @@ def recipients_for(
             continue
         channel = contact.channel(ref["channel_id"])
         if channel is None:
+            continue
+        if f"{contact.id}:{channel.id}" in avoid:
+            # Warning somebody about a dead channel over the dead channel is
+            # the joke that writes itself (§12.2). The caller says when this
+            # applies; it is not a general rule about broken channels.
             continue
         recipients.append(
             {

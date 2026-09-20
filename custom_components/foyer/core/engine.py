@@ -3536,6 +3536,9 @@ class _Run:
             # jammed is not run, because announcing a Zigbee blackout
             # through a Zigbee siren is not a notification.
             impaired=frozenset(r for r, h in self.radios.items() if h.confirmed),
+            broken_channels=frozenset(
+                key for key, health in self.channels.items() if health.fault is not None
+            ),
         )
         # Escalation steps first, because reaching the end of one raises a
         # moment a profile answers in this same call (§7.2).

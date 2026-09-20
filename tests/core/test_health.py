@@ -586,3 +586,72 @@ def test_switching_a_radio_off_mid_suspicion_says_it_is_over():
     world.advance(1)
     assert Moment.RF_INTERFERENCE_CLEARED in moments(world)
     assert "zigbee" not in world.state.health.radios
+
+
+def test_the_warning_about_a_dead_channel_never_goes_over_it():
+    """§12.2's rule, in the one place it can actually be enforced: the
+    message that says a channel is broken does not use that channel."""
+    config = replace(
+        make_house(),
+        contacts=contactable(),
+        profiles=(
+            ResponseProfile(
+                "default",
+                "Default",
+                actions=(
+                    ProfileAction(
+                        "tell",
+                        ActionKind.NOTIFY,
+                        frozenset({Moment.NOTIFICATION_CHANNEL_DOWN}),
+                        params={
+                            "contacts": [
+                                {"contact_id": "luca", "channel_id": "push"},
+                                {"contact_id": "luca", "channel_id": "sms"},
+                            ]
+                        },
+                    ),
+                ),
+            ),
+        ),
+        settings=Settings(default_profile_id="default"),
+    )
+    world = World(replace(config, health=HealthSettings()))
+    world.health(channels_present={PUSH: False, SMS: True})
+
+    intent = next(i for i in world.last.actions if i.kind == "notify")
+    reached = [r["channel_id"] for r in intent.params["recipients"]]
+    assert reached == ["sms"]
+
+
+def test_an_ordinary_alarm_still_tries_a_channel_believed_broken():
+    """Being wrong about a channel must never be the reason an alarm
+    reached nobody: two failed sends can be a provider with a hiccup."""
+    config = replace(
+        make_house(),
+        contacts=contactable(),
+        profiles=(
+            ResponseProfile(
+                "default",
+                "Default",
+                actions=(
+                    ProfileAction(
+                        "tell",
+                        ActionKind.NOTIFY,
+                        frozenset({Moment.TRIGGERED}),
+                        params={
+                            "contacts": [{"contact_id": "luca", "channel_id": "push"}]
+                        },
+                    ),
+                ),
+            ),
+        ),
+        settings=Settings(default_profile_id="default"),
+    )
+    world = World(replace(config, health=HealthSettings()))
+    world.health(channels_present={PUSH: False, SMS: True})
+    world.arm("away")
+    world.advance(31)
+    world.set(world.config.zone("window").entity_id, "on")
+
+    intent = next(i for i in world.last.actions if i.kind == "notify")
+    assert [r["channel_id"] for r in intent.params["recipients"]] == ["push"]
