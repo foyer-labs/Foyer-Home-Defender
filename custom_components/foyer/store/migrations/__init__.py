@@ -420,6 +420,45 @@ def _v6_1_to_v7_1(data: Document) -> Document:
     return out
 
 
+def _v7_1_to_v7_2(data: Document) -> Document:
+    """System health (§12): the mains, the watchdog and the radios.
+
+    Every part of it arrives switched off, and that is not caution for its
+    own sake. The watchdog needs a URL nobody has given yet and a ping to an
+    empty string is a failure reported every quarter of an hour; the mains
+    needs an entity and a state that means "lost", which INV-5 says is the
+    household's to confirm rather than Foyer's to assume; and interference
+    detection needs a coordinator entity named per radio, without which the
+    gate that makes the heuristic worth having cannot be applied at all.
+
+    A *minor* step, unlike decision 58's: a 7.1 build reading this document
+    ignores the block and is a build with no system health — exactly what it
+    was yesterday. Nothing it would have protected goes unprotected, and the
+    one thing it would miss, it was already missing.
+    """
+    out = copy.deepcopy(data)
+    out["health"] = {
+        "mains_entity_id": None,
+        "mains_lost_states": ["on"],
+        "watchdog": {
+            "enabled": False,
+            "url": "",
+            "interval": 900,
+            "timeout": 30,
+            "failures": 3,
+            "payload": False,
+        },
+        "radios": [],
+        "rf_zones": 4,
+        "rf_window": 60,
+        "rf_confirm": 60,
+        "channel_sweep": 900,
+        "channel_failures": 2,
+        "repair_after": 2 * 24 * 3600,
+    }
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -447,6 +486,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (5, 3): (_v5_3_to_v5_4, (5, 4)),
     (5, 4): (_v5_4_to_v6_1, (6, 1)),
     (6, 1): (_v6_1_to_v7_1, (7, 1)),
+    (7, 1): (_v7_1_to_v7_2, (7, 2)),
 }
 
 

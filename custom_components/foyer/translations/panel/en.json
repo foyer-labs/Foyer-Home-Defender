@@ -1156,7 +1156,47 @@
       "title": "Foyer: automatic rules",
       "message": "Automatic rules were switched on or off."
     },
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "system_power_lost": {
+      "title": "Foyer: mains power lost",
+      "message": "The house has lost mains power. Everything that needs the internet stops when the router does: if you are reading this, the message got out."
+    },
+    "system_power_restored": {
+      "title": "Foyer: mains power back",
+      "message": "Mains power is back after {seconds} s."
+    },
+    "notification_channel_down": {
+      "title": "Foyer: a notification channel is broken",
+      "message": "{contact} cannot be reached through {service}. This message went out over a different channel, because warning you about a dead channel over the dead channel would tell you nothing."
+    },
+    "notification_channel_restored": {
+      "title": "Foyer: notification channel working again",
+      "message": "{contact} can be reached through {service} again."
+    },
+    "watchdog_unreachable": {
+      "title": "Foyer: watchdog unreachable",
+      "message": "The external watchdog has not answered {failures} times running. Nothing that needs the internet would reach you either."
+    },
+    "watchdog_recovered": {
+      "title": "Foyer: watchdog reachable again",
+      "message": "The external watchdog is answering again."
+    },
+    "rf_interference_suspected": {
+      "title": "Foyer: radio interference suspected",
+      "message": "{count} of {of} zones on {radio} went quiet at once and the coordinator is still answering. Suspected, not proven: a coordinator crash, a firmware update or a power cut to a room of routers looks the same. Not used, because they are on that radio: {skipped}"
+    },
+    "rf_interference_cleared": {
+      "title": "Foyer: radio interference over",
+      "message": "{radio} is answering normally again."
+    },
+    "radio_coordinator_down": {
+      "title": "Foyer: radio coordinator unreachable",
+      "message": "The coordinator of {radio} cannot be reached, so its {zones} zones are not being watched. This is not interference — it is the coordinator, its power or its network."
+    },
+    "radio_coordinator_up": {
+      "title": "Foyer: radio coordinator back",
+      "message": "The coordinator of {radio} is answering again."
+    }
   },
   "chime_mode": {
     "sound": "Single sound",
@@ -1246,7 +1286,8 @@
     "alarm": "On alarm",
     "state": "On state change",
     "system": "On system event",
-    "later": "Arrives in a later phase"
+    "later": "Arrives in a later phase",
+    "health": "On system health"
   },
   "moment": {
     "armed": "Armed",
@@ -1278,7 +1319,17 @@
     "walk_test_started": "Walk test started",
     "walk_test_ended": "Walk test ended",
     "escalation_exhausted": "Escalation exhausted",
-    "escalation_skipped": "Escalation steps not sent"
+    "escalation_skipped": "Escalation steps not sent",
+    "system_power_lost": "Mains power lost",
+    "system_power_restored": "Mains power back",
+    "notification_channel_down": "Notification channel broken",
+    "notification_channel_restored": "Notification channel working again",
+    "watchdog_unreachable": "Watchdog unreachable",
+    "watchdog_recovered": "Watchdog reachable again",
+    "rf_interference_suspected": "Radio interference suspected",
+    "rf_interference_cleared": "Radio interference over",
+    "radio_coordinator_down": "Radio coordinator unreachable",
+    "radio_coordinator_up": "Radio coordinator back"
   },
   "condition": {
     "add": "Add a condition",

@@ -61,6 +61,22 @@ const MOMENT_GROUPS: Record<string, string[]> = {
     "escalation_exhausted",
     "chime",
   ],
+  // System health (§12), in a group of its own rather than swelling the one
+  // above: these are about Foyer's own condition — the power, the channels,
+  // the watchdog, the radio — and a household choosing what to answer reads
+  // them as one question, not as nine more lines under "system event".
+  health: [
+    "system_power_lost",
+    "system_power_restored",
+    "notification_channel_down",
+    "notification_channel_restored",
+    "watchdog_unreachable",
+    "watchdog_recovered",
+    "rf_interference_suspected",
+    "rf_interference_cleared",
+    "radio_coordinator_down",
+    "radio_coordinator_up",
+  ],
 };
 
 // How a notification carries the camera picture. The transport is named

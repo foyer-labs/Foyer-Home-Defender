@@ -121,6 +121,13 @@ class PlanContext:
     # it inhibits is decided here, per occurrence, because `always_on` zones
     # stay fully live and a walk test must never silence a smoke detector.
     walk_test: bool = False
+    # Radios whose interference is confirmed right now (§12.5). An action's
+    # targets on one of them are dropped: announcing a Zigbee blackout
+    # through a Zigbee siren is not a notification, and it is the one rule
+    # that defeats the whole feature if it is missed. What was dropped
+    # travels on the intent, so the message can say the siren did not sound
+    # rather than leaving somebody to find out later.
+    impaired: frozenset[str] = frozenset()
 
     @property
     def tz(self) -> tzinfo:
@@ -458,6 +465,22 @@ def variables(ctx: PlanContext, group: Sequence[Occurrence]) -> dict[str, str]:
         # Not a §6.4 variable: the built-in notification's own placeholder for
         # every zone of the batch, kept from Phase 0 so its text is unchanged.
         "zones": _names(zone_ids, zones),
+        # The same kind of thing for system health (§12): facts the built-in
+        # message needs and no household template may use. They are read
+        # straight off the occurrence's detail, so a moment that does not
+        # carry one simply leaves it empty.
+        "radio": detail.get("radio", ""),
+        "count": detail.get("count", ""),
+        "of": detail.get("of", ""),
+        "service": detail.get("service", ""),
+        "contact": _names(
+            [detail.get("contact_id")], {c.id: c.name for c in config.contacts}
+        ),
+        "seconds": detail.get("seconds", ""),
+        "failures": detail.get("failures", ""),
+        # Filled by run_sequence when a radio is suspected: what this
+        # response will not be able to do (part 1 decision 9).
+        "skipped": "",
     }
 
 
@@ -500,6 +523,20 @@ def _params(
         recipients, quiet = reachable(ctx, action, moment)
         params["recipients"] = recipients
         params["quiet"] = quiet
+    if ctx.impaired and (targets := _entity_ids(params)):
+        kept = tuple(
+            entity_id
+            for entity_id in targets
+            if ctx.snapshot.radio_of(entity_id) not in ctx.impaired
+        )
+        if len(kept) != len(targets):
+            dropped = tuple(e for e in targets if e not in kept)
+            if "entity_ids" in params:
+                params["entity_ids"] = list(kept)
+            else:
+                params["entity_id"] = list(kept)
+            params["skipped_entity_ids"] = list(dropped)
+            params["_all_targets_impaired"] = not kept
     if action.kind is ActionKind.NOTIFY and params.get("camera_entity_id"):
         # A notification that has to write the picture to a file writes it
         # where every other camera file goes, and the choice is made here so
@@ -513,6 +550,20 @@ def _entity_ids(params: Mapping[str, Any]) -> tuple[str, ...]:
     if isinstance(value, str):
         return (value,)
     return tuple(str(v) for v in value)
+
+
+def _on_impaired_radio(
+    ctx: PlanContext, actions: Sequence[ProfileAction]
+) -> tuple[str, ...]:
+    """The entities this sequence targets that sit on a suspected radio."""
+    return tuple(
+        dict.fromkeys(
+            entity_id
+            for action in actions
+            for entity_id in _entity_ids(action.params)
+            if ctx.snapshot.radio_of(entity_id) in ctx.impaired
+        )
+    )
 
 
 def run_sequence(
@@ -548,6 +599,13 @@ def run_sequence(
     suppressed = (
         frozenset(ctx.config.settings.silent_suppresses) if silent else frozenset()
     )
+    if ctx.impaired and (dropped := _on_impaired_radio(ctx, actions)):
+        # Said in plain words rather than left to be discovered: the message
+        # that reports the interference also names what this response will
+        # not be able to do because of it (part 1 decision 9). Not a §6.4
+        # template variable — it reaches the built-in notification text and
+        # nothing a household writes.
+        values = {**values, "skipped": ", ".join(dropped)}
     for index in range(start, len(actions)):
         action = actions[index]
         if action.kind is ActionKind.DELAY:
@@ -582,6 +640,12 @@ def run_sequence(
         if why is not None and why != SKIP_WALK_TEST:
             continue
         params = _params(action, values, ctx, area_id, moment)
+        if params.pop("_all_targets_impaired", False):
+            # Every target of this action is on the affected radio, so there
+            # is nothing left to run. Skipped rather than run empty: an
+            # action with no targets is a service call that either errors or
+            # does nothing, and neither is an honest record of what happened.
+            continue
         intent = ActionIntent(
             action_id=action.id,
             kind=action.kind.value,

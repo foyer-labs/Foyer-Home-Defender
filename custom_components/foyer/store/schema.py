@@ -13,6 +13,15 @@ from datetime import datetime
 from typing import Any
 
 from ..core.models import (
+    DEFAULT_CHANNEL_FAILURES,
+    DEFAULT_CHANNEL_SWEEP,
+    DEFAULT_REPAIR_AFTER,
+    DEFAULT_RF_CONFIRM,
+    DEFAULT_RF_WINDOW,
+    DEFAULT_RF_ZONES,
+    DEFAULT_WATCHDOG_FAILURES,
+    DEFAULT_WATCHDOG_INTERVAL,
+    DEFAULT_WATCHDOG_TIMEOUT,
     Acknowledgement,
     ActionKind,
     Activation,
@@ -26,6 +35,8 @@ from ..core.models import (
     AutoRule,
     BypassReason,
     Channel,
+    ChannelFault,
+    ChannelHealth,
     ChimeMode,
     ChimeSettings,
     ChimeTarget,
@@ -44,6 +55,7 @@ from ..core.models import (
     EventTrigger,
     FoyerConfig,
     Group,
+    HealthSettings,
     Incident,
     KeyAction,
     KeyCommand,
@@ -60,6 +72,8 @@ from ..core.models import (
     PendingRuleAction,
     PendingRun,
     ProfileAction,
+    Radio,
+    RadioHealth,
     ResponseProfile,
     RuleActionKind,
     RuleBlock,
@@ -77,6 +91,7 @@ from ..core.models import (
     StateTrigger,
     Suspension,
     SuspensionKind,
+    SystemHealth,
     TechnicalAlarm,
     TimeCondition,
     Timer,
@@ -84,8 +99,11 @@ from ..core.models import (
     TriggerSpec,
     User,
     WalkTest,
+    WatchdogHealth,
+    WatchdogSettings,
     Zone,
     ZoneType,
+    channel_key,
 )
 
 # Bump STORAGE_VERSION (breaking) or STORAGE_MINOR_VERSION (additive) together
@@ -142,8 +160,14 @@ from ..core.models import (
 # know that an area is the perimeter, so a rule it gained later could disarm
 # the one ring §9.4 says is never disarmed by a rule. Both failures are
 # silent, and refusing the file is the only safe downgrade.
+#
+# 7.2 is a *minor* step, deliberately, and it is worth saying why it is not
+# another 58: system health (§12) is additive and a 7.1 build reading this
+# document is a build with no watchdog, no mains entity and no radios — which
+# is exactly what it was yesterday. Nothing it would have protected goes
+# unprotected, and the only thing it loses is a warning it never had.
 STORAGE_VERSION = 7
-STORAGE_MINOR_VERSION = 1
+STORAGE_MINOR_VERSION = 2
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -177,6 +201,7 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
             devices=tuple(device_from_dict(d) for d in data["devices"]),
             contacts=tuple(contact_from_dict(c) for c in data["contacts"]),
             rules=tuple(rule_from_dict(r) for r in data["rules"]),
+            health=health_from_dict(data["health"]),
         )
     except (KeyError, TypeError, ValueError) as err:
         raise ConfigError(f"invalid Foyer configuration: {err!r}") from err
@@ -199,6 +224,76 @@ def config_to_dict(config: FoyerConfig) -> dict[str, Any]:
         },
         "settings": settings_to_dict(config.settings),
         "chime": chime_to_dict(config.chime),
+        "health": health_to_dict(config.health),
+    }
+
+
+def health_from_dict(h: dict[str, Any]) -> HealthSettings:
+    w = h.get("watchdog") or {}
+    return HealthSettings(
+        mains_entity_id=h.get("mains_entity_id") or None,
+        mains_lost_states=tuple(h.get("mains_lost_states") or ("on",)),
+        watchdog=WatchdogSettings(
+            enabled=bool(w.get("enabled", False)),
+            url=str(w.get("url", "")),
+            interval=int(w.get("interval", DEFAULT_WATCHDOG_INTERVAL)),
+            timeout=int(w.get("timeout", DEFAULT_WATCHDOG_TIMEOUT)),
+            failures=int(w.get("failures", DEFAULT_WATCHDOG_FAILURES)),
+            payload=bool(w.get("payload", False)),
+        ),
+        radios=tuple(radio_from_dict(r) for r in h.get("radios") or ()),
+        rf_zones=int(h.get("rf_zones", DEFAULT_RF_ZONES)),
+        rf_window=int(h.get("rf_window", DEFAULT_RF_WINDOW)),
+        rf_confirm=int(h.get("rf_confirm", DEFAULT_RF_CONFIRM)),
+        channel_sweep=int(h.get("channel_sweep", DEFAULT_CHANNEL_SWEEP)),
+        channel_failures=int(h.get("channel_failures", DEFAULT_CHANNEL_FAILURES)),
+        repair_after=int(h.get("repair_after", DEFAULT_REPAIR_AFTER)),
+    )
+
+
+def health_to_dict(h: HealthSettings) -> dict[str, Any]:
+    return {
+        "mains_entity_id": h.mains_entity_id,
+        "mains_lost_states": list(h.mains_lost_states),
+        "watchdog": {
+            "enabled": h.watchdog.enabled,
+            "url": h.watchdog.url,
+            "interval": h.watchdog.interval,
+            "timeout": h.watchdog.timeout,
+            "failures": h.watchdog.failures,
+            "payload": h.watchdog.payload,
+        },
+        "radios": [radio_to_dict(r) for r in h.radios],
+        "rf_zones": h.rf_zones,
+        "rf_window": h.rf_window,
+        "rf_confirm": h.rf_confirm,
+        "channel_sweep": h.channel_sweep,
+        "channel_failures": h.channel_failures,
+        "repair_after": h.repair_after,
+    }
+
+
+def radio_from_dict(r: dict[str, Any]) -> Radio:
+    return Radio(
+        id=str(r["id"]),
+        name=str(r["name"]),
+        entry_id=str(r.get("entry_id", "")),
+        coordinator_entity_id=r.get("coordinator_entity_id") or None,
+        n_zones=_opt_int(r.get("n_zones")),
+        window=_opt_int(r.get("window")),
+        enabled=bool(r.get("enabled", True)),
+    )
+
+
+def radio_to_dict(r: Radio) -> dict[str, Any]:
+    return {
+        "id": r.id,
+        "name": r.name,
+        "entry_id": r.entry_id,
+        "coordinator_entity_id": r.coordinator_entity_id,
+        "n_zones": r.n_zones,
+        "window": r.window,
+        "enabled": r.enabled,
     }
 
 
@@ -864,6 +959,74 @@ def _timer_to(timer: Timer | None) -> dict[str, Any] | None:
     }
 
 
+def _health_from(
+    data: dict[str, Any] | None, config: FoyerConfig, zone_ids: set[str]
+) -> SystemHealth:
+    """System health, restored (§12, INV-3).
+
+    Read with defaults throughout: a state file written before this phase
+    restores as "nothing known yet", and the first sweep after the restart
+    says what is true. Channels and radios the configuration no longer has
+    are dropped here, like every other map in this function.
+    """
+    data = data or {}
+    known = set(health_channels(config))
+    radio_ids = {r.id for r in config.health.radios}
+    w = data.get("watchdog") or {}
+    return SystemHealth(
+        mains_lost_since=_dt(data.get("mains_lost_since")),
+        channels={
+            key: ChannelHealth(
+                fault=ChannelFault(ch["fault"]) if ch.get("fault") else None,
+                since=_dt(ch.get("since")),
+                failures=int(ch.get("failures", 0)),
+                last_ok=_dt(ch.get("last_ok")),
+                last_failed=_dt(ch.get("last_failed")),
+                present=ch.get("present"),
+            )
+            for key, ch in (data.get("channels") or {}).items()
+            if key in known
+        },
+        watchdog=WatchdogHealth(
+            failures=int(w.get("failures", 0)),
+            down_since=_dt(w.get("down_since")),
+            last_ok=_dt(w.get("last_ok")),
+            last_attempt=_dt(w.get("last_attempt")),
+            last_error=str(w.get("last_error", "")),
+            ever_ok=bool(w.get("ever_ok", False)),
+            announced=bool(w.get("announced", False)),
+        ),
+        radios={
+            radio_id: RadioHealth(
+                suspected_since=_dt(r.get("suspected_since")),
+                confirmed=bool(r.get("confirmed", False)),
+                zone_ids=tuple(z for z in r.get("zone_ids", ()) if z in zone_ids),
+                coordinator_down_since=_dt(r.get("coordinator_down_since")),
+                coordinator_announced=bool(r.get("coordinator_announced", False)),
+            )
+            for radio_id, r in (data.get("radios") or {}).items()
+            if radio_id in radio_ids
+        },
+        quiet_since={
+            zone_id: _required_dt(at)
+            for zone_id, at in (data.get("quiet_since") or {}).items()
+            if zone_id in zone_ids
+        },
+    )
+
+
+def health_channels(config: FoyerConfig) -> dict[str, str]:
+    """Every enabled channel key. Spelled out here rather than imported from
+    ``core.health``, because a store module must not depend on the engine."""
+    return {
+        channel_key(contact.id, channel.id): channel.service
+        for contact in config.contacts
+        if contact.enabled
+        for channel in contact.channels
+        if channel.enabled
+    }
+
+
 def state_to_dict(state: RuntimeState) -> dict[str, Any]:
     return {
         "areas": {
@@ -1002,6 +1165,43 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
             for rule_id, rt in state.rules.items()
         },
         "pending_seq": state.pending_seq,
+        "health": {
+            "mains_lost_since": _iso(state.health.mains_lost_since),
+            "channels": {
+                key: {
+                    "fault": ch.fault.value if ch.fault else None,
+                    "since": _iso(ch.since),
+                    "failures": ch.failures,
+                    "last_ok": _iso(ch.last_ok),
+                    "last_failed": _iso(ch.last_failed),
+                    "present": ch.present,
+                }
+                for key, ch in state.health.channels.items()
+            },
+            "watchdog": {
+                "failures": state.health.watchdog.failures,
+                "down_since": _iso(state.health.watchdog.down_since),
+                "last_ok": _iso(state.health.watchdog.last_ok),
+                "last_attempt": _iso(state.health.watchdog.last_attempt),
+                "last_error": state.health.watchdog.last_error,
+                "ever_ok": state.health.watchdog.ever_ok,
+                "announced": state.health.watchdog.announced,
+            },
+            "radios": {
+                radio_id: {
+                    "suspected_since": _iso(r.suspected_since),
+                    "confirmed": r.confirmed,
+                    "zone_ids": list(r.zone_ids),
+                    "coordinator_down_since": _iso(r.coordinator_down_since),
+                    "coordinator_announced": r.coordinator_announced,
+                }
+                for radio_id, r in state.health.radios.items()
+            },
+            "quiet_since": {
+                zone_id: at.isoformat()
+                for zone_id, at in state.health.quiet_since.items()
+            },
+        },
         "lockouts": {
             key: {
                 "failures": [at.isoformat() for at in lock.failures],
@@ -1344,6 +1544,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 if rule_id in rule_ids
             },
             pending_seq=int(data.get("pending_seq", 0)),
+            health=_health_from(data.get("health"), config, zone_ids),
         )
     except (KeyError, TypeError, ValueError, AssertionError) as err:
         raise ConfigError(f"invalid Foyer runtime state: {err!r}") from err

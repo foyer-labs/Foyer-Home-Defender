@@ -140,6 +140,21 @@ CATEGORY: dict[Moment, LogCategory] = {
     Moment.AUTO_SUSPENSION_SET: LogCategory.SYSTEM,
     Moment.AUTO_SUSPENSION_CLEARED: LogCategory.SYSTEM,
     Moment.AUTO_ARMING_SWITCHED: LogCategory.SYSTEM,
+    # System health (§12) writes under ``system``, all of it. None of this
+    # is an ``alarm`` row: "the mains are down" is not an intrusion and must
+    # not enter the intrusion queue (decision 27). The one place an intrusion
+    # row appears is the ``triggered`` an armed house's confirmed
+    # interference produces, and that row is written by the trigger itself.
+    Moment.SYSTEM_POWER_LOST: LogCategory.SYSTEM,
+    Moment.SYSTEM_POWER_RESTORED: LogCategory.SYSTEM,
+    Moment.NOTIFICATION_CHANNEL_DOWN: LogCategory.SYSTEM,
+    Moment.NOTIFICATION_CHANNEL_RESTORED: LogCategory.SYSTEM,
+    Moment.WATCHDOG_UNREACHABLE: LogCategory.SYSTEM,
+    Moment.WATCHDOG_RECOVERED: LogCategory.SYSTEM,
+    Moment.RF_INTERFERENCE_SUSPECTED: LogCategory.SYSTEM,
+    Moment.RF_INTERFERENCE_CLEARED: LogCategory.SYSTEM,
+    Moment.RADIO_COORDINATOR_DOWN: LogCategory.SYSTEM,
+    Moment.RADIO_COORDINATOR_UP: LogCategory.SYSTEM,
     # A test is an action, filed with the actions — and marked (§11.4).
     Moment.ACTION_TESTED: LogCategory.ACTION,
     # A chime sounds exactly when a zone opens unmonitored (§6.6), which is
@@ -197,6 +212,24 @@ SEVERITY: dict[Moment, LogSeverity] = {
     Moment.AUTO_SUSPENSION_SET: LogSeverity.INFO,
     Moment.AUTO_SUSPENSION_CLEARED: LogSeverity.INFO,
     Moment.AUTO_ARMING_SWITCHED: LogSeverity.INFO,
+    # A power cut and a radio going silent are graded ``alarm`` while they
+    # are happening, and the reason is the quiet-hours threshold of §7.1: a
+    # contact who asked to be left alone at night still wants to hear that
+    # the house has lost power or that its radio has gone dark, and those
+    # are exactly the two an intruder causes on purpose. The channel and the
+    # watchdog are ``warning``: they are about Foyer's ability to speak, not
+    # about the house, and waking somebody at three for a Telegram
+    # integration that was removed is how a person learns to mute Foyer.
+    Moment.SYSTEM_POWER_LOST: LogSeverity.ALARM,
+    Moment.SYSTEM_POWER_RESTORED: LogSeverity.INFO,
+    Moment.NOTIFICATION_CHANNEL_DOWN: LogSeverity.WARNING,
+    Moment.NOTIFICATION_CHANNEL_RESTORED: LogSeverity.INFO,
+    Moment.WATCHDOG_UNREACHABLE: LogSeverity.WARNING,
+    Moment.WATCHDOG_RECOVERED: LogSeverity.INFO,
+    Moment.RF_INTERFERENCE_SUSPECTED: LogSeverity.ALARM,
+    Moment.RF_INTERFERENCE_CLEARED: LogSeverity.INFO,
+    Moment.RADIO_COORDINATOR_DOWN: LogSeverity.WARNING,
+    Moment.RADIO_COORDINATOR_UP: LogSeverity.INFO,
 }
 
 # Moments whose row is named something else, because the spec names them: the

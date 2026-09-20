@@ -1156,7 +1156,47 @@
       "title": "Foyer: regole automatiche",
       "message": "Le regole automatiche sono state accese o spente."
     },
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "system_power_lost": {
+      "title": "Foyer: rete elettrica assente",
+      "message": "La casa ha perso la rete elettrica. Tutto ciò che passa da internet si ferma quando si ferma il router: se stai leggendo questo, il messaggio è uscito."
+    },
+    "system_power_restored": {
+      "title": "Foyer: rete elettrica tornata",
+      "message": "La rete elettrica è tornata dopo {seconds} s."
+    },
+    "notification_channel_down": {
+      "title": "Foyer: un canale di notifica è rotto",
+      "message": "{contact} non è raggiungibile tramite {service}. Questo messaggio è uscito su un canale diverso: avvisarti di un canale morto sul canale morto non ti direbbe niente."
+    },
+    "notification_channel_restored": {
+      "title": "Foyer: canale di notifica di nuovo attivo",
+      "message": "{contact} è di nuovo raggiungibile tramite {service}."
+    },
+    "watchdog_unreachable": {
+      "title": "Foyer: watchdog irraggiungibile",
+      "message": "Il watchdog esterno non risponde da {failures} tentativi consecutivi. Nemmeno le notifiche che passano da internet ti raggiungerebbero."
+    },
+    "watchdog_recovered": {
+      "title": "Foyer: watchdog di nuovo raggiungibile",
+      "message": "Il watchdog esterno risponde di nuovo."
+    },
+    "rf_interference_suspected": {
+      "title": "Foyer: sospetta interferenza radio",
+      "message": "{count} zone su {of} di {radio} sono ammutolite insieme e il coordinatore risponde ancora. Sospetta, non dimostrata: un crash del coordinatore, un aggiornamento firmware o un black-out in una stanza piena di router hanno lo stesso aspetto. Non usati, perché su quella radio: {skipped}"
+    },
+    "rf_interference_cleared": {
+      "title": "Foyer: interferenza radio rientrata",
+      "message": "{radio} risponde di nuovo normalmente."
+    },
+    "radio_coordinator_down": {
+      "title": "Foyer: coordinatore radio irraggiungibile",
+      "message": "Il coordinatore di {radio} non è raggiungibile, quindi le sue {zones} zone non sono sorvegliate. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete."
+    },
+    "radio_coordinator_up": {
+      "title": "Foyer: coordinatore radio tornato",
+      "message": "Il coordinatore di {radio} risponde di nuovo."
+    }
   },
   "chime_mode": {
     "sound": "Suono singolo",
@@ -1246,7 +1286,8 @@
     "alarm": "All'allarme",
     "state": "Al cambio di stato",
     "system": "Su evento di sistema",
-    "later": "Arriva in una fase successiva"
+    "later": "Arriva in una fase successiva",
+    "health": "Sulla salute di sistema"
   },
   "moment": {
     "armed": "Inserito",
@@ -1278,7 +1319,17 @@
     "walk_test_started": "Walk test avviato",
     "walk_test_ended": "Walk test concluso",
     "escalation_exhausted": "Escalation esaurita",
-    "escalation_skipped": "Passi di escalation non inviati"
+    "escalation_skipped": "Passi di escalation non inviati",
+    "system_power_lost": "Rete elettrica assente",
+    "system_power_restored": "Rete elettrica tornata",
+    "notification_channel_down": "Canale di notifica rotto",
+    "notification_channel_restored": "Canale di notifica di nuovo attivo",
+    "watchdog_unreachable": "Watchdog irraggiungibile",
+    "watchdog_recovered": "Watchdog di nuovo raggiungibile",
+    "rf_interference_suspected": "Sospetta interferenza radio",
+    "rf_interference_cleared": "Interferenza radio rientrata",
+    "radio_coordinator_down": "Coordinatore radio irraggiungibile",
+    "radio_coordinator_up": "Coordinatore radio tornato"
   },
   "condition": {
     "add": "Aggiungi una condizione",

@@ -389,6 +389,30 @@ class Moment(StrEnum):
     AUTO_SUSPENSION_CLEARED = "auto_suspension_cleared"
     AUTO_ARMING_SWITCHED = "auto_arming_switched"
 
+    # System health (§12). A separate concept from zones: "the mains are
+    # down" is not an intrusion and never enters the intrusion queue
+    # (decision 27). Each of these is state with no acknowledgement — it
+    # clears when the cause clears, not when somebody looks at it — so each
+    # raised moment has the matching one that says it is over. A profile can
+    # answer any of them; there is nothing to acknowledge.
+    SYSTEM_POWER_LOST = "system_power_lost"
+    SYSTEM_POWER_RESTORED = "system_power_restored"
+    NOTIFICATION_CHANNEL_DOWN = "notification_channel_down"
+    NOTIFICATION_CHANNEL_RESTORED = "notification_channel_restored"
+    WATCHDOG_UNREACHABLE = "watchdog_unreachable"
+    WATCHDOG_RECOVERED = "watchdog_recovered"
+    # Many zones on one radio went quiet at once while the coordinator kept
+    # answering (§12.5). *Suspected*, and the word is load-bearing: a
+    # coordinator crash, a firmware update, a Zigbee channel change and a
+    # power cut to a room of mains-powered routers all look like this.
+    RF_INTERFERENCE_SUSPECTED = "rf_interference_suspected"
+    RF_INTERFERENCE_CLEARED = "rf_interference_cleared"
+    # The same silence with the coordinator itself gone: a different fault
+    # with a different fix, and conflating the two teaches people to ignore
+    # both.
+    RADIO_COORDINATOR_DOWN = "radio_coordinator_down"
+    RADIO_COORDINATOR_UP = "radio_coordinator_up"
+
 
 class Reason(StrEnum):
     """Why a request was rejected. Stable identifiers: UIs translate them."""
@@ -489,6 +513,59 @@ MAX_TRIGGER_COUNT = 10
 DEFAULT_LOW_BATTERY_THRESHOLD = 20
 MIN_LOW_BATTERY_THRESHOLD = 1
 MAX_LOW_BATTERY_THRESHOLD = 100
+
+# System health (§12). Every number here was chosen rather than inherited,
+# and the reasoning is in docs/system-health.md.
+#
+# The watchdog pings every quarter of an hour and gives up on one attempt
+# after thirty seconds (§12.3). The interval is the trade the household
+# makes: a shorter one tells the external service sooner that Home Assistant
+# has died, a longer one costs less and matters less. Three consecutive
+# failures — three quarters of an hour of silence — before Foyer says so
+# locally, because a single blip on a domestic line is not news and an alarm
+# that cries wolf about its own watchdog is an alarm nobody reads.
+DEFAULT_WATCHDOG_INTERVAL = 900
+MIN_WATCHDOG_INTERVAL = 60
+MAX_WATCHDOG_INTERVAL = 86400
+DEFAULT_WATCHDOG_TIMEOUT = 30
+MIN_WATCHDOG_TIMEOUT = 5
+MAX_WATCHDOG_TIMEOUT = 120
+DEFAULT_WATCHDOG_FAILURES = 3
+MIN_WATCHDOG_FAILURES = 1
+MAX_WATCHDOG_FAILURES = 20
+
+# RF interference (§12.5): N zones on one radio going quiet inside T seconds,
+# gated on the coordinator still answering, and then still true after the
+# confirmation window. The confirmation is what a coordinator reboot and a
+# firmware update walk into instead of the siren.
+DEFAULT_RF_ZONES = 4
+MIN_RF_ZONES = 2
+MAX_RF_ZONES = 50
+# "or 40 % of the zones on that radio, whichever is lower" (§12.5).
+RF_ZONE_FRACTION = 0.4
+DEFAULT_RF_WINDOW = 60
+MIN_RF_WINDOW = 5
+MAX_RF_WINDOW = 3600
+DEFAULT_RF_CONFIRM = 60
+MIN_RF_CONFIRM = 0
+MAX_RF_CONFIRM = 3600
+
+# Notification channel health (§12.2). The sweep asks the service registry
+# every quarter of an hour, which is a read in memory and costs nothing; two
+# consecutive failed sends make a channel broken, because one failure is a
+# provider with a hiccup and two is a pattern.
+DEFAULT_CHANNEL_SWEEP = 900
+MIN_CHANNEL_SWEEP = 60
+MAX_CHANNEL_SWEEP = 86400
+DEFAULT_CHANNEL_FAILURES = 2
+MIN_CHANNEL_FAILURES = 1
+MAX_CHANNEL_FAILURES = 10
+
+# How long a problem has to last before it is worth a Home Assistant repair
+# issue (§12.4). A zone that drops off for an hour is a flat battery being
+# reported twice; a zone that has been gone for two days is a zone nobody has
+# noticed, which is what Settings is for.
+DEFAULT_REPAIR_AFTER = 2 * 24 * 3600
 
 # Log retention (SPEC §10.3): per category, thirty days by default. Zero is
 # not a value: "keep nothing" is what disabling the category is for.
@@ -1003,6 +1080,143 @@ class ChimeSettings:
     during_exit: bool = False
 
 
+class HealthCause(StrEnum):
+    """Why ``binary_sensor.foyer_system_health`` is on (SPEC §13, §12).
+
+    The causes are attributes of one entity rather than five entities,
+    because the question a dashboard asks is "is anything wrong", and the
+    answer to "what" belongs on page 14 where there is room to say it.
+    """
+
+    ZONE_FAULT = "zone_fault"
+    MAINS_LOST = "mains_lost"
+    # The mains entity itself cannot be read (INV-4). Deliberately not
+    # "mains lost": a UPS integration that has not loaded yet would otherwise
+    # announce a power cut at every restart. It carries no moment of its own
+    # — there is nothing here for a response profile to do that answering a
+    # power cut would not do wrongly — and it is visible on the health
+    # sensor, on page 14 and in the diagnostics dump, which is where somebody
+    # looking for "why does it not see my UPS" will be.
+    MAINS_UNKNOWN = "mains_unknown"
+    CHANNEL_DOWN = "channel_down"
+    WATCHDOG_UNREACHABLE = "watchdog_unreachable"
+    RF_INTERFERENCE = "rf_interference"
+    COORDINATOR_DOWN = "coordinator_down"
+
+
+class ChannelFault(StrEnum):
+    """What is wrong with a notification channel (SPEC §12.2).
+
+    Two different certainties, and the panel says which: a service that is
+    not in the registry cannot possibly work, while a run of failed sends is
+    evidence. Keeping them apart is what lets the Contacts page say
+    "integration removed" rather than "something went wrong".
+    """
+
+    MISSING_SERVICE = "missing_service"
+    SEND_FAILED = "send_failed"
+
+
+@dataclass(frozen=True, slots=True)
+class Radio:
+    """One radio integration whose zones are counted together (§12.5).
+
+    ``entry_id`` is the Home Assistant config entry the radio *is*: Home
+    Assistant has no general notion of a radio, and the config entry is the
+    one thing every zone of one ZHA, Z-Wave JS or Zigbee2MQTT installation
+    shares. Foyer derives the membership from it and never asks the household
+    to assign forty zones by hand.
+
+    ``coordinator_entity_id`` is named by hand, and it is the whole feature:
+    eight sensors going quiet while the coordinator answers is interference,
+    and eight sensors going quiet with the coordinator gone is a dead switch.
+    Without it Foyer will not raise interference on this radio at all —
+    guessing which entity is the coordinator would turn the gate that makes
+    the heuristic useful into a second heuristic.
+    """
+
+    id: str
+    name: str
+    entry_id: str = ""
+    coordinator_entity_id: str | None = None
+    # Overrides for this radio, null meaning the global setting. A garden
+    # with two beams on its own stick is not the house's forty contacts.
+    n_zones: int | None = None
+    window: int | None = None
+    enabled: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class WatchdogSettings:
+    """The external watchdog (SPEC §12.3): a URL, pinged periodically.
+
+    Tied to no vendor: healthchecks.io, Uptime Kuma, Cronitor or a URL
+    somebody wrote themselves. If Home Assistant dies the pings stop and the
+    external service raises the alarm, which is the only answer to a dead
+    system being unable to report its own death.
+
+    ``payload`` is off and stays off unless somebody turns it on, and the
+    panel states the reason where the switch is (P-1, decision 29): a ping
+    saying "armed, Night, nobody home" tells whoever holds the other end
+    exactly when to come. The default heartbeat carries nothing at all.
+    """
+
+    enabled: bool = False
+    url: str = ""
+    interval: int = DEFAULT_WATCHDOG_INTERVAL
+    timeout: int = DEFAULT_WATCHDOG_TIMEOUT
+    failures: int = DEFAULT_WATCHDOG_FAILURES
+    payload: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class HealthSettings:
+    """What system health watches (SPEC §12). One block, like the chime.
+
+    ``mains_entity_id`` is an entity picker and deliberately not a zone
+    property. §12.1 is right that a UPS sensor is a zone of type
+    ``technical`` and that the concept is what costs something — but §13
+    wants one entity to know *which* zone the mains is, and answering that
+    with a flag on a zone would mean a household that has no technical zone
+    for it has no mains reading either. The picker works whether or not the
+    same entity is also a zone; when it is, the zone keeps its own technical
+    alarm and its own acknowledgement, unchanged.
+
+    ``mains_lost_states`` is explicit for the reason INV-5 exists: a UPS
+    binary sensor is ``on`` when the mains has failed, a smart plug's power
+    sensor is ``off``, and a default that guesses produces a mains alarm that
+    never fires. The zone wizard's rule applies here too — the panel proposes
+    from the device class and the household confirms.
+    """
+
+    mains_entity_id: str | None = None
+    mains_lost_states: tuple[str, ...] = ("on",)
+    watchdog: WatchdogSettings = field(default_factory=WatchdogSettings)
+    radios: tuple[Radio, ...] = ()
+    rf_zones: int = DEFAULT_RF_ZONES
+    rf_window: int = DEFAULT_RF_WINDOW
+    rf_confirm: int = DEFAULT_RF_CONFIRM
+    channel_sweep: int = DEFAULT_CHANNEL_SWEEP
+    channel_failures: int = DEFAULT_CHANNEL_FAILURES
+    repair_after: int = DEFAULT_REPAIR_AFTER
+
+    def radio(self, radio_id: str | None) -> Radio | None:
+        return next((r for r in self.radios if r.id == radio_id), None)
+
+    def rf_threshold(self, radio: Radio, zones_on_radio: int) -> int:
+        """N for this radio: the setting, or 40 % of its zones if that is lower.
+
+        Never below two — one sensor going quiet is a flat battery, which is
+        the sentence §12.5 opens with.
+        """
+        configured = radio.n_zones if radio.n_zones is not None else self.rf_zones
+        fraction = int(zones_on_radio * RF_ZONE_FRACTION)
+        return max(MIN_RF_ZONES, min(configured, fraction) if fraction else configured)
+
+    def rf_window_of(self, radio: Radio) -> int:
+        return radio.window if radio.window is not None else self.rf_window
+
+
 @dataclass(frozen=True, slots=True)
 class ContactChannel:
     """One way of reaching a contact (SPEC §7.1).
@@ -1388,6 +1602,7 @@ class FoyerConfig:
     devices: tuple[ArmingDevice, ...] = ()
     contacts: tuple[Contact, ...] = ()
     rules: tuple[AutoRule, ...] = ()
+    health: HealthSettings = field(default_factory=HealthSettings)
 
     def rule(self, rule_id: str | None) -> AutoRule | None:
         return next((r for r in self.rules if r.id == rule_id), None)
@@ -1864,6 +2079,118 @@ class Lockout:
 
 
 @dataclass(frozen=True, slots=True)
+class ChannelHealth:
+    """What Foyer knows about one contact channel (SPEC §12.2).
+
+    ``failures`` counts consecutive failed sends and resets on the first
+    success: one failure is a provider with a hiccup, a run of them is a
+    channel. ``since`` is when it broke, which is what turns "it is broken"
+    into "it has been broken since Tuesday" — the sentence that makes a
+    repair issue worth raising.
+    """
+
+    fault: ChannelFault | None = None
+    since: datetime | None = None
+    failures: int = 0
+    last_ok: datetime | None = None
+    last_failed: datetime | None = None
+    # Whether the last sweep found the service in the registry. None means no
+    # sweep has run yet, which is not the same as "missing": an installation
+    # that has just started has learned nothing, and reporting every channel
+    # as broken for the first quarter of an hour would be its own alarm.
+    present: bool | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class WatchdogHealth:
+    """The external watchdog's own state (SPEC §12.3).
+
+    Foyer watches the watchdog: repeated failures to reach the endpoint mean
+    no internet-based notification would go out either, and the panel says
+    so. ``ever_ok`` separates "it stopped working" from "it has never worked",
+    which is almost always a URL somebody mistyped.
+    """
+
+    failures: int = 0
+    down_since: datetime | None = None
+    last_ok: datetime | None = None
+    last_attempt: datetime | None = None
+    last_error: str = ""
+    ever_ok: bool = False
+    # Whether the unreachable moment has already been raised for this outage,
+    # so it is announced once rather than every quarter of an hour.
+    announced: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RadioHealth:
+    """One radio's correlated-silence state (SPEC §12.5).
+
+    ``suspected_since`` is when the threshold was first met and the
+    confirmation window started; ``confirmed`` is when it was still true at
+    the end of it and the moment was raised. Both persist, because a restart
+    in the middle of a jamming attempt must not restart the count from zero.
+    """
+
+    suspected_since: datetime | None = None
+    confirmed: bool = False
+    zone_ids: tuple[str, ...] = ()
+    coordinator_down_since: datetime | None = None
+    coordinator_announced: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SystemHealth:
+    """The condition of the system itself (SPEC §12), beside the areas.
+
+    State, not a channel with a memory: a mains failure that cleared itself at
+    three in the morning is over, and system health says so rather than
+    waiting for somebody to acknowledge it. That is the one deliberate
+    difference from the technical channel (§5.5), which this sits beside:
+    the technical channel is about the *house* and needs a person to say
+    they have seen it, and this is about *Foyer*, where the only meaningful
+    question is whether it is still true.
+
+    ``quiet_since`` records when each zone's entity went unreadable, which is
+    what the radio correlation of §12.5 counts. It is kept for every zone,
+    not only those on a radio, because a zone's radio can be assigned after
+    it has already gone quiet.
+    """
+
+    mains_lost_since: datetime | None = None
+    # Keyed "<contact_id>:<channel_id>".
+    channels: Mapping[str, ChannelHealth] = field(default_factory=dict)
+    watchdog: WatchdogHealth = field(default_factory=WatchdogHealth)
+    radios: Mapping[str, RadioHealth] = field(default_factory=dict)
+    quiet_since: Mapping[str, datetime] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "channels", _frozen(self.channels))
+        object.__setattr__(self, "radios", _frozen(self.radios))
+        object.__setattr__(self, "quiet_since", _frozen(self.quiet_since))
+
+    def channel(self, key: str) -> ChannelHealth:
+        return self.channels.get(key) or ChannelHealth()
+
+    def radio(self, radio_id: str) -> RadioHealth:
+        return self.radios.get(radio_id) or RadioHealth()
+
+    @property
+    def impaired_radios(self) -> frozenset[str]:
+        """Radios whose interference is confirmed right now (§12.5).
+
+        What "do not notify over the affected radio" reads: an action whose
+        target sits on one of these is not run, and the notification says so.
+        """
+        return frozenset(r for r, h in self.radios.items() if h.confirmed)
+
+
+def channel_key(contact_id: str, channel_id: str) -> str:
+    """One name for a contact's channel, used by the state and the panel."""
+    return f"{contact_id}:{channel_id}"
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeState:
     """Everything that must survive a restart (INV-3).
 
@@ -1932,6 +2259,13 @@ class RuntimeState:
     suspensions: tuple[Suspension, ...] = ()
     rules: Mapping[str, RuleRuntime] = field(default_factory=dict)
     pending_seq: int = 0
+    # System health (§12). Persisted like everything else here, and for the
+    # same reason: an outage a restart forgets is an outage that starts
+    # counting again from zero every time Home Assistant reloads, which on a
+    # house being configured is several times an hour. Additive, read with a
+    # default: an older state file restores as "nothing known yet", and the
+    # first sweep after the restart says what is true.
+    health: SystemHealth = field(default_factory=SystemHealth)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "areas", _frozen(self.areas))
@@ -2002,9 +2336,21 @@ class SystemSnapshot:
     entities: Mapping[str, EntityState]
     settling: bool = False
     timezone: tzinfo = UTC
+    # Which radio each entity belongs to (§12.5), entity id to Radio.id.
+    # Home Assistant has no general notion of a radio, so working it out is a
+    # lookup through the entity registry and the config entries — which is
+    # exactly the kind of thing INV-1 says the engine is handed rather than
+    # performs. It covers the zones *and* the entities actions target, so
+    # "do not notify over the affected radio" is decided here and not by an
+    # executor guessing.
+    radios: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _frozen(self.entities))
+        object.__setattr__(self, "radios", _frozen(self.radios))
+
+    def radio_of(self, entity_id: str | None) -> str | None:
+        return self.radios.get(entity_id or "")
 
     def entity(self, entity_id: str) -> EntityState:
         return self.entities.get(entity_id) or MISSING
@@ -2238,6 +2584,36 @@ class SetSuspension:
     actor: Actor = field(default_factory=Actor)
 
 
+@dataclass(frozen=True, slots=True)
+class HealthReport:
+    """What the runtime observed that the engine cannot see (SPEC §12).
+
+    One event rather than three, because it is one kind of fact: somebody
+    outside the engine went and looked. The watchdog's ping is an HTTP
+    request, the sweep is a read of the service registry, and a send outcome
+    is what the executor learned from a call that has already happened —
+    none of which a pure function may do (INV-1). The engine is handed the
+    observation and owns everything that follows from it: the counting, the
+    thresholds, the moments and the state.
+
+    Every field is optional and None means "nothing new about this": a
+    watchdog ping carries only the watchdog.
+    """
+
+    watchdog: bool | None = None
+    watchdog_error: str = ""
+    # channel key -> whether its service is in the registry, from the sweep.
+    channels_present: Mapping[str, bool] | None = None
+    # channel key -> whether a real send just succeeded.
+    channel_sends: Mapping[str, bool] | None = None
+
+    def __post_init__(self) -> None:
+        if self.channels_present is not None:
+            object.__setattr__(self, "channels_present", _frozen(self.channels_present))
+        if self.channel_sends is not None:
+            object.__setattr__(self, "channel_sends", _frozen(self.channel_sends))
+
+
 Event = (
     ArmRequest
     | ArmModeRequest
@@ -2254,6 +2630,7 @@ Event = (
     | CancelAutoAction
     | SetAutoArming
     | SetSuspension
+    | HealthReport
 )
 
 

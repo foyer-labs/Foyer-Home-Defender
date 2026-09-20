@@ -28,7 +28,12 @@ from collections.abc import Container
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
-from . import authz, escalation as escalation_engine, rules as rules_engine
+from . import (
+    authz,
+    escalation as escalation_engine,
+    health as health_engine,
+    rules as rules_engine,
+)
 from .models import (
     CUSTOM_BYPASS,
     ESCALATION_RESTART_GRACE,
@@ -55,6 +60,8 @@ from .models import (
     BypassZone,
     CancelAutoAction,
     Channel,
+    ChannelFault,
+    ChannelHealth,
     CodeResult,
     Contributor,
     Decision,
@@ -66,6 +73,7 @@ from .models import (
     EscalationKind,
     Event,
     FoyerConfig,
+    HealthReport,
     Incident,
     KeyCommand,
     KeyRelease,
@@ -74,6 +82,8 @@ from .models import (
     Occurrence,
     Operation,
     PendingRuleAction,
+    Radio,
+    RadioHealth,
     Reason,
     RuleActionKind,
     RuleBlock,
@@ -88,6 +98,7 @@ from .models import (
     Startup,
     Suspension,
     SuspensionKind,
+    SystemHealth,
     SystemSnapshot,
     TechnicalAlarm,
     Tick,
@@ -95,6 +106,7 @@ from .models import (
     TimerKind,
     WalkTest,
     WalkTestRequest,
+    WatchdogHealth,
     Zone,
     ZoneStateChanged,
 )
@@ -211,6 +223,8 @@ def decide(
         outcome = run.set_auto_arming(event.enabled)
     elif isinstance(event, SetSuspension):
         outcome = run.set_suspension(event)
+    elif isinstance(event, HealthReport):
+        run.apply_health_report(event)
     elif isinstance(event, Startup):
         # How long the gap was, measured rather than described: the log grades
         # a configuration reload and an hour with the integration disabled
@@ -242,6 +256,11 @@ def decide(
     if not snapshot.settling or isinstance(event, Startup):
         run.reconcile_faults()
         run.reconcile_batteries()
+        # Last of the reconciliations, because it reads what the first one
+        # wrote: a zone fault is one of the causes system health reports
+        # (§13), and reading a set the same call is still filling would make
+        # the health sensor lag the fault by one event.
+        run.reconcile_health()
     run.close_incident_if_settled()
     return run.decision(outcome)
 
@@ -385,6 +404,16 @@ def next_wakeup(
         ):
             if at is not None and at > now:
                 dues.append(at)
+    # The RF confirmation window (§12.5, part 1 decision 8). Nothing else
+    # wakes the engine for it: the zones went quiet a minute ago and will not
+    # report again — being quiet is the whole point — so without this the
+    # suspicion would sit unconfirmed until the next door opened.
+    for radio in config.health.radios:
+        current = state.health.radio(radio.id)
+        if radio.enabled and current.suspected_since and not current.confirmed:
+            dues.append(
+                current.suspected_since + timedelta(seconds=config.health.rf_confirm)
+            )
     windows = all_windows(config)
     for key, activations in state.windows.items():
         if (window := windows.get(key)) is not None:
@@ -602,6 +631,28 @@ class _Run:
         # What every row a rule causes carries, so the log can say which rule
         # armed the house without each call site remembering to add it (§9.4).
         self.rule_detail: dict[str, str] = {}
+        # System health (§12): state of the system itself, beside the areas
+        # and never in them. A channel or a radio that configuration has
+        # removed is dropped here rather than carried for ever, the same rule
+        # every other map in this constructor follows.
+        health = state.health
+        known_channels = set(health_engine.configured_channels(config))
+        radio_ids = {r.id for r in config.health.radios}
+        self.mains_lost_since = health.mains_lost_since
+        self.channels = {
+            key: value
+            for key, value in health.channels.items()
+            if key in known_channels
+        }
+        self.watchdog = health.watchdog
+        self.radios = {
+            key: value for key, value in health.radios.items() if key in radio_ids
+        }
+        self.quiet_since = {
+            zone_id: at
+            for zone_id, at in health.quiet_since.items()
+            if zone_id in zone_ids
+        }
 
     # --- world ----------------------------------------------------------------
 
@@ -1523,6 +1574,309 @@ class _Run:
                 },
             )
         self.low_batteries = frozenset(current)
+
+    # --- system health (§12) ----------------------------------------------------
+
+    def apply_health_report(self, event: HealthReport) -> None:
+        """Record what the runtime went and looked at. Decides nothing here.
+
+        The counting and the thresholds are in ``core.health``; what follows
+        from them — the moments, the incident, the state — is decided in
+        ``reconcile_health`` at the end of the call, with everything else.
+        """
+        if event.watchdog is not None:
+            current = self.watchdog
+            if event.watchdog:
+                self.watchdog = WatchdogHealth(
+                    failures=0,
+                    down_since=None,
+                    last_ok=self.now,
+                    last_attempt=self.now,
+                    last_error="",
+                    ever_ok=True,
+                    announced=False,
+                )
+            else:
+                self.watchdog = replace(
+                    current,
+                    failures=current.failures + 1,
+                    last_attempt=self.now,
+                    last_error=event.watchdog_error,
+                )
+        threshold = self.config.health.channel_failures
+        known = health_engine.configured_channels(self.config)
+        for key in known:
+            present = (event.channels_present or {}).get(key)
+            sent = (event.channel_sends or {}).get(key)
+            if present is None and sent is None:
+                continue
+            self.channels[key] = health_engine.channel_after(
+                self.channels.get(key) or ChannelHealth(),
+                self.now,
+                present=present,
+                sent_ok=sent,
+                threshold=threshold,
+            )
+
+    def reconcile_health(self) -> None:
+        """Announce what changed about the system itself, once each (§12).
+
+        Everything here is state without an acknowledgement: each raised
+        moment has the matching one that says it is over, and nothing waits
+        for a person. That is the deliberate difference from the technical
+        channel this sits beside (§5.5) — that one is about the house and
+        needs somebody to say they have seen it; this one is about Foyer,
+        where the only useful question is whether it is still true.
+        """
+        self.reconcile_mains()
+        self.reconcile_channels()
+        self.reconcile_watchdog()
+        self.reconcile_radios()
+
+    def reconcile_mains(self) -> None:
+        """A mains failure notifies at once and is never a quiet night (§12.1)."""
+        lost = health_engine.mains_state(self.config, self.snapshot)
+        if lost is True and self.mains_lost_since is None:
+            self.mains_lost_since = self.now
+            self.occur(
+                Moment.SYSTEM_POWER_LOST,
+                detail={"entity_id": self.config.health.mains_entity_id or ""},
+            )
+        elif lost is False and self.mains_lost_since is not None:
+            since = self.mains_lost_since
+            self.mains_lost_since = None
+            self.occur(
+                Moment.SYSTEM_POWER_RESTORED,
+                detail={
+                    "since": since.isoformat(),
+                    "seconds": str(int((self.now - since).total_seconds())),
+                },
+            )
+
+    def reconcile_channels(self) -> None:
+        """A broken channel is announced over one that still works (§12.2)."""
+        for key, service in health_engine.configured_channels(self.config).items():
+            current = self.channels.get(key)
+            if current is None:
+                continue
+            was = self.previous_channel_fault(key)
+            if current.fault is not None and was is None:
+                over = health_engine.announce_over(self.config, self.channels, key)
+                contact_id, _, channel_id = key.partition(":")
+                self.occur(
+                    Moment.NOTIFICATION_CHANNEL_DOWN,
+                    detail={
+                        "contact_id": contact_id,
+                        "channel_id": channel_id,
+                        "service": service,
+                        "cause": current.fault.value,
+                        # Which channel this may be said over, so the
+                        # response profile answering this moment does not
+                        # have to work it out and cannot get it wrong.
+                        "over_contact_id": over[0] if over else "",
+                        "over_channel_id": over[1] if over else "",
+                    },
+                )
+            elif current.fault is None and was is not None:
+                contact_id, _, channel_id = key.partition(":")
+                self.occur(
+                    Moment.NOTIFICATION_CHANNEL_RESTORED,
+                    detail={
+                        "contact_id": contact_id,
+                        "channel_id": channel_id,
+                        "service": service,
+                    },
+                )
+
+    def previous_channel_fault(self, key: str) -> ChannelFault | None:
+        """What this channel's fault was when the call started.
+
+        Read from the snapshot rather than remembered in a second field:
+        the state the call began with is already here, and a copy of it is a
+        copy that can disagree.
+        """
+        return self.snapshot.state.health.channel(key).fault
+
+    def reconcile_watchdog(self) -> None:
+        """Foyer watches the watchdog (§12.3).
+
+        Repeated failures to reach the endpoint mean no internet-based
+        notification would go out either, so the panel has to say so — the
+        ping is not only for whoever is at the other end of it.
+        """
+        settings = self.config.health.watchdog
+        if not settings.enabled:
+            if self.watchdog.down_since is not None or self.watchdog.announced:
+                self.watchdog = replace(
+                    self.watchdog, down_since=None, announced=False, failures=0
+                )
+            return
+        current = self.watchdog
+        if current.failures >= max(1, settings.failures) and not current.announced:
+            self.watchdog = replace(
+                current, down_since=current.down_since or self.now, announced=True
+            )
+            self.occur(
+                Moment.WATCHDOG_UNREACHABLE,
+                detail={
+                    "failures": str(current.failures),
+                    "error": current.last_error,
+                    # "it has never worked" is almost always a mistyped URL,
+                    # and it is a different sentence from "it stopped".
+                    "ever_ok": "1" if current.ever_ok else "",
+                },
+            )
+        elif current.failures == 0 and current.announced:
+            self.watchdog = replace(current, down_since=None, announced=False)
+            self.occur(Moment.WATCHDOG_RECOVERED)
+
+    def reconcile_radios(self) -> None:
+        """Correlated silence on one radio, gated on the coordinator (§12.5).
+
+        The order matters. A coordinator that is itself unreachable is a
+        coordinator or network failure, reported as such, and the radio is
+        not examined for interference at all: a PoE coordinator dying with
+        its switch is a different fault with a different fix, and conflating
+        them teaches the household to ignore both.
+        """
+        self.track_quiet_zones()
+        settings = self.config.health
+        for radio in settings.radios:
+            if not radio.enabled:
+                self.radios.pop(radio.id, None)
+                continue
+            current = self.radios.get(radio.id) or RadioHealth()
+            answering = health_engine.coordinator_answering(radio, self.snapshot)
+            if answering is False:
+                current = self.coordinator_lost(radio, current)
+                self.radios[radio.id] = current
+                continue
+            if current.coordinator_down_since is not None:
+                if current.coordinator_announced:
+                    self.occur(
+                        Moment.RADIO_COORDINATOR_UP,
+                        detail={"radio": radio.name, "radio_id": radio.id},
+                    )
+                current = replace(
+                    current, coordinator_down_since=None, coordinator_announced=False
+                )
+            if answering is None:
+                # No coordinator named: the gate cannot be applied, so
+                # nothing is raised. Page 14 says so beside the radio.
+                self.radios[radio.id] = replace(
+                    current, suspected_since=None, confirmed=False, zone_ids=()
+                )
+                continue
+            self.radios[radio.id] = self.evaluate_radio(radio, current)
+
+    def coordinator_lost(self, radio: Radio, current: RadioHealth) -> RadioHealth:
+        if current.confirmed:
+            # The suspicion is withdrawn: what looked like interference was
+            # the coordinator going with it. Saying so is the point.
+            self.occur(
+                Moment.RF_INTERFERENCE_CLEARED,
+                detail={
+                    "radio": radio.name,
+                    "radio_id": radio.id,
+                    "cause": "coordinator_down",
+                },
+            )
+        if current.coordinator_down_since is None:
+            self.occur(
+                Moment.RADIO_COORDINATOR_DOWN,
+                detail={
+                    "radio": radio.name,
+                    "radio_id": radio.id,
+                    "entity_id": radio.coordinator_entity_id or "",
+                    "zones": str(
+                        len(health_engine.zones_on(self.config, self.snapshot, radio))
+                    ),
+                },
+            )
+        return RadioHealth(
+            coordinator_down_since=current.coordinator_down_since or self.now,
+            coordinator_announced=True,
+        )
+
+    def evaluate_radio(self, radio: Radio, current: RadioHealth) -> RadioHealth:
+        """One radio, with its coordinator answering. The whole heuristic."""
+        on_radio = health_engine.zones_on(self.config, self.snapshot, radio)
+        window = self.config.health.rf_window_of(radio)
+        quiet = health_engine.burst(self.quiet_since, on_radio, window)
+        threshold = self.config.health.rf_threshold(radio, len(on_radio))
+        if len(quiet) < threshold:
+            if current.confirmed:
+                self.occur(
+                    Moment.RF_INTERFERENCE_CLEARED,
+                    detail={
+                        "radio": radio.name,
+                        "radio_id": radio.id,
+                        "cause": "zones_back",
+                    },
+                )
+            return RadioHealth()
+        if current.suspected_since is None:
+            # The confirmation window starts here and nothing is announced
+            # yet: a coordinator reboot and a firmware update both walk into
+            # this minute instead of into the siren.
+            return RadioHealth(suspected_since=self.now, zone_ids=quiet)
+        confirm = timedelta(seconds=self.config.health.rf_confirm)
+        if current.confirmed or self.now < current.suspected_since + confirm:
+            return replace(current, zone_ids=quiet)
+        self.raise_interference(radio, quiet, on_radio)
+        return replace(current, confirmed=True, zone_ids=quiet)
+
+    def raise_interference(
+        self, radio: Radio, quiet: tuple[str, ...], on_radio: tuple[str, ...]
+    ) -> None:
+        """The moment, and — armed only — the incident (§12.5, part 1 dec. 8).
+
+        The first line reports how many zones, on which radio, and that the
+        coordinator is still answering, because that is what lets somebody
+        tell jamming from the four other things that look exactly like it.
+        """
+        armed = tuple(
+            area.id
+            for area in self.config.areas
+            if self.areas[area.id].state
+            in (AreaState.ARMED, AreaState.ARMING, AreaState.ENTRY, AreaState.TRIGGERED)
+            and any(
+                zone.area_id == area.id
+                for zone_id in on_radio
+                if (zone := self.config.zone(zone_id)) is not None
+            )
+        )
+        detail = {
+            "radio": radio.name,
+            "radio_id": radio.id,
+            "count": str(len(quiet)),
+            "of": str(len(on_radio)),
+            "coordinator": "answering",
+            "armed": "1" if armed else "",
+        }
+        self.occur(Moment.RF_INTERFERENCE_SUSPECTED, zone_ids=quiet, detail=detail)
+        for area_id in armed:
+            # Jamming is a tamper condition in professional panels, so an
+            # armed house treats it as one: the incident opens with no zone
+            # of its own, because no zone did this — the radio did.
+            self.trigger(area_id, None, detail=dict(detail))
+
+    def track_quiet_zones(self) -> None:
+        """When each zone's entity stopped being readable (§12.5).
+
+        Recorded for every zone rather than only those on a radio: a radio
+        can be configured after its zones have already gone quiet, and a
+        count that started only at that moment would miss the burst that
+        prompted somebody to configure it.
+        """
+        for zone in self.config.zones:
+            if not zone.enabled:
+                self.quiet_since.pop(zone.id, None)
+                continue
+            if health_engine.is_unreadable(self.entity(zone)):
+                self.quiet_since.setdefault(zone.id, self.now)
+            else:
+                self.quiet_since.pop(zone.id, None)
 
     # --- alarm transitions ------------------------------------------------------
 
@@ -3147,6 +3501,11 @@ class _Run:
             incident=self.incident,
             active_zones=frozenset(self.active),
             walk_test=self.inhibiting,
+            # §12.5's rule that defeats the feature if missed: an action
+            # whose target sits on a radio currently suspected of being
+            # jammed is not run, because announcing a Zigbee blackout
+            # through a Zigbee siren is not a notification.
+            impaired=frozenset(r for r, h in self.radios.items() if h.confirmed),
         )
         # Escalation steps first, because reaching the end of one raises a
         # moment a profile answers in this same call (§7.2).
@@ -3189,6 +3548,13 @@ class _Run:
             suspensions=tuple(self.suspensions),
             rules=self.rules_runtime,
             pending_seq=self.pending_seq,
+            health=SystemHealth(
+                mains_lost_since=self.mains_lost_since,
+                channels=self.channels,
+                watchdog=self.watchdog,
+                radios=self.radios,
+                quiet_since=self.quiet_since,
+            ),
         )
         chime, chime_inhibited = self.chime_intents(occurrences)
         countdown = self.countdown_intents(occurrences)
