@@ -1724,7 +1724,8 @@
     "bypass_zone": "Exclude a zone",
     "edit_config": "Edit the configuration",
     "walk_test": "Enter walk test",
-    "test_action": "Run a real action test"
+    "test_action": "Run a real action test",
+    "cancel_auto_action": "Cancelling an automatic action"
   },
   "users": {
     "title": "Users",
@@ -2093,8 +2094,8 @@
     "next_disarm": "Next: {rule} disarms, {when}.",
     "next_switch": "Next: {rule} switches to {scenario}, {when}.",
     "next_none": "Nothing is scheduled.",
-    "trigger_absence": "{n} people away for {minutes} min",
-    "trigger_presence": "one of {n} people arrives",
+    "trigger_absence": "Everyone away for {minutes} min · people watched: {n}",
+    "trigger_presence": "Somebody arrives · people watched: {n}",
     "trigger_time": "at {at}, {days}",
     "trigger_entity": "{entity} is {state} for {minutes} min",
     "every_day": "every day",

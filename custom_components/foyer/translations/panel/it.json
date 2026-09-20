@@ -1724,7 +1724,8 @@
     "bypass_zone": "Esclusione di una zona",
     "edit_config": "Modifica della configurazione",
     "walk_test": "Ingresso in walk test",
-    "test_action": "Prova reale di un’azione"
+    "test_action": "Prova reale di un’azione",
+    "cancel_auto_action": "Annullare un'azione automatica"
   },
   "users": {
     "title": "Utenti",
@@ -2093,8 +2094,8 @@
     "next_disarm": "Prossima: {rule} disarma, {when}.",
     "next_switch": "Prossima: {rule} passa a {scenario}, {when}.",
     "next_none": "Non è programmato nulla.",
-    "trigger_absence": "{n} persone assenti da {minutes} min",
-    "trigger_presence": "una di {n} persone arriva",
+    "trigger_absence": "Tutti assenti da {minutes} min · persone osservate: {n}",
+    "trigger_presence": "Arriva qualcuno · persone osservate: {n}",
     "trigger_time": "alle {at}, {days}",
     "trigger_entity": "{entity} è {state} da {minutes} min",
     "every_day": "tutti i giorni",

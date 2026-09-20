@@ -306,7 +306,7 @@ Annulla non succede; se non premi niente succede, e il log dice quale regola
 ha inserito la casa.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-it.png" alt="La pagina Regole automatiche: tre regole con attivazione, condizioni di sicurezza e periodo di grazia, una finestra per il tecnico della caldaia e il riquadro del disarmo automatico che nomina l'attacco da cui protegge" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-it.png" alt="La pagina Regole automatiche: una regola che inserisce quando tutti sono via da dieci minuti, con le sue condizioni di sicurezza e i due minuti di grazia, una finestra per il tecnico della caldaia, e il riquadro del disarmo automatico che nomina l'attacco da cui protegge e l'area perimetrale che nessuna regola può disinserire" width="900">
 </p>
 
 Le condizioni di sicurezza sono la parte che vale la pena configurare. Una
@@ -342,7 +342,7 @@ sentire viene segnato come guasto lì accanto, ed è l'unico dei tre casi che
 l'elenco sa distinguere da solo.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-it.png" alt="Un walk test in corso: un banner dice che ogni risposta è trattenuta e che cosa resta attivo, e in cima alla tabella ci sono le tre zone che non hanno mai reagito — il PIR del garage, che è anche in guasto perché è rimasto muto troppo a lungo, un PIR del disimpegno che non ha visto nessuno benché la finestra della camera sullo stesso piano sia stata aperta alle 21:12, e una finestra che nessuno ha aperto" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-it.png" alt="Un walk test in corso: un banner dice che ogni risposta è trattenuta e che cosa resta attivo, e in cima alla tabella c'è la zona che non ha mai reagito, mentre le tre che hanno reagito portano l'ora in cui ti hanno visto per la prima volta" width="900">
 </p>
 
 Tre cose non sono facoltative, perché finché la prova è attiva un'intrusione
@@ -379,7 +379,7 @@ tutti e quattro la casa sembra tranquillissima: manca la corrente, si rompe il
 canale di notifica, la radio ammutolisce, oppure Home Assistant muore.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-it.png" alt="La pagina Salute di sistema: rete elettrica presente, il watchdog che riporta con payload vuoto, un canale di notifica non funzionante da due settimane, e una radio Zigbee dove quattro zone su quattro sono ammutolite mentre il coordinatore continuava a rispondere" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-it.png" alt="La pagina Salute di sistema: rete elettrica presente, il watchdog che riporta ogni quindici minuti con payload vuoto, e ogni canale di notifica con l'esito del suo ultimo invio vero" width="900">
 </p>
 
 - **Rete elettrica.** Indichi il sensore dell'UPS e quale suo stato significa
@@ -736,7 +736,7 @@ rifiutato e la via per superarla.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-it.png" alt="Il layout a tastierino per un tablet a muro: tutta la casa disinserita, un codice digitato a metà e i quattro scenari di inserimento sotto — e accanto lo stesso tastierino aperto dentro il layout completo" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-it.png" alt="Il layout a tastierino per un tablet a muro: tre cifre di un codice digitate, il tempo di ingresso che scorre, e il pulsante che lo chiude" width="620">
 </p>
 
 ## Domande che vengono fatte

@@ -273,7 +273,7 @@ to stop it."* Two minutes. Press Cancel and it does not; press nothing and it
 does, and the log says which rule armed the house.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-en.png" alt="The Automation rules page: three rules with their triggers, guards and grace periods, an expected-visitor window for the boiler engineer, and the automatic disarming card naming the attack it protects against" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-en.png" alt="The Automation rules page: a rule that arms when everybody has been away for ten minutes, with its guards and its two-minute grace period, an expected-visitor window for the boiler engineer, and the automatic disarming card naming the attack it protects against and the perimeter area a rule may never disarm" width="900">
 </p>
 
 The guards are the part worth configuring. A rule blocked by one is written to
@@ -308,7 +308,7 @@ reporting is marked as a fault beside them, which is the one case of the three
 the list can tell apart for you.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the three zones that never reacted at the top of the table — the garage PIR, which is also faulted for going silent too long, a landing PIR that saw nobody although the bedroom window on the same floor was opened at 21:12, and a window nobody opened" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the zone that never reacted at the top of the table while the three that did carry the time they first saw somebody" width="900">
 </p>
 
 Three things about it that are not optional, because for as long as it runs a
@@ -344,7 +344,7 @@ house looks perfectly quiet: the power goes out, the notification channel
 breaks, the radio goes quiet, or Home Assistant dies.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting with an empty payload, one notification channel failing since a fortnight ago, and a Zigbee radio where four of four zones went quiet while the coordinator kept answering" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting every fifteen minutes with an empty payload, and every notification channel with the outcome of its last real send" width="900">
 </p>
 
 - **Mains power.** Name your UPS sensor and which of its states means failure —
@@ -678,11 +678,11 @@ sends a command and renders the answer, including the name of the zone that
 refused it and the way past it.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts: every area with its state, the entry delay counting down, and the scenarios to arm" width="620">
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet: the whole house disarmed, a code half typed, and the four arming scenarios underneath — with the same pad opened inside the full layout beside it" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet: three digits of a code typed, the entry delay running, and the button that ends it" width="620">
 </p>
 
 ## Questions people ask
