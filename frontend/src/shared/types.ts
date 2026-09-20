@@ -588,6 +588,121 @@ export interface FoyerConfig {
   contacts: ContactConfig[];
   rules: RuleConfig[];
   code_policy: CodePolicyConfig;
+  health: HealthConfig;
+}
+
+// --- system health (SPEC §12) -----------------------------------------------------
+
+/** One radio integration whose zones are counted together (§12.5).
+ *
+ * `entry_id` is the Home Assistant config entry the radio *is*: Home
+ * Assistant has no general notion of a radio, and the config entry is the one
+ * thing every entity of a ZHA, Z-Wave JS or Zigbee2MQTT installation shares.
+ * `coordinator_entity_id` is named by hand and is the whole feature — zones
+ * going quiet while the coordinator answers is interference, zones going
+ * quiet with the coordinator gone is a dead switch. */
+export interface RadioConfig {
+  id?: string;
+  name: string;
+  entry_id: string;
+  coordinator_entity_id: string | null;
+  n_zones: number | null;
+  window: number | null;
+  enabled: boolean;
+}
+
+export interface WatchdogConfig {
+  enabled: boolean;
+  url: string;
+  interval: number;
+  timeout: number;
+  failures: number;
+  /** Off by default and behind an explicit warning (P-1): a ping saying
+   * "armed, Night, nobody home" tells a third party when to come. */
+  payload: boolean;
+}
+
+export interface HealthConfig {
+  mains_entity_id: string | null;
+  /** Which states of that entity mean the mains has failed. Explicit for the
+   * same reason INV-5 exists: a UPS says `on` and a power sensor says `off`. */
+  mains_lost_states: string[];
+  watchdog: WatchdogConfig;
+  radios: RadioConfig[];
+  rf_zones: number;
+  rf_window: number;
+  rf_confirm: number;
+  channel_sweep: number;
+  channel_failures: number;
+  repair_after: number;
+}
+
+/** What page 14 reads. Everything here is computed by the backend from the
+ * state the engine produced: the panel never works out for itself whether a
+ * radio is being jammed. */
+export interface HealthStatus {
+  now: string;
+  causes: string[];
+  unreachable_zones: { id: string; name: string; since: string; days: number }[];
+  mains: {
+    entity_id: string | null;
+    lost_states: string[];
+    state: string | null;
+    lost: boolean | null;
+    since: string | null;
+  };
+  watchdog: {
+    enabled: boolean;
+    url: string;
+    interval: number;
+    timeout: number;
+    failures_allowed: number;
+    payload: boolean;
+    failures: number;
+    down_since: string | null;
+    last_ok: string | null;
+    last_attempt: string | null;
+    last_error: string;
+    ever_ok: boolean;
+  };
+  channels: {
+    key: string;
+    contact_id: string;
+    contact_name: string;
+    channel_id: string;
+    kind: string;
+    service: string;
+    fault: string | null;
+    since: string | null;
+    failures: number;
+    last_ok: string | null;
+    checked: boolean;
+  }[];
+  radios: {
+    id: string;
+    name: string;
+    entry_id: string;
+    coordinator_entity_id: string | null;
+    coordinator_state: string | null;
+    enabled: boolean;
+    zones: number;
+    quiet: number;
+    threshold: number;
+    window: number;
+    suspected_since: string | null;
+    confirmed: boolean;
+    coordinator_down_since: string | null;
+  }[];
+  rf: { zones: number; window: number; confirm: number };
+  faults: string[];
+  repair_after: number;
+}
+
+export interface RadioCandidate {
+  entry_id: string;
+  title: string;
+  domain: string;
+  zones: number;
 }
 
 export interface ConfigMeta {
@@ -909,4 +1024,5 @@ export type PageId =
   | "log"
   | "settings"
   | "rules"
-  | "test";
+  | "test"
+  | "health";

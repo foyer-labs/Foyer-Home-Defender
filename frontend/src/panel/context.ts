@@ -12,12 +12,15 @@ import type {
   EditResult,
   FoyerConfig,
   FoyerStatus,
+  HealthConfig,
+  HealthStatus,
   HomeAssistant,
   LogExport,
   LogPage,
   LogQuery,
   PageId,
   Problem,
+  RadioCandidate,
   SecurityConfig,
   SettingsConfig,
   Simulation,
@@ -91,6 +94,13 @@ export interface PanelContext {
   walkTest(enable: boolean, options?: { duration?: number; code?: string }):
     Promise<CommandResult>;
   testAction(query: TestActionQuery): Promise<TestActionResult>;
+  /** Page 14 — system health (§12). Reading is gated on view_log, like the
+   * log itself; saving the block is edit_config and its code policy. The
+   * diagnostics *download* is Home Assistant's own button on the integration
+   * page, which is already admin-only (part 1 decision 12). */
+  health(): Promise<HealthStatus>;
+  saveHealth(health: HealthConfig): Promise<EditResult>;
+  radioCandidates(): Promise<RadioCandidate[]>;
   /** Configuration backup and restore (§15.1). */
   exportConfig(): Promise<{ filename: string; document: ConfigBackup }>;
   importConfig(document: unknown): Promise<EditResult>;

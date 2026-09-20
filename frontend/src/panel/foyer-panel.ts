@@ -18,6 +18,7 @@ import type {
   FoyerStatus,
   HomeAssistant,
   PageId,
+  RadioCandidate,
 } from "../shared/types";
 import type { PanelContext } from "./context";
 import "./pages/overview";
@@ -33,6 +34,7 @@ import "./pages/rules";
 import "./pages/test";
 import "./pages/log";
 import "./pages/settings";
+import "./pages/health";
 import "./wizard";
 
 // In the order of SPEC §15.1: 1–5, then 13, 10 and 11.
@@ -49,6 +51,7 @@ const PAGES: PageId[] = [
   "rules",
   "test",
   "log",
+  "health",
   "settings",
 ];
 const CONFIG_PAGES: PageId[] = [
@@ -88,6 +91,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   test: ["trigger_column", "blocks", "battery", "nothing_runs", "clock", "skipped", "inherited"],
   log: ["category", "zone_disarmed", "incident", "user", "export"],
   settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
+  health: ["mains", "channels", "watchdog", "payload", "radio", "coordinator", "diagnostics"],
 };
 
 /** The code, when there is one. An absent key means "nothing typed", which is
@@ -317,6 +321,15 @@ class FoyerPanel extends LitElement {
           }),
         ),
       saveChime: (chime) => this._edit("chime", { type: "foyer/config/chime", chime }),
+      health: () => hass.callWS({ type: "foyer/health" }),
+      saveHealth: (health) =>
+        this._edit("health", { type: "foyer/config/health", health }),
+      radioCandidates: async () =>
+        (
+          await hass.callWS<{ radios: RadioCandidate[] }>({
+            type: "foyer/health/radios",
+          })
+        ).radios,
       // The URL itself is never sent from here: the backend generates it,
       // because what protects an unauthenticated webhook is that nobody can
       // guess it (§7.2, part 1 decision 6).
@@ -644,6 +657,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-contacts .ctx=${ctx}></foyer-page-contacts>`;
       case "rules":
         return html`<foyer-page-rules .ctx=${ctx}></foyer-page-rules>`;
+      case "health":
+        return html`<foyer-page-health .ctx=${ctx}></foyer-page-health>`;
       case "test":
         return html`<foyer-page-test .ctx=${ctx}></foyer-page-test>`;
       case "log":

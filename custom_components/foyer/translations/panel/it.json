@@ -13,7 +13,8 @@
     "yes": "Sì",
     "no": "No",
     "seconds_unit": "Secondi",
-    "ok": "OK"
+    "ok": "OK",
+    "edit": "Modifica"
   },
   "nav": {
     "overview": "Panoramica",
@@ -28,7 +29,8 @@
     "devices": "Dispositivi di inserimento",
     "test": "Test e diagnostica",
     "contacts": "Contatti",
-    "rules": "Regole automatiche"
+    "rules": "Regole automatiche",
+    "health": "Salute di sistema"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -359,7 +361,10 @@
     "failures": "Fallimenti prima di segnalare",
     "entry_id": "Integrazione",
     "coordinator_entity_id": "Entità coordinatore",
-    "n_zones": "Zone prima del sospetto"
+    "n_zones": "Zone prima del sospetto",
+    "rf_zones": "Zone prima del sospetto",
+    "rf_window": "Entro",
+    "rf_confirm": "Finestra di conferma"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -995,6 +1000,40 @@
         "next": {
           "term": "Prossima azione automatica",
           "text": "Ciò che è programmato, non ciò che accadrà di sicuro: le condizioni si valutano nel momento in cui la regola agisce, e il log dice quale l'ha fermata."
+        }
+      }
+    },
+    "health": {
+      "title": "Che cosa sorveglia la salute di sistema",
+      "intro": "Un allarme che non sa dirti che ha smesso di funzionare ha smesso di funzionare. Questa pagina è la risposta ai quattro guasti che sconfiggono in silenzio un allarme fai-da-te: manca la corrente, si rompe il canale di notifica, la radio ammutolisce, o Home Assistant muore. Niente di tutto questo è un'intrusione, e niente arriva mai al pannello d'allarme.",
+      "items": {
+        "mains": {
+          "term": "Rete elettrica",
+          "text": "Indica l'entità e quale suo stato significa assenza. Un black-out è annunciato subito e non è mai una notte tranquilla."
+        },
+        "channels": {
+          "term": "Salute dei canali",
+          "text": "Controllati periodicamente e dopo ogni invio reale. Un canale rotto viene annunciato su un altro."
+        },
+        "watchdog": {
+          "term": "Watchdog esterno",
+          "text": "Se Home Assistant muore i ping si fermano e il servizio che hai scelto dà l'allarme. Foyer segnala anche quando non lo raggiunge."
+        },
+        "payload": {
+          "term": "Payload del ping",
+          "text": "Spento. Acceso, il ping dice quante aree sono inserite, cioè racconta a terzi quando la casa è vuota."
+        },
+        "radio": {
+          "term": "Radio",
+          "text": "Le zone sono raggruppate per l'integrazione da cui provengono. L'interferenza è sospetta, mai dimostrata."
+        },
+        "coordinator": {
+          "term": "Entità coordinatore",
+          "text": "Senza, su quella radio non viene segnalato niente: è ciò che distingue il jamming da un coordinatore morto."
+        },
+        "diagnostics": {
+          "term": "Diagnostici",
+          "text": "Il bottone di download di Home Assistant, con tutto il personale rimosso e gli id delle entità sostituiti."
         }
       }
     }
@@ -2089,5 +2128,78 @@
     "because": " · {name}",
     "block_alarm_in_progress": "C'è un allarme in corso",
     "block_missed": "Persa: Home Assistant era spento"
+  },
+  "health": {
+    "settings": "Impostazioni di salute di sistema",
+    "settings_hint": "Quale entità segnala la rete elettrica, dove il watchdog manda i suoi ping e quali radio vengono contate insieme. Cambiarle è una modifica di configurazione.",
+    "mains": "Rete elettrica",
+    "mains_present": "Presente",
+    "mains_lost": "Assente",
+    "mains_pick": "Nessuna entità scelta",
+    "mains_placeholder": "binary_sensor.ups_on_battery",
+    "mains_hint": "Un UPS via NUT o una presa smart te ne danno già una. Se è anche una zona di tipo tecnico, mantiene il suo allarme e il suo riconoscimento: qui dici soltanto a Foyer quale è la rete elettrica.",
+    "mains_states_hint": "Quali stati significano rete assente, separati da virgole. Un binary sensor di un UPS di solito è “on” quando la rete manca, un sensore di potenza “off”: una risposta sbagliata qui è un allarme che non suona mai.",
+    "not_configured": "Non configurata",
+    "unreadable": "Non leggibile",
+    "off": "Spento",
+    "reporting": "Riporta",
+    "unreachable": "Irraggiungibile",
+    "watchdog": "Watchdog esterno",
+    "watchdog_enable": "Manda ping a un endpoint esterno",
+    "watchdog_meta": "ogni {every} min · {payload}",
+    "watchdog_off_hint": "Fuori casa nessuno sa se Foyer è vivo",
+    "with_payload": "con payload",
+    "no_payload": "payload vuoto",
+    "watchdog_note": "Foyer sorveglia anche il watchdog: i fallimenti ripetuti nel raggiungere questo endpoint sono segnalati qui, perché non riuscire a raggiungere internet significa che nemmeno una notifica via internet uscirebbe.",
+    "url_placeholder": "https://hc-ping.com/…",
+    "url_hint": "healthchecks.io, Uptime Kuma, Cronitor, o qualunque cosa risponda. Se Home Assistant muore i ping si fermano e quel servizio dà l'allarme: è l'unica risposta al fatto che un sistema morto non può annunciare la propria morte.",
+    "interval_hint": "Secondi fra un ping e l'altro. Più corto significa che fuori casa si accorgono prima che Home Assistant è morto.",
+    "failures_hint": "Quanti ping consecutivi devono fallire prima che Foyer lo dica qui.",
+    "payload": "Includi lo stato della casa nel ping",
+    "payload_hint": "Spento di default.",
+    "payload_warning": "Un ping che dice “inserito, non c'è nessuno” racconta a chi gestisce quel servizio esattamente quando la tua casa è vuota. Anche acceso, Foyer manda solo quante aree sono inserite: mai quale scenario, quali aree o quali zone sono aperte.",
+    "channels": "Canali di notifica",
+    "channels_ok": "{n} in ordine",
+    "channels_broken": "{n} da sistemare",
+    "channels_meta": "mai provati: {n}",
+    "channels_note": "Un canale rotto viene annunciato su un altro: avvisarti di un canale morto sul canale morto è la battuta che si scrive da sola. Manda una prova dalla pagina Contatti.",
+    "channels_note_none": "Nessun contatto configurato.",
+    "no_channels": "Nessun canale di notifica configurato.",
+    "sweep_every": "controllati ogni {minutes} min",
+    "healthy": "Sano",
+    "untested": "Mai provato",
+    "fault_missing_service": "Servizio assente",
+    "fault_send_failed": "Invii falliti",
+    "since": "Da",
+    "radios": "Radio",
+    "no_radios": "Nessuna radio configurata: il silenzio correlato non viene contato.",
+    "radios_hint": "Una radio è il config entry di un'integrazione: tutte le zone di una stessa installazione ZHA, Z-Wave JS o Zigbee2MQTT lo condividono, quindi indicarlo una volta assegna quaranta zone.",
+    "radios_note": "Molte zone di una stessa radio che ammutoliscono in pochi secondi sono la firma del jamming — e anche di un crash del coordinatore, di un aggiornamento firmware, di un cambio di canale e di un black-out in una stanza piena di router alimentati a rete. Per questo l'evento si chiama sospetto.",
+    "add_radio": "Aggiungi una radio",
+    "candidate": "{title} · {zones} zone",
+    "entry_hint": "Solo le integrazioni da cui proviene almeno una delle tue zone.",
+    "coordinator_placeholder": "sensor.zigbee_coordinator",
+    "coordinator_hint": "È il controllo che rende utile tutto il resto: zone che ammutoliscono mentre il coordinatore risponde sono interferenza, zone che ammutoliscono con il coordinatore sparito sono un coordinatore morto. Senza, Foyer non segnala niente su questa radio invece di tirare a indovinare.",
+    "no_coordinator": "non indicato",
+    "quiet_zones": "Ammutolite",
+    "quiet_of": "{quiet} su {zones} · segnala a {threshold}",
+    "watching": "In ascolto",
+    "confirming": "In conferma",
+    "interference": "Sospetta interferenza",
+    "coordinator_down": "Coordinatore irraggiungibile",
+    "not_gated": "Nessun coordinatore",
+    "rf_zones_hint": "Oppure il 40% delle zone di quella radio, se è meno.",
+    "rf_confirm_hint": "Quanto deve durare il silenzio prima che Foyer lo dica. È quello in cui finiscono un riavvio del coordinatore e un aggiornamento firmware, invece che nella sirena.",
+    "faults": "Guasti aperti",
+    "faults_sub": "segnalati anche come problemi di Home Assistant",
+    "no_faults": "Nessun guasto.",
+    "days": "{n} giorni",
+    "recent": "Da poco",
+    "diagnostics": "Diagnostici",
+    "diagnostics_hint": "Un dump anonimizzato della configurazione e dello stato: niente codici, niente hash, niente nomi di persone, niente URL, e gli id delle entità ridotti a segnaposto stabili. È ciò che trasforma una segnalazione in qualcosa a cui si può rispondere.",
+    "diagnostics_open": "Apri la pagina dell'integrazione",
+    "diagnostics_where": "Il bottone di download è quello di Home Assistant, sulla pagina dell'integrazione, ed è riservato agli amministratori.",
+    "no_zones": "Nessuna zona",
+    "last_result": "Ultimo esito"
   }
 }

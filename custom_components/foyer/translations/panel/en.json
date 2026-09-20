@@ -13,7 +13,8 @@
     "yes": "Yes",
     "no": "No",
     "seconds_unit": "Seconds",
-    "ok": "OK"
+    "ok": "OK",
+    "edit": "Edit"
   },
   "nav": {
     "overview": "Overview",
@@ -28,7 +29,8 @@
     "devices": "Arming devices",
     "test": "Test & diagnostics",
     "contacts": "Contacts",
-    "rules": "Automation rules"
+    "rules": "Automation rules",
+    "health": "System health"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -359,7 +361,10 @@
     "failures": "Failures before reporting",
     "entry_id": "Integration",
     "coordinator_entity_id": "Coordinator entity",
-    "n_zones": "Zones before suspecting"
+    "n_zones": "Zones before suspecting",
+    "rf_zones": "Zones before suspecting",
+    "rf_window": "Within",
+    "rf_confirm": "Confirmation window"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -995,6 +1000,40 @@
         "next": {
           "term": "Next automatic action",
           "text": "What is scheduled, not what will certainly happen: the guards are evaluated at the moment the rule acts, and the log says which one stopped it."
+        }
+      }
+    },
+    "health": {
+      "title": "What system health watches",
+      "intro": "An alarm that cannot tell you it has stopped working has stopped working. This page is the answer to the four failures that silently defeat a DIY alarm: the power goes out, the notification channel breaks, the radio goes quiet, or Home Assistant dies. None of it is an intrusion, and none of it ever reaches the alarm panel.",
+      "items": {
+        "mains": {
+          "term": "Mains power",
+          "text": "Name the entity and which of its states means failure. A power cut is announced at once and is never a quiet night."
+        },
+        "channels": {
+          "term": "Channel health",
+          "text": "Checked periodically and after every real send. A broken channel is announced over a different one."
+        },
+        "watchdog": {
+          "term": "External watchdog",
+          "text": "If Home Assistant dies the pings stop and the service you chose raises the alarm. Foyer also reports when it cannot reach it."
+        },
+        "payload": {
+          "term": "Ping payload",
+          "text": "Off. On, the ping says how many areas are armed, which tells a third party when the house is empty."
+        },
+        "radio": {
+          "term": "Radios",
+          "text": "Zones are grouped by the integration they come from. Interference is suspected, never proven."
+        },
+        "coordinator": {
+          "term": "Coordinator entity",
+          "text": "Without one, nothing is raised on that radio: it is what separates jamming from a dead coordinator."
+        },
+        "diagnostics": {
+          "term": "Diagnostics",
+          "text": "Home Assistant's own download button, with everything personal removed and entity ids replaced."
         }
       }
     }
@@ -2089,5 +2128,78 @@
     "because": " · {name}",
     "block_alarm_in_progress": "An alarm is in progress",
     "block_missed": "Missed: Home Assistant was down"
+  },
+  "health": {
+    "settings": "System health settings",
+    "settings_hint": "Which entity reports the mains, where the watchdog pings, and which radios are counted together. Changing any of it is a configuration edit.",
+    "mains": "Mains power",
+    "mains_present": "Present",
+    "mains_lost": "Lost",
+    "mains_pick": "No entity chosen",
+    "mains_placeholder": "binary_sensor.ups_on_battery",
+    "mains_hint": "A UPS over NUT or a smart plug already gives you one. If it is also a zone of type technical, it keeps its own alarm and its own acknowledgement — this only tells Foyer which one is the mains.",
+    "mains_states_hint": "Which states mean the mains has failed, separated by commas. A UPS binary sensor is usually “on” for a failure and a power sensor “off”: a wrong answer here is an alarm that never fires.",
+    "not_configured": "Not set up",
+    "unreadable": "Cannot be read",
+    "off": "Off",
+    "reporting": "Reporting",
+    "unreachable": "Unreachable",
+    "watchdog": "External watchdog",
+    "watchdog_enable": "Ping an external endpoint",
+    "watchdog_meta": "every {every} min · {payload}",
+    "watchdog_off_hint": "Nothing outside the house knows whether Foyer is alive",
+    "with_payload": "with a payload",
+    "no_payload": "empty payload",
+    "watchdog_note": "Foyer watches the watchdog too: repeated failures to reach this endpoint are reported here, because being unable to reach the internet means no internet notification would go out either.",
+    "url_placeholder": "https://hc-ping.com/…",
+    "url_hint": "healthchecks.io, Uptime Kuma, Cronitor, or anything that answers. If Home Assistant dies the pings stop and that service raises the alarm — the only answer to a dead system being unable to report its own death.",
+    "interval_hint": "Seconds between pings. Shorter means the outside world learns sooner that Home Assistant has died.",
+    "failures_hint": "How many pings in a row must fail before Foyer says so here.",
+    "payload": "Include the state of the house in the ping",
+    "payload_hint": "Off by default.",
+    "payload_warning": "A ping that says “armed, nobody home” tells whoever runs that service exactly when your house is empty. Even switched on, Foyer sends only how many areas are armed — never which scenario, which areas, or which zones are open.",
+    "channels": "Notification channels",
+    "channels_ok": "{n} healthy",
+    "channels_broken": "{n} failing",
+    "channels_meta": "{n} never exercised",
+    "channels_note": "A broken channel is announced through a different one: warning you about a dead channel over the dead channel is the joke that writes itself. Send a test from the Contacts page.",
+    "channels_note_none": "No contacts configured yet.",
+    "no_channels": "No notification channels are configured.",
+    "sweep_every": "checked every {minutes} min",
+    "healthy": "Healthy",
+    "untested": "Untested",
+    "fault_missing_service": "Service missing",
+    "fault_send_failed": "Sends failing",
+    "since": "Since",
+    "radios": "Radios",
+    "no_radios": "No radios are configured, so correlated silence is not counted.",
+    "radios_hint": "A radio is one integration's config entry: every zone of one ZHA, Z-Wave JS or Zigbee2MQTT installation shares it, so naming the entry once assigns forty zones.",
+    "radios_note": "Many zones on one radio going quiet within seconds is the signature of jamming — and of a coordinator crash, a firmware update, a channel change and a power cut to a room of mains-powered routers. That is why the event is called suspected.",
+    "add_radio": "Add a radio",
+    "candidate": "{title} · {zones} zones",
+    "entry_hint": "Only integrations that back at least one of your zones.",
+    "coordinator_placeholder": "sensor.zigbee_coordinator",
+    "coordinator_hint": "The gate that makes this worth having: zones going quiet while the coordinator answers is interference, zones going quiet with the coordinator gone is a dead coordinator. Without one, Foyer raises nothing on this radio rather than guessing.",
+    "no_coordinator": "none named",
+    "quiet_zones": "Quiet",
+    "quiet_of": "{quiet} of {zones} · raises at {threshold}",
+    "watching": "Watching",
+    "confirming": "Confirming",
+    "interference": "Interference suspected",
+    "coordinator_down": "Coordinator unreachable",
+    "not_gated": "No coordinator",
+    "rf_zones_hint": "Or 40% of that radio's zones, whichever is lower.",
+    "rf_confirm_hint": "How long the silence must last before Foyer says so. This is what a coordinator reboot and a firmware update walk into instead of the siren.",
+    "faults": "Open faults",
+    "faults_sub": "also raised as Home Assistant repair issues",
+    "no_faults": "Nothing is in fault.",
+    "days": "{n} days",
+    "recent": "Recently",
+    "diagnostics": "Diagnostics",
+    "diagnostics_hint": "An anonymised dump of the configuration and the state: no codes, no hashes, no personal names, no URLs, and entity ids reduced to stable placeholders. It is what turns a bug report into something answerable.",
+    "diagnostics_open": "Open the integration page",
+    "diagnostics_where": "The download button is Home Assistant's own, on the integration's page, and it is available to administrators.",
+    "no_zones": "No zones on it",
+    "last_result": "Last result"
   }
 }

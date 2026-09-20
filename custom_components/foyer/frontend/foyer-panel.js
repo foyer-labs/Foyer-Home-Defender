@@ -2813,6 +2813,18 @@ var ut = {
 		"walk_test_ended",
 		"escalation_exhausted",
 		"chime"
+	],
+	health: [
+		"system_power_lost",
+		"system_power_restored",
+		"notification_channel_down",
+		"notification_channel_restored",
+		"watchdog_unreachable",
+		"watchdog_recovered",
+		"rf_interference_suspected",
+		"rf_interference_cleared",
+		"radio_coordinator_down",
+		"radio_coordinator_up"
 	]
 }, dt = ["companion", "telegram"], ft = ["notify", "persistent_notification"], pt = [
 	"siren",
@@ -8010,6 +8022,548 @@ var Jt = ["en", "it"], Yt = {
 };
 customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Xt);
 //#endregion
+//#region src/panel/pages/health.ts
+function Zt(e, t) {
+	return t ? new Date(t).toLocaleString(e.hass.language) : "—";
+}
+var Qt = class extends I {
+	constructor(...e) {
+		super(...e), this._candidates = [], this._problems = [], this._busy = !1, this._error = "";
+	}
+	static {
+		this.properties = {
+			ctx: { attribute: !1 },
+			_status: { state: !0 },
+			_draft: { state: !0 },
+			_candidates: { state: !0 },
+			_problems: { state: !0 },
+			_busy: { state: !0 },
+			_error: { state: !0 }
+		};
+	}
+	connectedCallback() {
+		super.connectedCallback(), this._load(), this._timer = window.setInterval(() => void this._load(), 3e4);
+	}
+	disconnectedCallback() {
+		super.disconnectedCallback(), this._timer && window.clearInterval(this._timer);
+	}
+	async _load() {
+		if (this.ctx) try {
+			this._status = await this.ctx.health(), this._error = "";
+		} catch (e) {
+			this._error = String(e?.message ?? e);
+		}
+	}
+	_editConfig() {
+		let e = this.ctx?.config?.health;
+		e && (this._draft = structuredClone(e), this._problems = [], this._loadCandidates());
+	}
+	async _loadCandidates() {
+		if (this.ctx) try {
+			this._candidates = await this.ctx.radioCandidates();
+		} catch {
+			this._candidates = [];
+		}
+	}
+	_set(e, t) {
+		this._draft &&= {
+			...this._draft,
+			[e]: t
+		};
+	}
+	_setWatchdog(e, t) {
+		this._draft &&= {
+			...this._draft,
+			watchdog: {
+				...this._draft.watchdog,
+				[e]: t
+			}
+		};
+	}
+	_setRadio(e, t) {
+		if (!this._draft) return;
+		let n = this._draft.radios.map((n, r) => r === e ? {
+			...n,
+			...t
+		} : n);
+		this._set("radios", n);
+	}
+	_addRadio() {
+		if (!this._draft) return;
+		let e = new Set(this._draft.radios.map((e) => e.entry_id)), t = this._candidates.find((t) => !e.has(t.entry_id));
+		this._set("radios", [...this._draft.radios, {
+			name: t?.title ?? "",
+			entry_id: t?.entry_id ?? "",
+			coordinator_entity_id: null,
+			n_zones: null,
+			window: null,
+			enabled: !0
+		}]);
+	}
+	_removeRadio(e) {
+		this._draft && this._set("radios", this._draft.radios.filter((t, n) => n !== e));
+	}
+	async _save() {
+		if (this.ctx && this._draft) {
+			this._busy = !0;
+			try {
+				let e = await this.ctx.saveHealth(this._draft);
+				this._problems = e.problems, e.success && (this._draft = void 0, await this._load());
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	render() {
+		let e = this.ctx;
+		if (!e?.config) return k;
+		let t = e.strings;
+		if (this._error) return D`<div class="card">
+        <div class="card-bd"><div class="empty">${this._error}</div></div>
+      </div>`;
+		let n = this._status;
+		return n ? D`
+      ${this._renderTiles(t, n)} ${this._renderChannels(t, n)}
+      ${this._renderRadios(t, n)} ${this._renderFaults(t, n)}
+      ${this._renderDiagnostics(t)}
+      ${this._draft ? this._renderEditor(t, this._draft) : D`<div class="card">
+            <div class="card-hd">
+              <h2>${B(t, "health.settings")}</h2>
+              <button class="btn" @click=${() => this._editConfig()}>
+                ${B(t, "common.edit")}
+              </button>
+            </div>
+            <div class="card-bd">
+              <p class="hint">${B(t, "health.settings_hint")}</p>
+            </div>
+          </div>`}
+    ` : D`<div class="card">
+        <div class="card-bd"><div class="empty">${B(t, "common.loading")}</div></div>
+      </div>`;
+	}
+	_tile(e, t, n, r) {
+		return D`<div class="tile ${r}">
+      <div class="name">${e}</div>
+      <div class="state">${t}</div>
+      <div class="meta">${n}</div>
+    </div>`;
+	}
+	_renderTiles(e, t) {
+		let n = t.mains, r = n.entity_id ? n.lost === !0 ? "crit" : n.lost === null ? "warn" : "ok" : "idle", i = t.watchdog, a = i.enabled ? i.down_since ? "crit" : "ok" : "idle", o = t.channels.filter((e) => e.fault).length, s = t.channels.filter((e) => !e.fault && !e.checked).length;
+		return D`<div class="tiles">
+      ${this._tile(B(e, "health.mains"), n.entity_id ? n.lost === !0 ? B(e, "health.mains_lost") : n.lost === null ? B(e, "health.unreadable") : B(e, "health.mains_present") : B(e, "health.not_configured"), n.entity_id ?? B(e, "health.mains_pick"), r)}
+      ${this._tile(B(e, "health.watchdog"), i.enabled ? i.down_since ? B(e, "health.unreachable") : B(e, "health.reporting") : B(e, "health.off"), i.enabled ? B(e, "health.watchdog_meta", {
+			every: String(Math.round(i.interval / 60)),
+			payload: B(e, i.payload ? "health.with_payload" : "health.no_payload")
+		}) : B(e, "health.watchdog_off_hint"), a)}
+      ${this._tile(B(e, "health.channels"), o ? B(e, "health.channels_broken", { n: String(o) }) : B(e, "health.channels_ok", { n: String(t.channels.length) }), B(e, "health.channels_meta", { n: String(s) }), o ? "crit" : t.channels.length ? "ok" : "idle")}
+    </div>`;
+	}
+	_renderChannels(e, t) {
+		return D`<div class="card">
+      <div class="card-hd">
+        <h2>${B(e, "health.channels")}</h2>
+        <span class="sub">
+          ${B(e, "health.sweep_every", { minutes: String(Math.round((this.ctx?.config?.health.channel_sweep ?? 900) / 60)) })}
+        </span>
+      </div>
+      ${t.channels.length ? D`<div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>${B(e, "contacts.title")}</th>
+                  <th>${B(e, "field.service")}</th>
+                  <th>${B(e, "field.state")}</th>
+                  <th>${B(e, "health.last_result")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${t.channels.map((t) => D`<tr>
+                    <td>
+                      <strong>${t.contact_name}</strong>
+                      <span class="tag">${B(e, `channel_kind.${t.kind}`)}</span>
+                    </td>
+                    <td class="mono">${t.service}</td>
+                    <td>
+                      <span class="pill ${t.fault ? "bad" : t.checked ? "ok" : "warn"}">
+                        ${t.fault ? B(e, `health.fault_${t.fault}`) : t.checked ? B(e, "health.healthy") : B(e, "health.untested")}
+                      </span>
+                    </td>
+                    <td>${Zt(this.ctx, t.since ?? t.last_ok)}</td>
+                  </tr>`)}
+              </tbody>
+            </table>
+          </div>` : D`<div class="empty">${B(e, "health.no_channels")}</div>`}
+      <div class="card-bd">
+        <p class="hint">${B(e, "health.channels_note")}</p>
+      </div>
+    </div>`;
+	}
+	_renderRadios(e, t) {
+		return D`<div class="card">
+      <div class="card-hd">
+        <h2>${B(e, "health.radios")}</h2>
+      </div>
+      ${t.radios.length ? D`<div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>${B(e, "field.name")}</th>
+                  <th>${B(e, "field.coordinator_entity_id")}</th>
+                  <th>${B(e, "health.quiet_zones")}</th>
+                  <th>${B(e, "field.state")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${t.radios.map((t) => D`<tr>
+                    <td><strong>${t.name}</strong></td>
+                    <td class="mono">
+                      ${t.coordinator_entity_id ?? B(e, "health.no_coordinator")}
+                    </td>
+                    <td class="mono">
+                      ${B(e, "health.quiet_of", {
+			quiet: String(t.quiet),
+			zones: String(t.zones),
+			threshold: String(t.threshold)
+		})}
+                    </td>
+                    <td>
+                      <span
+                        class="pill ${t.confirmed || t.coordinator_down_since ? "bad" : t.suspected_since || !t.coordinator_entity_id || !t.zones ? "warn" : "ok"}"
+                      >
+                        ${t.confirmed ? B(e, "health.interference") : t.coordinator_down_since ? B(e, "health.coordinator_down") : t.suspected_since ? B(e, "health.confirming") : t.coordinator_entity_id ? t.zones ? B(e, "health.watching") : B(e, "health.no_zones") : B(e, "health.not_gated")}
+                      </span>
+                    </td>
+                  </tr>`)}
+              </tbody>
+            </table>
+          </div>` : D`<div class="empty">${B(e, "health.no_radios")}</div>`}
+      <div class="card-bd">
+        <p class="hint">${B(e, "health.radios_note")}</p>
+      </div>
+    </div>`;
+	}
+	_renderFaults(e, t) {
+		let n = new Map((this.ctx?.config?.zones ?? []).map((e) => [e.id ?? "", e])), r = new Map(t.unreachable_zones.map((e) => [e.id, e]));
+		return D`<div class="card">
+      <div class="card-hd">
+        <h2>${B(e, "health.faults")}</h2>
+        <span class="sub">${B(e, "health.faults_sub")}</span>
+      </div>
+      ${t.faults.length ? D`<div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>${B(e, "field.name")}</th>
+                  <th>${B(e, "field.entity_id")}</th>
+                  <th>${B(e, "health.since")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${t.faults.map((t) => {
+			let i = n.get(t), a = r.get(t);
+			return D`<tr>
+                    <td><strong>${i?.name ?? t}</strong></td>
+                    <td class="mono">${i?.entity_id ?? ""}</td>
+                    <td>
+                      ${a ? B(e, "health.days", { n: String(a.days) }) : B(e, "health.recent")}
+                    </td>
+                  </tr>`;
+		})}
+              </tbody>
+            </table>
+          </div>` : D`<div class="empty">${B(e, "health.no_faults")}</div>`}
+    </div>`;
+	}
+	_renderDiagnostics(e) {
+		return D`<div class="card">
+      <div class="card-hd">
+        <h2>${B(e, "health.diagnostics")}</h2>
+      </div>
+      <div class="card-bd">
+        <p class="hint">${B(e, "health.diagnostics_hint")}</p>
+        <a class="btn" href="/config/integrations/integration/foyer">
+          ${B(e, "health.diagnostics_open")}
+        </a>
+        <p class="hint">${B(e, "health.diagnostics_where")}</p>
+      </div>
+    </div>`;
+	}
+	_renderEditor(e, t) {
+		return D`<div class="card">
+      <div class="card-hd">
+        <h2>${B(e, "health.settings")}</h2>
+      </div>
+      <div class="card-bd">
+        <div class="grid-form">
+          <label class="field">
+            <span class="lbl">${B(e, "field.mains_entity_id")}</span>
+            <input
+              .value=${t.mains_entity_id ?? ""}
+              placeholder=${B(e, "health.mains_placeholder")}
+              @input=${(e) => this._set("mains_entity_id", e.target.value || null)}
+            />
+            <span class="hint">${B(e, "health.mains_hint")}</span>
+          </label>
+          <label class="field">
+            <span class="lbl">${B(e, "field.mains_lost_states")}</span>
+            <input
+              .value=${t.mains_lost_states.join(", ")}
+              @input=${(e) => this._set("mains_lost_states", e.target.value.split(",").map((e) => e.trim()).filter(Boolean))}
+            />
+            <span class="hint">${B(e, "health.mains_states_hint")}</span>
+          </label>
+        </div>
+
+        <fieldset>
+          <legend>${B(e, "health.watchdog")}</legend>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t.watchdog.enabled}
+              @change=${(e) => this._setWatchdog("enabled", e.target.checked)}
+            />
+            <span>${B(e, "health.watchdog_enable")}</span>
+          </label>
+          <div class="grid-form">
+            <label class="field wide">
+              <span class="lbl">${B(e, "field.url")}</span>
+              <input
+                .value=${t.watchdog.url}
+                placeholder=${B(e, "health.url_placeholder")}
+                @input=${(e) => this._setWatchdog("url", e.target.value)}
+              />
+              <span class="hint">${B(e, "health.url_hint")}</span>
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.interval")}</span>
+              <input
+                type="number"
+                min="60"
+                max="86400"
+                .value=${String(t.watchdog.interval)}
+                @input=${(e) => this._setWatchdog("interval", W(e.target.value) ?? 900)}
+              />
+              <span class="hint">${B(e, "health.interval_hint")}</span>
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.timeout")}</span>
+              <input
+                type="number"
+                min="5"
+                max="120"
+                .value=${String(t.watchdog.timeout)}
+                @input=${(e) => this._setWatchdog("timeout", W(e.target.value) ?? 30)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.failures")}</span>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                .value=${String(t.watchdog.failures)}
+                @input=${(e) => this._setWatchdog("failures", W(e.target.value) ?? 3)}
+              />
+              <span class="hint">${B(e, "health.failures_hint")}</span>
+            </label>
+          </div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t.watchdog.payload}
+              @change=${(e) => this._setWatchdog("payload", e.target.checked)}
+            />
+            <span>
+              ${B(e, "health.payload")}
+              <span class="hint">${B(e, "health.payload_hint")}</span>
+            </span>
+          </label>
+          ${t.watchdog.payload ? D`<div class="warning" role="alert">${B(e, "health.payload_warning")}</div>` : k}
+          <p class="hint">${B(e, "health.watchdog_note")}</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>${B(e, "health.radios")}</legend>
+          <p class="hint">${B(e, "health.radios_hint")}</p>
+          ${t.radios.map((t, n) => this._renderRadioEditor(e, t, n))}
+          <button class="btn" @click=${() => this._addRadio()}>${B(e, "health.add_radio")}</button>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.rf_zones")}</span>
+              <input
+                type="number"
+                min="2"
+                max="50"
+                .value=${String(t.rf_zones)}
+                @input=${(e) => this._set("rf_zones", W(e.target.value) ?? 4)}
+              />
+              <span class="hint">${B(e, "health.rf_zones_hint")}</span>
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.rf_window")}</span>
+              <input
+                type="number"
+                min="5"
+                max="3600"
+                .value=${String(t.rf_window)}
+                @input=${(e) => this._set("rf_window", W(e.target.value) ?? 60)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.rf_confirm")}</span>
+              <input
+                type="number"
+                min="0"
+                max="3600"
+                .value=${String(t.rf_confirm)}
+                @input=${(e) => this._set("rf_confirm", W(e.target.value) ?? 60)}
+              />
+              <span class="hint">${B(e, "health.rf_confirm_hint")}</span>
+            </label>
+          </div>
+        </fieldset>
+
+        ${this._problems.length ? D`<div class="problems" role="alert">
+              <ul>
+                ${this._problems.map((t) => D`<li>${U(e, t)}</li>`)}
+              </ul>
+            </div>` : k}
+        <div class="actions">
+          <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
+            ${B(e, "common.save")}
+          </button>
+          <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
+            ${B(e, "common.cancel")}
+          </button>
+        </div>
+      </div>
+    </div>`;
+	}
+	_renderRadioEditor(e, t, n) {
+		return D`<div class="radio-row">
+      <div class="grid-form">
+        <label class="field">
+          <span class="lbl">${B(e, "field.name")}</span>
+          <input
+            .value=${t.name}
+            @input=${(e) => this._setRadio(n, { name: e.target.value })}
+          />
+        </label>
+        <label class="field">
+          <span class="lbl">${B(e, "field.entry_id")}</span>
+          <select
+            @change=${(e) => {
+			let r = e.target.value, i = this._candidates.find((e) => e.entry_id === r);
+			this._setRadio(n, {
+				entry_id: r,
+				name: t.name || (i?.title ?? "")
+			});
+		}}
+          >
+            <option .value=${""} ?selected=${!t.entry_id}>—</option>
+            ${this._candidates.map((n) => D`<option
+                .value=${n.entry_id}
+                ?selected=${n.entry_id === t.entry_id}
+              >
+                ${B(e, "health.candidate", {
+			title: n.title,
+			zones: String(n.zones)
+		})}
+              </option>`)}
+          </select>
+          <span class="hint">${B(e, "health.entry_hint")}</span>
+        </label>
+        <label class="field wide">
+          <span class="lbl">${B(e, "field.coordinator_entity_id")}</span>
+          <input
+            .value=${t.coordinator_entity_id ?? ""}
+            placeholder=${B(e, "health.coordinator_placeholder")}
+            @input=${(e) => this._setRadio(n, { coordinator_entity_id: e.target.value || null })}
+          />
+          <span class="hint">${B(e, "health.coordinator_hint")}</span>
+        </label>
+      </div>
+      <div class="actions">
+        <label class="check">
+          <input
+            type="checkbox"
+            .checked=${t.enabled}
+            @change=${(e) => this._setRadio(n, { enabled: e.target.checked })}
+          />
+          <span>${B(e, "field.enabled")}</span>
+        </label>
+        <button class="btn danger" @click=${() => this._removeRadio(n)}>
+          ${B(e, "common.delete")}
+        </button>
+      </div>
+    </div>`;
+	}
+	static {
+		this.styles = [
+			V,
+			H,
+			o`
+      .tiles {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-bottom: 16px;
+      }
+      .tile {
+        background: var(--card-background-color, #fff);
+        border: 1px solid var(--divider-color, #e0e0e0);
+        border-left: 4px solid var(--disabled-text-color, #9e9e9e);
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      .tile.ok {
+        border-left-color: var(--success-color, #43a047);
+      }
+      .tile.warn {
+        border-left-color: var(--warning-color, #ffa726);
+      }
+      .tile.crit {
+        border-left-color: var(--error-color, #e53935);
+      }
+      .tile .name {
+        color: var(--secondary-text-color);
+        font-size: 12.5px;
+      }
+      .tile .state {
+        font-size: 18px;
+        font-weight: 500;
+        margin: 2px 0 4px;
+      }
+      .tile .meta {
+        color: var(--secondary-text-color);
+        font-size: 12.5px;
+        overflow-wrap: anywhere;
+      }
+      .radio-row {
+        border: 1px solid var(--divider-color, #e0e0e0);
+        border-radius: 8px;
+        margin-bottom: 12px;
+        padding: 12px;
+      }
+      .warning {
+        background: color-mix(in srgb, var(--warning-color, #ffa726) 14%, transparent);
+        border-left: 3px solid var(--warning-color, #ffa726);
+        border-radius: 4px;
+        font-size: 13px;
+        margin: 8px 0;
+        padding: 10px 12px;
+      }
+      a.btn {
+        display: inline-block;
+        text-decoration: none;
+      }
+    `
+		];
+	}
+};
+customElements.get("foyer-page-health") || customElements.define("foyer-page-health", Qt);
+//#endregion
 //#region src/panel/wizard.ts
 var Z = [
 	"area",
@@ -8017,7 +8571,7 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], Zt = 3, Qt = class extends I {
+], $t = 3, en = class extends I {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -8175,7 +8729,7 @@ var Z = [
 		return D`
       <p>${B(e, "wizard.zones_text", {
 			have: n.length,
-			want: Zt
+			want: $t
 		})}</p>
       <ul class="zones">
         ${n.map((t) => D`<li>
@@ -8512,10 +9066,10 @@ var Z = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", Qt);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", en);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var $t = [
+var tn = [
 	"overview",
 	"areas",
 	"zones",
@@ -8528,8 +9082,9 @@ var $t = [
 	"rules",
 	"test",
 	"log",
+	"health",
 	"settings"
-], en = [
+], nn = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -8540,7 +9095,7 @@ var $t = [
 	"contacts",
 	"rules",
 	"settings"
-], tn = {
+], rn = {
 	overview: [
 		"area",
 		"master",
@@ -8645,6 +9200,15 @@ var $t = [
 		"retention",
 		"backup",
 		"language"
+	],
+	health: [
+		"mains",
+		"channels",
+		"watchdog",
+		"payload",
+		"radio",
+		"coordinator",
+		"diagnostics"
 	]
 };
 function Q(e) {
@@ -8653,7 +9217,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var nn = class extends I {
+var an = class extends I {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._offset = 0;
 	}
@@ -8755,6 +9319,12 @@ var nn = class extends I {
 				type: "foyer/config/chime",
 				chime: e
 			}),
+			health: () => e.callWS({ type: "foyer/health" }),
+			saveHealth: (e) => this._edit("health", {
+				type: "foyer/config/health",
+				health: e
+			}),
+			radioCandidates: async () => (await e.callWS({ type: "foyer/health/radios" })).radios,
 			setAckWebhook: (e) => this._edit("settings", {
 				type: "foyer/ack_webhook",
 				enabled: e
@@ -8973,7 +9543,7 @@ var nn = class extends I {
     `;
 	}
 	_renderTabs(e) {
-		let t = this._canConfigure ? $t : $t.filter((e) => !en.includes(e));
+		let t = this._canConfigure ? tn : tn.filter((e) => !nn.includes(e));
 		return t.length < 2 ? k : D`
       <nav class="tabs" role="tablist">
         ${t.map((t) => D`
@@ -9012,6 +9582,7 @@ var nn = class extends I {
 			case "devices": return D`<foyer-page-devices .ctx=${t}></foyer-page-devices>`;
 			case "contacts": return D`<foyer-page-contacts .ctx=${t}></foyer-page-contacts>`;
 			case "rules": return D`<foyer-page-rules .ctx=${t}></foyer-page-rules>`;
+			case "health": return D`<foyer-page-health .ctx=${t}></foyer-page-health>`;
 			case "test": return D`<foyer-page-test .ctx=${t}></foyer-page-test>`;
 			case "log": return D`<foyer-page-log .ctx=${t}></foyer-page-log>`;
 			case "settings": return D`<foyer-page-settings .ctx=${t}></foyer-page-settings>`;
@@ -9035,7 +9606,7 @@ var nn = class extends I {
         ${r ? D`<div class="help-body">
               <p>${B(e, `${n}.intro`)}</p>
               <dl>
-                ${tn[t].map((t) => D`
+                ${rn[t].map((t) => D`
                     <dt>${B(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${B(e, `${n}.items.${t}.text`)}</dd>
                   `)}
@@ -9279,5 +9850,5 @@ var nn = class extends I {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", nn);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", an);
 //#endregion
