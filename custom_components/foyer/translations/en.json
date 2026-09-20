@@ -543,18 +543,29 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "The zone {zone} has been unreadable for {days} days. While it is, it is a fault: it blocks arming and it is never treated as “closed”. A flat battery, a sensor out of range, or an integration that no longer loads.\n\nDismiss this card. It comes back if the problem does."
+            "description": "The zone {zone} has been unreadable for {days} days. While it is, it is a fault: it blocks arming and it is never treated as “closed”. A flat battery, a sensor out of range, or an integration that no longer loads.\n\nDismisses this card. It comes back if the problem does."
           }
         }
       }
     },
     "channel_broken": {
-      "title": "Foyer: cannot reach {contact} through {service}",
+      "title": "Foyer: {service} is not there to call",
       "fix_flow": {
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "The notification channel {service} for {contact} is {detail}. Integrations get removed, renamed or fail to load after an update, and a channel discovered broken during an alarm is the failure this check exists to prevent. Fix it on the Contacts page and send a test.\n\nDismiss this card. It comes back if the problem does."
+            "description": "The notification channel {service}, which {contact} is reached through, is not in this installation any more. Integrations get removed, renamed or fail to load after an update, and a channel discovered broken during an alarm is the failure this check exists to prevent. Fix it on the Contacts page and send a test.\n\nDismisses this card. It comes back if the problem does."
+          }
+        }
+      }
+    },
+    "channel_failing": {
+      "title": "Foyer: sending to {contact} keeps failing",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Mark as seen",
+            "description": "Messages to {contact} through {service} have failed repeatedly. The service is there; the sends are not arriving. Send a test from the Contacts page once you believe it is fixed — a success clears this.\n\nDismisses this card. It comes back if the problem does."
           }
         }
       }
@@ -565,7 +576,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "Not one ping to {url} has succeeded. Almost always a mistyped URL or an endpoint that was never created. Last error: {error}. Until it works, nothing outside the house knows whether Home Assistant is still alive.\n\nDismiss this card. It comes back if the problem does."
+            "description": "Not one ping has succeeded since it was switched on. Almost always a mistyped URL or an endpoint that was never created. Last error: {error}. Until it works, nothing outside the house knows whether Home Assistant is still alive.\n\nDismisses this card. It comes back if the problem does."
           }
         }
       }
@@ -576,7 +587,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "Pings to {url} are failing. Last error: {error}. Being unable to reach it means no notification that needs the internet would reach you either.\n\nDismiss this card. It comes back if the problem does."
+            "description": "The pings are failing. Last error: {error}. Being unable to reach it means no notification that needs the internet would reach you either.\n\nDismisses this card. It comes back if the problem does."
           }
         }
       }
@@ -587,7 +598,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "{count} of {of} zones on {radio} went quiet at once while the coordinator kept answering. This is a heuristic, not jamming detection: a coordinator crash, a firmware update, a channel change or a power cut to a room of mains-powered routers all look exactly like this. See docs/system-health.md.\n\nDismiss this card. It comes back if the problem does."
+            "description": "{count} of {of} zones on {radio} went quiet at once while the coordinator kept answering. This is a heuristic, not jamming detection: a coordinator crash, a firmware update, a channel change or a power cut to a room of mains-powered routers all look exactly like this. See docs/system-health.md.\n\nDismisses this card. It comes back if the problem does."
           }
         }
       }
@@ -598,7 +609,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "{entity_id} cannot be read, so no zone on {radio} is being watched. This is not interference — it is the coordinator, its power or its network. A coordinator on PoE dies with its switch.\n\nDismiss this card. It comes back if the problem does."
+            "description": "{entity_id} cannot be read, so no zone on {radio} is being watched. This is not interference — it is the coordinator, its power or its network. A coordinator on Power-over-Ethernet dies with its switch.\n\nDismisses this card. It comes back if the problem does."
           }
         }
       }
@@ -609,7 +620,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "{entity_id} reports that mains power has failed. Everything that needs the internet stops when the router does: see docs/resilience.md.\n\nDismiss this card. It comes back if the problem does."
+            "description": "{entity_id} reports that mains power has failed. Everything that needs the internet stops when the router does: see docs/resilience.md.\n\nDismisses this card. It comes back if the problem does."
           }
         }
       }

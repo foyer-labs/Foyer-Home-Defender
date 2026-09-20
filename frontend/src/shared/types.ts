@@ -653,7 +653,11 @@ export interface HealthStatus {
   };
   watchdog: {
     enabled: boolean;
-    url: string;
+    /** Whether a URL is configured — never the URL itself. A healthchecks.io
+     * ping URL is the credential, and this payload is open to anyone holding
+     * view_log; the editor reads the real value through foyer/config, which
+     * is edit_config. */
+    url_set: boolean;
     interval: number;
     timeout: number;
     failures_allowed: number;

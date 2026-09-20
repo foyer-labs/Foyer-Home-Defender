@@ -78,7 +78,6 @@ class Executor:
     def __init__(self, hass: HomeAssistant, language: str | None = None) -> None:
         self.hass = hass
         self._language = language
-        self._sends: dict[str, bool] = {}
 
     @property
     def language(self) -> str:
@@ -90,36 +89,42 @@ class Executor:
     async def async_run(self, decision: Decision) -> list[ActionResult]:
         results: list[ActionResult] = []
         for intent in decision.actions:
-            # Filled by whatever ran this intent, and read back whether it
-            # raised or not: a notification to three contacts that fails for
-            # one of them has still told the other two something true about
-            # their channels.
-            self._sends = {}
+            # A local, not a field on this object: two decisions interleave
+            # here the moment either awaits a service call, and a shared
+            # accumulator would give one decision's send outcomes to the
+            # other — losing a dead channel, or counting one failure twice
+            # and breaking a working channel at half the threshold.
+            #
+            # It is read back whether the action raised or not: a
+            # notification to three contacts that failed for one of them has
+            # still told the other two something true about their channels.
+            sends: dict[str, bool] = {}
             try:
-                await self._async_run_one(intent)
+                await self._async_run_one(intent, sends)
                 results.append(
-                    ActionResult(intent.action_id, intent.kind, True, sends=self._sends)
+                    ActionResult(intent.action_id, intent.kind, True, sends=sends)
                 )
             except Exception as err:  # one failed action must not stop the others
                 _LOGGER.exception("Foyer action %s failed", intent.action_id)
                 results.append(
                     ActionResult(
-                        intent.action_id,
-                        intent.kind,
-                        False,
-                        str(err),
-                        sends=self._sends,
+                        intent.action_id, intent.kind, False, str(err), sends=sends
                     )
                 )
-        self._sends = {}
         return results
 
-    async def _async_run_one(self, intent: ActionIntent) -> None:
+    async def _async_run_one(
+        self, intent: ActionIntent, sends: dict[str, bool]
+    ) -> None:
+        if intent.kind == ActionKind.NOTIFY.value:
+            # The one action that learns something about a channel, and the
+            # only one handed the map to write it into.
+            await self._async_notify(intent, sends)
+            return
         runner: Callable[[ActionIntent], Any] | None = {
             "chime": self._async_chime,
             "revert": self._async_revert,
             ActionKind.PERSISTENT_NOTIFICATION.value: self._async_persistent,
-            ActionKind.NOTIFY.value: self._async_notify,
             ActionKind.SIREN.value: self._async_siren,
             ActionKind.LIGHT.value: self._async_light,
             ActionKind.CAMERA.value: self._async_camera,
@@ -188,7 +193,7 @@ class Executor:
             i18n.translate(strings, f"{base}.message", **intent.placeholders),
         )
 
-    async def _async_notify(self, intent: ActionIntent) -> None:
+    async def _async_notify(self, intent: ActionIntent, sends: dict[str, bool]) -> None:
         """A notification, to a `notify.*` service or to the address book.
 
         Both forms exist and both keep existing (part 1 decision 8): the
@@ -263,10 +268,10 @@ class Executor:
                     recipient.get("contact_name"),
                     recipient.get("service"),
                 )
-                self._sends[key] = False
+                sends[key] = False
                 errors.append(f"{recipient.get('contact_name')}: {err}")
             else:
-                self._sends[key] = True
+                sends[key] = True
         if errors:
             raise HomeAssistantError("; ".join(errors))
 

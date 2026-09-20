@@ -1019,6 +1019,7 @@ def _health_from(
         unknown_zones=frozenset(
             z for z in (data.get("unknown_zones") or ()) if z in zone_ids
         ),
+        acknowledged_issues=frozenset(data.get("acknowledged_issues") or ()),
     )
 
 
@@ -1209,6 +1210,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 for zone_id, at in state.health.quiet_since.items()
             },
             "unknown_zones": sorted(state.health.unknown_zones),
+            "acknowledged_issues": sorted(state.health.acknowledged_issues),
         },
         "lockouts": {
             key: {

@@ -149,10 +149,16 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     history without a word would be the wrong default to guess.
     """
     from .panel import async_unregister_panel
+    from .repairs import async_forget_all
     from .store.config_store import ConfigStore
     from .store.state_store import StateStore
 
     async_unregister_panel(hass)
+    # Repair issues are registered against the domain rather than the entry,
+    # so Home Assistant does not take them away with it: without this,
+    # removing Foyer leaves a card in Settings for ever, pointing at an
+    # integration that is not there to fix it (§12.4).
+    async_forget_all(hass)
     await ConfigStore(hass).async_remove()
     await StateStore(hass).async_remove()
 

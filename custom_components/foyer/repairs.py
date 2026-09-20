@@ -13,20 +13,32 @@ somebody has seen it (part 1 decision 10). That is deliberate and it is the
 one place system health does ask for an acknowledgement: the state itself
 never does — it clears when the cause clears — but an issue that vanished on
 its own would mean a zone could drop off for a week, come back, and leave no
-trace anywhere a person was going to look. Confirming dismisses the card;
-the problem coming back raises it again.
+trace anywhere a person was going to look.
+
+The acknowledgement is *persisted*, and that is not a detail. Home
+Assistant's own confirm flow only deletes the issue, and this module
+reconciles every five minutes — so without a record the card a person
+dismissed would be back before they had closed the page, and back again
+after every restart. An id is forgotten as soon as its problem clears, so
+the next occurrence raises the card again.
 """
 
 from __future__ import annotations
 
-from typing import Any
+import hashlib
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
+from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import issue_registry as ir
+import voluptuous as vol
 
 from .const import DOMAIN
 from .core.models import ChannelFault
+
+if TYPE_CHECKING:
+    from .runtime.system import FoyerSystem
 
 # One translation key per kind of problem; the issue id carries which zone,
 # channel or radio it is about, and the placeholders carry the names. A key
@@ -34,6 +46,7 @@ from .core.models import ChannelFault
 # door.
 ZONE_UNREACHABLE = "zone_unreachable"
 CHANNEL_BROKEN = "channel_broken"
+CHANNEL_FAILING = "channel_failing"
 WATCHDOG_NEVER_WORKED = "watchdog_never_worked"
 WATCHDOG_UNREACHABLE = "watchdog_unreachable"
 RF_INTERFERENCE = "rf_interference"
@@ -46,24 +59,54 @@ MAINS_LOST = "mains_lost"
 TRANSIENT_GRACE = 3600
 
 
-async def async_create_fix_flow(
-    hass: HomeAssistant, issue_id: str, data: dict[str, Any] | None
-) -> RepairsFlow:
-    """Every Foyer issue is confirmed rather than repaired from here.
+class SeenRepairFlow(RepairsFlow):
+    """Confirm that somebody has seen this, and remember that they did.
 
     There is nothing Home Assistant can do about a jammed radio or a removed
     integration, and a flow that pretended otherwise would be a button that
-    does nothing. What it offers is the honest thing: "I have seen this".
+    does nothing. What this offers is the honest thing — "I have seen
+    this" — and then records it, so the card stays dismissed until the
+    problem has cleared and come back.
     """
-    return ConfirmRepairFlow()
+
+    def __init__(self, hass: HomeAssistant, issue_id: str) -> None:
+        self.hass = hass
+        self.issue_id = issue_id
+
+    async def async_step_init(self, user_input: dict[str, str] | None = None):
+        return await self.async_step_confirm()
+
+    async def async_step_confirm(
+        self, user_input: dict[str, str] | None = None
+    ) -> FlowResult:
+        if user_input is not None:
+            system: FoyerSystem | None = self.hass.data.get(DOMAIN)
+            if system is not None:
+                await system.async_acknowledge_issue(self.issue_id)
+            return self.async_create_entry(data={})
+        return self.async_show_form(step_id="confirm", data_schema=vol.Schema({}))
 
 
-def reconcile(hass: HomeAssistant, entry_id: str, status: dict[str, Any]) -> None:
+async def async_create_fix_flow(
+    hass: HomeAssistant, issue_id: str, data: dict[str, Any] | None
+) -> RepairsFlow:
+    return SeenRepairFlow(hass, issue_id)
+
+
+def reconcile(
+    hass: HomeAssistant,
+    entry_id: str,
+    status: dict[str, Any],
+    acknowledged: frozenset[str] = frozenset(),
+) -> frozenset[str]:
     """Raise what is true now and withdraw what is not. Idempotent.
 
     Called periodically rather than on every decision: these are problems
     measured in hours and days, and re-registering an issue every time a
     door opens would be work nobody asked for.
+
+    Returns the acknowledgements still worth keeping — an id whose problem
+    has cleared is forgotten, so the next occurrence raises its card again.
     """
     wanted: dict[str, dict[str, Any]] = {}
 
@@ -77,20 +120,17 @@ def reconcile(hass: HomeAssistant, entry_id: str, status: dict[str, Any]) -> Non
     for channel in status["channels"]:
         if not channel["fault"]:
             continue
-        wanted[f"{CHANNEL_BROKEN}_{channel['key'].replace(':', '_')}"] = {
-            "translation_key": CHANNEL_BROKEN,
+        missing = channel["fault"] == ChannelFault.MISSING_SERVICE.value
+        # Two keys rather than one with a word in it: a placeholder Foyer
+        # fills with "missing" puts an English word in the middle of an
+        # Italian sentence, and the backend writes no word a person reads.
+        key = CHANNEL_BROKEN if missing else CHANNEL_FAILING
+        wanted[f"{key}_{_slug(channel['key'])}"] = {
+            "translation_key": key,
             "severity": ir.IssueSeverity.ERROR,
             "placeholders": {
                 "contact": channel["contact_name"],
                 "service": channel["service"],
-                "cause": channel["fault"],
-                # Said in the card as well as in the notification, because
-                # the two are read by different people at different times.
-                "detail": (
-                    "missing"
-                    if channel["fault"] == ChannelFault.MISSING_SERVICE.value
-                    else "failing"
-                ),
             },
         }
 
@@ -100,10 +140,9 @@ def reconcile(hass: HomeAssistant, entry_id: str, status: dict[str, Any]) -> Non
         wanted[key] = {
             "translation_key": key,
             "severity": ir.IssueSeverity.ERROR,
-            "placeholders": {
-                "url": watchdog["url"],
-                "error": watchdog["last_error"] or "-",
-            },
+            # Never the URL: it is the credential, and a repair card is a
+            # page somebody screenshots into an issue thread.
+            "placeholders": {"error": watchdog["last_error"] or "-"},
         }
 
     for radio in status["radios"]:
@@ -141,6 +180,10 @@ def reconcile(hass: HomeAssistant, entry_id: str, status: dict[str, Any]) -> Non
         if domain == DOMAIN and _is_health_issue(issue_id)
     }
     for issue_id, issue in wanted.items():
+        if issue_id in acknowledged:
+            # Somebody has seen this one. It comes back when the problem
+            # does, not five minutes after they dismissed it.
+            continue
         ir.async_create_issue(
             hass,
             DOMAIN,
@@ -153,6 +196,32 @@ def reconcile(hass: HomeAssistant, entry_id: str, status: dict[str, Any]) -> Non
         )
     for issue_id in existing - wanted.keys():
         ir.async_delete_issue(hass, DOMAIN, issue_id)
+    return acknowledged & wanted.keys()
+
+
+def async_forget_all(hass: HomeAssistant) -> None:
+    """Withdraw every card Foyer raised. For an integration being removed.
+
+    Issues are registered against the domain rather than the config entry,
+    so Home Assistant does not take them away with the entry: without this,
+    removing Foyer leaves a card in Settings for ever, pointing at an
+    integration that is not there to fix it.
+    """
+    registry = ir.async_get(hass)
+    for domain, issue_id in list(registry.issues):
+        if domain == DOMAIN and _is_health_issue(issue_id):
+            ir.async_delete_issue(hass, DOMAIN, issue_id)
+
+
+def _slug(key: str) -> str:
+    """A collision-free suffix for a contact channel.
+
+    ``contact:channel`` cannot go into an issue id as it is, and flattening
+    the separator to an underscore makes ``luca_home`` + ``sms`` and
+    ``luca`` + ``home_sms`` the same card. A short digest cannot collide by
+    accident, and the card's words come from the translation anyway.
+    """
+    return hashlib.sha1(key.encode("utf-8")).hexdigest()[:10]
 
 
 def _is_health_issue(issue_id: str) -> bool:
@@ -161,6 +230,7 @@ def _is_health_issue(issue_id: str) -> bool:
         (
             ZONE_UNREACHABLE,
             CHANNEL_BROKEN,
+            CHANNEL_FAILING,
             WATCHDOG_NEVER_WORKED,
             WATCHDOG_UNREACHABLE,
             RF_INTERFERENCE,

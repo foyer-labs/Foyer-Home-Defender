@@ -8,6 +8,7 @@ hands the actions to the executor.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from datetime import datetime, timedelta
 import logging
 from typing import Any
@@ -231,8 +232,22 @@ class FoyerSystem:
         self._unsub_wakeup: CALLBACK_TYPE | None = None
         self._unsubs: list[CALLBACK_TYPE] = []
         self._started = False
-        # Guards the one-level recursion of _async_report_sends.
+        # Guards the one-level recursion of _async_report_sends, and holds
+        # what that recursion could not carry.
         self._reporting = False
+        self._pending_sends: dict[str, bool] = {}
+        # Set by async_stop. Anything that was awaiting when the entry
+        # unloaded checks it before touching state: a reload while a
+        # watchdog ping is in flight would otherwise leave the old instance
+        # writing its own state over the new one's, pushing updates to
+        # removed entities and arming a wake-up nothing will ever cancel
+        # (INV-3).
+        self._stopped = False
+        # Memoisation for the read model, invalidated on every change.
+        self._revision = 0
+        self._health_at = -1
+        self._health_cache: dict[str, Any] | None = None
+        self._radio_cache: dict[str, str] | None = None
         # Which config entry this system belongs to, for the repair issues
         # of §12.4. Set by __init__.py once the entry exists.
         self.entry_id: str | None = None
@@ -290,6 +305,7 @@ class FoyerSystem:
 
     async def async_stop(self) -> None:
         """Unload: timers stop here, their state is on disk for the next start."""
+        self._stopped = True
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
@@ -343,13 +359,43 @@ class FoyerSystem:
 
     @callback
     def async_reconcile_issues(self) -> None:
-        if self.entry_id is None:
+        if self.entry_id is None or self._stopped:
             return
         try:
-            repairs.reconcile(self.hass, self.entry_id, self.health_status())
+            keep = repairs.reconcile(
+                self.hass,
+                self.entry_id,
+                self.health_status(),
+                self.state.health.acknowledged_issues,
+            )
         except Exception:
             # A repair card nobody could raise must never stop the alarm.
             _LOGGER.exception("Foyer could not reconcile its repair issues")
+            return
+        if keep != self.state.health.acknowledged_issues:
+            self._remember_acknowledged(keep)
+
+    def _remember_acknowledged(self, issues: frozenset[str]) -> None:
+        """Write the acknowledged set straight into the state.
+
+        The one thing in ``RuntimeState`` the engine does not decide: it is
+        about a card in Home Assistant's Settings, not about the house, and
+        ``decide()`` carries it through untouched. It is in the state at all
+        because the alternative is a card that comes back five minutes after
+        somebody dismissed it, and again after every restart.
+        """
+        self.state = replace(
+            self.state,
+            health=replace(self.state.health, acknowledged_issues=issues),
+        )
+        self.hass.async_create_task(self._async_save(), eager_start=True)
+
+    async def async_acknowledge_issue(self, issue_id: str) -> None:
+        """Somebody pressed "mark as seen" on a repair card (§12.4)."""
+        current = self.state.health.acknowledged_issues
+        if issue_id in current:
+            return
+        self._remember_acknowledged(current | {issue_id})
 
     @callback
     def _on_ha_stop(self, _event: HassEvent) -> None:
@@ -407,6 +453,12 @@ class FoyerSystem:
                     error = f"HTTP {response.status}"
         except (TimeoutError, ClientError, OSError, ValueError) as err:
             error = f"{type(err).__name__}: {err}"
+        if settings.url:
+            # The URL is the credential — whoever holds a healthchecks.io
+            # ping URL can keep the check green for ever, which is to say
+            # silence the one thing that reports Foyer's own death. aiohttp
+            # puts it in the message; the log and page 14 must not.
+            error = error.replace(settings.url, "<url>")
         await self.async_handle(HealthReport(watchdog=ok, watchdog_error=error))
 
     @callback
@@ -440,11 +492,17 @@ class FoyerSystem:
             return False
         if "." not in service:
             return self.hass.services.has_service("notify", service)
-        domain, _, name = service.partition(".")
-        if self.hass.services.has_service(domain, name):
-            return True
+        # An entity first, as the executor resolves it, and existing is
+        # enough. A notify entity's state is the timestamp of the last
+        # message it sent, so a channel nobody has used yet reads as
+        # ``unknown`` — and calling that missing would break every newly
+        # configured channel fifteen minutes after somebody added it.
+        # Unavailable is different: that one really cannot be called.
         state = self.hass.states.get(service)
-        return state is not None and state.state not in health_engine.UNREADABLE
+        if state is not None:
+            return state.state != "unavailable"
+        domain, _, name = service.partition(".")
+        return self.hass.services.has_service(domain, name)
 
     # --- events --------------------------------------------------------------
 
@@ -455,6 +513,11 @@ class FoyerSystem:
         old_state: str | None = None,
     ) -> Decision:
         """Decide, store, persist, execute, record. Returns the Decision."""
+        if self._stopped:
+            # This instance has been unloaded. Whatever was awaiting is
+            # finishing after the fact, and the house belongs to whoever
+            # replaced it.
+            return decide(self._snapshot(), Tick(), self.config, dt_util.utcnow())
         # No await between snapshot and store: on the event loop this block is
         # atomic, so two events can never interleave their decisions.
         was_active = self.state.active_zones
@@ -493,11 +556,17 @@ class FoyerSystem:
         lost is one cycle's evidence about the channel that carried the
         warning, which the next sweep or the next real send says again.
         """
-        if self._reporting:
-            return
         sends: dict[str, bool] = {}
         for result in results:
             sends.update(result.sends)
+        if self._reporting:
+            # Held rather than discarded: this is evidence about a real
+            # send, and the alternative is losing what a dead channel did
+            # while Foyer was busy saying another one was dead.
+            self._pending_sends.update(sends)
+            return
+        sends = {**self._pending_sends, **sends}
+        self._pending_sends = {}
         if not sends:
             return
         self._reporting = True
@@ -676,6 +745,20 @@ class FoyerSystem:
         }
 
     def health_status(self) -> dict[str, Any]:
+        """Memoised for one round of updates (see ``_health_status``).
+
+        Every entity that shows system health asks for this twice — once
+        for its state and once for its attributes — and they all ask inside
+        ``_notify()``, which runs on the alarm path between the trigger and
+        the siren. Each call otherwise builds a fresh snapshot and a fresh
+        entity-registry walk.
+        """
+        if self._health_at != self._revision or self._health_cache is None:
+            self._health_cache = self._health_status()
+            self._health_at = self._revision
+        return self._health_cache
+
+    def _health_status(self) -> dict[str, Any]:
         """System health, as page 14 and the two entities read it (§12, §13).
 
         Everything here comes off the state the engine produced or from
@@ -721,7 +804,11 @@ class FoyerSystem:
             },
             "watchdog": {
                 "enabled": config.watchdog.enabled,
-                "url": config.watchdog.url,
+                # Never the URL, for the reason core/dump.py states about
+                # the diagnostics dump: it is the credential. This page is
+                # open to anyone holding view_log; editing the URL goes
+                # through foyer/config, which is edit_config.
+                "url_set": bool(config.watchdog.url),
                 "interval": config.watchdog.interval,
                 "timeout": config.watchdog.timeout,
                 "failures_allowed": config.watchdog.failures,
@@ -866,15 +953,19 @@ class FoyerSystem:
         decided in ``core`` and a lookup it was never handed is a lookup it
         cannot make (INV-1).
         """
+        if self._radio_cache is not None:
+            return self._radio_cache
         radios = {r.entry_id: r.id for r in self.config.health.radios if r.enabled}
         if not radios:
-            return {}
+            self._radio_cache = {}
+            return self._radio_cache
         registry = er.async_get(self.hass)
         out: dict[str, str] = {}
         for entity_id in self.radio_entity_ids():
             entry = registry.async_get(entity_id)
             if entry is not None and (radio := radios.get(entry.config_entry_id or "")):
                 out[entity_id] = radio
+        self._radio_cache = out
         return out
 
     def radio_entity_ids(self) -> list[str]:
@@ -916,6 +1007,11 @@ class FoyerSystem:
         self._notify()
 
     def _notify(self) -> None:
+        # One revision per round of updates: what the entities read is
+        # computed once and shared, rather than rebuilt per entity per
+        # property.
+        self._revision += 1
+        self._radio_cache = None
         for listener in list(self._listeners):
             listener()
         async_dispatcher_send(self.hass, SIGNAL_UPDATE)

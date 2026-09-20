@@ -653,6 +653,10 @@ class _Run:
             if zone_id in zone_ids
         }
         self.unknown_zones = set(health.unknown_zones & zone_ids)
+        # Carried, never decided here: the engine has no opinion about a
+        # card in Home Assistant's Settings, and dropping the set on the
+        # next decision would undo every acknowledgement.
+        self.acknowledged_issues = health.acknowledged_issues
         # Radios the configuration no longer has, kept for one more call so
         # reconcile_radios can end what they were reporting with a row. A
         # suspicion that simply disappeared from the log would be the one row
@@ -3661,6 +3665,7 @@ class _Run:
                 radios=self.radios,
                 quiet_since=self.quiet_since,
                 unknown_zones=frozenset(self.unknown_zones),
+                acknowledged_issues=self.acknowledged_issues,
             ),
         )
         chime, chime_inhibited = self.chime_intents(occurrences)

@@ -543,18 +543,29 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "La zona {zone} è illeggibile da {days} giorni. Finché lo è, è un guasto: blocca l'inserimento e non viene mai considerata “chiusa”. Batteria scarica, sensore fuori portata, o un'integrazione che non si carica più.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+            "description": "La zona {zone} è illeggibile da {days} giorni. Finché lo è, è un guasto: blocca l'inserimento e non viene mai considerata “chiusa”. Batteria scarica, sensore fuori portata, o un'integrazione che non si carica più.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
           }
         }
       }
     },
     "channel_broken": {
-      "title": "Foyer: {contact} non è raggiungibile tramite {service}",
+      "title": "Foyer: {service} non esiste più",
       "fix_flow": {
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "Il canale di notifica {service} di {contact} è {detail}. Le integrazioni vengono rimosse, rinominate o non si caricano più dopo un aggiornamento, e un canale scoperto rotto durante un allarme è esattamente il fallimento che questo controllo esiste per evitare. Correggilo nella pagina Contatti e manda una prova.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+            "description": "Il canale di notifica {service}, con cui si raggiunge {contact}, non è più presente in questa installazione. Le integrazioni vengono rimosse, rinominate o non si caricano più dopo un aggiornamento, e un canale scoperto rotto durante un allarme è esattamente il fallimento che questo controllo esiste per evitare. Correggilo nella pagina Contatti e manda una prova.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+          }
+        }
+      }
+    },
+    "channel_failing": {
+      "title": "Foyer: gli invii a {contact} continuano a fallire",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "I messaggi a {contact} tramite {service} sono falliti più volte di seguito. Il servizio c'è; gli invii non arrivano. Manda una prova dalla pagina Contatti quando pensi di averlo sistemato: un invio riuscito chiude questa segnalazione.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
           }
         }
       }
@@ -565,7 +576,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "Nessun ping a {url} è mai riuscito. Quasi sempre un URL sbagliato o un endpoint mai creato. Ultimo errore: {error}. Finché non funziona, niente fuori casa sa se Home Assistant è ancora vivo.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+            "description": "Da quando è stato acceso non è riuscito nemmeno un ping. Quasi sempre un URL sbagliato o un endpoint mai creato. Ultimo errore: {error}. Finché non funziona, niente fuori casa sa se Home Assistant è ancora vivo.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
           }
         }
       }
@@ -576,7 +587,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "I ping a {url} falliscono. Ultimo errore: {error}. Non riuscire a raggiungerlo significa che nemmeno una notifica che passa da internet ti raggiungerebbe.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+            "description": "I ping falliscono. Ultimo errore: {error}. Non riuscire a raggiungerlo significa che nemmeno una notifica che passa da internet ti raggiungerebbe.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
           }
         }
       }
@@ -587,7 +598,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "{count} zone su {of} di {radio} sono ammutolite insieme mentre il coordinatore continuava a rispondere. È un'euristica, non un rilevamento di jamming: un crash del coordinatore, un aggiornamento firmware, un cambio di canale o un black-out in una stanza piena di router alimentati a rete hanno tutti questo aspetto. Vedi docs/system-health.md.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+            "description": "{count} zone su {of} di {radio} sono ammutolite insieme mentre il coordinatore continuava a rispondere. È un'euristica, non un rilevamento di jamming: un crash del coordinatore, un aggiornamento firmware, un cambio di canale o un black-out in una stanza piena di router alimentati a rete hanno tutti questo aspetto. Vedi docs/system-health.md.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
           }
         }
       }
@@ -598,7 +609,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "{entity_id} non è leggibile, quindi nessuna zona di {radio} è sorvegliata. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete. Un coordinatore in PoE muore con il suo switch.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+            "description": "{entity_id} non è leggibile, quindi nessuna zona di {radio} è sorvegliata. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete. Un coordinatore alimentato via Power-over-Ethernet muore insieme al suo switch.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
           }
         }
       }
@@ -609,7 +620,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "{entity_id} segnala che la rete elettrica è venuta a mancare. Tutto ciò che passa da internet si ferma quando si ferma il router: vedi docs/resilience.md.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+            "description": "{entity_id} segnala che la rete elettrica è venuta a mancare. Tutto ciò che passa da internet si ferma quando si ferma il router: vedi docs/resilience.md.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
           }
         }
       }

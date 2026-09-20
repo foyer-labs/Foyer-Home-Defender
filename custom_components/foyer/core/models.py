@@ -2178,6 +2178,12 @@ class SystemHealth:
     # and decision 56 applies to the technical channel: what Foyer did not
     # see happen, it does not claim to have seen.
     unknown_zones: frozenset[str] = frozenset()
+    # Repair issues somebody has marked as seen (§12.4, part 1 decision
+    # 10). Here rather than in memory because the alternative is a card
+    # that comes back five minutes after it was dismissed, and again after
+    # every restart. An id leaves this set when its problem clears, so the
+    # next occurrence raises the card again.
+    acknowledged_issues: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "channels", _frozen(self.channels))

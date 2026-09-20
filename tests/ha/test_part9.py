@@ -17,6 +17,7 @@ import pytest
 
 from custom_components.foyer import repairs
 from custom_components.foyer.const import DOMAIN
+from custom_components.foyer.core.models import HealthReport
 from custom_components.foyer.diagnostics import (
     async_get_config_entry_diagnostics,
 )
@@ -442,6 +443,7 @@ def test_every_repair_issue_has_its_strings(language: str):
     for key in (
         repairs.ZONE_UNREACHABLE,
         repairs.CHANNEL_BROKEN,
+        repairs.CHANNEL_FAILING,
         repairs.WATCHDOG_NEVER_WORKED,
         repairs.WATCHDOG_UNREACHABLE,
         repairs.RF_INTERFERENCE,
@@ -451,3 +453,188 @@ def test_every_repair_issue_has_its_strings(language: str):
         assert key in issues, key
         assert "title" in issues[key]
         assert "confirm" in issues[key]["fix_flow"]["step"]
+
+
+# --- what the review pass found ---------------------------------------------------
+
+
+async def test_a_notify_entity_that_has_never_sent_is_not_broken(
+    hass, loaded, hass_ws_client
+):
+    """A notify entity's state is the timestamp of the last message it sent,
+    so a channel nobody has used yet reads as ``unknown``. Calling that
+    missing broke every newly configured channel a quarter of an hour after
+    somebody added it."""
+    client = await hass_ws_client(hass)
+    hass.states.async_set("notify.mobile_app_luca", "unknown")
+
+    async def noop(call):
+        return None
+
+    hass.services.async_register("notify", "gsm", noop)
+    await _contact(hass, client)
+    await _system(hass)._async_channel_sweep()
+    await hass.async_block_till_done()
+
+    assert not [c for c in _system(hass).health_status()["channels"] if c["fault"]]
+
+
+async def test_an_unavailable_notify_entity_is_broken(hass, loaded, hass_ws_client):
+    client = await hass_ws_client(hass)
+    hass.states.async_set("notify.mobile_app_luca", "unavailable")
+
+    async def noop(call):
+        return None
+
+    hass.services.async_register("notify", "gsm", noop)
+    await _contact(hass, client)
+    await _system(hass)._async_channel_sweep()
+    await hass.async_block_till_done()
+
+    broken = [c for c in _system(hass).health_status()["channels"] if c["fault"]]
+    assert [c["service"] for c in broken] == ["notify.mobile_app_luca"]
+
+
+async def test_the_watchdog_url_never_reaches_the_read_path(
+    hass, loaded, hass_ws_client
+):
+    """core/dump.py states the position: the ping URL is the credential.
+    This page is open to anyone holding view_log."""
+    client = await hass_ws_client(hass)
+    await _save_health(
+        hass,
+        client,
+        watchdog={
+            "enabled": True,
+            "url": PING,
+            "interval": 900,
+            "timeout": 30,
+            "failures": 3,
+            "payload": False,
+        },
+    )
+    status = await _ws(client, {"type": "foyer/health"})
+    assert status["watchdog"]["url_set"] is True
+    assert "url" not in status["watchdog"]
+    assert PING not in str(status)
+
+
+async def test_the_url_is_stripped_out_of_the_error_it_appears_in(
+    hass, loaded, hass_ws_client, aioclient_mock
+):
+    client = await hass_ws_client(hass)
+    aioclient_mock.get(PING, exc=OSError(f"cannot connect to {PING}"))
+    await _save_health(
+        hass,
+        client,
+        watchdog={
+            "enabled": True,
+            "url": PING,
+            "interval": 900,
+            "timeout": 30,
+            "failures": 1,
+            "payload": False,
+        },
+    )
+    await _system(hass)._async_watchdog()
+    await hass.async_block_till_done()
+
+    error = _system(hass).state.health.watchdog.last_error
+    assert PING not in error
+    assert "<url>" in error
+
+
+async def test_a_card_marked_as_seen_does_not_come_back_five_minutes_later(
+    hass, loaded, hass_ws_client
+):
+    client = await hass_ws_client(hass)
+
+    async def noop(call):
+        return None
+
+    hass.services.async_register("notify", "gsm", noop)
+    await _contact(hass, client)
+    await _system(hass)._async_channel_sweep()
+    await hass.async_block_till_done()
+    _system(hass).async_reconcile_issues()
+
+    registry = ir.async_get(hass)
+    issue_id = next(
+        i
+        for (d, i) in registry.issues
+        if d == DOMAIN and i.startswith(repairs.CHANNEL_BROKEN)
+    )
+    await _system(hass).async_acknowledge_issue(issue_id)
+    ir.async_delete_issue(hass, DOMAIN, issue_id)
+
+    _system(hass).async_reconcile_issues()
+    assert (DOMAIN, issue_id) not in registry.issues
+    assert issue_id in _system(hass).state.health.acknowledged_issues
+
+
+async def test_the_card_comes_back_when_the_problem_does(hass, loaded, hass_ws_client):
+    client = await hass_ws_client(hass)
+
+    async def noop(call):
+        return None
+
+    hass.services.async_register("notify", "gsm", noop)
+    await _contact(hass, client)
+    await _system(hass)._async_channel_sweep()
+    await hass.async_block_till_done()
+    _system(hass).async_reconcile_issues()
+
+    registry = ir.async_get(hass)
+    issue_id = next(
+        i
+        for (d, i) in registry.issues
+        if d == DOMAIN and i.startswith(repairs.CHANNEL_BROKEN)
+    )
+    await _system(hass).async_acknowledge_issue(issue_id)
+    ir.async_delete_issue(hass, DOMAIN, issue_id)
+
+    # Fixed: the acknowledgement is forgotten with the problem.
+    hass.services.async_register("notify", "mobile_app_luca", noop)
+    await _system(hass)._async_channel_sweep()
+    await hass.async_block_till_done()
+    _system(hass).async_reconcile_issues()
+    assert issue_id not in _system(hass).state.health.acknowledged_issues
+
+    # Broken again: the card is raised again.
+    hass.services.async_remove("notify", "mobile_app_luca")
+    await _system(hass)._async_channel_sweep()
+    await hass.async_block_till_done()
+    _system(hass).async_reconcile_issues()
+    assert (DOMAIN, issue_id) in registry.issues
+
+
+async def test_removing_the_integration_takes_its_cards_with_it(
+    hass, loaded, hass_ws_client
+):
+    """Issues are registered against the domain, not the entry, so Home
+    Assistant does not take them away on its own."""
+    client = await hass_ws_client(hass)
+
+    async def noop(call):
+        return None
+
+    hass.services.async_register("notify", "gsm", noop)
+    await _contact(hass, client)
+    await _system(hass)._async_channel_sweep()
+    await hass.async_block_till_done()
+    _system(hass).async_reconcile_issues()
+
+    registry = ir.async_get(hass)
+    assert [i for (d, i) in registry.issues if d == DOMAIN]
+    repairs.async_forget_all(hass)
+    assert not [i for (d, i) in registry.issues if d == DOMAIN]
+
+
+async def test_a_stopped_system_decides_nothing_more(hass, loaded, hass_ws_client):
+    """A reload while a ping is in flight would otherwise leave the old
+    instance writing its state over the new one's (INV-3)."""
+    system = _system(hass)
+    before = system.state
+    await system.async_stop()
+    await system.async_handle(HealthReport(watchdog=False))
+    assert system.state is before
