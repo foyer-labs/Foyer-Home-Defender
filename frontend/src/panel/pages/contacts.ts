@@ -95,6 +95,7 @@ class FoyerPageContacts extends LitElement {
     _problems: { state: true },
     _busy: { state: true },
     _tested: { state: true },
+    _health: { state: true },
   };
 
   ctx?: PanelContext;
@@ -103,6 +104,29 @@ class FoyerPageContacts extends LitElement {
   private _busy = false;
   /** The result of the last channel test, by channel id: what §11.4 is for. */
   private _tested: Record<string, { ok: boolean; error?: string | null }> = {};
+  /** Which channels are broken right now (§12.2). The health page owns the
+   * detail; here it is one word beside the channel, because this is the page
+   * somebody is on when they are thinking about who gets told. */
+  private _health: Record<string, string> = {};
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    void this._loadHealth();
+  }
+
+  private async _loadHealth(): Promise<void> {
+    if (!this.ctx) return;
+    try {
+      const status = await this.ctx.health();
+      this._health = Object.fromEntries(
+        status.channels.filter((c) => c.fault).map((c) => [c.key, c.fault as string]),
+      );
+    } catch {
+      // Reading health is gated on view_log; a contact editor that cannot
+      // read it simply shows no badge rather than an error.
+      this._health = {};
+    }
+  }
 
   private _edit(contact?: ContactConfig): void {
     this._draft = contact
@@ -267,13 +291,15 @@ class FoyerPageContacts extends LitElement {
       <td><strong>${contact.name}</strong></td>
       <td>
         <div class="channels">
-          ${contact.channels.map(
-            (channel, index) =>
-              html`<span class="tag"
-                >${index + 1}. ${t(s, `channel_kind.${channel.kind}`)} ·
-                ${channel.service}</span
-              >`,
-          )}
+          ${contact.channels.map((channel, index) => {
+            const fault = this._health[`${contact.id}:${channel.id}`];
+            return html`<span class="tag ${fault ? "broken" : ""}"
+              >${index + 1}. ${t(s, `channel_kind.${channel.kind}`)} ·
+              ${channel.service}${fault
+                ? html` · <strong>${t(s, `health.fault_${fault}`)}</strong>`
+                : nothing}</span
+            >`;
+          })}
         </div>
       </td>
       <td class="mono">
@@ -632,6 +658,13 @@ class FoyerPageContacts extends LitElement {
     formStyles,
     stateStyles,
     css`
+      /* A channel Foyer cannot reach (§12.2). Red here as well as on page
+         14, because this is the page somebody is on when they decide who
+         gets told at four in the morning. */
+      .tag.broken {
+        border-color: var(--error-color, #e53935);
+        color: var(--error-color, #e53935);
+      }
       /* One chip per channel, in priority order. Without the gap they run
          into each other and "…luca2. SMS" reads as one service. */
       .channels {

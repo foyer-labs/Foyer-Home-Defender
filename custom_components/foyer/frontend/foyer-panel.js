@@ -5788,7 +5788,7 @@ function zt(e) {
 }
 var Bt = class extends F {
 	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1, this._tested = {};
+		super(...e), this._problems = [], this._busy = !1, this._tested = {}, this._health = {};
 	}
 	static {
 		this.properties = {
@@ -5796,8 +5796,20 @@ var Bt = class extends F {
 			_draft: { state: !0 },
 			_problems: { state: !0 },
 			_busy: { state: !0 },
-			_tested: { state: !0 }
+			_tested: { state: !0 },
+			_health: { state: !0 }
 		};
+	}
+	connectedCallback() {
+		super.connectedCallback(), this._loadHealth();
+	}
+	async _loadHealth() {
+		if (this.ctx) try {
+			let e = await this.ctx.health();
+			this._health = Object.fromEntries(e.channels.filter((e) => e.fault).map((e) => [e.key, e.fault]));
+		} catch {
+			this._health = {};
+		}
 	}
 	_edit(e) {
 		this._draft = e ? structuredClone(e) : {
@@ -5942,10 +5954,13 @@ var Bt = class extends F {
       <td><strong>${t.name}</strong></td>
       <td>
         <div class="channels">
-          ${t.channels.map((t, n) => E`<span class="tag"
-                >${n + 1}. ${z(e, `channel_kind.${t.kind}`)} ·
-                ${t.service}</span
-              >`)}
+          ${t.channels.map((n, r) => {
+			let i = this._health[`${t.id}:${n.id}`];
+			return E`<span class="tag ${i ? "broken" : ""}"
+              >${r + 1}. ${z(e, `channel_kind.${n.kind}`)} ·
+              ${n.service}${i ? E` · <strong>${z(e, `health.fault_${i}`)}</strong>` : O}</span
+            >`;
+		})}
         </div>
       </td>
       <td class="mono">
@@ -6208,6 +6223,13 @@ var Bt = class extends F {
 			V,
 			B,
 			o`
+      /* A channel Foyer cannot reach (§12.2). Red here as well as on page
+         14, because this is the page somebody is on when they decide who
+         gets told at four in the morning. */
+      .tag.broken {
+        border-color: var(--error-color, #e53935);
+        color: var(--error-color, #e53935);
+      }
       /* One chip per channel, in priority order. Without the gap they run
          into each other and "…luca2. SMS" reads as one service. */
       .channels {
