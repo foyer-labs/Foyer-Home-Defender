@@ -5,6 +5,87 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.8] — the house arms itself, and says so first
+
+Automatic arming rules (§9.4): the second half of Phase 4. **The stored
+configuration moves to schema 7.1, a major step** — everything in it is
+additive, but a 6.x build reading this document would ignore the rules and,
+worse, would not know which area is the perimeter, so a rule it gained later
+could disarm the one ring that is never disarmed by a rule. Both failures are
+silent, so the file is refused instead. Upgrading migrates in one step and
+changes nothing: no rules, automatic disarming off, no area marked as the
+perimeter until you mark one.
+
+### Added
+- **Automatic arming rules** (panel page 12). A closed model, not an
+  automation engine: four triggers — everybody away for N minutes, somebody
+  arrives, a time on chosen weekdays, an entity holding a state — three
+  actions, an active window outside which the rule does not exist, and three
+  guards. A rule acts as a user would, through the same arming path, and every
+  row it writes carries its name and the channel `auto_rule`.
+- **A cancellable countdown before it acts.** The rule announces itself to the
+  contacts it names, with a **Cancel** button in the push — the same
+  actionable-notification machinery the acknowledgement uses, with a different
+  action id. Press it and the rule waits until its condition becomes true
+  again; press nothing and it acts, and the guards are evaluated a second time
+  first, because two minutes is long enough for somebody to come home.
+- **Guards, and a log row when one stops a rule.** Only if currently disarmed,
+  only if every zone is ready, only if no interior zone has moved for N
+  minutes — the last one catches somebody asleep upstairs with a flat phone.
+  A blocked rule is written to the log under `system`: "why did it not arm
+  last night?" is a question people ask, and silence is the worst answer.
+- **Suspensions, and the expected-visitor window.** Skip the next occurrence,
+  suspend until a date and time, or name a window — "Boiler engineer,
+  09:00–13:00" — which can put a reduced scenario in place of what the
+  suspended rule would have armed. Mechanically the same thing; the difference
+  is that in six months the log still says why.
+- **`switch.foyer_auto_arming`**, the global kill switch, which also cancels
+  whatever is counting down, and **`sensor.foyer_next_auto_action`**, whose
+  state is the action — `arm`, `disarm`, `switch`, `idle` — with the instant,
+  the rule and any suspension as attributes. It reports what is *scheduled*,
+  not what will certainly happen: the guards are evaluated when the rule acts.
+- **`is_perimeter` on an area** (page 2). The outer defence ring.
+- **The simulator reaches the rules.** Pick a hypothetical Tuesday at 23:00,
+  override the people a rule watches, and read the trace. The kill switch and
+  the suspensions in force come with it, so "would it arm tomorrow morning,
+  with the engineer expected?" has an answer; everything the trace says about
+  a rule is read off the same Decision the runtime acts on.
+- **`docs/automation-rules.md`**: presence-based arming from the start, the
+  guards, the two kinds of trigger and what each does when a guard clears,
+  suspensions, and an unhedged section on why automatic disarming is
+  restricted.
+
+### Security
+- **Automatic disarming is off until you turn it on, and never touches a
+  perimeter area.** Presence in Home Assistant is inferred from a phone: a
+  stolen phone disarms the house, GPS drift of 200 metres disarms the house, a
+  cloned MAC address on the home network disarms the house. Enabling it is a
+  deliberate act beside that paragraph. The perimeter constraint is enforced
+  in the engine, with a test asserting it on the `Decision` — a `disarm` rule
+  leaves those areas out, and a scenario change that would drop one leaves it
+  armed instead.
+- **A scenario change counts as disarming** whenever it would leave an armed
+  area disarmed — including an `arm` action, which is the same call and does
+  the same thing when a scenario is already running. Both meet the switch and
+  the perimeter constraint, so "arm Night" is not a way round either.
+- **An unreadable person is never read as an arrival or an absence.** A
+  tracker that restarted or a phone off the network leaves the rule exactly as
+  it was, which is INV-4 applied to people: a presence rule can disarm a
+  house, and `unavailable` is not evidence of anybody.
+- **Stopping the rules is an operation.** Cancelling a countdown, suspending
+  and the kill switch all go through one entry in the code policy, which needs
+  no code by default — a push carries none — and can be raised, and then they
+  refuse where somebody can see it. The rules themselves are outside the
+  policy: nobody is there to be asked, and the authorisation happened when
+  somebody with `edit_config` saved the rule. `docs/automation-rules.md` says
+  so plainly.
+
+### Fixed
+- The `exceptions` entries in `translations/` are mappings, as Home Assistant
+  requires. Three of them were plain strings, which hassfest refuses and
+  `async_get_exception_message` cannot read; the repository's own test now
+  checks the shape rather than only the key set.
+
 ## [0.1.0-beta.7] — until somebody answers
 
 Escalation: a notification that keeps looking for a person instead of firing
