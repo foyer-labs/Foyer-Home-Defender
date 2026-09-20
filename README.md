@@ -341,6 +341,13 @@ interference opens an incident, as jamming does in a professional panel.
 Persistent problems also become Home Assistant repair issues, in Settings,
 where somebody meets them without opening the Foyer panel.
 
+[docs/system-health.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/system-health.md)
+has the detail and states the heuristic as a heuristic;
+[docs/resilience.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/resilience.md)
+is the shorter and more uncomfortable one: what survives when somebody cuts
+the power, why a UPS on the router is the highest-value thing you can buy, and
+why a local GSM channel is the only one that survives the fibre being cut.
+
 ## The log is about people
 
 The log records who was in the house, when they arrived and when they left. In
@@ -365,8 +372,8 @@ So, on page 10, beside the log itself:
 And on page 11:
 
 - **A seven-day retention preset** that touches only the categories naming
-  people, leaving faults and door states alone — those name nobody and are
-  what you read when a sensor did not react three weeks ago.
+  people, leaving actions, faults and door states alone — those name nobody and
+  are what you read when a sensor did not react three weeks ago.
 - **Timed pseudonymisation**, off by default, which after N days replaces names
   with a stable identifier. The panel says before you switch it on that it
   trades away the answer to *who disarmed that night* for every older row —
@@ -376,13 +383,6 @@ And on page 11:
 [docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
 is the practical version: what a row contains, where the exemption stops, and
 what to do about it. It is information, not legal advice.
-
-[docs/system-health.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/system-health.md)
-has the detail and states the heuristic as a heuristic;
-[docs/resilience.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/resilience.md)
-is the shorter and more uncomfortable one: what survives when somebody cuts
-the power, why a UPS on the router is the highest-value thing you can buy, and
-why a local GSM channel is the only one that survives the fibre being cut.
 
 ## Arming from the wall
 

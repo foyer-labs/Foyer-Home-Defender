@@ -87,6 +87,12 @@ class PersonRef:
     """
 
     user_id: str | None
+    # The Home Assistant account linked to them, if any. It is here because a
+    # configuration row records *the Home Assistant user* who saved it — a
+    # different namespace from the Foyer user id every other row carries — so
+    # without it an erasure reaches nothing anybody ever changed from the
+    # panel, and reports honestly that it found nothing (found in review).
+    ha_user_id: str | None = None
     names: tuple[str, ...] = ()
     device_ids: tuple[str, ...] = ()
     contact_ids: tuple[str, ...] = ()
@@ -99,7 +105,14 @@ class PersonRef:
 
     @property
     def empty(self) -> bool:
-        return not (self.user_id or self.names or self.device_ids or self.contact_ids)
+        return not (
+            self.user_id
+            or self.ha_user_id
+            or self.names
+            or self.device_ids
+            or self.contact_ids
+            or self.item_id
+        )
 
 
 def person_ref(config: FoyerConfig, user_id: str) -> PersonRef | None:
@@ -113,6 +126,7 @@ def person_ref(config: FoyerConfig, user_id: str) -> PersonRef | None:
 def ref_for(config: FoyerConfig, user: User) -> PersonRef:
     return PersonRef(
         user_id=user.id,
+        ha_user_id=user.ha_user_id,
         names=(user.name,) if user.name else (),
         device_ids=tuple(
             device.id for device in config.devices if device.user_id == user.id
@@ -146,10 +160,17 @@ def redact_detail(detail: Mapping[str, Any], names: Sequence[str]) -> dict[str, 
     """The JSON detail with this person's name taken out of it.
 
     Names reach `detail` by the side door: a configuration row summarises what
-    changed by the *name* of the thing, so "Luca's tag" and a contact called
-    after somebody are in there under `changes`. Matching is case-insensitive
-    and on the whole word or any string containing it, because that is how a
-    person's name gets into an object's name in the first place.
+    changed by the *name* of the thing, so "Ana's tag" and a contact called
+    after somebody are in there under `changes`.
+
+    Matching is on whole words, not on substrings, and that is not tidiness.
+    A person called Ed or Id, matched as a substring, redacts `added`,
+    `changed`, `enabled`, `item_id`, `area_id` and `zone_id` — which is every
+    key this project writes, and the erasure would destroy the *what happened*
+    that §10.4 exists to preserve, in an UPDATE with nothing behind it.
+
+    Two keys that both redact would collapse into one in a dict, losing a row's
+    content with no error and no count, so a redacted key is made unique.
     """
     wanted = tuple(n.strip().casefold() for n in names if n and n.strip())
     if not wanted:
@@ -157,18 +178,62 @@ def redact_detail(detail: Mapping[str, Any], names: Sequence[str]) -> dict[str, 
     return _redact(dict(detail), wanted)  # type: ignore[return-value]
 
 
+def _word_in(value: str, names: Sequence[str]) -> bool:
+    """Whether one of these names appears in ``value`` as a whole word."""
+    low = value.casefold()
+    for name in names:
+        start = low.find(name)
+        while start != -1:
+            before = low[start - 1] if start else ""
+            after_at = start + len(name)
+            after = low[after_at] if after_at < len(low) else ""
+            # A word boundary on both sides, where "word" is what a name is
+            # made of: letters, digits and the underscore that every key in
+            # this project uses. An apostrophe is not one, so "Ana's tag"
+            # still matches "Ana".
+            if not (before.isalnum() or before == "_") and not (
+                after.isalnum() or after == "_"
+            ):
+                return True
+            start = low.find(name, start + 1)
+    return False
+
+
 def _redact(value: Any, names: Sequence[str]) -> Any:
     if isinstance(value, str):
-        low = value.casefold()
-        return REDACTED if any(name in low for name in names) else value
+        return REDACTED if _word_in(value, names) else value
     if isinstance(value, dict):
-        return {
-            (_redact(key, names) if isinstance(key, str) else key): _redact(item, names)
-            for key, item in value.items()
-        }
+        out: dict[Any, Any] = {}
+        for key, item in value.items():
+            clean = _redact(item, names)
+            if isinstance(key, str) and _word_in(key, names):
+                # Unique, so two redacted siblings stay two entries.
+                marker = REDACTED
+                index = 2
+                while marker in out:
+                    marker = f"{REDACTED} {index}"
+                    index += 1
+                out[marker] = clean
+            else:
+                out[key] = clean
+        return out
     if isinstance(value, (list, tuple)):
         return [_redact(item, names) for item in value]
     return value
+
+
+def unlink_detail(detail: Mapping[str, Any], user_id: str) -> dict[str, Any]:
+    """The detail with the link back to a person removed.
+
+    A configuration row *about* somebody carries their id in ``item_id``. An
+    erasure that left it would leave the one field that still says which
+    account the row was about — and would match the same row again on the next
+    run, so the panel would go on reporting rows to erase after erasing them.
+    """
+    out = dict(detail)
+    if out.get("item_id") == user_id:
+        out.pop("item_id", None)
+    return out
 
 
 def erased_row(

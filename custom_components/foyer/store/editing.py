@@ -221,14 +221,14 @@ def upsert(
             new = replace(config, scenarios=_replace_in(config.scenarios, obj))
         elif kind == "user":
             # The pseudonym is minted once and then carried, never recomputed
-            # (§10.4, part 2 decision 4). Taken from the person already stored
-            # when the editor did not send it back, so renaming somebody does
-            # not detach every row already written under their identifier.
+            # (§10.4, part 2 decision 4). The stored one wins over anything a
+            # client sends: it is the identifier a person's already-swept rows
+            # carry, so a caller that could choose it could merge two people's
+            # histories under one identifier, or set it to somebody's name and
+            # turn the whole sweep into a rename (found in review).
             known = config.user(data["id"])
-            data["pseudonym"] = (
-                data.get("pseudonym")
-                or (known.pseudonym if known else None)
-                or new_pseudonym(new_id())
+            data["pseudonym"] = (known.pseudonym if known else None) or new_pseudonym(
+                new_id()
             )
             obj = user_from_dict({**_USER_DEFAULTS, **data})
             new = replace(config, users=_replace_in(config.users, obj))
@@ -491,10 +491,30 @@ def _log_from(data: Any, current: LogSettings) -> LogSettings:
 
     Parsed by the same function that reads the stored document, so what the
     panel sends and what is on disk can never mean two different things.
+
+    The two settings of §10.4 are kept when the caller does not mention them.
+    ``enabled`` and ``retention_days`` round-trip to their documented defaults
+    when they are missing, which is harmless; these two carry a deliberate
+    answer — "replace names after N days", "take the log with you" — and a
+    save that moved a retention slider and silently switched both off would
+    be a privacy setting nobody could keep (found in review).
     """
     if not isinstance(data, dict):
         return current
-    return log_from_dict(data)
+    parsed = log_from_dict(data)
+    return replace(
+        parsed,
+        pseudonymise_after=(
+            parsed.pseudonymise_after
+            if "pseudonymise_after" in data
+            else current.pseudonymise_after
+        ),
+        delete_on_uninstall=(
+            parsed.delete_on_uninstall
+            if "delete_on_uninstall" in data
+            else current.delete_on_uninstall
+        ),
+    )
 
 
 # What one field's before-and-after may be worth printing in a log row. A

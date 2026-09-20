@@ -83,11 +83,11 @@ Retention is already per category, on **page 11 — Settings**, thirty days
 everywhere by default, purged daily.
 
 Beside those fields is a **shorten to seven days** button. It sets `arming`,
-`alarm`, `security` and `config` to seven days and **leaves the others alone**
-— `system` and the two `zone_*` categories carry faults, restarts and door
-states, which name nobody and are what you read when you want to know why a
-sensor did not react three weeks ago. There is nothing to be gained by
-shortening those and something real to lose.
+`alarm`, `security` and `config` to seven days and **leaves the other four
+alone** — `action`, `system` and the two `zone_*` categories carry what a siren
+did, faults, restarts and door states, which name nobody and are what you read
+when you want to know why a sensor did not react three weeks ago. There is
+nothing to be gained by shortening those and something real to lose.
 
 Seven days is what an installation with domestic staff usually wants: long
 enough to answer "what happened last weekend", short enough that nobody's
@@ -112,14 +112,16 @@ A subject access request is about somebody's personal data, not about the rows
 whose `user_id` column happens to match, so an export that stopped at the first
 of those three would be an answer that left out half the subject.
 
-**It needs the `view_log` permission.** There is no way for somebody to fetch
-their own rows without it, and that is a deliberate limit rather than an
-oversight: the log is the security record of a house, and opening a read of it
-to everyone who appears in it would be a larger hole than the one it closes. In
-a household this is not a problem — the request is made to whoever set the
-system up, who exports the file and hands it over. **In a B&B, a let or an
-office it is an arrangement somebody has to make**, and making it is part of
-running one.
+**Exporting needs the `view_log` permission, and the block it sits in needs
+`manage_users`** — the person count above the buttons is part of the erasure,
+which is what `manage_users` owns. In practice one person does both. There is
+no way for somebody to fetch their own rows without being trusted with the log,
+and that is a deliberate limit rather than an oversight: the log is the security
+record of a house, and opening a read of it to everyone who appears in it would
+be a larger hole than the one it closes. In a household this is not a problem —
+the request is made to whoever set the system up, who exports the file and hands
+it over. **In a B&B, a let or an office it is an arrangement somebody has to
+make**, and making it is part of running one.
 
 ---
 
@@ -136,12 +138,29 @@ they are, and the person comes out of them.
 What it does to each of their rows:
 
 - `user_id`, `user_name`, `channel` and `device_id` are emptied;
-- their name is taken out of the `detail` document wherever a configuration row
-  recorded it — a device or a contact named after them.
+- their name is taken out of the `detail` document of those rows wherever it
+  appears — as a whole word, so a person called Ed does not take `added` and
+  `enabled` with them;
+- a configuration row recording a change to *their account* loses the link
+  back to it, while keeping the name of whoever made the change. That row is
+  somebody else's record of what they did, and a person asking to be forgotten
+  is not asking for another person's audit trail to be blanked.
 
 What it leaves untouched: the time, the area, the zone, the event, the
 incident. **The log still answers "what happened on the night of the
 fourteenth" and no longer answers "who".**
+
+Two things it does not reach, said here rather than left to be discovered:
+
+- **A name somebody else put in an object's name.** If an administrator called
+  a tag "Ana's tag", the row recording *that* change is the administrator's,
+  not Ana's, and it keeps its text. Rename the object and the next row carries
+  the new name; the old row is history of what the administrator did.
+- **A row whose account is not Foyer's.** Erasure searches by the Foyer
+  account, by the Home Assistant account linked to it, and by the name on rows
+  that carry no account at all. Somebody who appears in the log only under a
+  Home Assistant account that is not linked to their Foyer user is not found —
+  link the two on page 7 and they are.
 
 Before it runs, the panel shows how many rows were found and by which key —
 their account, or their name alone. The second number is not noise: a row
@@ -151,13 +170,23 @@ the oldest rows — the ones somebody is most likely to ask about — with the n
 still in them.
 
 There is a checkbox: **keep a stable identifier instead of forgetting**. Off by
-default. On, the rows keep an opaque `person-…` identifier that says nothing
-about them but still links their rows to each other, so "the same person acted
-on both nights" survives. That is minimisation, not erasure, and somebody
-asking to be forgotten is usually asking for the other one. Ask them.
+default. On, the rows keep an opaque `person-…` identifier that still links
+their rows to each other, so "the same person acted on both nights" survives.
+That is minimisation, not erasure, and somebody asking to be forgotten is
+usually asking for the other one. Ask them.
+
+And be honest about what the identifier protects against. It says nothing by
+itself, but **the table that maps it back to a name is in the configuration** —
+it is a field on each person, and it travels in a configuration backup, so that
+restoring one does not detach every row already written. So a pseudonym hides a
+name from whoever reads the log; it hides nothing from whoever can read
+`.storage` or holds a backup, which is the same boundary `docs/security-model.md`
+draws around everything else here.
 
 **The erasure is itself recorded**, under `config`, with who performed it and
-how many rows it touched — and **without naming the person**. Deleting the
+how many rows it touched — and **without naming the person**. (The one case
+where the row does carry the name is somebody erasing themselves, because the
+row names whoever performed it.) Deleting the
 whole log is recorded (§10.3) and so is this, but a row that recorded an
 erasure by naming the person erased would leave behind the very thing it was
 asked to remove.
@@ -170,9 +199,13 @@ It needs the `manage_users` permission and a code.
 
 **Page 11 — Settings**, under *Personal data in the log*. Off by default.
 
-Switched on with a delay of N days, a sweep runs once a day and replaces the
-name on every row older than N days with that person's stable identifier. Rows
-newer than N days are untouched.
+Switched on with a delay of N days, a sweep runs once a day — and once at
+every start, because an installation that restarts more often than daily would
+otherwise never run it at all — and replaces the name on every row older than N
+days with that person's stable identifier, in the columns and inside the
+detail. Rows newer than N days are untouched. Saving any setting restarts the
+integration, so the first sweep happens seconds after you switch it on: the
+panel asks you to confirm before it does.
 
 **Read this before switching it on.** It trades away the ability to answer
 *"who disarmed that night"* for every row older than the delay — which is the
@@ -190,6 +223,8 @@ Two limits worth knowing:
   has since been deleted from the configuration keep their name. If you are
   going to delete somebody, erase their history first — that operation reaches
   those rows and this one does not.
+- It finds the same rows the erasure finds, and misses the same ones: a person
+  whose Home Assistant account is not linked to their Foyer user on page 7.
 - It does not reach the copies that left. Anything that subscribed to
   `foyer_event` kept what it was given.
 

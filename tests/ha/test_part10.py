@@ -14,9 +14,11 @@ from __future__ import annotations
 import json
 
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 import pytest
 
 from custom_components.foyer.const import DOMAIN
+from custom_components.foyer.core.journal import system_row
 from custom_components.foyer.store import log_store
 
 from .conftest import ZONE
@@ -424,3 +426,231 @@ async def test_the_zone_is_still_there_to_be_watched(hass, loaded):
     entry must not leave the next one looking at a half-loaded system."""
     await _set(hass, ZONE, "off")
     assert hass.states.get(ZONE) is not None
+
+
+# --- what the review found, kept found ---------------------------------------------
+
+
+async def _config_row_about(hass, user_id: str) -> dict:
+    rows = await _rows(hass, categories=["config"])
+    return next(r for r in rows if r["detail"].get("item_id") == user_id)
+
+
+async def test_erasing_a_person_does_not_blank_whoever_edited_their_account(
+    hass, with_cleaner
+):
+    """A configuration row *about* somebody carries their id in the detail and
+    somebody else in the user columns — whoever created the account. Blanking
+    those columns would destroy the audit record of a third party who asked
+    for nothing."""
+    client, user_id = with_cleaner
+    before = await _config_row_about(hass, user_id)
+    assert before["user_name"]
+
+    await _ws(client, {"type": "foyer/privacy/erase", "user_id": user_id})
+
+    rows = await _rows(hass, categories=["config"])
+    # The row is still there, still says who did the editing, and no longer
+    # says which account it was about.
+    kept = [r for r in rows if r["user_name"] == before["user_name"]]
+    assert kept
+    assert not any(r["detail"].get("item_id") == user_id for r in rows)
+
+
+async def test_the_sweep_leaves_configuration_rows_about_a_person_alone(
+    hass, with_cleaner, freezer
+):
+    """Stamping this person's pseudonym on a row somebody else wrote would not
+    be minimisation but a false attribution: the row would say they edited
+    their own account."""
+    client, user_id = with_cleaner
+    before = await _config_row_about(hass, user_id)
+    editor = before["user_name"]
+    assert (await _switch_on(hass, client, days=1))["success"]
+
+    freezer.tick(2 * 24 * 3600)
+    await hass.data[DOMAIN]._async_pseudonymise()
+
+    after = await _config_row_about(hass, user_id)
+    assert after["user_name"] == editor
+
+
+async def test_two_people_with_one_name_are_not_merged(hass, hass_ws_client, loaded):
+    """The name clause is qualified by the account, or erasing one person
+    would erase the other's rows and the sweep would merge both histories
+    under whichever pseudonym came first."""
+    client = await hass_ws_client(hass)
+    first = await _make_user(hass, client, name="Luca", new_code=CODE)
+    second = await _make_user(hass, client, name="Luca", new_code="135790")
+    system = hass.data[DOMAIN]
+    # A row for each of them, written the way a keypad writes one.
+    system.async_record(
+        (
+            system_row(
+                dt_util.utcnow(), event_type="test", user_id=second, user_name="Luca"
+            ),
+        )
+    )
+    await system.log.async_flush()
+
+    result = await _ws(client, {"type": "foyer/privacy/erase", "user_id": first})
+    assert result["success"], result
+    rows = await _rows(hass)
+    # The other Luca's row is untouched.
+    assert any(r["user_id"] == second and r["user_name"] == "Luca" for r in rows)
+
+
+async def test_a_person_can_still_be_erased_after_a_sweep(hass, with_cleaner, freezer):
+    """The pseudonym is one of the keys the erasure searches on. Without it,
+    an installation with the sweep on could never erase anybody properly, and
+    the mapping back to the name is still in the configuration."""
+    client, user_id = with_cleaner
+    assert (await _switch_on(hass, client, days=1))["success"]
+    freezer.tick(2 * 24 * 3600)
+    await hass.data[DOMAIN]._async_pseudonymise()
+    pseudonym = hass.data[DOMAIN].config.user(user_id).pseudonym
+    assert any(r["user_name"] == pseudonym for r in await _rows(hass))
+
+    result = await _ws(client, {"type": "foyer/privacy/erase", "user_id": user_id})
+    assert result["success"] and result["removed"] > 0
+    rows = await _rows(hass)
+    assert not any(r["user_name"] == pseudonym for r in rows)
+    disarms = [r for r in rows if r["event_type"] == "disarmed"]
+    assert disarms and all(r["channel"] is None for r in disarms)
+
+
+async def test_the_sweep_takes_the_name_out_of_the_detail_too(
+    hass, hass_ws_client, loaded, freezer
+):
+    """A row's detail carries names by the side door — a configuration row
+    summarises what changed by the name of the thing. A pseudonymisation that
+    left them there would not have replaced the name at all."""
+    client = await hass_ws_client(hass)
+    user_id = await _make_user(hass, client, name="Ana Cleaner", new_code=CODE)
+    system = hass.data[DOMAIN]
+    system.async_record(
+        (
+            system_row(
+                dt_util.utcnow(),
+                event_type="test",
+                user_id=user_id,
+                user_name="Ana Cleaner",
+                detail={"changes": {"devices": {"added": ["Ana Cleaner's tag"]}}},
+            ),
+        )
+    )
+    await system.log.async_flush()
+    assert (await _switch_on(hass, client, days=1))["success"]
+
+    freezer.tick(2 * 24 * 3600)
+    await hass.data[DOMAIN]._async_pseudonymise()
+
+    assert not any("Ana Cleaner" in json.dumps(r) for r in await _rows(hass))
+
+
+async def test_saving_one_log_setting_keeps_the_other_two(hass, with_cleaner):
+    """A save that moved a retention slider must not switch off a privacy
+    setting it never mentioned."""
+    client, _ = with_cleaner
+    assert (await _switch_on(hass, client, days=30))["success"]
+    settings = (await _ws(client, {"type": "foyer/config"}))["config"]["settings"]
+    log = {"enabled": settings["log"]["enabled"], "retention_days": {"arming": 7}}
+    result = await _ws(
+        client,
+        {"type": "foyer/config/settings", "settings": {**settings, "log": log}},
+    )
+    assert result["success"], result
+    await hass.async_block_till_done()
+    assert hass.data[DOMAIN].config.settings.log.pseudonymise_after == 30
+
+
+async def test_a_client_cannot_choose_somebody_else_pseudonym(hass, with_cleaner):
+    """It is the identifier a person's already-swept rows carry: a caller that
+    could set it could merge two histories under one identifier."""
+    client, user_id = with_cleaner
+    mine = hass.data[DOMAIN].config.user(user_id).pseudonym
+    result = await _ws(
+        client,
+        {
+            "type": "foyer/user/save",
+            "user": {
+                "id": user_id,
+                "name": CLEANER,
+                "permissions": ["arm", "disarm"],
+                "pseudonym": "person-chosen",
+                "enabled": True,
+            },
+        },
+    )
+    assert result["success"], result
+    await hass.async_block_till_done()
+    assert hass.data[DOMAIN].config.user(user_id).pseudonym == mine
+
+
+async def test_a_configuration_it_cannot_read_stops_the_setup(
+    hass, entry, hass_storage
+):
+    """Found in review, and it was the worst thing in this branch: a guard
+    written for the removal landed in the setup, where `config is None` means
+    "first run" — so an unreadable document was answered by seeding a fresh
+    one over it, losing every area, user and code hash in silence."""
+    hass.states.async_set(ZONE, "off")
+    # Written by a major version this build does not understand, which is what
+    # `migrate` refuses rather than reading half of.
+    stored = {
+        "version": 99,
+        "minor_version": 1,
+        "key": "foyer.config",
+        "data": {"areas": [{"id": "a1", "name": "Casa"}]},
+    }
+    hass_storage["foyer.config"] = dict(stored)
+    entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    # And the document is exactly as it was: nothing seeded over it.
+    assert hass_storage["foyer.config"] == stored
+
+
+async def test_a_persons_own_configuration_changes_are_reachable(
+    hass, hass_ws_client, loaded, hass_admin_user
+):
+    """A configuration row records the *Home Assistant* account that saved it,
+    which is a different namespace from the Foyer user id every other row
+    carries. Found in review: without this, erasing somebody left every
+    change they had ever made from the panel with their name on it, and the
+    preview said it had found nothing."""
+    client = await hass_ws_client(hass)
+    user_id = await _make_user(
+        hass,
+        client,
+        name=CLEANER,
+        new_code=CODE,
+        permissions=["arm", "disarm", "edit_config"],
+        ha_user_id=hass_admin_user.id,
+    )
+    # Something saved from the panel, as that person.
+    system = hass.data[DOMAIN]
+    settings = (await _ws(client, {"type": "foyer/config"}))["config"]["settings"]
+    # With the code: this person holds one now, and §8.2 asks for it to edit.
+    await _ws(
+        client,
+        {"type": "foyer/config/settings", "settings": settings, "code": CODE},
+    )
+    await hass.async_block_till_done()
+
+    rows = await _rows(hass, categories=["config"])
+    saved = [r for r in rows if r["event_type"] == "config_save"]
+    assert saved and saved[0]["user_id"] == user_id, saved
+
+    counts = await _ws(client, {"type": "foyer/privacy/preview", "user_id": user_id})
+    assert counts["by_id"] > 0
+    erased = await _ws(
+        client,
+        {"type": "foyer/privacy/erase", "user_id": user_id, "code": CODE},
+    )
+    assert erased["success"], erased
+    left = [r for r in await _rows(hass) if CLEANER in json.dumps(r)]
+    # Only the row recording the erasure, which names whoever performed it —
+    # and here that is the same person, who performed it on themselves.
+    assert [r["event_type"] for r in left] == ["config_history_erased"]
+    assert system is not None

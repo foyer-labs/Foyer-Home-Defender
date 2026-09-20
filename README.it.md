@@ -408,9 +408,9 @@ Così, su pagina 10, accanto al registro stesso:
 E su pagina 11:
 
 - **Un preset di conservazione a sette giorni** che tocca solo le categorie che
-  nominano persone, e lascia stare guasti e stati delle porte — quelli non
-  nominano nessuno e sono quello che leggi quando un sensore non ha reagito tre
-  settimane fa.
+  nominano persone, e lascia stare azioni, guasti e stati delle porte — quelli
+  non nominano nessuno e sono quello che leggi quando un sensore non ha reagito
+  tre settimane fa.
 - **La pseudonimizzazione a tempo**, spenta per default, che dopo N giorni
   sostituisce i nomi con un identificatore stabile. Il pannello dice, prima che
   tu la accenda, che rinuncia alla risposta a *chi ha disinserito quella notte*

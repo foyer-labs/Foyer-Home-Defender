@@ -1346,7 +1346,9 @@
     "pseudonymise_hint": "Le righe più vecchie di questo tengono un identificatore stabile invece di un nome, così la forma delle notti sopravvive e i nomi no. L'accensione e lo spegnimento vengono registrati entrambi.",
     "delete_on_uninstall": "Cancella il database del registro se Foyer viene rimosso",
     "delete_on_uninstall_hint": "Spento, rimuovere Foyer lascia il database dov'è, nella cartella di configurazione, come foyer-log.db. La conferma di Home Assistant è l'ultima finestra che c'è, quindi è qui che si risponde alla domanda — e tenere è la risposta che non distrugge niente.",
-    "uninstall_snapshots_hint": "Gli scatti delle telecamere non vengono mai cancellati insieme. Sono fotografie dell'interno della casa, in una cartella che hai scelto tu e che può contenere file che non sono di Foyer — rimuoverli sta a te."
+    "uninstall_snapshots_hint": "Gli scatti delle telecamere non vengono mai cancellati insieme. Sono fotografie dell'interno della casa, in una cartella che hai scelto tu e che può contenere file che non sono di Foyer — rimuoverli sta a te.",
+    "pseudonymise_confirm": "Dal prossimo avvio — e salvare una qualsiasi impostazione è un avvio — ogni riga più vecchia di {days} giorni perde il nome che porta, e il nome dentro il suo dettaglio. Non si torna indietro rispegnendo questo interruttore. Il registro non risponderà più a chi ha disinserito quelle notti.",
+    "pseudonymise_yes": "Accendi"
   },
   "action_kind": {
     "notify": "Notifica",

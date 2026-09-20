@@ -165,3 +165,41 @@ def test_the_short_preset_touches_only_what_names_people():
 
 def test_an_empty_reference_matches_nothing():
     assert PersonRef(user_id=None).empty
+
+
+def test_redaction_matches_whole_words_and_not_substrings():
+    """A person called Ed must not erase `added`, `changed` and `enabled`.
+
+    Found in review: substring matching turned an erasure into the
+    destruction of the "what happened" §10.4 says must survive, in an UPDATE
+    with nothing behind it.
+    """
+    detail = {
+        "kind": "device",
+        "item_id": "abc",
+        "changes": {"devices": {"added": ["Hall keypad"], "changed": {"a": 1}}},
+        "enabled": True,
+    }
+    assert redact_detail(detail, ("Ed",)) == detail
+    assert redact_detail({"area_id": "a", "zone_id": "z"}, ("Id",)) == {
+        "area_id": "a",
+        "zone_id": "z",
+    }
+    # And the name still comes out when it is a word, including in a
+    # possessive, which is how a person's name gets into a device's name.
+    assert redact_detail({"added": ["Ed's tag"]}, ("Ed",)) == {"added": [REDACTED]}
+
+
+def test_two_redacted_keys_stay_two_entries():
+    """A dict comprehension would collapse them into one, losing a row's
+    content with no error and no count (found in review)."""
+    out = redact_detail({"Ana Smith": {"a": 1}, "Ana Smith ": {"b": 2}}, ("Ana Smith",))
+    assert len(out) == 2
+
+
+def test_unlink_removes_the_id_that_points_back_at_the_account():
+    from custom_components.foyer.core.privacy import unlink_detail
+
+    assert unlink_detail({"kind": "user", "item_id": "ana"}, "ana") == {"kind": "user"}
+    # Somebody else's row is left alone.
+    assert unlink_detail({"item_id": "luca"}, "ana") == {"item_id": "luca"}

@@ -7684,7 +7684,7 @@ var Jt = ["en", "it"], Yt = {
 	during_exit: !1
 }, Xt = class extends P {
 	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1;
+		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1;
 	}
 	static {
 		this.properties = {
@@ -7694,7 +7694,8 @@ var Jt = ["en", "it"], Yt = {
 			_problems: { state: !0 },
 			_busy: { state: !0 },
 			_saved: { state: !0 },
-			_restored: { state: !0 }
+			_restored: { state: !0 },
+			_confirmPseudonymise: { state: !0 }
 		};
 	}
 	get _chime() {
@@ -7874,8 +7875,10 @@ var Jt = ["en", "it"], Yt = {
             <label class="check">
               <input
                 type="checkbox"
-                .checked=${a}
-                @change=${(e) => o({ pseudonymise_after: e.target.checked ? 30 : null })}
+                .checked=${a || this._confirmPseudonymise}
+                @change=${(e) => {
+			e.target.checked ? this._confirmPseudonymise = !0 : (this._confirmPseudonymise = !1, o({ pseudonymise_after: null }));
+		}}
               />
               <span>${R(e, "settings.pseudonymise")}</span>
             </label>
@@ -7895,6 +7898,25 @@ var Jt = ["en", "it"], Yt = {
                 </label>` : O}
           </div>
           <div class="notice">${R(e, "settings.pseudonymise_warning")}</div>
+          ${this._confirmPseudonymise ? E`<div class="problems" role="alert">
+                <p>${R(e, "settings.pseudonymise_confirm", { days: 30 })}</p>
+                <div class="actions">
+                  <button
+                    class="btn danger"
+                    @click=${() => {
+			this._confirmPseudonymise = !1, o({ pseudonymise_after: 30 });
+		}}
+                  >
+                    ${R(e, "settings.pseudonymise_yes")}
+                  </button>
+                  <button
+                    class="btn"
+                    @click=${() => this._confirmPseudonymise = !1}
+                  >
+                    ${R(e, "common.cancel")}
+                  </button>
+                </div>
+              </div>` : O}
           <p class="hint">${R(e, "settings.pseudonymise_hint")}</p>
           <label class="check">
             <input

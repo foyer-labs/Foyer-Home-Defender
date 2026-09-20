@@ -123,7 +123,13 @@ async def async_clear_retained(
     if not await mqtt.async_wait_for_mqtt_client(hass):
         return False
     _, state_topic = topic_names(config, install_id)
-    await mqtt.async_publish(hass, state_topic, "", qos=settings.qos, retain=True)
+    # At least once, whatever this installation publishes its state at: a
+    # fire-and-forget clear that the broker dropped would return True and
+    # suppress the warning telling the household to go and clear the retained
+    # message by hand (found in review).
+    await mqtt.async_publish(
+        hass, state_topic, "", qos=max(1, settings.qos), retain=True
+    )
     return True
 
 

@@ -51,14 +51,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .store.state_store import StateStore
 
     store = ConfigStore(hass)
-    try:
-        config = await store.async_load()
-    except Exception:
-        # A configuration this version cannot read still has to be removable.
-        # What is lost is the answer to the log question, and the answer it
-        # falls back to is the one that destroys nothing.
-        _LOGGER.exception("Foyer could not read its configuration while removing")
-        config = None
+    # Deliberately not guarded. `config is None` below means "first run" and
+    # seeds a fresh configuration over the file, so swallowing a read failure
+    # here would answer a corrupt or newer-major document by destroying every
+    # area, zone, user and code hash in it. A document this version cannot
+    # read must stop the setup, exactly as the alarm state does below.
+    config = await store.async_load()
     if config is None:
         # First run: the config flow's answers seed the stored configuration.
         # From here on .storage/foyer.config is the source of truth.
@@ -178,9 +176,19 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     from .store.state_store import StateStore
 
     # Read before anything is deleted: the answer to "keep or delete the log"
-    # lives in the configuration this function is about to remove.
+    # lives in the configuration this function is about to remove. Guarded,
+    # because a document this version cannot read must not stop the removal —
+    # Home Assistant drops the entry whatever this raises, and everything
+    # below would simply never run, leaving the panel in the sidebar and the
+    # stored configuration, hashes and all, on disk with nothing left to
+    # remove it. What is lost is the answer to the log question, and the
+    # answer it falls back to is the one that destroys nothing.
     store = ConfigStore(hass)
-    config = await store.async_load()
+    try:
+        config = await store.async_load()
+    except Exception:
+        _LOGGER.exception("Foyer could not read its configuration while removing")
+        config = None
 
     async_unregister_panel(hass)
     # Repair issues are registered against the domain rather than the entry,
@@ -191,13 +199,30 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     notices.async_dismiss_all(hass)
     _async_remove_registrations(hass, entry)
 
-    if config is not None:
+    asked = config is not None and config.settings.log.delete_on_uninstall
+    if asked and not await async_delete_database(hass):
+        # A file left behind when somebody asked for it to go is worth a line:
+        # it is thirty days of history, and the `-wal` beside it is the last
+        # rows of it.
+        _LOGGER.warning(
+            "Foyer could not delete its event log database; it is still in "
+            "the configuration directory"
+        )
+
+    await store.async_remove()
+    await StateStore(hass).async_remove()
+
+    # The broker last, and deliberately. `async_wait_for_mqtt_client` waits up
+    # to fifty seconds for an MQTT entry that is retrying against a broker
+    # nobody can reach, and every deletion above would sit behind it — a
+    # removal the household abandons halfway is a removal that did nothing.
+    if config is not None and config.settings.mqtt.enabled:
         try:
             cleared = await mqtt.async_clear_retained(hass, config, entry.entry_id[:8])
         except Exception:
             cleared = False
             _LOGGER.exception("Foyer could not clear its retained MQTT message")
-        if config.settings.mqtt.enabled and not cleared:
+        if not cleared:
             # Said out loud rather than shrugged off: what is left behind is a
             # message on somebody else's broker describing this house, and the
             # household can go and clear it by hand if they know.
@@ -205,11 +230,6 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
                 "Foyer left its retained MQTT message on the broker: it could not "
                 "be reached while the integration was being removed"
             )
-        if config.settings.log.delete_on_uninstall:
-            await async_delete_database(hass)
-
-    await store.async_remove()
-    await StateStore(hass).async_remove()
 
 
 def _async_remove_registrations(hass: HomeAssistant, entry: ConfigEntry) -> None:

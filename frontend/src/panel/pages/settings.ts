@@ -39,6 +39,7 @@ class FoyerPageSettings extends LitElement {
     _busy: { state: true },
     _saved: { state: true },
     _restored: { state: true },
+    _confirmPseudonymise: { state: true },
   };
 
   ctx?: PanelContext;
@@ -48,6 +49,11 @@ class FoyerPageSettings extends LitElement {
   private _busy = false;
   private _saved = false;
   private _restored = false;
+  // Switching timed pseudonymisation on is destructive from the first sweep,
+  // which runs at the next start — and a configuration save is a restart.
+  // So it is confirmed, like erasing somebody, rather than acted on from a
+  // tick nobody meant (found in review).
+  private _confirmPseudonymise = false;
 
   private get _chime(): ChimeConfig {
     return this._draft ?? structuredClone(this.ctx?.config?.chime ?? NO_CHIME);
@@ -289,11 +295,15 @@ class FoyerPageSettings extends LitElement {
             <label class="check">
               <input
                 type="checkbox"
-                .checked=${on}
-                @change=${(e: Event) =>
-                  change({
-                    pseudonymise_after: (e.target as HTMLInputElement).checked ? 30 : null,
-                  })}
+                .checked=${on || this._confirmPseudonymise}
+                @change=${(e: Event) => {
+                  if ((e.target as HTMLInputElement).checked) {
+                    this._confirmPseudonymise = true;
+                  } else {
+                    this._confirmPseudonymise = false;
+                    change({ pseudonymise_after: null });
+                  }
+                }}
               />
               <span>${t(s, "settings.pseudonymise")}</span>
             </label>
@@ -315,6 +325,28 @@ class FoyerPageSettings extends LitElement {
               : nothing}
           </div>
           <div class="notice">${t(s, "settings.pseudonymise_warning")}</div>
+          ${this._confirmPseudonymise
+            ? html`<div class="problems" role="alert">
+                <p>${t(s, "settings.pseudonymise_confirm", { days: 30 })}</p>
+                <div class="actions">
+                  <button
+                    class="btn danger"
+                    @click=${() => {
+                      this._confirmPseudonymise = false;
+                      change({ pseudonymise_after: 30 });
+                    }}
+                  >
+                    ${t(s, "settings.pseudonymise_yes")}
+                  </button>
+                  <button
+                    class="btn"
+                    @click=${() => (this._confirmPseudonymise = false)}
+                  >
+                    ${t(s, "common.cancel")}
+                  </button>
+                </div>
+              </div>`
+            : nothing}
           <p class="hint">${t(s, "settings.pseudonymise_hint")}</p>
           <label class="check">
             <input

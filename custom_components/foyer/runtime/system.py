@@ -345,9 +345,13 @@ class FoyerSystem:
             )
         except Exception:
             _LOGGER.exception("Foyer could not purge its event log")
-            return
+            removed = 0
         if removed:
             _LOGGER.debug("Foyer purged %s expired log rows", removed)
+        # Whatever the purge did. The two jobs share a schedule and nothing
+        # else: a locked database that stopped the purge must not also stop an
+        # installation's names from ageing out, which is a thing somebody
+        # asked for and would never be told had stopped happening.
         await self._async_pseudonymise()
 
     async def _async_pseudonymise(self) -> None:

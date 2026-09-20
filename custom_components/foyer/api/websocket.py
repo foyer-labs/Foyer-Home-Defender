@@ -143,7 +143,7 @@ from ..store.editing import (
     update_settings,
     upsert,
 )
-from ..store.log_store import export_csv, export_json
+from ..store.log_store import LogUnavailable, export_csv, export_json
 from ..store.schema import (
     STORAGE_MINOR_VERSION,
     STORAGE_VERSION,
@@ -302,6 +302,19 @@ async def _gate(
         # like an installation with nothing in it.
         connection.send_error(msg["id"], reason.value, reason.value)
     return None
+
+
+def _me(
+    system: FoyerSystem, connection: websocket_api.ActiveConnection
+) -> tuple[str, str]:
+    """Who to record for something done from the panel (§10.1).
+
+    The Foyer person linked to this Home Assistant account when there is one,
+    so every row in the log names people from one namespace and a question
+    about a person can reach all of them.
+    """
+    me = system.config.user_of_ha(connection.user.id)
+    return (me.id, me.name) if me else (connection.user.id, connection.user.name)
 
 
 def _public_config(config) -> dict[str, Any]:
@@ -833,6 +846,12 @@ async def _apply(
     kind: str = "config",
 ) -> None:
     """Store a validated edit and reload, or return its problems untouched."""
+    # The Foyer person behind this Home Assistant account, when one is
+    # linked. Written in preference to the Home Assistant id because every
+    # other row in the log carries the Foyer one, and a `config` row in a
+    # different namespace is a row no question about a person can reach —
+    # including the erasure of §10.4 (found in review).
+    me = system.config.user_of_ha(connection.user.id)
     answer = await async_write(
         hass,
         system,
@@ -840,8 +859,8 @@ async def _apply(
         operation=operation,
         kind=kind,
         channel=CHANNEL_HA_UI,
-        user_id=connection.user.id,
-        user_name=connection.user.name,
+        user_id=me.id if me else connection.user.id,
+        user_name=me.name if me else connection.user.name,
     )
     connection.send_result(msg_id, answer)
 
@@ -996,8 +1015,8 @@ def _record_pseudonymisation(
                 dt_util.utcnow(),
                 operation="pseudonymisation",
                 kind="log",
-                user_id=connection.user.id,
-                user_name=connection.user.name,
+                user_id=_me(system, connection)[0],
+                user_name=_me(system, connection)[1],
                 channel=CHANNEL_HA_UI,
                 changes={"from": was, "to": now},
             ),
@@ -1595,8 +1614,8 @@ async def ws_log_clear(
                 dt_util.utcnow(),
                 operation="log_cleared",
                 kind="log",
-                user_id=connection.user.id,
-                user_name=connection.user.name,
+                user_id=_me(system, connection)[0],
+                user_name=_me(system, connection)[1],
                 channel=CHANNEL_HA_UI,
                 changes={"removed": removed},
             ),
@@ -1790,7 +1809,14 @@ async def ws_privacy_erase(
     if (ref := _person(system, connection, msg)) is None:
         return
     pseudonym = ref.pseudonym if msg["pseudonymise"] else None
-    removed = await system.log.async_erase_person(ref, pseudonym=pseudonym)
+    try:
+        removed = await system.log.async_erase_person(ref, pseudonym=pseudonym)
+    except LogUnavailable:
+        # A configuration save reloads the entry and closes the database. Say
+        # so, rather than answer success and record an erasure that did not
+        # happen.
+        connection.send_error(msg["id"], "no_log", "the event log is not available")
+        return
     system.async_record(
         (
             config_row(

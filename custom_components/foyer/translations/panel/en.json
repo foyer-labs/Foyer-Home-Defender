@@ -1346,7 +1346,9 @@
     "pseudonymise_hint": "Rows older than this keep a stable identifier instead of a name, so the shape of the nights survives and the names do not. Switching it on and switching it off are both recorded.",
     "delete_on_uninstall": "Delete the log database if Foyer is removed",
     "delete_on_uninstall_hint": "Off, removing Foyer leaves the database where it is, in the configuration directory, as foyer-log.db. Home Assistant's own confirmation is the last dialogue there is, so this is where the question gets answered — and keeping is the answer that destroys nothing.",
-    "uninstall_snapshots_hint": "Camera snapshots are never deleted with it. They are pictures of the inside of the house, in a folder you chose, which may hold files that are not Foyer's — so removing them is yours to do."
+    "uninstall_snapshots_hint": "Camera snapshots are never deleted with it. They are pictures of the inside of the house, in a folder you chose, which may hold files that are not Foyer's — so removing them is yours to do.",
+    "pseudonymise_confirm": "From the next start — and saving any setting is a start — every row older than {days} days loses the name on it, and the name inside its detail. It cannot be undone by switching this off again. The log will no longer answer who disarmed on those nights.",
+    "pseudonymise_yes": "Switch it on"
   },
   "action_kind": {
     "notify": "Notification",
