@@ -20,6 +20,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 
 from .models import (
+    AreaState,
     ChannelFault,
     ChannelHealth,
     EntityState,
@@ -214,6 +215,37 @@ def announce_over(
         if candidate != key and (known is None or known.fault is None):
             return contact.id, channel.id
     return None
+
+
+# --- the watchdog's payload (§12.3, P-1) -------------------------------------------
+
+
+def watchdog_payload(
+    config: FoyerConfig, snapshot: SystemSnapshot
+) -> Mapping[str, object] | None:
+    """What the heartbeat carries. Nothing, unless somebody turned it on.
+
+    This is P-1 in its original case (decision 29). A ping saying "armed,
+    Night, nobody home" is a channel telling whoever holds the other end
+    exactly when to come, and the other end is a third party by definition —
+    that is the whole point of an external watchdog. So the default is an
+    empty request, and the option that adds the state of the house is off,
+    with the reason written next to it in the panel.
+
+    Even switched on it says the least that is useful: how many areas are
+    armed and whether anything is wrong, never which scenario, never which
+    areas, never which zones are open.
+    """
+    if not config.health.watchdog.payload:
+        return None
+    armed = sum(
+        1 for rt in snapshot.state.areas.values() if rt.state is not AreaState.DISARMED
+    )
+    return {
+        "armed_areas": armed,
+        "areas": len(config.areas),
+        "healthy": not causes(snapshot.state.health, config, snapshot),
+    }
 
 
 # --- the whole picture (§13) -------------------------------------------------------

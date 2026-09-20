@@ -106,7 +106,6 @@ from .models import (
     TimerKind,
     WalkTest,
     WalkTestRequest,
-    WatchdogHealth,
     Zone,
     ZoneStateChanged,
 )
@@ -1587,14 +1586,17 @@ class _Run:
         if event.watchdog is not None:
             current = self.watchdog
             if event.watchdog:
-                self.watchdog = WatchdogHealth(
+                # ``announced`` and ``down_since`` are deliberately kept:
+                # reconcile_watchdog is the one place that decides an outage
+                # is over, and clearing them here would mean the recovery
+                # was never announced.
+                self.watchdog = replace(
+                    current,
                     failures=0,
-                    down_since=None,
                     last_ok=self.now,
                     last_attempt=self.now,
                     last_error="",
                     ever_ok=True,
-                    announced=False,
                 )
             else:
                 self.watchdog = replace(
@@ -1618,6 +1620,16 @@ class _Run:
                 threshold=threshold,
             )
 
+    def world(self) -> SystemSnapshot:
+        """The snapshot as it is *now*, with this call's change applied.
+
+        ``self.snapshot`` is the world as the call began; the event's entity
+        change lives in ``self.entities``. Everything in core.health reads a
+        snapshot, so it is handed this one — reading the original would make
+        a power cut visible only at the next unrelated event.
+        """
+        return replace(self.snapshot, entities=self.entities)
+
     def reconcile_health(self) -> None:
         """Announce what changed about the system itself, once each (§12).
 
@@ -1635,7 +1647,7 @@ class _Run:
 
     def reconcile_mains(self) -> None:
         """A mains failure notifies at once and is never a quiet night (§12.1)."""
-        lost = health_engine.mains_state(self.config, self.snapshot)
+        lost = health_engine.mains_state(self.config, self.world())
         if lost is True and self.mains_lost_since is None:
             self.mains_lost_since = self.now
             self.occur(
@@ -1746,7 +1758,7 @@ class _Run:
                 self.radios.pop(radio.id, None)
                 continue
             current = self.radios.get(radio.id) or RadioHealth()
-            answering = health_engine.coordinator_answering(radio, self.snapshot)
+            answering = health_engine.coordinator_answering(radio, self.world())
             if answering is False:
                 current = self.coordinator_lost(radio, current)
                 self.radios[radio.id] = current
@@ -1789,7 +1801,7 @@ class _Run:
                     "radio_id": radio.id,
                     "entity_id": radio.coordinator_entity_id or "",
                     "zones": str(
-                        len(health_engine.zones_on(self.config, self.snapshot, radio))
+                        len(health_engine.zones_on(self.config, self.world(), radio))
                     ),
                 },
             )
@@ -1800,7 +1812,7 @@ class _Run:
 
     def evaluate_radio(self, radio: Radio, current: RadioHealth) -> RadioHealth:
         """One radio, with its coordinator answering. The whole heuristic."""
-        on_radio = health_engine.zones_on(self.config, self.snapshot, radio)
+        on_radio = health_engine.zones_on(self.config, self.world(), radio)
         window = self.config.health.rf_window_of(radio)
         quiet = health_engine.burst(self.quiet_since, on_radio, window)
         threshold = self.config.health.rf_threshold(radio, len(on_radio))
@@ -3495,7 +3507,7 @@ class _Run:
     def decision(self, outcome: _Outcome) -> Decision:
         ctx = PlanContext(
             config=self.config,
-            snapshot=replace(self.snapshot, entities=self.entities),
+            snapshot=self.world(),
             now=self.now,
             areas=self.areas,
             incident=self.incident,

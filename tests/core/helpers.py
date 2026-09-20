@@ -26,6 +26,7 @@ from custom_components.foyer.core.models import (
     EntryMode,
     Event,
     FoyerConfig,
+    HealthReport,
     Moment,
     Permission,
     ProfileAction,
@@ -293,6 +294,9 @@ class World:
             areas={a.id: AreaRuntime() for a in self.config.areas}
         )
         self.entities = closed_entities(self.config)
+        # Which radio each entity sits on (§12.5). The runtime works this out
+        # from the config entries; a test says it outright.
+        self.radios: dict[str, str] = {}
         for entity_id, value in (entities or {}).items():
             self.entities[entity_id] = EntityState(
                 value, last_reported=self.now, last_changed=self.now
@@ -304,7 +308,9 @@ class World:
     # --- driving -----------------------------------------------------------------
 
     def snapshot(self) -> SystemSnapshot:
-        return SystemSnapshot(self.state, self.entities, self.settling, self.timezone)
+        return SystemSnapshot(
+            self.state, self.entities, self.settling, self.timezone, self.radios
+        )
 
     def send(self, event: Event) -> Decision:
         decision = decide(self.snapshot(), event, self.config, self.now)
@@ -362,6 +368,16 @@ class World:
     def suspend(self, suspension: Suspension | None = None, **kwargs) -> Decision:
         suspension_id = kwargs.pop("suspension_id", None)
         return self.send(SetSuspension(suspension, suspension_id, **_actor(kwargs)))
+
+    # --- system health (§12) ------------------------------------------------------
+
+    def health(self, **kwargs) -> Decision:
+        """The runtime reports what it went and looked at (§12)."""
+        return self.send(HealthReport(**kwargs))
+
+    def on_radio(self, radio_id: str, *entity_ids: str) -> None:
+        for entity_id in entity_ids:
+            self.radios[entity_id] = radio_id
 
     def person(self, entity_id: str, state: str) -> Decision:
         """Somebody's presence entity changed, which is an ordinary state
