@@ -28,7 +28,7 @@ aiosqlite; this is the deliberate substitution).
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 import contextlib
 from datetime import datetime, timedelta
 import json
@@ -57,6 +57,10 @@ class LogUnavailable(Exception):
 
 
 DB_FILENAME = "foyer-log.db"
+
+# How the writer task is created. The config entry's own factory, so the
+# task cannot outlive the entry (see async_setup).
+TaskFactory = Callable[[Any, str], "asyncio.Task[None]"]
 EVENT_FOYER = "foyer_event"
 
 # How many rows one query returns unless the caller says otherwise. The panel
@@ -235,11 +239,20 @@ class LogStore:
 
     # --- lifecycle -----------------------------------------------------------
 
-    async def async_setup(self) -> None:
+    async def async_setup(self, create_task: TaskFactory | None = None) -> None:
+        """Open the database and start the writer.
+
+        ``create_task`` is how the worker is created, and the caller passes the
+        config entry's own factory: a task created against the entry is
+        cancelled when the entry unloads, whatever else happens. Without that,
+        a setup that fails after this point — or a reload racing something —
+        leaves a writer running against a store nobody will close, which is
+        the same rule as everywhere else here: nothing this integration starts
+        may outlive its entry.
+        """
         await self.hass.async_add_executor_job(self._open)
-        self._worker = self.hass.async_create_background_task(
-            self._run(), "foyer log writer"
-        )
+        start = create_task or self.hass.async_create_background_task
+        self._worker = start(self._run(), "foyer log writer")
 
     async def async_close(self) -> None:
         """Stop writing, then flush what is queued: a row already decided on

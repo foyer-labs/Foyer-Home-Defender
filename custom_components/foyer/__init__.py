@@ -84,7 +84,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     log = LogStore(hass)
     try:
-        await log.async_setup()
+        # Against the entry, so the writer goes when the entry goes even if
+        # something below this line never gets the chance to close it.
+        await log.async_setup(
+            lambda coro, name: entry.async_create_background_task(hass, coro, name)
+        )
     except Exception:
         # The alarm runs without its log. It must never be the other way
         # round: an unreadable database file is a diagnostic problem, not a

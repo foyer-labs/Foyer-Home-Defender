@@ -425,6 +425,10 @@ async def test_editing_the_configuration_asks_for_a_code(hass, hass_ws_client, l
         {"type": "foyer/config/save", "kind": "area", "item": item, "code": CODE},
     )
     assert accepted["success"], accepted
+    # An accepted save schedules a reload. Waited for here, or the test ends
+    # with a new entry setting itself up behind it — which on a fast runner is
+    # a lingering task reported against whatever ran next.
+    await hass.async_block_till_done()
 
 
 async def test_a_non_administrator_needs_the_permission_to_configure(
