@@ -47,7 +47,7 @@ The common rule, and the one worth building first:
    channel. The editor refuses to save a countdown that names no contact at
    all; what it cannot check is whether the contact's channel can carry a
    button. An SMS-only contact hears the countdown and cannot stop it from
-   the message — the panel's Cancel button still works.
+   the message — the Cancel button on page 12 and on the card still does.
 2. On page 12, add a rule: trigger **Absence**, the people it watches, and a
    number of minutes. Five is enough for a phone that loses the network at the
    end of the drive; thirty is enough that nobody's afternoon nap arms the
@@ -64,7 +64,9 @@ What happens then, in order:
 - every phone leaves; the timer starts when the last one goes;
 - N minutes later the rule wants to act, and the guards are evaluated;
 - the countdown starts and the push goes out: *"Nobody seems to be in, so Arm
-  when empty will arm Away. Cancel to stop it."*;
+  when empty will arm Away. Cancel to stop it."* — and the same countdown, with
+  the same button, appears on page 12 and on every card, because two minutes is
+  not long enough to go looking for the right screen;
 - two minutes later, if nobody pressed anything, **the guards are evaluated
   again** — two minutes is long enough for somebody to come home — and the
   house arms;
