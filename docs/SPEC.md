@@ -1714,6 +1714,11 @@ rely on.
   left growing in the configuration directory.
 - **Alarmo import** (§20.2).
 - **Contributor infrastructure** (§20.3).
+- **The disclaimers, last of all** (§20.4). The wording that says what this is
+  and what it is not, everywhere somebody meets it rather than only in the
+  licence. **Still to be agreed** — it is a conversation, not a task with a
+  known answer — so what §20.4 records is the shape of it and the reasons,
+  not the sentences.
 
 **Acceptance:** a person who has never spoken to the author can install it, hit a
 problem, and produce an issue that is answerable.
@@ -1870,6 +1875,54 @@ other way it becomes a permanent source of issues that are nobody's bug.
 - A documented flow for adding a language that touches no code: copy
   `translations/en.json` and `translations/panel/en.json`, translate both, open a
   pull request. CI already enforces matching key sets (§19).
+
+### 20.4 Disclaimers, and what this software is not
+
+**To be written and agreed, last of all.** Apache-2.0 already disclaims
+warranty and liability, and §1.2, §5.5 and INV-6 already state parts of this
+in the places where the decision is being made. What is missing is one settled
+wording, said everywhere a person actually meets the product rather than only
+in a licence file nobody opens.
+
+The distinction the wording has to carry:
+
+> Foyer automates actions on rules — arming, disarming, sounding, notifying —
+> the way an alarm does. It is **not a professional alarm system**, it is not
+> professional hardware, and nothing about it is certified.
+
+What follows from that, and what the wording has to say plainly:
+
+- **No certification and no standard.** EN 50131, CEI 79-3 and their
+  equivalents are not met and are not aimed at. An insurance policy or a
+  tender that names a grade is not satisfied by this (§1.2).
+- **No monitored centre.** Nobody is watching. Foyer notifies the people the
+  household lists, over transports it does not own, and an escalation that
+  reaches nobody is an outcome the household has to have planned for (§7.3).
+- **Consumer hardware, and a house's own network and power.** Detection is
+  only as good as sensors somebody bought, a radio somebody else designed and
+  a router that goes off with the power. The failure modes are documented
+  rather than defended against (§12, `docs/resilience.md`).
+- **Not a fire alarm system**, already non-negotiable in §5.5 and repeated
+  here because it is the one that could kill somebody.
+- **It depends on Home Assistant**, and stops when Home Assistant stops. The
+  restart gap is logged (INV-3) precisely because the alternative is a system
+  implying it was watching when it was not.
+- **The household is the operator.** Foyer executes the configuration it was
+  given; verifying that configuration is what the simulator, the walk test and
+  the action test exist for (§11), and the honest claim is "it does what you
+  configured", never "it will protect you".
+
+Where it has to appear, at minimum: both READMEs, `docs/security-model.md`,
+the first-run wizard, the panel's own about/help surface, `SECURITY.md`, and
+the HACS listing. Where it must **not** appear: as a modal nobody reads twice,
+or as small print that contradicts a headline sentence elsewhere. The project's
+own rule applies to this too — state the limit where the person is deciding,
+in the same voice as everything else.
+
+One thing to settle when the wording is: whether the strongest sentences
+belong to the reader ("do not rely on this alone") or to the author ("this is
+not offered as a certified alarm"). They are not the same promise, and the
+document should make one of them on purpose.
 
 ## 21. Decision log
 
