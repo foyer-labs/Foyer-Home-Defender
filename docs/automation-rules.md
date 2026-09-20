@@ -1,0 +1,255 @@
+# Automation rules
+
+Letting the house arm itself, and the reasons it is allowed to do far less in
+the other direction.
+
+Everything here is configured on **page 12 — Automation rules**. Three things
+are worth reading before writing a rule:
+
+- **This is a closed rule model, not an automation engine.** Four triggers,
+  three actions, one active window, three guards. Anything more complicated
+  belongs in a Home Assistant automation subscribed to the `foyer_event`
+  event — which can do anything at all, including calling `foyer.arm`.
+- **A rule acts as a user would.** It goes through the same arming path a
+  person goes through: the same preconditions, the same refusals, the same log.
+  Every row it writes carries the rule's name and the channel `auto_rule`.
+- **Automatic arming and automatic disarming are not equally safe**, and Foyer
+  does not pretend they are. The asymmetry is enforced in the engine rather
+  than written on a screen. It has [its own section](#why-automatic-disarming-is-restricted)
+  below, which does not soften anything.
+
+---
+
+## The rule model
+
+| Element | Options |
+|---|---|
+| **Trigger** | `absence` — every selected person `not_home` for N minutes · `presence` — a selected person arrives · `time` — at HH:MM on chosen weekdays · `entity` — an entity holds a state for N minutes |
+| **Action** | arm a scenario · disarm named areas · switch to another scenario |
+| **Active window** | weekdays plus a time range; outside it the rule does not exist |
+| **Guards** | only if currently disarmed · only if every zone is ready · only if no interior zone has moved for N minutes |
+| **Grace period** | an actionable notification with a countdown and a **Cancel** button before the action runs |
+| **Suspension** | until a date and time · skip the next occurrence · a named expected-visitor window · the global switch |
+
+### Presence-based arming, from the start
+
+The common rule, and the one worth building first:
+
+1. Create a contact on page 6 with the Companion app as an **actionable**
+   channel. Without one, nobody gets the countdown and nobody can cancel it —
+   which is why the editor refuses to save a countdown that reaches nobody.
+2. On page 12, add a rule: trigger **Absence**, the people it watches, and a
+   number of minutes. Five is enough for a phone that loses the network at the
+   end of the drive; thirty is enough that nobody's afternoon nap arms the
+   house around them.
+3. Choose the scenario it arms.
+4. Leave the guards on. Each of them is a reason not to arm, and each one
+   answers a real evening.
+5. Leave the grace period at 120 s and name the contacts it announces to.
+
+What happens then, in order:
+
+- every phone leaves; the timer starts when the last one goes;
+- N minutes later the rule wants to act, and the guards are evaluated;
+- the countdown starts and the push goes out: *"Nobody seems to be in, so Arm
+  when empty will arm Away. Cancel to stop it."*;
+- two minutes later, if nobody pressed anything, **the guards are evaluated
+  again** — two minutes is long enough for somebody to come home — and the
+  house arms;
+- the log gets an `armed` row under `arming`, on channel `auto_rule`, with the
+  rule's name on it.
+
+If somebody presses **Cancel**, the rule stops and does not announce itself
+again until its condition goes false and true once more: somebody has to come
+home before "the house is empty" is news again.
+
+### Triggers that stay true, and triggers that happen once
+
+This distinction decides what a blocked rule does next, and it is the one
+thing about the model worth holding in mind:
+
+| Trigger | Kind | A guard blocks it, then clears |
+|---|---|---|
+| `absence` | a condition | the rule acts as soon as the guard clears — shut the window and the house arms |
+| `entity` | a condition | the same |
+| `time` | an instant | the occurrence is missed. 23:00 happens once; a window shut at 23:02 is not another 23:00 |
+| `presence` | an instant | the same: that arrival has been and gone |
+
+A `time` rule that arms "some time after eleven, whenever the window is
+finally shut" would be a different rule from the one somebody wrote.
+
+### The guards
+
+| Guard | What it catches |
+|---|---|
+| Only if currently disarmed | The house is already armed, or somebody is walking out through an exit delay |
+| Only if every zone is ready | An open window, or a zone in fault. Without it the rule would try to arm and fail, which is a louder answer than not trying |
+| Only if no interior motion for N minutes | The flat phone battery: somebody is in the house, and their phone is not telling anybody |
+
+The third one reads the zones themselves — an interior zone that is active
+now, or whose entity changed inside the window. Areas marked as the perimeter
+are left out of it: a front door contact is not evidence that anybody is in.
+
+**A blocked rule is always logged**, under `system`, with the guard that
+blocked it. "Why did it not arm last night?" is a question people ask, and
+silence is the worst possible answer. The row is written once, when the block
+begins, rather than at every evaluation.
+
+### The active window
+
+Outside its window a rule **does not exist**: it is not blocked, it is not
+suspended, and nothing is written about it. A rule with a window of
+22:00–06:00 is not a rule that spends the day being stopped.
+
+---
+
+## Suspensions, and the boiler engineer
+
+The recurring case: the house will be empty tomorrow morning, but somebody is
+being let in. Automatic arming would arm the house around them.
+
+Three ways to stop it, all on page 12 and none of them a configuration change:
+
+- **Skip the next occurrence** — one click. The rule sits out one turn and is
+  back the moment after.
+- **Suspend until** a date and time.
+- **An expected-visitor window** — a named period, "09:00–13:00 tomorrow,
+  Boiler engineer", optionally with a **reduced scenario** applied instead.
+
+The three are mechanically the same thing. The difference is what the log
+says in six months: *Boiler engineer* answers the question, and *rule
+suspended* never will. That is the whole reason the named window exists as a
+first-class concept rather than a checkbox.
+
+### What "apply instead" does, exactly
+
+A reduced scenario **substitutes**: it replaces the suspended rule's action at
+the moment that rule would have acted. It does not arm anything when the
+window opens and does nothing when it closes.
+
+That is deliberate, and the reason is the section below. If the window armed
+something at its opening, then on a house that was already armed more than
+that, opening the window would have to **disarm** — and an expected visitor is
+not an authorisation to open the house.
+
+Suspensions live with the runtime state, not with the configuration: they
+expire on their own, they need no `edit_config` permission, and setting one is
+three clicks from the panel the evening before.
+
+---
+
+## Why automatic disarming is restricted
+
+Automatic **arming** carries a moderate, manageable risk. A flat phone battery
+or a dropped Wi-Fi connection can make the system believe the house is empty
+and arm it with somebody inside. The guards plus the cancellable countdown
+reduce that to an annoyance.
+
+Automatic **disarming on presence is a genuine security hole**, and it is why
+professional systems do not offer it. Presence in Home Assistant is inferred
+from a phone:
+
+- **a stolen phone disarms the house.** Whoever took it does not need a code,
+  a key or a moment's hesitation: they need to walk up to the door;
+- **GPS drift of 200 metres disarms the house.** Phones do this in cities,
+  under cloud, in car parks and next to large buildings — routinely;
+- **a cloned MAC address on the home network disarms the house.** A network
+  device tracker believes whatever the network tells it.
+
+This is not theoretical. It is the most banal attack there is against a DIY
+alarm, and it needs no skill at all.
+
+So:
+
+1. Automatic **arming** is fully supported.
+2. Automatic **disarming exists and is disabled by default.** Turning it on is
+   a deliberate act on page 12, beside the paragraph above.
+3. **A perimeter area is never disarmed by a rule.** Mark an area as the
+   perimeter on page 2, and no rule can open it, whatever the rule says.
+   Whoever walks in on a stolen phone still finds every external door and
+   window protected.
+
+Point 3 is a hard constraint in the engine, not a default somebody can talk
+their way past, and a regression test asserts it directly on the Decision
+rather than through the screen.
+
+Two consequences worth knowing:
+
+- **A "switch to another scenario" action counts as disarming** whenever it
+  would leave an armed area disarmed. Switching scenario drops the areas the
+  old scenario armed and the new one does not name, so a rule that switches
+  can open part of the house without ever saying the word. It needs the same
+  switch turned on — and a perimeter area it would have dropped simply stays
+  armed, outside any scenario, which the master panel then reports as
+  `armed_custom_bypass`.
+- **A rule that names only perimeter areas is refused when you save it**,
+  because it could never do anything.
+
+A `time` rule that disarms — "open the bedrooms at 07:00 on weekdays" —
+carries none of the phone-shaped risk above. It is still behind the same
+switch, because a disarm is a disarm and the mechanism should be chosen rather
+than inherited; the warning the panel shows beside it names the attack that
+rule really has, which is an hour anybody watching the house can learn.
+
+---
+
+## The entities, and the log
+
+| Entity | What it is for |
+|---|---|
+| `switch.foyer_auto_arming` | The global kill switch. Off stops every rule and cancels whatever is counting down — a fortnight away, a house full of guests, a weekend when the rules would be wrong |
+| `sensor.foyer_next_auto_action` | What happens next: `arm`, `disarm`, `switch`, or `idle`. The instant, the rule's name and any suspension are attributes |
+
+`sensor.foyer_next_auto_action` reports what is **scheduled**, not what will
+certainly happen: the guards are evaluated at the moment the rule acts. A
+sensor that tried to predict them would be a second opinion able to contradict
+the engine, and the row under `system` is where the real answer lives.
+
+What the log records:
+
+| Row | Category | When |
+|---|---|---|
+| `armed` / `disarmed`, `channel: auto_rule`, with the rule's name | `arming` | A rule acted |
+| `auto_pending` | `system` | A countdown started |
+| `auto_cancelled` | `system` | Somebody pressed Cancel, with who and through which path |
+| `auto_blocked` | `system` | A guard, a suspension or the switch stopped a rule |
+| `auto_suspension_set` / `auto_suspension_cleared` | `system` | A suspension was created, used, lifted or expired |
+| `arm_failed`, `channel: auto_rule` | `arming` | The rule acted and the arming itself was refused — an open window with the "ready" guard off |
+
+---
+
+## Things that are easy to get wrong
+
+- **A countdown announced to nobody.** The editor refuses to save one: a grace
+  period whose notification reaches no contact is a delay, not a chance to
+  stop it.
+- **Quiet hours still apply** to the countdown's notification. A contact whose
+  quiet window is on, with a threshold above a warning, does not hear it — and
+  the countdown still runs. Give at least one contact a channel that gets
+  through, or set the grace period to 0 and know that it acts at once.
+- **A person entity Home Assistant cannot read is never taken as absence.** An
+  `unknown` or `unavailable` person is not evidence that nobody is in, which is
+  the same rule INV-4 applies to zones.
+- **A `presence` rule created while somebody is at home has not seen them
+  arrive.** The first evaluation is a baseline, exactly as it is for a key
+  zone or an NFC tag.
+- **No rule acts during a walk test.** The house is armed for a test and
+  somebody is walking through it; a rule that disarmed halfway through would
+  end the one check that finds a misaimed PIR.
+- **A countdown that fell due while Home Assistant was down acts at startup**,
+  and the row says it was late. It is the one place where Foyer does the thing
+  rather than dropping it, and the reason is that an arming missed is a house
+  left open while everybody believes it is closed.
+
+---
+
+## Rehearsing a rule before trusting it
+
+Page 9's simulator takes a hypothetical date and time. A rule that fires at
+23:00 on weekdays can be rehearsed at eleven on a Monday morning: set the
+clock, override the people to `not_home`, and read the trace.
+
+What the trace shows about a rule — that it would act, that a guard would
+block it, that a suspension covers it — is read off the same `Decision` the
+runtime acts on. Nothing predicts it a second time, so the rehearsal and the
+night cannot disagree.

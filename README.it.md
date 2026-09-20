@@ -36,8 +36,10 @@
 > persona e permessi. **Ora è arrivata anche l'escalation delle notifiche**: una
 > rubrica di persone con i canali in ordine di priorità, una notifica che sale
 > da push a SMS a una seconda persona finché qualcuno non risponde, e quattro
-> modi per fermarla. Manca ancora che la casa si inserisca da sola, sulla
-> presenza o a orario.
+> modi per fermarla. **E ora la casa si inserisce da sola**: regole sulla
+> presenza, su un orario o su un'entità, ognuna annunciata da una push con
+> dentro un pulsante Annulla, e la mattina che aspetti il tecnico della
+> caldaia tenuta aperta da una finestra che lo dice.
 
 **Provalo se** hai già sensori di porta, finestra o movimento in Home
 Assistant, vuoi una centrale con scenari di inserimento veri invece di una
@@ -45,8 +47,7 @@ cartella di automazioni, preferisci controllare una configurazione invece di
 sperare che sia giusta, e vuoi inserire e disinserire da una tastiera, un tag
 o un badge con un registro che dice chi è stato.
 
-**Non ancora, se** ti serve che la casa si inserisca da sola quando esce
-l'ultima persona, o se non vuoi far girare su casa tua una beta con
+**Non ancora, se** non vuoi far girare su casa tua una beta con
 pochi mesi di vita: [Alarmo](https://github.com/nielsfaber/alarmo) ha anni di
 installazioni alle spalle, e per un impianto che deve semplicemente funzionare
 oggi è la scelta prudente.
@@ -112,6 +113,14 @@ oggi è la scelta prudente.
   attive, perché un walk test non deve mai silenziare un rivelatore
   di fumo. Si chiude da sola, e finché è attiva lo dice su ogni schermo.
   [Qui sotto](#camminare-per-casa-e-premere-il-pulsante).
+- **La casa può inserirsi da sola, e te lo dice prima.** Regole sulla
+  presenza, su un orario o sullo stato di un'entità, con condizioni di
+  sicurezza che le fermano — solo se è tutto disinserito, solo se tutte le
+  zone sono pronte, solo se in casa non si muove niente da N minuti. Ognuna si
+  annuncia prima con una push che porta un pulsante **Annulla**, e una
+  sospensione che si chiama «Tecnico della caldaia, 09:00–13:00» tiene la casa
+  aperta la mattina che aspetti qualcuno — così fra sei mesi il log dice
+  ancora perché. [Più sotto](#lasciare-che-la-casa-si-inserisca-da-sola).
 - **Un pulsante di prova accanto a ogni azione e a ogni canale di un
   contatto, e si esegue davvero.** Fa
   suonare la sirena per tre secondi, manda la notifica sul serio. L'errore che
@@ -243,6 +252,36 @@ del corridoio. Di quello si occupa la sezione qui sotto.
 Come si legge una traccia, e cosa vale la pena provare prima di fidarsi di una
 configurazione: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md) (in inglese).
 
+## Lasciare che la casa si inserisca da sola
+
+Escono tutti i telefoni. Cinque minuti dopo vengono controllate le condizioni
+— niente di aperto, niente che si muove dentro, casa disinserita — e su quei
+telefoni arriva una push: *«Non sembra esserci nessuno, quindi **Arma a casa
+vuota** inserirà Fuori casa. Annulla per fermarla.»* Due minuti. Se premi
+Annulla non succede; se non premi niente succede, e il log dice quale regola
+ha inserito la casa.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-it.png" alt="La pagina Regole automatiche: tre regole con attivazione, condizioni di sicurezza e periodo di grazia, una finestra per il tecnico della caldaia e il riquadro del disarmo automatico che nomina l'attacco da cui protegge" width="900">
+</p>
+
+Le condizioni di sicurezza sono la parte che vale la pena configurare. Una
+regola fermata da una di loro finisce nel log sotto `system`, perché *«perché
+non si è armata ieri sera?»* è una domanda che la gente fa, e il silenzio è la
+peggior risposta possibile. E la mattina che aspetti qualcuno, una finestra
+con un nome — «Tecnico della caldaia, 09:00–13:00» — sospende l'inserimento e,
+se vuoi, arma al suo posto il solo perimetro.
+
+**Inserire e disinserire non sono trattati come ugualmente sicuri.** Il
+disarmo automatico esiste, è spento finché non lo accendi, e non può mai agire
+su un'area che hai segnato come perimetrale. In Home Assistant la presenza è
+dedotta da un telefono: un telefono rubato, una deriva GPS di 200 metri o un
+MAC clonato sulla tua rete sembrano esattamente te che torni a casa. Chi entra
+con un telefono rubato trova comunque armata ogni porta e finestra esterna —
+imposto nel motore, con un test che lo verifica, non un default su una
+schermata. [docs/automation-rules.md](docs/automation-rules.md) dice il resto
+senza addolcirlo.
+
 ## Camminare per casa, e premere il pulsante
 
 Il simulatore risponde a *cosa farebbe l'allarme*. Due cose non può dirtele:
@@ -358,9 +397,6 @@ card.
 
 ## Cosa manca ancora, e conta
 
-- **Nessuna regola automatica.** Inserire a orario, sulla presenza o su una
-  condizione tua è ancora un'automazione che scrivi tu, che chiama
-  `foyer.arm`. *Prossima versione.*
 - **Nessun controllo di salute dei canali.** Foyer non si accorge ancora che
   un servizio `notify` è sparito, che il modem GSM non è più registrato sulla
   rete o che l'ultimo invio è fallito: il pulsante di prova accanto a ogni
@@ -383,6 +419,7 @@ copia il codice. Dove differiscono oggi:
 | | Foyer | Alarmo |
 |---|---|---|
 | **Escalation finché qualcuno non risponde** | Contatti con i canali in ordine di priorità, passi ai tempi che scegli, fermati da una qualunque delle quattro prese d'atto | Notifiche, nessuna escalation |
+| **Inserirsi da sola, in sicurezza** | Regole con condizioni di sicurezza e un conto alla rovescia annullabile; il disarmo spento per default, e mai su un'area segnata come perimetrale | Inserimento e disinserimento sulla presenza, via automazioni |
 | **Simulatore** | Sì: lo stesso motore, un mondo e un orologio inventati, e una traccia che dice perché ogni azione sarebbe partita o no | — |
 | **Walk test** | Sì: l'impianto è inserito per davvero, ogni risposta è trattenuta, e in cima ci sono le zone che non hanno mai reagito. Le zone 24h, tamper, tecniche e panico restano attive | — |
 | **Prova delle azioni** | Sì: fa suonare la sirena o parte il messaggio sul serio, con conferma, e nel registro come prova | — |

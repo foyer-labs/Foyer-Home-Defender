@@ -33,16 +33,17 @@
 > contract and MQTT in both directions — and before that, codes, users and
 > permissions. **Escalation has now landed too**: an address book with
 > prioritised channels, a notification that climbs from push to SMS to a second
-> person until somebody acknowledges, and four ways to stop it. Still missing:
-> arming the house by itself, on presence or on a schedule.
+> person until somebody acknowledges, and four ways to stop it. **And the house
+> now arms itself**: rules on presence, a time or an entity, each one
+> announced by a push with a Cancel button in it, with the morning the boiler
+> engineer is expected kept open by a window that says so.
 
 **Try it if** you already have door, window or motion sensors in Home
 Assistant, you want one panel with arming scenarios of your own instead of a
 folder of automations, you would rather check a configuration than hope it is
 right, and you are willing to run a beta on a house that has other locks on it.
 
-**Not yet, if** you want something finished, or you need the house to arm
-itself when everybody leaves — [Alarmo](https://github.com/nielsfaber/alarmo)
+**Not yet, if** you want something finished — [Alarmo](https://github.com/nielsfaber/alarmo)
 has years of use behind it, and a large installed base is a kind of testing this
 project has not had yet.
 
@@ -105,6 +106,14 @@ project has not had yet.
   panic zones, which stay fully live, because a walk test must never silence a
   smoke detector. It ends itself, and it says so on every screen while it
   runs. [Below](#walking-the-house-and-pressing-the-button).
+- **The house can arm itself, and tell you before it does.** Rules on
+  presence, a time of day or an entity's state, with guards that stop them —
+  only if disarmed, only if every zone is ready, only if nothing has moved
+  inside for N minutes. Each one announces itself first with a push carrying a
+  **Cancel** button, and a suspension named "Boiler engineer, 09:00–13:00"
+  keeps the house open for the morning somebody is expected — so that in six
+  months the log still says why.
+  [Below](#letting-the-house-arm-itself).
 - **A test button beside every action and every contact channel, and it
   really executes.** Sound the siren for three seconds, actually send the
   notification to that person through that transport. The failure this
@@ -215,6 +224,34 @@ at the hallway. That is the next section's job.
 
 How to read a trace, and what is worth rehearsing before you trust a
 configuration: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/simulator.md).
+
+## Letting the house arm itself
+
+Every phone leaves. Five minutes later the guards are checked — nothing open,
+nothing moving inside, the house disarmed — and a push arrives on those
+phones: *"Nobody seems to be in, so **Arm when empty** will arm Away. Cancel
+to stop it."* Two minutes. Press Cancel and it does not; press nothing and it
+does, and the log says which rule armed the house.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-en.png" alt="The Automation rules page: three rules with their triggers, guards and grace periods, an expected-visitor window for the boiler engineer, and the automatic disarming card naming the attack it protects against" width="900">
+</p>
+
+The guards are the part worth configuring. A rule blocked by one is written to
+the log under `system`, because *"why did it not arm last night?"* is a
+question people ask and silence is the worst possible answer. And the morning
+somebody is expected, a named window — "Boiler engineer, 09:00–13:00" —
+suspends the arming and optionally arms the perimeter alone instead.
+
+**Arming and disarming are not treated as equally safe.** Automatic disarming
+exists, is off until you turn it on, and can never act on an area you marked
+as the perimeter. Presence in Home Assistant is inferred from a phone: a
+stolen phone, 200 metres of GPS drift or a cloned MAC address on your network
+all look exactly like you coming home. Whoever walks in on a stolen phone
+still finds every external door and window armed — enforced in the engine,
+with a test that asserts it, not a default on a screen.
+[docs/automation-rules.md](docs/automation-rules.md) says the rest without
+softening it.
 
 ## Walking the house, and pressing the button
 
@@ -336,9 +373,6 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No automatic rules.** Arming on a schedule, on presence or on a condition
-  of your own is still an automation you write, calling `foyer.arm`.
-  *Next release.*
 - **No channel health checks.** Foyer does not yet notice that a `notify`
   service has disappeared, that the GSM modem fell off the network or that the
   last send failed — the test button beside every channel is how you find out,
@@ -358,6 +392,7 @@ its code. Where they differ today:
 | | Foyer | Alarmo |
 |---|---|---|
 | **Escalation until somebody answers** | Contacts with channels in priority order, steps at times you choose, stopped by any of four acknowledgements | Notifications, no escalation |
+| **Arming itself, safely** | Rules with guards and a cancellable countdown; disarming off by default, and never on an area you marked as the perimeter | Arming and disarming on presence, via automations |
 | **Simulator** | Yes: the same engine, a made-up world and a made-up clock, and a trace saying why each action would or would not have run | — |
 | **Walk test** | Yes: really armed, every response held back, and the zones that never reacted listed first. 24h, tamper, technical and panic zones stay live | — |
 | **Action test** | Yes: really sounds the siren or sends the message, with confirmation, and logged as a test | — |
