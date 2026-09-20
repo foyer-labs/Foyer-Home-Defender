@@ -294,6 +294,51 @@ that the emergency channel was misconfigured. It asks first, needs the
 whatever its configured duration, and leaves a row in the log marked as a
 test — never as the alarm it imitates.
 
+## When the alarm itself stops working
+
+An alarm that cannot tell you it has stopped working has stopped working. Four
+failures silently defeat a do-it-yourself alarm, and in every one of them the
+house looks perfectly quiet: the power goes out, the notification channel
+breaks, the radio goes quiet, or Home Assistant dies.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting with an empty payload, one notification channel failing since a fortnight ago, and a Zigbee radio where four of four zones went quiet while the coordinator kept answering" width="900">
+</p>
+
+- **Mains power.** Name your UPS sensor and which of its states means failure —
+  a UPS says `on` for a power cut and a power sensor says `off`, so Foyer asks
+  rather than guesses. A failure notifies at once and is never a quiet night.
+- **Notification channels**, checked every quarter of an hour and after every
+  real send. A `notify` service somebody removed in an update is found before
+  the night it matters, and the warning goes out **over a channel that still
+  works** — warning you about a dead channel over the dead channel is the joke
+  that writes itself.
+- **An external watchdog.** Foyer pings a URL you choose; if Home Assistant
+  dies the pings stop and that service raises the alarm, which is the only
+  answer to a dead system being unable to report its own death. The heartbeat
+  **carries nothing**: a ping saying "armed, nobody home" would tell a third
+  party exactly when to come.
+- **Radio interference**, *suspected* and never claimed. Many zones on one
+  radio going quiet within seconds is its signature — and also the signature
+  of a coordinator crash, a firmware update, a channel change and a power cut
+  to a room of mains-powered routers. Foyer counts them per radio, gates it on
+  the coordinator still answering, waits a minute to see if it is still true,
+  and then **does not act through that radio**: announcing a Zigbee blackout
+  through a Zigbee siren is not a notification.
+
+None of it is an intrusion, so none of it ever touches an
+`alarm_control_panel` — with one exception: on an armed house, confirmed
+interference opens an incident, as jamming does in a professional panel.
+Persistent problems also become Home Assistant repair issues, in Settings,
+where somebody meets them without opening the Foyer panel.
+
+[docs/system-health.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/system-health.md)
+has the detail and states the heuristic as a heuristic;
+[docs/resilience.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/resilience.md)
+is the shorter and more uncomfortable one: what survives when somebody cuts
+the power, why a UPS on the router is the highest-value thing you can buy, and
+why a local GSM channel is the only one that survives the fibre being cut.
+
 ## Arming from the wall
 
 Foyer does not talk to keypads. It offers a contract, because keypad models
@@ -371,10 +416,9 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No channel health checks.** Foyer does not yet notice that a `notify`
-  service has disappeared, that the GSM modem fell off the network or that the
-  last send failed — the test button beside every channel is how you find out,
-  and it is worth pressing after an update. *After that.*
+- **No privacy tooling yet.** Deleting one person's history, timed
+  pseudonymisation and a per-person export are the next thing, and the log
+  keeps names for thirty days until they land. *Next.*
 - **No ESPHome keypad of our own.** DIY builds fit the contract like anything
   else, but this project does not maintain one in v1.
 
@@ -630,6 +674,12 @@ Open an [issue](https://github.com/foyer-labs/Foyer-Home-Defender/issues). Say
 which version of Foyer and of Home Assistant, what you expected, and what the
 log page shows — the row usually contains the answer, so a screenshot of it is
 worth more than a description. English or Italian, whichever you prefer.
+
+Attaching Home Assistant's **Download diagnostics**, from the integration's
+page in Settings, usually turns an issue into one answer rather than five
+questions. It is anonymised on purpose: no names, no codes, no hashes, no
+URLs, and entity ids replaced by stable placeholders, so it carries the shape
+of the installation and nothing about the people in it.
 
 To be told when the next phase lands, watch the repository: releases are
 announced there, and the [changelog](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CHANGELOG.md)

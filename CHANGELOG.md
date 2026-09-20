@@ -5,6 +5,70 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [Unreleased] — an alarm that can say it has stopped working
+
+System health (§12): the first part of Phase 5. **The stored configuration
+moves to schema 7.2, a minor step** — the whole block is additive, and a 7.1
+build reading this document is a build with no watchdog, no mains entity and
+no radios, which is exactly what it was yesterday. Upgrading changes nothing
+until somebody switches a part of it on: the watchdog needs a URL, the mains
+needs an entity and the state that means failure, and interference detection
+needs a coordinator entity named per radio.
+
+### Added
+- **Mains power** (§12.1). Name the entity your UPS or smart plug exposes and
+  which of its states means the mains has failed — asked rather than guessed,
+  for the same reason every zone's trigger state is asked. A failure raises
+  `system_power_lost` at once, at alarm severity, and a response profile can
+  act on it. It never touches an `alarm_control_panel`.
+- **Notification channel health** (§12.2). Every configured channel is checked
+  every quarter of an hour against the service registry, and after every real
+  send. A service removed, renamed or failing to load after an update is
+  broken at once; two failed sends in a row are broken too, and any success
+  clears it. The warning goes out over a channel that still works, and the
+  moment `notification_channel_down` carries which one that is.
+- **An external watchdog** (§12.3). A URL of your choosing, pinged every
+  fifteen minutes. **The heartbeat carries nothing**: the payload option is
+  off, and even switched on it says how many areas are armed and never which
+  scenario, which areas or which zones are open. Three failures in a row and
+  Foyer says so locally, because being unable to reach the endpoint means no
+  internet-based notification would go out either.
+- **Radio interference detection** (§12.5), stated as the heuristic it is.
+  Four zones on one radio — or 40% of that radio's zones, whichever is lower —
+  going quiet inside sixty seconds, with the coordinator still answering, and
+  still true sixty seconds later. Disarmed it is a warning; armed it opens an
+  incident, as jamming does in a professional panel. **Foyer does not act
+  through the affected radio**, and the message says which actions were
+  skipped and why.
+- **Repair issues** (§12.4). A zone unreachable for two days, a broken
+  channel, a watchdog that has never succeeded, suspected interference, a
+  coordinator that has been gone for an hour and a power cut that has lasted
+  an hour all appear in Settings ▸ Repairs, where somebody meets them without
+  opening the Foyer panel. Each one can be marked as seen.
+- **Anonymised diagnostics** (§12.4). Home Assistant's own download button now
+  answers: the shape of the installation, with no names, no codes, no hashes,
+  no URLs and no real entity ids. Built as an allow-list, so a field added
+  later cannot leak by being forgotten, and entity ids become placeholders
+  numbered from the configuration's own order — stable across two downloads,
+  and not hashes.
+- **`binary_sensor.foyer_system_health`** with the causes as attributes, and
+  **`binary_sensor.foyer_rf_interference_<radio>`** per radio (§13).
+- **Panel page 14 — System health**, with its help panel. The condition on
+  top, readable by whoever may read the log; the configuration under it, which
+  is `edit_config` and its code policy.
+- **Ten new moments** a response profile can answer, all logged under
+  `system`: the power going and coming back, a channel going and coming back,
+  the watchdog going and coming back, interference suspected and over, and a
+  coordinator going and coming back.
+- **`docs/system-health.md`** and **`docs/resilience.md`** — the second of
+  which §7.3 has been owed since Phase 4: cut power and cut fibre, a UPS on
+  the router, and why a local GSM channel is the only one that survives.
+
+### Changed
+- The configuration schema moves from 7.1 to 7.2, additively.
+- The `notify` executor now reports, per contact channel, whether each send
+  succeeded, which is what channel health counts.
+
 ## [0.1.0-beta.8] — the house arms itself, and says so first
 
 Automatic arming rules (§9.4): the second half of Phase 4. **The stored

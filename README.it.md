@@ -324,6 +324,54 @@ canale d'emergenza era configurato male. Chiede conferma, richiede il permesso
 sia la durata configurata, e lascia nel registro una riga marcata come prova —
 mai come l'allarme che imita.
 
+## Quando è l'allarme stesso a smettere di funzionare
+
+Un allarme che non sa dirti che ha smesso di funzionare ha smesso di
+funzionare. Quattro guasti sconfiggono in silenzio un allarme fai-da-te, e in
+tutti e quattro la casa sembra tranquillissima: manca la corrente, si rompe il
+canale di notifica, la radio ammutolisce, oppure Home Assistant muore.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-it.png" alt="La pagina Salute di sistema: rete elettrica presente, il watchdog che riporta con payload vuoto, un canale di notifica non funzionante da due settimane, e una radio Zigbee dove quattro zone su quattro sono ammutolite mentre il coordinatore continuava a rispondere" width="900">
+</p>
+
+- **Rete elettrica.** Indichi il sensore dell'UPS e quale suo stato significa
+  assenza: un UPS dice `on` quando la corrente manca, un sensore di potenza
+  dice `off`, quindi Foyer lo chiede invece di indovinarlo. Un black-out viene
+  annunciato subito e non è mai una notte tranquilla.
+- **Canali di notifica**, controllati ogni quarto d'ora e dopo ogni invio
+  reale. Un servizio `notify` che qualcuno ha rimosso in un aggiornamento
+  viene trovato prima della notte in cui serve, e l'avviso esce **su un canale
+  che funziona ancora**: avvisarti di un canale morto sul canale morto è la
+  battuta che si scrive da sola.
+- **Un watchdog esterno.** Foyer manda ping a un URL che scegli tu; se Home
+  Assistant muore i ping si fermano e quel servizio dà l'allarme, che è
+  l'unica risposta al fatto che un sistema morto non può annunciare la propria
+  morte. Il battito **non porta niente**: un ping che dicesse «inserito, non
+  c'è nessuno» racconterebbe a terzi esattamente quando venire.
+- **Interferenza radio**, *sospetta* e mai dichiarata. Molte zone di una stessa
+  radio che ammutoliscono in pochi secondi sono la sua firma — e anche quella
+  di un crash del coordinatore, di un aggiornamento firmware, di un cambio di
+  canale e di un black-out in una stanza piena di router alimentati a rete.
+  Foyer le conta per radio, verifica che il coordinatore risponda ancora,
+  aspetta un minuto per vedere se è ancora vero, e poi **non agisce attraverso
+  quella radio**: annunciare un blackout Zigbee con una sirena Zigbee non è
+  una notifica.
+
+Niente di tutto questo è un'intrusione, quindi niente tocca mai un
+`alarm_control_panel` — con un'eccezione: a casa inserita, un'interferenza
+confermata apre un incidente, come il jamming in un centrale professionale. I
+problemi persistenti diventano anche problemi di Home Assistant, in
+Impostazioni, dove qualcuno li incontra senza aprire il pannello di Foyer.
+
+[docs/system-health.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/system-health.md)
+ha il dettaglio e chiama l'euristica con il suo nome;
+[docs/resilience.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/resilience.md)
+è quello più breve e più scomodo: cosa sopravvive quando qualcuno stacca la
+corrente, perché un UPS sul router è la cosa che rende di più fra quelle che
+puoi comprare, e perché un canale GSM locale è l'unico che sopravvive al
+taglio della fibra.
+
 ## Tastiere, tag e telecomandi
 
 Foyer non parla con le singole tastiere: espone un contratto. I modelli cambiano ogni
@@ -394,11 +442,10 @@ card.
 
 ## Cosa manca ancora, e conta
 
-- **Nessun controllo di salute dei canali.** Foyer non si accorge ancora che
-  un servizio `notify` è sparito, che il modem GSM non è più registrato sulla
-  rete o che l'ultimo invio è fallito: il pulsante di prova accanto a ogni
-  canale è come lo scopri, e vale la pena premerlo dopo un aggiornamento.
-  *Dopo.*
+- **Nessuno strumento per la privacy, ancora.** Cancellare la storia di una
+  sola persona, la pseudonimizzazione a tempo e l'esportazione per persona
+  sono la prossima cosa, e fino ad allora il registro tiene i nomi per trenta
+  giorni. *Adesso.*
 - **Nessuna tastiera ESPHome nostra.** Una costruzione fai-da-te rientra nel
   contratto come qualunque altra, ma questo progetto non ne mantiene una
   in v1.
@@ -678,6 +725,13 @@ Apri una [issue](https://github.com/foyer-labs/Foyer-Home-Defender/issues). Di'
 quale versione di Foyer e di Home Assistant, cosa ti aspettavi, e cosa mostra
 la pagina del registro: la riga di solito contiene già la risposta, quindi una
 schermata vale più di una descrizione. In italiano o in inglese, come preferisci.
+
+Allegare i **diagnostici** di Home Assistant, dalla pagina dell'integrazione
+in Impostazioni, di solito trasforma una segnalazione in una risposta invece
+che in cinque domande. Sono anonimizzati apposta: niente nomi, niente codici,
+niente hash, niente URL, e gli id delle entità sostituiti da segnaposto
+stabili, così portano la forma dell'installazione e niente sulle persone che
+ci abitano.
 
 Per sapere quando esce una versione, metti il repository fra quelli che
 segui: le versioni vengono annunciate lì, e il

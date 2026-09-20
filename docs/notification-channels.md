@@ -12,10 +12,10 @@ Three things are worth reading before configuring anything:
   and hands to the service.
 - **Every internet-dependent channel fails at exactly the wrong moment.**
   Somebody who cuts the power or the fibre has cut the push notification, the
-  Telegram message and the Twilio call with it. The specification makes a
-  document of its own out of this (§7.3, still to be written); the short
-  version is a UPS on the router and at least one local GSM channel somewhere
-  in the list.
+  Telegram message and the Twilio call with it.
+  [resilience.md](resilience.md) is the document that says what to do about
+  it; the short version is a UPS on the router and at least one local GSM
+  channel somewhere in the list.
 - **Test every channel from page 6.** The button beside each one really sends.
   The failure this prevents is discovering during the emergency that the
   emergency channel was misconfigured, and it is the reason the button exists
