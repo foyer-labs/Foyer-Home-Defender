@@ -73,6 +73,12 @@ perimeter until you mark one.
   area disarmed — including an `arm` action, which is the same call and does
   the same thing when a scenario is already running. Both meet the switch and
   the perimeter constraint, so "arm Night" is not a way round either.
+- **A rule never silences an alarm.** While an area it would disarm is in
+  entry or already triggered, the rule is blocked and the log says so:
+  disarming an area the incident touched acknowledges the incident and stops
+  the escalation, and a phone walking through the door is not a person saying
+  they have seen it. §4.6.1 already refused a scenario switch for the same
+  reason.
 - **An unreadable person is never read as an arrival or an absence.** A
   tracker that restarted or a phone off the network leaves the rule exactly as
   it was, which is INV-4 applied to people: a presence rule can disarm a
