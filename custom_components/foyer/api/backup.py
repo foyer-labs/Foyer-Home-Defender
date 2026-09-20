@@ -61,6 +61,12 @@ def public_user(user: User) -> dict[str, Any]:
         "valid_until": user.valid_until.isoformat() if user.valid_until else None,
         "code_exempt_when_identified": user.code_exempt_when_identified,
         "enabled": user.enabled,
+        # The stable opaque identifier a pseudonymised log row carries instead
+        # of this name (§10.4). Not a credential and not a secret — it says
+        # nothing about the person — and it travels with a backup on purpose:
+        # a restore that minted new ones would detach every row already
+        # pseudonymised from every row written afterwards.
+        "pseudonym": user.pseudonym,
     }
 
 

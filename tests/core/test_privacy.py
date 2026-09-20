@@ -1,0 +1,167 @@
+"""Who a log row is about, and what is left of it (SPEC §10.4).
+
+The arithmetic only. What the database does with it is tests/ha's; the point
+of these is that the rules can be read and checked without a Home Assistant
+instance, like everything else in core/.
+"""
+
+from __future__ import annotations
+
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+
+from custom_components.foyer.core.models import ArmingDevice, Contact, DeviceKind
+from custom_components.foyer.core.privacy import (
+    ERASED_COLUMNS,
+    NAMED_CATEGORIES,
+    REDACTED,
+    SHORT_RETENTION_DAYS,
+    PersonRef,
+    cutoff,
+    erased_row,
+    new_pseudonym,
+    person_ref,
+    redact_detail,
+)
+
+from .helpers import make_house, user
+
+NOW = datetime(2026, 9, 20, 22, 0, tzinfo=UTC)
+
+
+def _house():
+    return replace(
+        make_house(),
+        users=(user("luca", "Luca"), user("ana", "Ana Cleaner")),
+        devices=(
+            ArmingDevice(
+                id="tag_ana",
+                name="Ana's tag",
+                kind=DeviceKind.TAG,
+                entity_id="tag.ana",
+                user_id="ana",
+            ),
+            ArmingDevice(
+                id="hall", name="Hall keypad", kind=DeviceKind.KEYPAD, ref="hall"
+            ),
+        ),
+        contacts=(
+            Contact(id="c_ana", name="Ana", linked_user_id="ana"),
+            Contact(id="c_luca", name="Luca"),
+        ),
+    )
+
+
+def test_person_ref_gathers_every_pointer_at_one_person():
+    """A subject access request is about personal data, not about the rows
+    whose user_id column matches (part 2 decision 7)."""
+    ref = person_ref(_house(), "ana")
+    assert ref is not None
+    assert ref.user_id == "ana"
+    assert ref.names == ("Ana Cleaner",)
+    # Her tag, and not the shared keypad in the hall.
+    assert ref.device_ids == ("tag_ana",)
+    # The address-book entry linked to her, and not the one that is not.
+    assert ref.contact_ids == ("c_ana",)
+    assert not ref.empty
+
+
+def test_person_ref_of_somebody_who_is_not_a_user():
+    assert person_ref(_house(), "nobody") is None
+
+
+def test_erasure_empties_every_identifying_column():
+    """Decision 6: not two columns but four. Which keypad, and by which
+    route, is as much "who" as the name once you know the household."""
+    row = {
+        "ts": "2026-09-14T03:14:00+00:00",
+        "event_type": "disarmed",
+        "area_id": "ground",
+        "user_id": "ana",
+        "user_name": "Ana Cleaner",
+        "channel": "keypad",
+        "device_id": "hall",
+        "detail": {"zone_ids": ["door"]},
+    }
+    out = erased_row(row, person_ref(_house(), "ana"))
+    for column in ERASED_COLUMNS:
+        assert out[column] is None
+    # And what happened survives, which is the half §10.4 says must.
+    assert out["event_type"] == "disarmed"
+    assert out["area_id"] == "ground"
+    assert out["ts"] == row["ts"]
+    assert out["detail"] == {"zone_ids": ["door"]}
+
+
+def test_erasure_with_a_pseudonym_keeps_the_shape():
+    """The minimisation form of the same operation (decision 1): the same
+    person on both nights, without the name."""
+    ref = person_ref(_house(), "ana")
+    out = erased_row(
+        {"user_id": "ana", "user_name": "Ana Cleaner"}, ref, pseudonym="person-abc"
+    )
+    assert out["user_id"] == out["user_name"] == "person-abc"
+    assert out["channel"] is None
+
+
+def test_redaction_reaches_a_name_inside_a_configuration_diff():
+    """Names get into `detail` by the side door: a configuration row
+    summarises what changed by the *name* of the thing it changed."""
+    detail = {
+        "kind": "device",
+        "changes": {
+            "devices": {
+                "added": ["Ana Cleaner's tag"],
+                "changed": {"Hall keypad": {"enabled": [True, False]}},
+            }
+        },
+    }
+    out = redact_detail(detail, ("Ana Cleaner",))
+    assert out["changes"]["devices"]["added"] == [REDACTED]
+    # Everything that is not about her is untouched.
+    assert out["changes"]["devices"]["changed"] == {
+        "Hall keypad": {"enabled": [True, False]}
+    }
+    assert out["kind"] == "device"
+
+
+def test_redaction_matches_a_name_used_as_a_key():
+    out = redact_detail(
+        {"changed": {"Ana Cleaner": {"enabled": [True, False]}}}, ("ana cleaner",)
+    )
+    assert list(out["changed"]) == [REDACTED]
+
+
+def test_redaction_without_a_name_changes_nothing():
+    detail = {"changes": {"areas": {"added": ["Garage"]}}}
+    assert redact_detail(detail, ()) == detail
+
+
+def test_a_pseudonym_is_opaque_and_stable_for_its_token():
+    assert new_pseudonym("0123456789abcdef") == new_pseudonym("0123456789abcdef")
+    assert new_pseudonym("0123456789abcdef") != new_pseudonym("fedcba9876543210")
+    # It says nothing about anybody: no name goes into it, so no list of
+    # names gets it back out (part 2 decision 4).
+    assert "Ana" not in new_pseudonym("0123456789abcdef")
+
+
+def test_cutoff_is_the_moment_rows_become_old_enough():
+    assert cutoff(NOW, 30) == NOW - timedelta(days=30)
+    # A delay below the floor is raised to it: the sweep runs daily and
+    # anything shorter would promise a precision it does not have.
+    assert cutoff(NOW, 0) == NOW - timedelta(days=1)
+
+
+def test_the_short_preset_touches_only_what_names_people():
+    """§10.4's preset for installations with domestic staff (decision 8)."""
+    assert SHORT_RETENTION_DAYS == 7
+    assert set(NAMED_CATEGORIES) == {"arming", "alarm", "security", "config"}
+    # The diagnostic categories are left alone: they name nobody, and they
+    # are what somebody reads when a sensor did not react three weeks ago.
+    assert "system" not in NAMED_CATEGORIES
+    assert "zone_armed" not in NAMED_CATEGORIES
+    assert "zone_disarmed" not in NAMED_CATEGORIES
+
+
+def test_an_empty_reference_matches_nothing():
+    assert PersonRef(user_id=None).empty

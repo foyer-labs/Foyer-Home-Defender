@@ -1443,6 +1443,13 @@ class User:
     valid_until: datetime | None = None
     code_exempt_when_identified: bool = False
     enabled: bool = True
+    # The stable opaque identifier a pseudonymised log row carries instead of
+    # this person's name (§10.4, part 2 decision 4). Minted once when the
+    # person is created and never recomputed: "the same person disarmed on
+    # both nights" has to survive a rename, a year and a configuration
+    # change, and a counter anchored to configuration order would renumber
+    # everyone behind whoever was deleted.
+    pseudonym: str | None = None
 
     def may(self, permission: str) -> bool:
         return permission in self.permissions
@@ -1517,6 +1524,17 @@ class LogSettings:
 
     enabled: Mapping[str, bool] = field(default_factory=dict)
     retention_days: Mapping[str, int] = field(default_factory=dict)
+    # After how many days a row keeps a stable opaque identifier instead of a
+    # name (§10.4). None is off, and off is the default: this trades away the
+    # ability to answer "who disarmed that night" for rows older than N days,
+    # which is the very question the log exists to answer. A real trade, not a
+    # free safety feature, and the panel says so before the switch.
+    pseudonymise_after: int | None = None
+    # Whether removing the integration takes the log database with it (§16).
+    # Off, so an installation that never answered keeps its history: §16 says
+    # to ask rather than guess, and "keep" is the only answer that cannot
+    # destroy something nobody meant to destroy (part 2 decision 9).
+    delete_on_uninstall: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "enabled", _frozen(self.enabled))

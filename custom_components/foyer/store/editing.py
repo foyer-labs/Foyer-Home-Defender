@@ -29,6 +29,7 @@ from ..core.models import (
     ZoneType,
 )
 from ..core.presets import preset
+from ..core.privacy import new_pseudonym
 from ..core.validation import Problem, edit_conflicts, notify_contacts, validate
 from .schema import (
     ConfigError,
@@ -119,6 +120,7 @@ _USER_DEFAULTS: dict[str, Any] = {
     "valid_until": None,
     "code_exempt_when_identified": False,
     "enabled": True,
+    "pseudonym": None,
 }
 
 
@@ -214,6 +216,16 @@ def upsert(
             obj = scenario_from_dict(data)
             new = replace(config, scenarios=_replace_in(config.scenarios, obj))
         elif kind == "user":
+            # The pseudonym is minted once and then carried, never recomputed
+            # (§10.4, part 2 decision 4). Taken from the person already stored
+            # when the editor did not send it back, so renaming somebody does
+            # not detach every row already written under their identifier.
+            known = config.user(data["id"])
+            data["pseudonym"] = (
+                data.get("pseudonym")
+                or (known.pseudonym if known else None)
+                or new_pseudonym(new_id())
+            )
             obj = user_from_dict({**_USER_DEFAULTS, **data})
             new = replace(config, users=_replace_in(config.users, obj))
         elif kind == "device":
