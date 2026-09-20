@@ -9,7 +9,7 @@ armed right now. The panel's own checks are a courtesy (INV-2).
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from typing import Any
 import uuid
 
@@ -445,6 +445,17 @@ def update_settings(
                 # then had a keypad that submitted after six and a lockout
                 # waiting at the fifth try.
                 security=_security_from(settings.get("security"), current.security),
+                # Not in the list above, and that was the whole bug (found in
+                # review): this block builds a fresh Settings rather than
+                # replacing fields on the stored one, so a field nobody
+                # enumerated fell back to its dataclass default — `False`.
+                # Page 12's switch could therefore never be turned on, and
+                # any unrelated save turned it off again. §9.4 point 2 is a
+                # decision the household makes; it is not one a settings save
+                # gets to unmake.
+                allow_auto_disarm=bool(
+                    settings.get("allow_auto_disarm", current.allow_auto_disarm)
+                ),
             ),
         )
     except (KeyError, TypeError, ValueError):
@@ -466,6 +477,14 @@ def update_settings(
             Problem("retention_out_of_range", "settings", None, "pseudonymise_after")
         )
     return _check(config, new, state, None)
+
+
+def _policy_from(data: Any, current: CodePolicy) -> CodePolicy:
+    """The code policy the caller sent, on top of the one already stored."""
+    if not isinstance(data, dict):
+        return current
+    known = {f.name for f in fields(CodePolicy)}
+    return replace(current, **{k: bool(v) for k, v in data.items() if k in known})
 
 
 def _security_from(data: Any, current: SecuritySettings) -> SecuritySettings:
@@ -504,6 +523,19 @@ def _log_from(data: Any, current: LogSettings) -> LogSettings:
     parsed = log_from_dict(data)
     return replace(
         parsed,
+        # Every part of the block keeps what the caller did not mention, not
+        # only the two settings of §10.4 (found in review). `log_from_dict`
+        # is sparse by design — it keeps only what differs from the
+        # documented default — so a payload naming one field would otherwise
+        # switch every category back on and every retention back to thirty
+        # days, which on the next purge deletes rows the household had asked
+        # to keep longer.
+        enabled=parsed.enabled if "enabled" in data else current.enabled,
+        retention_days=(
+            parsed.retention_days
+            if "retention_days" in data
+            else current.retention_days
+        ),
         pseudonymise_after=(
             parsed.pseudonymise_after
             if "pseudonymise_after" in data
@@ -596,9 +628,14 @@ def update_security(
     every path in the system resolves it.
     """
     try:
-        policy = CodePolicy(
-            **{k: bool(v) for k, v in (data.get("code_policy") or {}).items()}
-        )
+        # Merged onto the stored policy, and unknown keys ignored (found in
+        # review). Splatted straight into the constructor, a payload naming
+        # one operation reset every other one to its default — an
+        # installation that asks for a code to arm would lose that with
+        # nothing reported — and a document from a newer minor version, which
+        # is additive by contract, raised TypeError and failed the whole
+        # save.
+        policy = _policy_from(data.get("code_policy"), config.code_policy)
         security = security_from_dict(data["security"])
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "settings"))

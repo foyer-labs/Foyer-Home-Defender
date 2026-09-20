@@ -59,7 +59,7 @@ from ..core.models import (
     ArmModeRequest,
     ArmRequest,
     BypassZone,
-    CodeResult,
+    CodeAttempt,
     DisarmRequest,
     Operation,
     Permission,
@@ -361,7 +361,7 @@ def async_register(hass: HomeAssistant) -> None:
         """
         system = _system(hass)
         requester = await _requester(hass, system, call)
-        refused = _refused(
+        refused = await _refused(
             system, requester, Operation.TEST_ACTION, Permission.TEST_ACTIONS
         )
         if refused is not None:
@@ -386,7 +386,7 @@ def async_register(hass: HomeAssistant) -> None:
         # the WebSocket command behind page 10 asks for none either — two
         # answers to one question is how one of them ends up being the wrong
         # one.
-        refused = _refused(
+        refused = await _refused(
             system,
             requester,
             Operation.EDIT_CONFIG,
@@ -414,7 +414,7 @@ def async_register(hass: HomeAssistant) -> None:
     async def export_config(call: ServiceCall) -> ServiceResponse:
         system = _system(hass)
         requester = await _requester(hass, system, call)
-        refused = _refused(
+        refused = await _refused(
             system, requester, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
         )
         if refused is not None:
@@ -424,7 +424,7 @@ def async_register(hass: HomeAssistant) -> None:
     async def import_config(call: ServiceCall) -> ServiceResponse:
         system = _system(hass)
         requester = await _requester(hass, system, call)
-        refused = _refused(
+        refused = await _refused(
             system, requester, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
         )
         if refused is not None:
@@ -443,7 +443,7 @@ def async_register(hass: HomeAssistant) -> None:
             user_name=named.name if named else None,
         )
 
-    def _refused(
+    async def _refused(
         system: FoyerSystem,
         requester: Requester,
         operation: Operation,
@@ -467,8 +467,22 @@ def async_register(hass: HomeAssistant) -> None:
             return system.refusal(requester.reason)
         actor = requester.actor
         now = dt_util.utcnow()
-        if actor.code is CodeResult.INVALID:
-            return {"success": False, "reason": Reason.BAD_CODE.value}
+        # Counted through the engine, like every other wrong code (§8.4,
+        # found in review): these services verify their own and never reach
+        # `decide()`, so a script could try codes here for ever without a
+        # counter ever reaching its limit.
+        attempt = await system.async_handle(
+            CodeAttempt(operation=operation, actor=actor)
+        )
+        if attempt.reason is not None:
+            return {"success": False, "reason": attempt.reason.value}
+        # A claimed `user_id` resolves to that person here, which is what
+        # lets an adapter say who acted — and, because this is also where the
+        # permission is read, what lets a caller who names somebody borrow
+        # their `view_log`. Decision 88 says a claim "grants nothing"; this
+        # path and the test that pins it say otherwise. Raised in the report
+        # rather than changed: the id is a uuid nobody can guess, and which
+        # of the two is meant is a decision, not a defect.
         user = system.config.user(actor.user_id)
         if user is None:
             # Nobody is behind this call. Before the first code exists that is

@@ -8,6 +8,7 @@ person edits something and the other changes every time a door opens.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import fields
 from datetime import datetime
 from typing import Any
@@ -202,9 +203,13 @@ def config_from_dict(data: dict[str, Any]) -> FoyerConfig:
             zones=tuple(zone_from_dict(z) for z in data["zones"]),
             scenarios=tuple(scenario_from_dict(s) for s in data["scenarios"]),
             profiles=tuple(profile_from_dict(p) for p in data["profiles"]),
-            code_policy=CodePolicy(
-                **{k: bool(v) for k, v in data["code_policy"].items()}
-            ),
+            # Unknown keys ignored, so a document written by a newer *minor*
+            # version — additive by contract — is read rather than refused
+            # (found in review). Splatted into the constructor, one unknown
+            # operation raised TypeError, `async_load` re-raised it and the
+            # integration would not start at all: a downgrade that bricks is
+            # exactly what the major/minor split exists to prevent.
+            code_policy=_policy(data["code_policy"]),
             settings=settings_from_dict(data["settings"]),
             groups=tuple(group_from_dict(g) for g in data["groups"]),
             chime=chime_from_dict(data["chime"]),
@@ -470,6 +475,11 @@ def security_to_dict(s: SecuritySettings) -> dict[str, Any]:
         "lockout_window": s.lockout_window,
         "lockout_duration": s.lockout_duration,
     }
+
+
+def _policy(data: Mapping[str, Any]) -> CodePolicy:
+    known = {f.name for f in fields(CodePolicy)}
+    return CodePolicy(**{k: bool(v) for k, v in data.items() if k in known})
 
 
 def user_from_dict(u: dict[str, Any]) -> User:
@@ -1081,6 +1091,12 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
         "seen_zones": sorted(state.seen_zones),
         "seen_devices": sorted(state.seen_devices),
         "faults": sorted(state.faults),
+        # The zones already known to be low (§4.2). Without it, every restart
+        # — and every configuration save, which reloads the entry — re-raised
+        # LOW_BATTERY for every flat cell in the house, with a log row and a
+        # notification each time (found in review). The latch exists exactly
+        # so that it is said once, on the way down.
+        "low_batteries": sorted(state.low_batteries),
         "technical": {
             zone_id: {
                 "since": alarm.since.isoformat(),
@@ -1430,6 +1446,11 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                 d for d in data.get("seen_devices", ()) if d in device_ids
             ),
             faults=frozenset(z for z in data.get("faults", ()) if z in zone_ids),
+            # Filtered against the live configuration like every other set
+            # here: a zone that has gone is not a battery anybody can replace.
+            low_batteries=frozenset(
+                z for z in data.get("low_batteries", ()) if z in zone_ids
+            ),
             technical={
                 zone_id: TechnicalAlarm(
                     since=_required_dt(alarm["since"]),

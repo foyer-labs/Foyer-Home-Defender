@@ -79,6 +79,29 @@ def public_config(config: FoyerConfig) -> dict[str, Any]:
     return document
 
 
+# What a backup never carries out, and never takes in. Both are credentials
+# rather than settings: the acknowledgement webhook is an unauthenticated URL
+# that stops an alarm, and the watchdog URL is the one address that can keep a
+# dead installation looking alive. A backup is a file that leaves the machine
+# (see this module's header), and a restore that could *choose* either of them
+# would hand that choice to whoever wrote the file.
+CREDENTIAL_SETTINGS = ("ack_webhook_id",)
+
+
+def _without_credentials(document: dict[str, Any]) -> dict[str, Any]:
+    settings = dict(document.get("settings") or {})
+    for key in CREDENTIAL_SETTINGS:
+        settings[key] = None
+    document["settings"] = settings
+    health = dict(document.get("health") or {})
+    watchdog = dict(health.get("watchdog") or {})
+    if watchdog:
+        watchdog["url"] = ""
+        health["watchdog"] = watchdog
+        document["health"] = health
+    return document
+
+
 def backup_document(config: FoyerConfig) -> dict[str, Any]:
     """The stored document with its schema version (§15.1).
 
@@ -89,7 +112,7 @@ def backup_document(config: FoyerConfig) -> dict[str, Any]:
         "foyer": BACKUP_MAGIC,
         "version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
         "created": dt_util.now().isoformat(),
-        "config": public_config(config),
+        "config": _without_credentials(public_config(config)),
     }
 
 
@@ -139,6 +162,23 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
     # histories with one identifier, and an erasure or an export then crosses
     # between two people (both found in review). Either way a fresh one is
     # minted here.
+    # The credentials are the installation's, never the document's: a
+    # backup can neither carry them out (see `backup_document`) nor set them
+    # coming in. `update_settings` has refused the webhook id since Phase 4 —
+    # "the address of an unauthenticated URL can only ever be generated here"
+    # — and this path did not go through it (found in review).
+    config = replace(
+        config,
+        settings=replace(
+            config.settings, ack_webhook_id=system.config.settings.ack_webhook_id
+        ),
+        health=replace(
+            config.health,
+            watchdog=replace(
+                config.health.watchdog, url=system.config.health.watchdog.url
+            ),
+        ),
+    )
     seen: set[str] = set()
     users = []
     for user in config.users:

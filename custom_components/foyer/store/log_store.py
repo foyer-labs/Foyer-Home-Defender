@@ -764,6 +764,13 @@ class LogStore:
                     # again tomorrow and the sweep would never settle.
                     PersonRef(
                         user_id=ref.user_id,
+                        # And the Home Assistant account, or the sweep reaches
+                        # nothing this person ever changed from the panel —
+                        # every `config` row would keep the real name for ever
+                        # while the setting reported success (found in
+                        # review). Only the pseudonym is left out, and only so
+                        # that a row already swept stops matching.
+                        ha_user_id=ref.ha_user_id,
                         names=ref.names,
                         item_id=ref.item_id,
                     )

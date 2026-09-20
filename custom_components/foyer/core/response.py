@@ -696,6 +696,10 @@ def run_sequence(
     the walk test ended.
     """
     plan = Plan()
+    # Which channel this batch belongs to, carried onto everything it starts:
+    # a technical response is not stopped by a disarm or by the intrusion
+    # siren cutoff (§5.5, found in review).
+    technical = moment in TECHNICAL_MOMENTS
     actions = sequence(profile, moment)
     suppressed = (
         frozenset(ctx.config.settings.silent_suppresses) if silent else frozenset()
@@ -769,7 +773,9 @@ def run_sequence(
         if incident_id is not None and moment in UNION_MOMENTS:
             plan.started.append(action.id)
         if action.kind.value in REVERTIBLE:
-            running = _running(action, params, area_id, incident_id, ctx.now)
+            running = _running(
+                action, params, area_id, incident_id, ctx.now, technical=technical
+            )
             if running is not None:
                 plan.running.append(running)
     return plan
@@ -781,6 +787,8 @@ def _running(
     area_id: str | None,
     incident_id: str | None,
     now: datetime,
+    *,
+    technical: bool = False,
 ) -> RunningAction | None:
     entity_ids = _entity_ids(params)
     if not entity_ids:
@@ -795,6 +803,7 @@ def _running(
             restore="off",
             area_id=area_id,
             incident_id=incident_id,
+            technical=technical,
         )
     revert_after = params.get("revert_after")
     if not revert_after:
@@ -807,6 +816,7 @@ def _running(
         restore="off" if params.get("state", "on") == "on" else "on",
         area_id=area_id,
         incident_id=incident_id,
+        technical=technical,
     )
 
 

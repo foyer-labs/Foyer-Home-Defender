@@ -551,7 +551,16 @@ class FoyerSystem:
             # This instance has been unloaded. Whatever was awaiting is
             # finishing after the fact, and the house belongs to whoever
             # replaced it.
-            return decide(self._snapshot(), Tick(), self.config, dt_util.utcnow())
+            #
+            # Refused, rather than an accepted Tick (found in review): a
+            # disarm arriving in that gap would otherwise be answered
+            # `success: true` — to the keypad, to the service caller and to
+            # the panel — while nothing at all had happened.
+            return replace(
+                decide(self._snapshot(), Tick(), self.config, dt_util.utcnow()),
+                accepted=False,
+                reason=Reason.NOT_LOADED,
+            )
         # No await between snapshot and store: on the event loop this block is
         # atomic, so two events can never interleave their decisions.
         was_active = self.state.active_zones
@@ -638,6 +647,12 @@ class FoyerSystem:
     @callback
     def async_heartbeat(self, entity_id: str) -> None:
         """An entity reported without changing: supervision moves on (decision 11)."""
+        if self._stopped:
+            # The watcher is unsubscribed after the unload returns, so a
+            # report can still arrive here — and `_reschedule` below would
+            # arm a wake-up on a dead instance that nothing will ever cancel
+            # (found in review).
+            return
         zones = [z for z in self.config.zones if z.entity_id == entity_id]
         if any(z.id in self.state.faults for z in zones):
             # It may have been in supervision fault: let the engine clear it.
@@ -664,11 +679,32 @@ class FoyerSystem:
     @callback
     def _on_wakeup(self, _now: datetime) -> None:
         self._unsub_wakeup = None
-        self.hass.async_create_task(self.async_handle(Tick()), eager_start=True)
+        self.hass.async_create_task(self._async_wakeup(), eager_start=True)
+
+    async def _async_wakeup(self) -> None:
+        """The Tick a timer asked for, and the next one whatever happens.
+
+        Found in review: this handle is the only thing that arms the next
+        wake-up, so a decision that raised here stopped the scheduler
+        permanently — no exit delay, entry delay, escalation step or bypass
+        expiry would ever fire again until an unrelated zone happened to
+        move.
+        """
+        try:
+            await self.async_handle(Tick())
+        except Exception:
+            _LOGGER.exception("Foyer could not handle a scheduled wake-up")
+            self._reschedule()
 
     # --- persistence ---------------------------------------------------------
 
     async def _async_save(self) -> None:
+        if self._stopped:
+            # A save started before the unload and finishing after it would
+            # write this instance's state over the one that replaced it
+            # (found in review) — the hole `_remember_acknowledged` already
+            # closed for its own task.
+            return
         try:
             await self._state_store.async_save(self.state, dt_util.utcnow())
         except Exception:
@@ -1051,7 +1087,15 @@ class FoyerSystem:
         self._revision += 1
         self._radio_cache = None
         for listener in list(self._listeners):
-            listener()
+            try:
+                listener()
+            except Exception:
+                # An entity whose property raises must cost that entity its
+                # update and nothing else (found in review). Unguarded, it
+                # took with it every entity after it in the list, the state
+                # save that follows — INV-3 — and the log rows for the
+                # decision that was being announced.
+                _LOGGER.exception("Foyer could not update one of its entities")
         async_dispatcher_send(self.hass, SIGNAL_UPDATE)
 
     # --- read model ----------------------------------------------------------

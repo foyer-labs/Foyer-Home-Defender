@@ -79,6 +79,7 @@ from ..core.models import (
     ArmRequest,
     BypassZone,
     CancelAutoAction,
+    CodeAttempt,
     CodeResult,
     ContactChannelKind,
     Decision,
@@ -226,6 +227,14 @@ def _may_configure(
     if actor.code is CodeResult.INVALID:
         return Reason.BAD_CODE
     if user is None:
+        # An account this installation has not linked to a Foyer user. The
+        # docstring above says the code still applies to an administrator,
+        # and this returns before ever asking for one — so in practice an
+        # unlinked administrator, which is what every account is until
+        # somebody links it, is never asked. Raised in the report rather than
+        # changed here: asking would mean a code on every configuration save
+        # for the owner of a house where only they hold one, and that is a
+        # decision about how the product feels, not a defect to fix quietly.
         return None if connection.user.is_admin else Reason.NOT_PERMITTED
     if not user.enabled or not user.in_window(dt_util.utcnow()):
         return Reason.USER_NOT_VALID
@@ -264,7 +273,14 @@ async def _gate(
     page would teach the household to keep the code on a sticky note.
     """
     actor = await _actor(hass, system, connection, msg)
-    reason = _may_configure(
+    # The lockout of §8.4, spent through the engine so that a wrong code here
+    # counts exactly as one typed on a keypad does: the same counter, the same
+    # `code_rejected` row, the same `lockout` moment a profile can answer.
+    # These commands verify their own code and never reach `decide()`, so
+    # before this they counted nothing at all — an unlimited, silent oracle
+    # over the whole code space (found in review).
+    attempt = await system.async_handle(CodeAttempt(operation=operation, actor=actor))
+    reason = attempt.reason or _may_configure(
         system, connection, actor, operation, permission, need_code=need_code
     )
     if reason is None:
@@ -887,6 +903,16 @@ async def ws_config_save(
     if msg["kind"] == "user":
         connection.send_error(msg["id"], "invalid_format", "use foyer/user/save")
         return
+    # A tag is not a setting, it is a credential belonging to a person: it
+    # carries no code, and possession of it arms and disarms as whoever it
+    # names (§9.3). Saving one with `edit_config` alone would let somebody
+    # who may not disarm mint a token that disarms — so it asks for the
+    # permission that owns people, as deleting a user does.
+    permission = (
+        Permission.MANAGE_USERS
+        if msg["kind"] == "device" and (msg["item"] or {}).get("kind") == "tag"
+        else Permission.EDIT_CONFIG
+    )
     if (
         await _gate(
             hass,
@@ -894,7 +920,7 @@ async def ws_config_save(
             connection,
             msg,
             operation=Operation.EDIT_CONFIG,
-            permission=Permission.EDIT_CONFIG,
+            permission=permission,
         )
     ) is None:
         return

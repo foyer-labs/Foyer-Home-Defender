@@ -449,6 +449,12 @@ class Reason(StrEnum):
     # considered, so a caller cannot learn which codes exist by trying them
     # from an invented device (part 2 decision 1).
     DEVICE_NOT_REGISTERED = "device_not_registered"
+    # The instance that received this request has been unloaded — a reload,
+    # which every configuration save performs, or the integration going. It
+    # is a refusal rather than an accepted nothing (found in review): a
+    # disarm answered "success" while nothing happened is the one answer an
+    # alarm may never give.
+    NOT_LOADED = "not_loaded"
 
 
 # Entity states that mean "we do not know" — a fault, never calm (INV-4).
@@ -1917,6 +1923,13 @@ class RunningAction:
     restore: str | None = None  # the state a switch goes back to
     area_id: str | None = None
     incident_id: str | None = None
+    # Whether this belongs to the technical channel (§5.5). It is here
+    # because the channel is not derivable from the area: a technical
+    # response carries the area of the zone that raised it, so a disarm of
+    # that area — or the intrusion siren cutoff — would otherwise stop a
+    # smoke sounder, which §5.5 says in as many words it may never do
+    # (found in review).
+    technical: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -2574,6 +2587,22 @@ class SetChime:
 
 
 @dataclass(frozen=True, slots=True)
+class CodeAttempt:
+    """A code offered to a command the engine does not otherwise decide (§8.4).
+
+    Configuration and log commands verify their own code — they never reach
+    `decide()` — and therefore counted nothing: a wrong code there was an
+    oracle with no lockout and no row, which is the one thing §8.4 exists to
+    prevent (found in review). This event spends the same counter, writes the
+    same rows and raises the same moments as any other refused code, so
+    §8.2-§8.4 stay resolved in one place.
+    """
+
+    operation: Operation
+    actor: Actor = field(default_factory=Actor)
+
+
+@dataclass(frozen=True, slots=True)
 class WalkTestRequest:
     """Enter or leave the walk test (§11.3, §9.1 ``foyer.walk_test``).
 
@@ -2672,6 +2701,7 @@ Event = (
     | BypassZone
     | SetChime
     | WalkTestRequest
+    | CodeAttempt
     | CancelAutoAction
     | SetAutoArming
     | SetSuspension

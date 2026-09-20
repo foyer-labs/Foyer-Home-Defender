@@ -86,7 +86,8 @@
     "device_not_registered": "That device is not one of this installation's arming devices. Add it under Arming devices first.",
     "nothing_to_cancel": "There is no automatic action counting down.",
     "unknown_rule": "That rule does not exist.",
-    "unknown_suspension": "That suspension does not exist."
+    "unknown_suspension": "That suspension does not exist.",
+    "not_loaded": "Foyer was reloading — nothing was done"
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -231,7 +232,8 @@
     "watchdog_timeout_too_long": "The timeout must be shorter than the interval between pings.",
     "duplicate_radio_entry": "Another radio already uses that integration.",
     "radio_entry_required": "Choose which integration this radio is.",
-    "coordinator_required": "Name the coordinator entity, or switch this radio off. Without it Foyer cannot tell interference from a dead coordinator, and will not guess."
+    "coordinator_required": "Name the coordinator entity, or switch this radio off. Without it Foyer cannot tell interference from a dead coordinator, and will not guess.",
+    "group_members_disabled": "Fewer members are switched on than the threshold needs, so this group can never be satisfied."
   },
   "field": {
     "name": "Name",

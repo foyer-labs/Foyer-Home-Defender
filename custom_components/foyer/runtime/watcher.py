@@ -1,8 +1,19 @@
-"""Subscribes to zone entities and feeds them to the engine.
+"""Subscribes to the entities the engine is given, and feeds them to it.
 
 Two streams: a state change (including an attribute-only one, which matters to
 numeric attribute triggers and event entities) becomes a ZoneStateChanged; a
 report without any change is a heartbeat for supervision (decision 11).
+
+**Everything the snapshot carries is subscribed to, not only the zones**
+(found in review). The engine is handed the world and never looks anything up
+(INV-1), and the world it is handed includes each zone's battery entity, the
+mains entity, every radio's coordinator and every entity an action's condition
+reads. Subscribing to a narrower set than that is not a smaller subscription,
+it is a power cut nobody notices until the next door opens.
+
+The heartbeat stream stays on the zones alone: supervision is a property of a
+zone (§4.2), and a battery reporting its level is not a door saying it is
+still there.
 """
 
 from __future__ import annotations
@@ -24,7 +35,8 @@ from .system import FoyerSystem
 
 @callback
 def async_watch_zones(system: FoyerSystem) -> CALLBACK_TYPE:
-    entity_ids = system.zone_entity_ids()
+    entity_ids = system.watched_entity_ids()
+    zone_ids = system.zone_entity_ids()
 
     @callback
     def _changed(event: Event[EventStateChangedData]) -> None:
@@ -44,7 +56,7 @@ def async_watch_zones(system: FoyerSystem) -> CALLBACK_TYPE:
 
     unsubs = [
         async_track_state_change_event(system.hass, entity_ids, _changed),
-        async_track_state_report_event(system.hass, entity_ids, _reported),
+        async_track_state_report_event(system.hass, zone_ids, _reported),
     ]
 
     @callback

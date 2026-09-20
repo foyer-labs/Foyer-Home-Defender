@@ -123,6 +123,9 @@
     },
     "rejected_unknown_suspension": {
       "message": "Quella sospensione non esiste."
+    },
+    "rejected_not_loaded": {
+      "message": "Foyer si stava ricaricando, quindi non è stato fatto niente."
     }
   },
   "entity": {

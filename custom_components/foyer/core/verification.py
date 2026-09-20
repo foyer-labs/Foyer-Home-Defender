@@ -83,6 +83,14 @@ def groups(config: FoyerConfig) -> tuple[Verification, ...]:
             suppress=g.suppress_members,
         )
         for g in config.groups
+        # A group with fewer enabled members left than its threshold can
+        # never be satisfied, and a suppressing one would then hold back
+        # every alarm its survivors raise for ever — an enabled PIR seeing an
+        # intruder in an armed area and producing one `verification_pending`
+        # row and nothing else (found in review). Dropped entirely instead:
+        # the members alarm on their own, which is what they do when no group
+        # is watching them, and page 13 says the group is incomplete.
+        if len([m for m in g.members if m in zones]) >= g.n
     ]
     seen: set[str] = set()
     for zone in config.zones:

@@ -30,6 +30,7 @@ from .models import (
     MAX_LOW_BATTERY_THRESHOLD,
     MAX_MQTT_QOS,
     MAX_MQTT_TOPIC,
+    MAX_RETENTION_DAYS,
     MAX_RF_CONFIRM,
     MAX_RF_WINDOW,
     MAX_RF_ZONES,
@@ -49,6 +50,7 @@ from .models import (
     MIN_LOCKOUT_FAILURES,
     MIN_LOCKOUT_SECONDS,
     MIN_LOW_BATTERY_THRESHOLD,
+    MIN_RETENTION_DAYS,
     MIN_RF_CONFIRM,
     MIN_RF_WINDOW,
     MIN_RF_ZONES,
@@ -72,6 +74,7 @@ from .models import (
     EventTrigger,
     FoyerConfig,
     KeyCommand,
+    LogCategory,
     Moment,
     NumericOperator,
     NumericTrigger,
@@ -86,6 +89,7 @@ from .models import (
     TimeCondition,
     Zone,
 )
+from .privacy import MAX_PSEUDONYMISE_DAYS, MIN_PSEUDONYMISE_DAYS
 from .templates import unknown_variables
 from .verification import cross_zone_id
 
@@ -296,6 +300,7 @@ def validate(config: FoyerConfig) -> list[Problem]:
 
     problems.extend(_group_problems(config, zones, area_ids))
     problems.extend(_chime_problems(config.chime))
+    problems.extend(_log_problems(config))
     problems.extend(_health_problems(config))
     problems.extend(_user_problems(config, area_ids, scenario_ids))
     problems.extend(
@@ -921,6 +926,14 @@ def _group_problems(
             add("group_member_invalid", "members")
         if not 2 <= group.n <= max(len(set(members)), 2):
             add("group_threshold", "n")
+        elif (
+            len({m for m in set(members) if m in zones and zones[m].enabled}) < group.n
+        ):
+            # Enough members on paper, not enough switched on. The group
+            # cannot be satisfied and the engine therefore ignores it, so the
+            # page has to say why rather than leave a group that looks
+            # configured and does nothing (found in review).
+            add("group_members_disabled", "members")
         if not _in_range(
             group.window_seconds, MIN_VERIFICATION_WINDOW, MAX_VERIFICATION_WINDOW
         ):
@@ -1038,6 +1051,31 @@ def _health_problems(config: FoyerConfig) -> list[Problem]:
             radio.window, MIN_RF_WINDOW, MAX_RF_WINDOW
         ):
             problems.append(Problem("health_out_of_range", "radio", radio.id, "window"))
+    return problems
+
+
+def _log_problems(config: FoyerConfig) -> list[Problem]:
+    """The event log's own numbers (§10.2, §10.4).
+
+    Checked here as well as in `store/editing`, because a restored backup
+    reaches the stored configuration through `validate` alone — and a
+    retention of zero days is not a short retention, it is a purge that
+    deletes the whole of a category every day it runs (found in review).
+    """
+    log = config.settings.log
+    problems: list[Problem] = []
+    if any(
+        not MIN_RETENTION_DAYS <= log.retention(c.value) <= MAX_RETENTION_DAYS
+        for c in LogCategory
+    ):
+        problems.append(Problem("retention_out_of_range", "settings", None, "log"))
+    after = log.pseudonymise_after
+    if after is not None and not (
+        MIN_PSEUDONYMISE_DAYS <= after <= MAX_PSEUDONYMISE_DAYS
+    ):
+        problems.append(
+            Problem("retention_out_of_range", "settings", None, "pseudonymise_after")
+        )
     return problems
 
 

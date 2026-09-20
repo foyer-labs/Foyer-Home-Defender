@@ -123,6 +123,9 @@
     },
     "rejected_unknown_suspension": {
       "message": "That suspension does not exist."
+    },
+    "rejected_not_loaded": {
+      "message": "Foyer was reloading, so nothing was done."
     }
   },
   "entity": {

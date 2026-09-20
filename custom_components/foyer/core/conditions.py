@@ -15,6 +15,7 @@ from datetime import datetime, tzinfo
 
 from .clock import in_daily_window
 from .models import (
+    FAULT_STATES,
     Condition,
     ConditionMode,
     ProfileAction,
@@ -41,7 +42,10 @@ def met(
     if isinstance(condition, TimeCondition):
         return in_daily_window(now, tz, condition.after, condition.before)
     state = snapshot.entity(condition.entity_id).state
-    if state is None:
+    if state is None or state in FAULT_STATES:
+        # `unavailable` and `unknown` are not answers (INV-4, §6.3): read as
+        # ordinary strings, "is not home" was satisfied by a tracker nobody
+        # could read, and an action ran on a guess (found in review).
         return False
     if condition.operator is StateOperator.IS:
         return state == condition.state

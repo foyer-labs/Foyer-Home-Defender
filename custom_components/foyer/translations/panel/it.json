@@ -86,7 +86,8 @@
     "device_not_registered": "Quel dispositivo non è fra i dispositivi di inserimento dell'impianto. Aggiungilo prima in Dispositivi di inserimento.",
     "nothing_to_cancel": "Non c'è nessuna azione automatica in conto alla rovescia.",
     "unknown_rule": "Quella regola non esiste.",
-    "unknown_suspension": "Quella sospensione non esiste."
+    "unknown_suspension": "Quella sospensione non esiste.",
+    "not_loaded": "Foyer si stava ricaricando — non è stato fatto niente"
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -231,7 +232,8 @@
     "watchdog_timeout_too_long": "Il timeout deve essere più breve dell'intervallo fra due ping.",
     "duplicate_radio_entry": "Un'altra radio usa già quell'integrazione.",
     "radio_entry_required": "Scegli quale integrazione è questa radio.",
-    "coordinator_required": "Indica l'entità coordinatore, oppure disattiva questa radio. Senza, Foyer non può distinguere l'interferenza da un coordinatore morto, e non tira a indovinare."
+    "coordinator_required": "Indica l'entità coordinatore, oppure disattiva questa radio. Senza, Foyer non può distinguere l'interferenza da un coordinatore morto, e non tira a indovinare.",
+    "group_members_disabled": "Ci sono meno membri accesi di quanti ne chiede la soglia, quindi questo gruppo non può mai essere soddisfatto."
   },
   "field": {
     "name": "Nome",

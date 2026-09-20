@@ -62,6 +62,7 @@ from .models import (
     Channel,
     ChannelFault,
     ChannelHealth,
+    CodeAttempt,
     CodeResult,
     Contributor,
     Decision,
@@ -110,6 +111,7 @@ from .models import (
     ZoneStateChanged,
 )
 from .response import (
+    TECHNICAL_MOMENTS,
     PlanContext,
     audible_targets,
     chime_suppressed,
@@ -216,6 +218,8 @@ def decide(
         run.set_chime(event.enabled)
     elif isinstance(event, WalkTestRequest):
         outcome = run.walk_test_request(event)
+    elif isinstance(event, CodeAttempt):
+        outcome = run.code_attempt(event)
     elif isinstance(event, CancelAutoAction):
         outcome = run.cancel_auto_action(event)
     elif isinstance(event, SetAutoArming):
@@ -373,7 +377,14 @@ def next_wakeup(
     # rule, the hour an active window opens, and the end of a suspension —
     # every one of them a moment at which the house may act on its own, and
     # none of them announced by anything else.
-    dues.extend(p.due for p in state.pending_rules)
+    # Not while Home Assistant is still starting: `decide` does not run the
+    # rules then, so a due already past would be a wake-up that wakes,
+    # consumes nothing, reschedules itself for the same moment and does it
+    # again — a decision and a state save per turn, through the whole of a
+    # cold boot (found in review). The Startup event that ends the settling
+    # period runs the rules itself.
+    if not snapshot.settling:
+        dues.extend(p.due for p in state.pending_rules)
     for suspension in state.suspensions:
         dues.extend(
             at
@@ -1061,6 +1072,41 @@ class _Run:
 
     # --- walk test (§11.3) ---------------------------------------------------------
 
+    def code_attempt(self, event: CodeAttempt) -> _Outcome:
+        """A code offered to a command that decides for itself (§8.4).
+
+        Only the lockout half: whether this channel is shut, whether the code
+        was wrong, and the counter either way. What the caller may *do* with
+        a right code is its own question — a log read asks for `view_log`,
+        not for the permission this operation maps to — so it stays with the
+        caller, and this stays the one place a wrong code is counted.
+        """
+        actor = self.actor
+        if (until := authz.locked_until(self.lockouts, actor, self.now)) is not None:
+            self.occur(
+                Moment.CODE_REJECTED,
+                channel=actor.channel,
+                detail={
+                    "operation": event.operation.value,
+                    "reason": Reason.LOCKED_OUT.value,
+                    "until": until.isoformat(),
+                },
+            )
+            return _reject(Reason.LOCKED_OUT)
+        if actor.code is CodeResult.INVALID:
+            self.code_failed(event.operation)
+            return _reject(Reason.BAD_CODE)
+        if actor.code_verified:
+            # A correct code ends the run of failures on this channel, as it
+            # does on every other path (`authorize`).
+            key = authz.lockout_key(actor)
+            cleared = authz.clear_failures(self.lockouts.get(key))
+            if cleared is None:
+                self.lockouts.pop(key, None)
+            else:
+                self.lockouts[key] = cleared
+        return _ACCEPTED
+
     def walk_test_request(self, event: WalkTestRequest) -> _Outcome:
         """Enter or leave the walk test. One operation, §8.2 like any other."""
         if event.enable == (self.walk_test is not None):
@@ -1472,14 +1518,28 @@ class _Run:
         self.running = list(without(self.running, done))
 
     def stop_running(self, area_id: str, moment: Moment) -> None:
-        """Stop this area's sounders, and the incident's if it shares one."""
+        """Stop this area's sounders, and the incident's if it shares one.
+
+        Never the technical channel's (§5.5, found in review). A technical
+        response carries the area of the zone that raised it, so without the
+        flag a disarm of that area — or the intrusion siren cutoff — switched
+        off a smoke sounder while the kitchen was still on fire. Disarming is
+        an intrusion command and has no authority here.
+        """
         incident = self.incident
         in_incident = incident is not None and area_id in incident.area_ids
         stopped = [
             r
             for r in self.running
-            if r.area_id == area_id
-            or (in_incident and incident is not None and r.incident_id == incident.id)
+            if not r.technical
+            and (
+                r.area_id == area_id
+                or (
+                    in_incident
+                    and incident is not None
+                    and r.incident_id == incident.id
+                )
+            )
         ]
         for running in stopped:
             self.extra.append(revert_intent(running, moment))
@@ -2088,7 +2148,16 @@ class _Run:
                 scenario_id=self.areas[area_id].scenario_id
                 if area_id in self.areas
                 else None,
-                moment=Moment.TRIGGERED,
+                # The moment this contributor is joining *for*. A zone that
+                # satisfied a group joins with the group's profile, which is
+                # the loud one §4.8 exists to give it — resolved as
+                # TRIGGERED, the group id was computed and then ignored, so
+                # the incident adopted the quiet member profile's escalation,
+                # or none at all when the member profile had no steps (found
+                # in review).
+                moment=(
+                    Moment.VERIFICATION_SATISFIED if of_group else Moment.TRIGGERED
+                ),
             )
             new.append(
                 Contributor(
@@ -2923,7 +2992,15 @@ class _Run:
         # Disarming stops the sirens and abandons what a delay was still
         # holding for this area: the alarm is over (§5.2).
         self.stop_running(area_id, Moment.DISARMED)
-        self.pending_runs = [r for r in self.pending_runs if r.area_id != area_id]
+        self.pending_runs = [
+            r
+            for r in self.pending_runs
+            # What a delay is still holding for this area, unless it belongs
+            # to the technical channel: disarming is an intrusion command
+            # (§5.5) and the rest of a smoke alarm's sequence is not its to
+            # abandon (found in review).
+            if r.area_id != area_id or r.moment in TECHNICAL_MOMENTS
+        ]
         self.clear_area(area_id)
 
     def clear_area(self, area_id: str) -> None:
@@ -3257,7 +3334,19 @@ class _Run:
             # disarming the perimeter without ever asking (part 2 decision 6).
             dropped, perimeter = rules_engine.switch_drops(
                 self.config,
-                replace(self.snapshot.state, areas=self.areas),
+                # The world as it is *now*, both halves of it. The areas were
+                # already live here and the active scenario was not, so
+                # anything that switched scenario earlier in this same
+                # decision left this reading a scenario that had already gone
+                # — and with it the list of areas the rule was about to drop.
+                # Empty list, nothing refused, and `arm_scenario` then
+                # disarmed the perimeter itself, past the one constraint
+                # §9.4 says is enforced in the engine (found in review).
+                replace(
+                    self.snapshot.state,
+                    areas=self.areas,
+                    active_scenario_id=self.active_scenario_id,
+                ),
                 scenario_id,
             )
             # What it would actually disarm, with the perimeter taken out: a
