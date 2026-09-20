@@ -870,3 +870,33 @@ def test_the_ups_dying_with_the_power_does_not_withdraw_the_power_cut():
     causes = health.causes(world.state.health, world.config, world.snapshot())
     assert HealthCause.MAINS_LOST in causes
     assert HealthCause.MAINS_UNKNOWN in causes
+
+
+def test_a_confirmation_deadline_already_past_is_not_a_wake_up():
+    """Every other branch of next_wakeup filters a past due time, and this
+    one has the worst consequence if it does not: while Home Assistant is
+    still starting, reconcile_health is skipped, so a Tick at a past
+    deadline decides nothing, reschedules the same past time and fires
+    again — spinning through the whole of startup, with a store write and a
+    log write each time round."""
+    from custom_components.foyer.core.engine import next_wakeup
+
+    world = zigbee_world()
+    silence(world, RADIO_ZONES)
+    assert world.state.health.radio("zigbee").suspected_since is not None
+
+    world.now += timedelta(seconds=600)
+    assert next_wakeup(world.snapshot(), world.config, world.now) is None
+
+
+def test_a_suspicion_that_was_already_open_still_confirms_after_a_restart():
+    """The counterpart of the restart rule above: zones Foyer had already
+    timed keep their timestamps, so an attempt that began before the restart
+    is not forgotten — only zones it never heard go quiet are uncounted."""
+    world = zigbee_world()
+    silence(world, RADIO_ZONES)
+    assert world.state.health.radio("zigbee").suspected_since is not None
+
+    world.now += timedelta(seconds=300)
+    world.send(Startup(down_since=world.now - timedelta(seconds=290), cause="ha_start"))
+    assert Moment.RF_INTERFERENCE_SUSPECTED in moments(world)

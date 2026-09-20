@@ -410,9 +410,16 @@ def next_wakeup(
     for radio in config.health.radios:
         current = state.health.radio(radio.id)
         if radio.enabled and current.suspected_since and not current.confirmed:
-            dues.append(
-                current.suspected_since + timedelta(seconds=config.health.rf_confirm)
-            )
+            due = current.suspected_since + timedelta(seconds=config.health.rf_confirm)
+            # Only a deadline that is still ahead, as every other branch of
+            # this function does. A deadline already past is one the next
+            # decision settles anyway, and scheduling it would be a wake-up
+            # at ``now`` — which, while Home Assistant is still starting and
+            # reconcile_health is deliberately skipped, nothing can consume:
+            # the Tick would decide nothing, reschedule the same past time
+            # and fire again, spinning through the whole of startup.
+            if due > now:
+                dues.append(due)
     windows = all_windows(config)
     for key, activations in state.windows.items():
         if (window := windows.get(key)) is not None:
