@@ -33,7 +33,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
@@ -67,6 +66,7 @@ from ..core.models import (
     Reason,
     WalkTestRequest,
 )
+from ..runtime import notices
 from ..runtime.system import FoyerSystem
 from ..security.devices import Requester, async_requester
 from .backup import async_write, backup_document, restore
@@ -237,7 +237,7 @@ async def async_report_unknown_device(
         )
     )
     strings = await hass.async_add_executor_job(i18n.load_strings, system.language)
-    persistent_notification.async_create(
+    notices.async_create(
         hass,
         i18n.translate(
             strings, "notification.device_rejected.message", device=ref or "?"

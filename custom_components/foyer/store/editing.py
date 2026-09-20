@@ -29,7 +29,11 @@ from ..core.models import (
     ZoneType,
 )
 from ..core.presets import preset
-from ..core.privacy import new_pseudonym
+from ..core.privacy import (
+    MAX_PSEUDONYMISE_DAYS,
+    MIN_PSEUDONYMISE_DAYS,
+    new_pseudonym,
+)
 from ..core.validation import Problem, edit_conflicts, notify_contacts, validate
 from .schema import (
     ConfigError,
@@ -455,6 +459,12 @@ def update_settings(
         for c in LogCategory
     ):
         return _fail(Problem("retention_out_of_range", "settings", None, "log"))
+    if log.pseudonymise_after is not None and not (
+        MIN_PSEUDONYMISE_DAYS <= log.pseudonymise_after <= MAX_PSEUDONYMISE_DAYS
+    ):
+        return _fail(
+            Problem("retention_out_of_range", "settings", None, "pseudonymise_after")
+        )
     return _check(config, new, state, None)
 
 

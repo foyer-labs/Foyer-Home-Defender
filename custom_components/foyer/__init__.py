@@ -51,7 +51,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .store.state_store import StateStore
 
     store = ConfigStore(hass)
-    config = await store.async_load()
+    try:
+        config = await store.async_load()
+    except Exception:
+        # A configuration this version cannot read still has to be removable.
+        # What is lost is the answer to the log question, and the answer it
+        # falls back to is the one that destroys nothing.
+        _LOGGER.exception("Foyer could not read its configuration while removing")
+        config = None
     if config is None:
         # First run: the config flow's answers seed the stored configuration.
         # From here on .storage/foyer.config is the source of truth.
@@ -141,17 +148,39 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Deleting the integration deletes its stored configuration and state.
+    """Leaving, and leaving nothing behind (SPEC §16).
 
-    The event log database is deliberately left where it is. Whether to keep
-    or delete it is a question the user must be asked, and asking it belongs
-    to the clean uninstall of Phase 5 (SPEC §16); deleting thirty days of
-    history without a word would be the wrong default to guess.
+    Entities and devices out of both registries, the sidebar panel gone, the
+    repair issues forgotten, the notifications Foyer put up taken down, the
+    retained MQTT message cleared — a message that outlives the integration
+    keeps telling whoever connects next what the house was doing — and the
+    stored configuration and alarm state deleted.
+
+    The log database is the one thing that is a question rather than an
+    answer, and the question was asked before this ran: Home Assistant's own
+    confirmation is the last dialogue there is, so what decides here is the
+    switch on page 11 (part 2 decision 9). It is off unless somebody turned it
+    on, because §16 says to ask rather than guess and keeping is the only
+    answer that destroys nothing. An installation that never answered keeps
+    its thirty days, and `docs/privacy.md` says where the file is.
+
+    What Foyer does *not* delete is the camera folder. The snapshots under
+    `media/foyer` are pictures of the inside of a house and are the one item
+    nobody would think to look for — but the folder is configurable, may point
+    anywhere and may hold files that are not Foyer's, so it is named in the
+    documentation and beside the switch instead of being removed.
     """
     from .panel import async_unregister_panel
     from .repairs import async_forget_all
+    from .runtime import mqtt, notices
     from .store.config_store import ConfigStore
+    from .store.log_store import async_delete_database
     from .store.state_store import StateStore
+
+    # Read before anything is deleted: the answer to "keep or delete the log"
+    # lives in the configuration this function is about to remove.
+    store = ConfigStore(hass)
+    config = await store.async_load()
 
     async_unregister_panel(hass)
     # Repair issues are registered against the domain rather than the entry,
@@ -159,8 +188,47 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     # removing Foyer leaves a card in Settings for ever, pointing at an
     # integration that is not there to fix it (§12.4).
     async_forget_all(hass)
-    await ConfigStore(hass).async_remove()
+    notices.async_dismiss_all(hass)
+    _async_remove_registrations(hass, entry)
+
+    if config is not None:
+        try:
+            cleared = await mqtt.async_clear_retained(hass, config, entry.entry_id[:8])
+        except Exception:
+            cleared = False
+            _LOGGER.exception("Foyer could not clear its retained MQTT message")
+        if config.settings.mqtt.enabled and not cleared:
+            # Said out loud rather than shrugged off: what is left behind is a
+            # message on somebody else's broker describing this house, and the
+            # household can go and clear it by hand if they know.
+            _LOGGER.warning(
+                "Foyer left its retained MQTT message on the broker: it could not "
+                "be reached while the integration was being removed"
+            )
+        if config.settings.log.delete_on_uninstall:
+            await async_delete_database(hass)
+
+    await store.async_remove()
     await StateStore(hass).async_remove()
+
+
+def _async_remove_registrations(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Every entity and device this entry created, out of both registries.
+
+    Home Assistant does this itself when an entry is removed. It is done here
+    as well because §16 asks for it by name and because the failure it is
+    guarding against — an entity left behind, unavailable for ever, in
+    somebody's dashboard — is silent, and a second removal of something
+    already removed costs nothing.
+    """
+    from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+    entities = er.async_get(hass)
+    for registered in list(er.async_entries_for_config_entry(entities, entry.entry_id)):
+        entities.async_remove(registered.entity_id)
+    devices = dr.async_get(hass)
+    for device in list(dr.async_entries_for_config_entry(devices, entry.entry_id)):
+        devices.async_remove_device(device.id)
 
 
 def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:

@@ -67,6 +67,7 @@ from ..core.models import (
     User,
     ZoneStateChanged,
 )
+from ..core.privacy import cutoff as privacy_cutoff, ref_for
 from ..core.response import (
     PlanContext,
     contact_test_intent,
@@ -347,6 +348,31 @@ class FoyerSystem:
             return
         if removed:
             _LOGGER.debug("Foyer purged %s expired log rows", removed)
+        await self._async_pseudonymise()
+
+    async def _async_pseudonymise(self) -> None:
+        """Rows older than the configured delay keep an identifier, not a name.
+
+        Off unless the installation asked for it (§10.4). It runs here, beside
+        the purge, because it is the same kind of job — retention applied on a
+        schedule — and because the one place it must never run is the write
+        path: this is data minimisation, and an alarm must not wait for it.
+        """
+        after = self.config.settings.log.pseudonymise_after
+        if self.log is None or not after:
+            return
+        people = [ref_for(self.config, user) for user in self.config.users]
+        if not people:
+            return
+        try:
+            changed = await self.log.async_pseudonymise(
+                people, privacy_cutoff(dt_util.utcnow(), after)
+            )
+        except Exception:
+            _LOGGER.exception("Foyer could not pseudonymise its older log rows")
+            return
+        if changed:
+            _LOGGER.debug("Foyer pseudonymised %s older log rows", changed)
 
     @callback
     def _on_alive(self, _now: datetime) -> None:

@@ -19,7 +19,6 @@ import logging
 import os
 from typing import Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.components.siren import SirenEntityFeature
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES
 from homeassistant.core import HomeAssistant
@@ -36,6 +35,7 @@ from ..core.models import (
     Decision,
     Moment,
 )
+from . import notices
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ class Executor:
             title = title or i18n.translate(
                 strings, f"{base}.title", **intent.placeholders
             )
-        persistent_notification.async_create(
+        notices.async_create(
             self.hass,
             message,
             title=title or None,
