@@ -944,7 +944,11 @@ class FoyerSystem:
         """
         snapshot = self._snapshot()
         simulation = simulate_run(
-            self.config, request, snapshot.entities, carry=self.state
+            self.config,
+            request,
+            snapshot.entities,
+            carry=self.state,
+            radios=snapshot.radios,
         )
         return simulation_dict(simulation, self.config)
 

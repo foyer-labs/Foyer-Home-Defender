@@ -51,6 +51,7 @@ from .models import (
     Occurrence,
     PendingRun,
     RuntimeState,
+    SystemHealth,
     SystemSnapshot,
     Tick,
     ZoneStateChanged,
@@ -341,6 +342,7 @@ def run(
     request: SimulationRequest,
     live: Mapping[str, EntityState] | None = None,
     carry: RuntimeState | None = None,
+    radios: Mapping[str, str] | None = None,
 ) -> Simulation:
     """Rehearse the configuration. Executes nothing, ever (§11.2, INV-1).
 
@@ -364,6 +366,13 @@ def run(
         # "would it arm tomorrow morning?", which is the question.
         auto_arming=carry.auto_arming if carry is not None else True,
         suspensions=carry.suspensions if carry is not None else (),
+        # And a third, for the same reason (§12): system health is the
+        # condition of the system rather than of the house. Carried in so a
+        # rehearsal starts from what is already true — otherwise every
+        # simulation run on an installation whose mains is genuinely out
+        # would announce the power cut again, in the middle of a trace about
+        # the kitchen window.
+        health=carry.health if carry is not None else SystemHealth(),
     )
     now = request.start
     horizon = max(0, min(request.horizon, MAX_HORIZON))
@@ -387,7 +396,9 @@ def run(
         # Which sequences a delay was already holding: anything else the
         # decision leaves pending, it held back itself.
         before_runs = frozenset(r.id for r in state.pending_runs)
-        snapshot = SystemSnapshot(state, entities, False, request.timezone)
+        snapshot = SystemSnapshot(
+            state, entities, False, request.timezone, radios or {}
+        )
         decision = decide(snapshot, event, config, at)
         state = decision.state
         if isinstance(event, ZoneStateChanged):
@@ -402,6 +413,7 @@ def run(
                 before_runs=before_runs,
                 entities=entities,
                 request=request,
+                radios=radios or {},
             )
         )
         return decision
@@ -413,7 +425,9 @@ def run(
 
     for _ in range(MAX_STEPS):
         wake = next_wakeup(
-            SystemSnapshot(state, entities, False, request.timezone), config, now
+            SystemSnapshot(state, entities, False, request.timezone, radios or {}),
+            config,
+            now,
         )
         due = pending[0][0] if pending else None
         # A timer exactly at ``now`` has just been processed by the decision
@@ -673,10 +687,13 @@ def _report(
     before_runs: frozenset[str],
     entities: Mapping[str, EntityState],
     request: SimulationRequest,
+    radios: Mapping[str, str],
 ) -> SimStep:
     ctx = PlanContext(
         config=config,
-        snapshot=SystemSnapshot(decision.state, entities, False, request.timezone),
+        snapshot=SystemSnapshot(
+            decision.state, entities, False, request.timezone, radios
+        ),
         now=decision.at,
         areas=decision.state.areas,
         incident=decision.state.incident,

@@ -1015,7 +1015,12 @@ def _health_problems(config: FoyerConfig) -> list[Problem]:
             )
         if radio.coordinator_entity_id and "." not in radio.coordinator_entity_id:
             problems.append(
-                Problem("health_entity_invalid", "radio", radio.id, "coordinator_entity_id")
+                Problem(
+                    "health_entity_invalid",
+                    "radio",
+                    radio.id,
+                    "coordinator_entity_id",
+                )
             )
         if radio.enabled and not radio.coordinator_entity_id:
             problems.append(
@@ -1026,7 +1031,9 @@ def _health_problems(config: FoyerConfig) -> list[Problem]:
         if radio.n_zones is not None and not _in_range(
             radio.n_zones, MIN_RF_ZONES, MAX_RF_ZONES
         ):
-            problems.append(Problem("health_out_of_range", "radio", radio.id, "n_zones"))
+            problems.append(
+                Problem("health_out_of_range", "radio", radio.id, "n_zones")
+            )
         if radio.window is not None and not _in_range(
             radio.window, MIN_RF_WINDOW, MAX_RF_WINDOW
         ):
