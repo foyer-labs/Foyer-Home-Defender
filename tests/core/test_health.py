@@ -565,3 +565,24 @@ def test_a_health_problem_warns_and_never_blocks_arming():
     world.health(channels_present={PUSH: False, SMS: False})
     decision = world.arm("away")
     assert decision.accepted
+
+
+def test_switching_a_radio_off_mid_suspicion_says_it_is_over():
+    """Every moment raised here has the one that says it is over. A
+    suspicion that simply vanished from the log would be the one row
+    somebody looks for the next morning."""
+    world = zigbee_world()
+    silence(world, RADIO_ZONES)
+    world.advance(61)
+    assert world.state.health.radio("zigbee").confirmed
+
+    world.config = replace(
+        world.config,
+        health=replace(
+            world.config.health,
+            radios=(replace(world.config.health.radios[0], enabled=False),),
+        ),
+    )
+    world.advance(1)
+    assert Moment.RF_INTERFERENCE_CLEARED in moments(world)
+    assert "zigbee" not in world.state.health.radios

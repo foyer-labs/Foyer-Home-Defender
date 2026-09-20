@@ -1755,7 +1755,25 @@ class _Run:
         settings = self.config.health
         for radio in settings.radios:
             if not radio.enabled:
-                self.radios.pop(radio.id, None)
+                # Switching a radio off ends whatever it was reporting, and
+                # says so: every moment raised here has the one that says it
+                # is over, and a suspicion that simply disappeared from the
+                # log would be the one row somebody looks for afterwards.
+                current = self.radios.pop(radio.id, None)
+                if current is not None and current.confirmed:
+                    self.occur(
+                        Moment.RF_INTERFERENCE_CLEARED,
+                        detail={
+                            "radio": radio.name,
+                            "radio_id": radio.id,
+                            "cause": "radio_disabled",
+                        },
+                    )
+                if current is not None and current.coordinator_announced:
+                    self.occur(
+                        Moment.RADIO_COORDINATOR_UP,
+                        detail={"radio": radio.name, "radio_id": radio.id},
+                    )
                 continue
             current = self.radios.get(radio.id) or RadioHealth()
             answering = health_engine.coordinator_answering(radio, self.world())
