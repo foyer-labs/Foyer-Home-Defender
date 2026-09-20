@@ -8289,7 +8289,11 @@ var Qt = class extends F {
       </div>
     </div>`;
 	}
+	_bounds(e, t) {
+		return this.ctx?.meta?.bounds[e] ?? t;
+	}
 	_renderEditor(e, t) {
+		let [n, r] = this._bounds("watchdog_interval", [60, 86400]), [i, a] = this._bounds("watchdog_timeout", [5, 120]), [o, s] = this._bounds("watchdog_failures", [1, 20]), [c, l] = this._bounds("rf_zones", [2, 50]), [u, d] = this._bounds("rf_window", [5, 3600]), [f, ee] = this._bounds("rf_confirm", [0, 3600]);
 		return E`<div class="card">
       <div class="card-hd">
         <h2>${z(e, "health.settings")}</h2>
@@ -8339,8 +8343,8 @@ var Qt = class extends F {
               <span class="lbl">${z(e, "field.interval")}</span>
               <input
                 type="number"
-                min="60"
-                max="86400"
+                min=${n}
+                max=${r}
                 .value=${String(t.watchdog.interval)}
                 @input=${(e) => this._setWatchdog("interval", U(e.target.value) ?? 900)}
               />
@@ -8350,8 +8354,8 @@ var Qt = class extends F {
               <span class="lbl">${z(e, "field.timeout")}</span>
               <input
                 type="number"
-                min="5"
-                max="120"
+                min=${i}
+                max=${a}
                 .value=${String(t.watchdog.timeout)}
                 @input=${(e) => this._setWatchdog("timeout", U(e.target.value) ?? 30)}
               />
@@ -8360,8 +8364,8 @@ var Qt = class extends F {
               <span class="lbl">${z(e, "field.failures")}</span>
               <input
                 type="number"
-                min="1"
-                max="20"
+                min=${o}
+                max=${s}
                 .value=${String(t.watchdog.failures)}
                 @input=${(e) => this._setWatchdog("failures", U(e.target.value) ?? 3)}
               />
@@ -8393,8 +8397,8 @@ var Qt = class extends F {
               <span class="lbl">${z(e, "field.rf_zones")}</span>
               <input
                 type="number"
-                min="2"
-                max="50"
+                min=${c}
+                max=${l}
                 .value=${String(t.rf_zones)}
                 @input=${(e) => this._set("rf_zones", U(e.target.value) ?? 4)}
               />
@@ -8404,8 +8408,8 @@ var Qt = class extends F {
               <span class="lbl">${z(e, "field.rf_window")}</span>
               <input
                 type="number"
-                min="5"
-                max="3600"
+                min=${u}
+                max=${d}
                 .value=${String(t.rf_window)}
                 @input=${(e) => this._set("rf_window", U(e.target.value) ?? 60)}
               />
@@ -8414,8 +8418,8 @@ var Qt = class extends F {
               <span class="lbl">${z(e, "field.rf_confirm")}</span>
               <input
                 type="number"
-                min="0"
-                max="3600"
+                min=${f}
+                max=${ee}
                 .value=${String(t.rf_confirm)}
                 @input=${(e) => this._set("rf_confirm", U(e.target.value) ?? 60)}
               />

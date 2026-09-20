@@ -425,7 +425,17 @@ class FoyerPageHealth extends LitElement {
 
   // --- the configuration half -----------------------------------------------------
 
+  private _bounds(key: string, fallback: [number, number]): [number, number] {
+    return (this.ctx?.meta?.bounds[key] as [number, number] | undefined) ?? fallback;
+  }
+
   private _renderEditor(s: Strings, draft: HealthConfig) {
+    const [minInterval, maxInterval] = this._bounds("watchdog_interval", [60, 86400]);
+    const [minTimeout, maxTimeout] = this._bounds("watchdog_timeout", [5, 120]);
+    const [minFailures, maxFailures] = this._bounds("watchdog_failures", [1, 20]);
+    const [minZones, maxZones] = this._bounds("rf_zones", [2, 50]);
+    const [minWindow, maxWindow] = this._bounds("rf_window", [5, 3600]);
+    const [minConfirm, maxConfirm] = this._bounds("rf_confirm", [0, 3600]);
     return html`<div class="card">
       <div class="card-hd">
         <h2>${t(s, "health.settings")}</h2>
@@ -485,8 +495,8 @@ class FoyerPageHealth extends LitElement {
               <span class="lbl">${t(s, "field.interval")}</span>
               <input
                 type="number"
-                min="60"
-                max="86400"
+                min=${minInterval}
+                max=${maxInterval}
                 .value=${String(draft.watchdog.interval)}
                 @input=${(e: Event) =>
                   this._setWatchdog(
@@ -500,8 +510,8 @@ class FoyerPageHealth extends LitElement {
               <span class="lbl">${t(s, "field.timeout")}</span>
               <input
                 type="number"
-                min="5"
-                max="120"
+                min=${minTimeout}
+                max=${maxTimeout}
                 .value=${String(draft.watchdog.timeout)}
                 @input=${(e: Event) =>
                   this._setWatchdog(
@@ -514,8 +524,8 @@ class FoyerPageHealth extends LitElement {
               <span class="lbl">${t(s, "field.failures")}</span>
               <input
                 type="number"
-                min="1"
-                max="20"
+                min=${minFailures}
+                max=${maxFailures}
                 .value=${String(draft.watchdog.failures)}
                 @input=${(e: Event) =>
                   this._setWatchdog(
@@ -554,8 +564,8 @@ class FoyerPageHealth extends LitElement {
               <span class="lbl">${t(s, "field.rf_zones")}</span>
               <input
                 type="number"
-                min="2"
-                max="50"
+                min=${minZones}
+                max=${maxZones}
                 .value=${String(draft.rf_zones)}
                 @input=${(e: Event) =>
                   this._set("rf_zones", optionalNumber((e.target as HTMLInputElement).value) ?? 4)}
@@ -566,8 +576,8 @@ class FoyerPageHealth extends LitElement {
               <span class="lbl">${t(s, "field.rf_window")}</span>
               <input
                 type="number"
-                min="5"
-                max="3600"
+                min=${minWindow}
+                max=${maxWindow}
                 .value=${String(draft.rf_window)}
                 @input=${(e: Event) =>
                   this._set("rf_window", optionalNumber((e.target as HTMLInputElement).value) ?? 60)}
@@ -577,8 +587,8 @@ class FoyerPageHealth extends LitElement {
               <span class="lbl">${t(s, "field.rf_confirm")}</span>
               <input
                 type="number"
-                min="0"
-                max="3600"
+                min=${minConfirm}
+                max=${maxConfirm}
                 .value=${String(draft.rf_confirm)}
                 @input=${(e: Event) =>
                   this._set(
