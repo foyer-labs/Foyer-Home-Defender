@@ -110,9 +110,10 @@ bug is a second evaluation path somewhere, never the trace.
   then this happens. The offset exists because a verification group reaching
   two of two, or a second zone joining an incident, happen *in sequence*, and
   two zones forced at the same instant can never show either.
-- **Entities used in conditions.** Only the ones your actions actually read —
-  "only if nobody is home" can be rehearsed both ways. Leave one empty to use
-  what it really says right now.
+- **Entities used in conditions, and the people an automatic rule watches.**
+  Only the ones your configuration actually reads — "only if nobody is home"
+  can be rehearsed both ways, and so can "everybody has left". Leave one empty
+  to use what it really says right now.
 
 **If your installation asks for a code to arm**, the simulator asks for one
 too. The premise is a real arming, run through the real engine, and §8.2 has no
@@ -124,6 +125,14 @@ The house starts disarmed whatever it is really doing, with your sensors'
 real current readings underneath your overrides. If a window is genuinely open,
 the simulator will tell you the arming would be refused, which is a useful
 answer rather than an obstacle: force it closed and ask again.
+
+Two things about the house are **not** hypothetical and come with the run: the
+automatic-rule kill switch, and any suspension in force. So "would it arm
+tomorrow morning, with the boiler engineer expected?" is a question the
+simulator can answer — and a rule that fires at 23:00 on weekdays can be
+rehearsed at eleven on a Monday morning by setting the clock to it. What the
+trace says about a rule, including the guard that would block it, is read off
+the same decision the runtime would act on (§9.4).
 
 ### Reading the trace
 
