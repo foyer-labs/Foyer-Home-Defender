@@ -123,6 +123,11 @@ e nessuna connessione verso l'esterno che parta da Foyer.
   suonare la sirena per tre secondi, manda la notifica sul serio. L'errore che
   evita è scoprire durante l'emergenza che il canale d'emergenza era
   configurato male. Con conferma, con permesso, e a registro come prova.
+- **Foyer controlla che Foyer funzioni ancora.** La rete elettrica, ogni
+  canale di notifica, un watchdog esterno che dà l'allarme da fuori casa
+  quando i ping si fermano, e molte zone di una stessa radio che ammutoliscono
+  insieme. Un allarme che non sa dirti che ha smesso di funzionare ha smesso
+  di funzionare.
 - **Test e diagnostica: una tabella in tempo reale di ogni zona**, con
   l'unica colonna che le pagine di configurazione non possono mostrarti — se
   Foyer considererebbe quel sensore *scattato adesso*, letto attraverso il
@@ -445,7 +450,7 @@ card.
 - **Nessuno strumento per la privacy, ancora.** Cancellare la storia di una
   sola persona, la pseudonimizzazione a tempo e l'esportazione per persona
   sono la prossima cosa, e fino ad allora il registro tiene i nomi per trenta
-  giorni. *Adesso.*
+  giorni. *La prossima.*
 - **Nessuna tastiera ESPHome nostra.** Una costruzione fai-da-te rientra nel
   contratto come qualunque altra, ma questo progetto non ne mantiene una
   in v1.

@@ -118,6 +118,10 @@ outbound connection of Foyer's own.
   notification to that person through that transport. The failure this
   prevents is discovering during the emergency that the emergency channel was
   misconfigured. Confirmed, permissioned, and logged as a test.
+- **Foyer checks that Foyer still works.** The mains, every notification
+  channel, an external watchdog that raises the alarm from outside the house
+  when the pings stop, and many zones on one radio going quiet at once. An
+  alarm that cannot tell you it has stopped working has stopped working.
 - **Test & diagnostics: a live table of every zone**, with the one column the
   configuration pages cannot show you — whether Foyer would count that sensor
   as *triggered right now*, read through that zone's own trigger. Plus whether
