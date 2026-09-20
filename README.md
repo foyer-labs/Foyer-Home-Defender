@@ -6,7 +6,7 @@
 
 <h1 align="center">Foyer Home Defender</h1>
 
-<p align="center"><em>A real intruder alarm panel for Home Assistant: areas with a state each, arming scenarios you define yourself, zones that say what "triggered" means for them — and a simulator that tells you what the alarm would do, before you find out the hard way.</em></p>
+<p align="center"><em>An alarm panel for the sensors you already have. Areas with a state each, arming scenarios you define yourself, zones that say what "triggered" means for them — and a simulator that tells you what would happen, before you find out the hard way.</em></p>
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=version" alt="Latest version"></a>
@@ -17,16 +17,15 @@
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml"><img src="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
 </p>
 
-> ### Status: beta. The alarm core works, and you can ask it what it would do before you trust it.
+> ### Status: beta. It works, it guards the author's house, and you can ask it what it would do before you trust it.
 >
-> It can protect a house, and it is protecting the author's. Three things tell
-> you what it would do before you have to trust it: the **simulator**, which
-> rehearses a decision without anything happening; the **walk test**, which
-> arms the house for real, holds every response back and tells you which zones
-> never saw you walk past them; and the **action test**, which really sounds
-> the siren, so a misconfigured emergency channel is something you find out now
-> rather than during the emergency. A walk test never silences a smoke detector
-> — 24h, tamper, technical and panic zones stay fully live.
+> Three things answer that question for you. The **simulator** rehearses a
+> decision with nothing actually happening. The **walk test** arms the house
+> for real, holds every response back, and tells you which zones never saw you
+> walk past them. The **action test** really does sound the siren, so a
+> misconfigured emergency channel is something you find out on a Tuesday
+> afternoon rather than at three in the morning. (A walk test never silences a
+> smoke detector: 24h, tamper, technical and panic zones stay fully live.)
 >
 > The rest — codes and users, keypads and tags, escalation until somebody
 > answers, and the house arming itself when everybody leaves — is in the
@@ -49,6 +48,40 @@ outbound connection of Foyer's own.
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-en.png" alt="The Foyer panel: two areas armed by one scenario, one counting down its entry delay, the zones that are not ready, and the last few events" width="900">
 </p>
+
+## Where this came from
+
+Most people who end up here already have the hardware and do not know it.
+
+You put a contact on the front door because you wanted the hall light to come
+on. You put one on the bedroom window because you wanted to be told you had
+left it open before the rain started. You put a PIR in the corridor for the
+night light, and another in the kitchen because the extractor fan should
+notice somebody is cooking. Two winters later the house is full of exactly the
+sensors a burglar alarm is made of, and they are being used to switch lamps.
+
+Then you ask what an alarm costs. Somebody comes round, quotes a figure that
+makes you blink, and proposes to drill holes for a contact on the front door
+and a PIR in the hall — which is to say, for the two sensors already screwed
+to your doorframe. And then there is a monthly subscription, because the
+keypad has to phone somebody.
+
+So the thing that is missing is not the hardware. It is the discipline around
+it: areas that arm separately instead of one all-or-nothing switch, an entry
+delay that survives a restart, a zone that declares what "open" means for it
+rather than assuming `on`, one incident instead of nine notifications at once,
+a log you can still read in three weeks, and some way to check the whole lot
+without setting anything off at two in the morning.
+
+That is what this is. It costs an evening of configuration, and if you already
+own the sensors you have already paid for most of it.
+
+**What it is honestly not:** a certified system, a monitored one, or
+professional hardware. Nobody is watching, no grade is met, and detection is
+only as good as the sensors somebody bought for a light switch. What it can be
+— with a UPS on the router, one notification channel that survives the fibre
+being cut, and a second sensor where a single one would be lonely — is a very
+good result for the money, on a house that is already smart.
 
 ## What it does
 
@@ -538,16 +571,20 @@ All three verification tools, and how to read what they tell you:
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-users-en.png" alt="Users and codes: two people with their permissions, scope and validity, and the table of which operations ask for a code" width="900">
 </p>
 
-## Security model
+## What the codes are for, and what they are not
 
-Foyer's codes protect against household members, guests, cleaners, non-admin
-Home Assistant users and anyone who finds an unlocked wall tablet. They do **not** protect against a Home Assistant administrator, who can
-read `.storage`, disable the integration or call any service directly. The
-event log is audit-*useful*, not tamper-*proof*, for the same reason.
+Foyer's codes are there to stop the people who are *in* your house from
+disarming it: household members, guests, the cleaner, a non-admin Home
+Assistant user, whoever picks up the wall tablet you left unlocked. They are
+not there to stop **you**. A Home Assistant administrator can read `.storage`,
+disable the integration or call any service directly, so no code in Foyer means
+anything to them — and the event log is audit-*useful* rather than
+tamper-*proof* for exactly the same reason.
 
-**Foyer is not a certified alarm system.** EN 50131 grade compliance is
-explicitly out of scope, and it does not replace a monitored professional
-installation.
+That is the honest boundary, and it is worth knowing before you rely on it.
+Foyer is an integration that does what an alarm does; it is not a certified
+alarm system, it does not meet EN 50131 or any equivalent grade, and it does
+not replace a monitored professional installation.
 
 **The acknowledgement webhook, if you switch it on, is an unauthenticated
 URL.** It exists so a voice provider can feed back the key somebody pressed
@@ -558,8 +595,12 @@ arm, disarm, read the log or change anything. It does not exist until you
 switch it on, the id is generated and random, and switching it off forgets it.
 [The details](docs/notification-channels.md#twilio-voice-call).
 
-**Foyer is not a fire alarm system.** A smoke detector wired into Home
-Assistant does not replace certified, interconnected smoke alarms.
+**And it is not a fire alarm system.** The technical channel is genuinely
+useful — it is live whether the house is armed or not, and disarming has no
+authority over it — but a smoke detector wired into Home Assistant does not
+replace certified, interconnected smoke alarms. Buy those separately. They are
+not expensive, and this is the one item on the page where being wrong is not
+about a burglary.
 
 ## What you need
 
