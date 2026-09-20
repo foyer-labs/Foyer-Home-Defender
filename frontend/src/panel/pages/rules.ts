@@ -240,6 +240,9 @@ class FoyerPageRules extends LitElement {
                 Math.round((Date.parse(item.due) - ctx.now()) / 1000),
               ),
             })}
+            ${item.suspension_name
+              ? html`<em>${t(s, "rules.because", { name: item.suspension_name })}</em>`
+              : nothing}
           </div>
           <span class="spacer"></span>
           <button

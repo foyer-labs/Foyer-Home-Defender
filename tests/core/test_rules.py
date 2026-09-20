@@ -972,3 +972,163 @@ def test_a_suspension_with_no_end_is_refused():
         Suspension(id="y", kind=SuspensionKind.VISITOR, name="Boiler engineer")
     )
     assert not named.accepted
+
+
+def test_a_refused_arming_does_not_ask_again_every_two_minutes():
+    """The countdown is an actionable push. A rule that restarted it after
+    every refusal would say "the house will arm in two minutes" all night,
+    about an arming that cannot happen."""
+    world = World(house(rule()))
+    world.set("binary_sensor.kitchen_window", "on")
+    empty(world)
+    world.advance(30 * 60)  # the countdown starts
+    world.advance(130)  # it fires, and the arming is refused
+    assert Moment.ARM_FAILED in (world.last.moments if world.last else ())
+    assert not world.state.pending_rules
+
+    announcements = 0
+    for _ in range(6):
+        decision = world.advance(130)
+        announcements += sum(1 for m in decision.moments if m is Moment.AUTO_PENDING)
+    assert announcements == 0
+    assert not world.state.pending_rules
+
+    # And it is not dead either: shutting the window is what releases it.
+    decision = world.set("binary_sensor.kitchen_window", "off")
+    assert decision.state.pending_rules
+
+
+def test_a_rule_refused_for_something_no_zone_can_fix_waits_its_turn():
+    """A deleted scenario is not an open window: there is nothing to shut,
+    so the rule waits until the house fills and empties again."""
+    from dataclasses import replace as _replace
+
+    config = house(rule(grace=0))
+    world = World(config)
+    empty(world)
+    world.advance(30 * 60)
+    world.disarm()
+    world.config = _replace(config, scenarios=())
+
+    failures = 0
+    for _ in range(5):
+        decision = world.advance(60)
+        failures += sum(1 for m in decision.moments if m is Moment.ARM_FAILED)
+    assert failures <= 1
+
+
+def test_a_countdown_survives_a_reload_that_deleted_its_rule():
+    """It is restored so the engine can cancel it with a row; filtering it
+    out of the document is what made it vanish in silence."""
+    from dataclasses import replace as _replace
+
+    from custom_components.foyer.store.schema import state_from_dict, state_to_dict
+
+    config = house(rule())
+    world = World(config)
+    empty(world)
+    world.advance(30 * 60)
+    assert world.state.pending_rules
+
+    gone = _replace(config, rules=())
+    restored = state_from_dict(state_to_dict(world.state), gone)
+    assert restored.pending_rules
+
+    world.config = gone
+    world.state = restored
+    decision = world.advance(30)
+    assert not decision.state.pending_rules
+    assert Moment.AUTO_CANCELLED in decision.moments
+
+
+def test_a_skip_pressed_during_the_countdown_skips_the_occurrence():
+    """The button says "skip the next occurrence". Spending it and then
+    arming the house two minutes later is the opposite of that."""
+    world = World(house(rule()))
+    empty(world)
+    world.advance(30 * 60)
+    assert world.state.pending_rules
+
+    world.suspend(
+        Suspension(id="once", kind=SuspensionKind.NEXT, rule_ids=("empty_house",))
+    )
+    world.advance(130)  # the deadline: the suspension answers it
+    assert not world.state.pending_rules
+    assert not world.state.suspensions
+
+    for _ in range(4):
+        world.advance(130)
+    assert not world.state.pending_rules
+    assert world.states()["ground"] == "disarmed"
+
+
+def test_a_rule_never_silences_an_alarm():
+    """§4.6.1 refuses a scenario switch while an area is in entry or
+    triggered. A rule is the same case and more so: disarming an area the
+    incident touched acknowledges it and stops the escalation (§7.2)."""
+    config = house(
+        rule(
+            "let_me_in",
+            kind=RuleTriggerKind.PRESENCE,
+            action=RuleActionKind.DISARM,
+            area_ids=("ground",),
+            scenario_id=None,
+            grace=0,
+        ),
+        allow_auto_disarm=True,
+    )
+    world = World(config)
+    world.arm("night")
+    world.advance(10)
+    world.set("binary_sensor.kitchen_window", "on")  # instant zone: triggered
+    assert world.states()["ground"] == "triggered"
+
+    empty(world)
+    decision = world.person(LUCA, "home")
+    assert RuleBlock.ALARM_IN_PROGRESS.value in [
+        o.detail.get("reason") for o in decision.occurrences
+    ]
+    assert decision.state.area("ground").state is AreaState.TRIGGERED
+    assert decision.state.incident is not None
+    assert not decision.state.incident.acknowledged
+
+
+def test_an_hour_that_fell_while_the_system_was_down_is_recorded():
+    config = house(rule(kind=RuleTriggerKind.TIME, at="23:00", entity_ids=(), grace=0))
+    world = World(config)
+    world.now = datetime(2026, 9, 14, 22, 30, tzinfo=UTC)
+    world.advance(1)
+    down_since = world.now
+    world.now += timedelta(hours=2)  # 00:31, through the 23:00 occurrence
+
+    decision = world.send(Startup(down_since=down_since))
+    blocked = [o for o in decision.occurrences if o.moment is Moment.AUTO_BLOCKED]
+    assert blocked and blocked[0].detail["reason"] == RuleBlock.MISSED.value
+    # Recorded, not acted on: an arming nobody was told about is not a
+    # kindness at half past midnight.
+    assert world.states()["ground"] == "disarmed"
+
+
+def test_an_arm_rule_keeps_a_perimeter_area_armed_when_it_may_disarm():
+    """With automatic disarming enabled, an `arm` that behaves as a switch
+    drops what it may and leaves the perimeter exactly as it was."""
+    config = perimeter_house(
+        rule("to_night", scenario_id="night", grace=0), allow_auto_disarm=True
+    )
+    config = replace(
+        config,
+        scenarios=tuple(
+            replace(s, areas=("upstairs",)) if s.id == "night" else s
+            for s in config.scenarios
+        ),
+    )
+    world = World(config)
+    world.arm("away")
+    world.advance(30)
+    empty(world)
+    decision = world.advance(30 * 60)
+
+    assert decision.state.active_scenario_id == "night"
+    assert decision.state.area("ground").state is AreaState.ARMED
+    assert decision.state.area("ground").scenario_id is None
+    assert decision.state.area("garage").state is AreaState.DISARMED

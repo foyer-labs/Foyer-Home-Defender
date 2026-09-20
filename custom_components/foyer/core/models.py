@@ -616,6 +616,24 @@ class RuleBlock(StrEnum):
     # A disarm rule naming an area that no longer exists. Validation catches
     # it at save time, so this is what a deleted area leaves behind.
     UNKNOWN_AREA = "unknown_area"
+    # The rule acted and the arming itself was refused for something a zone
+    # can put right — an open window, a zone in fault. It tries again when
+    # the areas it wants are ready, and not before: a rule that retried on a
+    # timer would announce an arming every two minutes all night.
+    NOT_READY_REFUSED = "not_ready_refused"
+    # Refused for something no zone can put right: a scenario that has been
+    # deleted, an alarm in progress, a permission. It waits like any rule
+    # that has had its turn — until its condition goes false and true again.
+    REFUSED = "refused"
+    # An area the rule would disarm is in entry or already triggered. A rule
+    # never silences an alarm: §4.6.1 says the same of a scenario switch, and
+    # for the same reason — the siren stopping is a person saying they have
+    # seen it, and a phone walking through the door is not that person.
+    ALARM_IN_PROGRESS = "alarm_in_progress"
+    # A `time` rule whose hour fell while Home Assistant was down. The row
+    # exists because "why did it not arm last night?" has to have an answer
+    # even when the answer is "nothing was running".
+    MISSED = "missed"
 
 
 class MqttDetail(StrEnum):
@@ -1137,16 +1155,6 @@ class AutoRule:
     grace_seconds: int = DEFAULT_GRACE_SECONDS
     notify_contact_ids: tuple[str, ...] = ()
     enabled: bool = True
-
-    @property
-    def disarms(self) -> bool:
-        """Whether this rule can leave the house less protected (§9.4).
-
-        ``switch`` counts: a scenario change disarms the areas only the old
-        scenario armed (§4.6.1, decision 42), so a rule that switches can
-        disarm without an action that says the word (part 2 decision 6).
-        """
-        return self.action in (RuleActionKind.DISARM, RuleActionKind.SWITCH)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1833,7 +1841,6 @@ class RuleRuntime:
     latched: bool = False
     blocked: RuleBlock | None = None
     last_occurrence: datetime | None = None
-    last_acted: datetime | None = None
     # Whether this rule has been evaluated at least once. The baseline rule
     # this project applies everywhere else (§4.7, §9.3): a `presence` rule
     # saved while somebody is already at home has not seen them arrive, and

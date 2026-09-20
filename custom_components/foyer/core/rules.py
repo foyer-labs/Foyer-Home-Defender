@@ -122,6 +122,40 @@ def occurrence_due(
     return due
 
 
+def occurrence_in(
+    rule: AutoRule,
+    since: datetime,
+    now: datetime,
+    tz: tzinfo,
+    last: datetime | None,
+) -> datetime | None:
+    """The occurrence of a ``time`` rule that fell between ``since`` and now.
+
+    For the restart gap: the instant is behind us, so nothing else will ever
+    mention it. At most one is reported — the most recent — because a house
+    that was off for a week does not need seven rows saying the same thing.
+    """
+    trigger = rule.trigger
+    if trigger.kind is not RuleTriggerKind.TIME or trigger.at is None:
+        return None
+    at = parse_hhmm(trigger.at)
+    if at is None:
+        return None
+    days = trigger.weekdays or tuple(range(7))
+    local = now.astimezone(tz)
+    for back in range(8):
+        day = local - timedelta(days=back)
+        candidate = day.replace(hour=at.hour, minute=at.minute, second=0, microsecond=0)
+        if candidate > local or candidate < since:
+            continue
+        if day.weekday() not in days:
+            continue
+        if last is not None and last >= candidate:
+            return None
+        return candidate
+    return None
+
+
 def next_occurrence(rule: AutoRule, now: datetime, tz: tzinfo) -> datetime | None:
     """When a ``time`` rule is next due, for the sensor and the scheduler."""
     trigger = rule.trigger
@@ -414,6 +448,7 @@ def switch_drops(
         for area_id, rt in state.areas.items()
         if rt.state is not AreaState.DISARMED
         and rt.scenario_id is not None
+        and rt.scenario_id == state.active_scenario_id
         and area_id not in target.areas
     )
     perimeter = tuple(

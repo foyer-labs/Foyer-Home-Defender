@@ -178,7 +178,13 @@ class Executor:
         service = str(intent.params.get("service") or "")
         data: dict[str, Any] = {"message": intent.params.get("message", "")}
         title = intent.params.get("title")
-        if not data["message"]:
+        if not data["message"] and intent.profile_id is None:
+            # Only for what Foyer sends of its own — the countdown of §9.4.
+            # A profile's action with an empty rendered message ("{zone}"
+            # with no zone) must not fall through to a moment key that may
+            # not exist: `i18n.translate` answers a missing key with the key
+            # itself, and "notification.triggered.message" is not a sentence
+            # to send somebody at four in the morning.
             title, data["message"] = await self._async_text(intent)
         if title:
             data["title"] = title

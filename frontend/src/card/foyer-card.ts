@@ -140,7 +140,16 @@ class FoyerCard extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this._timer = window.setInterval(() => {
-      if (this._area?.timer || this._isMaster || this._pendingAuto) this._tick += 1;
+      // Only while something is actually counting: a master card that ticked
+      // all day would redraw a wall tablet 86 400 times for nothing.
+      if (
+        this._area?.timer ||
+        this._status?.areas.some((a) => a.timer) ||
+        this._status?.walk_test ||
+        this._pendingAuto
+      ) {
+        this._tick += 1;
+      }
     }, 1000);
   }
 
@@ -155,7 +164,15 @@ class FoyerCard extends LitElement {
     if (!changed.has("hass") || !this.hass) return;
     if (this.hass.language !== this._language) {
       this._language = this.hass.language;
-      loadStrings(this.hass).then((strings) => (this._strings = strings));
+      loadStrings(this.hass)
+        .then((strings) => (this._strings = strings))
+        .catch(() => {
+          // A wall tablet reconnecting can lose this one call. Forget the
+          // language so the next update asks again: without it the card
+          // renders nothing at all until somebody reloads the page, which
+          // is the worst failure an alarm card has.
+          this._language = undefined;
+        });
     }
     if (!this._unsubscribe && this.isConnected) {
       this._unsubscribe = this.hass.connection.subscribeMessage<FoyerStatus>(
@@ -199,6 +216,16 @@ class FoyerCard extends LitElement {
           }),
           warning: true,
         };
+      }
+      if (
+        !result.success &&
+        result.reason === "nothing_to_cancel" &&
+        command.type === "foyer/auto/cancel"
+      ) {
+        // Somebody else stopped it, or it has already run. The banner is
+        // gone, which is the answer; a red line under it would only ask the
+        // reader to work out which of the two they are looking at.
+        return;
       }
       if (!result.success) {
         // A code was wanted, or the one typed was wrong: open the pad, leave
@@ -367,6 +394,7 @@ class FoyerCard extends LitElement {
               : nothing}
           </div>
           ${countdown ? this._countdown(s, countdown) : nothing}
+          ${this._renderInlinePad(s)}
           <div class="buttons">
             ${master
               ? html`<select
@@ -641,6 +669,9 @@ class FoyerCard extends LitElement {
             scenario: scenario?.name ?? "",
             seconds: left,
           })}
+          ${pending.suspension_name
+            ? html`<em>${t(s, "rules.because", { name: pending.suspension_name })}</em>`
+            : nothing}
         </span>
         <button
           ?disabled=${this._busy}

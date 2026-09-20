@@ -997,7 +997,6 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "latched": rt.latched,
                 "blocked": rt.blocked.value if rt.blocked else None,
                 "last_occurrence": _iso(rt.last_occurrence),
-                "last_acted": _iso(rt.last_acted),
                 "seen": rt.seen,
             }
             for rule_id, rt in state.rules.items()
@@ -1311,7 +1310,6 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     suspension_name=p.get("suspension_name"),
                 )
                 for p in data.get("pending_rules", ())
-                if p["rule_id"] in rule_ids
             ),
             # A suspension that named rules and has lost every one of them
             # is dropped rather than filtered: an empty ``rule_ids`` means
@@ -1340,7 +1338,6 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     latched=bool(rt.get("latched", False)),
                     blocked=RuleBlock(rt["blocked"]) if rt.get("blocked") else None,
                     last_occurrence=_dt(rt.get("last_occurrence")),
-                    last_acted=_dt(rt.get("last_acted")),
                     seen=bool(rt.get("seen", False)),
                 )
                 for rule_id, rt in data.get("rules", {}).items()

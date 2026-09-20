@@ -262,7 +262,19 @@ What the log records:
 - **A countdown that fell due while Home Assistant was down acts at startup**,
   and the row says it was late. It is the one place where Foyer does the thing
   rather than dropping it, and the reason is that an arming missed is a house
-  left open while everybody believes it is closed.
+  left open while everybody believes it is closed. An *occurrence* that fell
+  in the same gap — 23:00 passing with nothing running — is recorded and
+  missed instead: it never announced itself, and arming at half past midnight
+  without having told anybody is not a kindness.
+- **A rule never silences an alarm.** While an area it would disarm is in
+  entry or already triggered, the rule is blocked and the log says so.
+  Disarming an area the incident touched acknowledges the incident and stops
+  the escalation (§7.2) — a person may do that, and an inference from a phone
+  walking through the door may not.
+- **An arming the house refused is not retried on a timer.** If a window was
+  open, the rule tries again when the areas it wants are ready, and not
+  before. Anything else it was refused for waits like a rule that has had its
+  turn: until its condition goes false and true again.
 
 ---
 

@@ -2493,9 +2493,47 @@ class _Run:
         rules themselves.
         """
         self.expire_suspensions()
+        self.record_missed_occurrences()
         self.drop_orphan_countdowns()
         self.fire_pending_rules()
         self.evaluate_rules()
+
+    def record_missed_occurrences(self) -> None:
+        """A `time` rule whose hour passed while Home Assistant was down.
+
+        The occurrence is gone — ``occurrence_due`` only looks at today's
+        instant and it is behind us — so the rule will say nothing on its
+        own. That is the one failure §9.4 is written against: "why did it not
+        arm last night?" needs an answer even when the answer is "nothing was
+        running". A countdown that fell due in the same gap fires late
+        (part 2 decision 12); an occurrence that never started one cannot be
+        fired late without announcing an arming nobody was told about, so it
+        is recorded and missed.
+        """
+        if not self.restarted or self.gap_since is None:
+            return
+        for rule in self.config.rules:
+            if not rule.enabled or rule.trigger.kind is not RuleTriggerKind.TIME:
+                continue
+            runtime = self.rules_runtime.get(rule.id, RuleRuntime())
+            missed = rules_engine.occurrence_in(
+                rule, self.gap_since, self.now, self.timezone, runtime.last_occurrence
+            )
+            if missed is None:
+                continue
+            self.rules_runtime[rule.id] = replace(
+                runtime, last_occurrence=missed, blocked=RuleBlock.MISSED
+            )
+            self.occur(
+                Moment.AUTO_BLOCKED,
+                channel=AUTO_RULE_CHANNEL,
+                detail={
+                    "rule": rule.name,
+                    "rule_id": rule.id,
+                    "reason": RuleBlock.MISSED.value,
+                    "due": missed.isoformat(),
+                },
+            )
 
     def drop_orphan_countdowns(self) -> None:
         """A countdown whose rule was deleted or switched off is cancelled.
@@ -2553,8 +2591,15 @@ class _Run:
                 continue
             decided = self.rule_decision(rule, scenario_id=pending.scenario_id)
             if decided.block is not None:
-                self.rule_blocked(rule, decided.block, decided.suspension)
-                self.spend(rule)
+                spent = self.rule_blocked(rule, decided.block, decided.suspension)
+                if not spent:
+                    # A guard, a walk test or the switch: the condition still
+                    # holds, so the rule asks again when that clears. A skip
+                    # somebody pressed during the countdown is the exception —
+                    # unlatching there would spend the skip and then arm the
+                    # house two minutes later, which is the opposite of what
+                    # the button says.
+                    self.spend(rule)
                 continue
             self.rule_act(rule, decided, late=self.restarted)
 
@@ -2562,6 +2607,7 @@ class _Run:
         for rule in self.config.rules:
             if not rule.enabled:
                 continue
+            self.unblock_when_ready(rule)
             runtime, wants, occurrence = self.rule_wants(rule)
             if wants and not rules_engine.in_active_window(
                 rule, self.now, self.timezone
@@ -2582,9 +2628,7 @@ class _Run:
                 self.rule_blocked(rule, decided.block, decided.suspension)
                 continue
             self.rules_runtime[rule.id] = replace(
-                _spend(rule, runtime, occurrence, acted=True),
-                blocked=None,
-                last_acted=self.now,
+                _spend(rule, runtime, occurrence, acted=True), blocked=None
             )
             if rule.grace_seconds > 0:
                 self.start_countdown(rule, decided)
@@ -2640,6 +2684,40 @@ class _Run:
             rule, self.now, self.timezone, runtime.last_occurrence
         )
         return replace(runtime, seen=True), occurrence is not None, occurrence
+
+    # What a zone can put right by closing, and what it cannot.
+    _ZONE_REFUSALS = frozenset(
+        {Reason.ZONE_OPEN, Reason.ZONE_FAULT, Reason.ARM_HOLD_EXPIRED}
+    )
+
+    def refused(self, rule: AutoRule, reason: Reason | None) -> None:
+        """Record that the action this rule asked for did not happen."""
+        runtime = self.rules_runtime.get(rule.id, RuleRuntime())
+        self.rules_runtime[rule.id] = replace(
+            runtime,
+            latched=runtime.latched or rule.trigger.level,
+            blocked=(
+                RuleBlock.NOT_READY_REFUSED
+                if reason in self._ZONE_REFUSALS
+                else RuleBlock.REFUSED
+            ),
+        )
+
+    def unblock_when_ready(self, rule: AutoRule) -> None:
+        """Let a rule an open window refused ask again, once it is shut.
+
+        The only thing that releases it is the thing that refused it, which
+        is why this reads the same blockers the arming itself reads rather
+        than a timer: "shut the window and the house arms" is the behaviour,
+        and "ask again every two minutes" is the one it must not have.
+        """
+        runtime = self.rules_runtime.get(rule.id, RuleRuntime())
+        if runtime.blocked is not RuleBlock.NOT_READY_REFUSED:
+            return
+        scenario = self.config.scenario(rule.scenario_id)
+        faulted, open_ = self.blockers(tuple(scenario.areas) if scenario else ())
+        if not faulted and not open_:
+            self.rules_runtime[rule.id] = replace(runtime, latched=False, blocked=None)
 
     def spend(self, rule: AutoRule) -> None:
         """After a countdown was stopped at the last moment by a guard.
@@ -2719,6 +2797,20 @@ class _Run:
                 area_ids=tuple(a for a in dropped if a not in perimeter),
                 refused=perimeter,
             )
+        if decided.disarms and any(
+            self.areas[area_id].state in (AreaState.ENTRY, AreaState.TRIGGERED)
+            for area_id in decided.area_ids
+            if area_id in self.areas
+        ):
+            # §4.6.1 already refuses a scenario switch while an area it would
+            # touch is in entry or triggered: changing scenario must never
+            # silence an alarm without a disarm. A rule is the same case and
+            # more so — disarming an area the incident touched acknowledges
+            # the incident and stops the escalation (§7.2), so a phone
+            # walking through the door would stop the call on its way to the
+            # neighbour. A person may do that; an inference from a phone may
+            # not.
+            return replace(decided, block=RuleBlock.ALARM_IN_PROGRESS)
         if decided.disarms and not self.config.settings.allow_auto_disarm:
             # §9.4 point 2, enforced rather than documented: a rule that
             # would leave the house less protected does nothing until
@@ -2754,7 +2846,7 @@ class _Run:
 
     def rule_blocked(
         self, rule: AutoRule, block: RuleBlock, suspension: Suspension | None
-    ) -> None:
+    ) -> bool:
         """Say why a rule did not act — once, at the start of the block.
 
         §9.4 asks for this row by name, under ``system``: "why did it not arm
@@ -2790,6 +2882,7 @@ class _Run:
         )
         if skipped and suspension is not None:
             self.consume_suspension(suspension)
+        return skipped
 
     def consume_suspension(self, suspension: Suspension) -> None:
         """ "Skip the next occurrence" is spent by use, never by the clock."""
@@ -3004,12 +3097,17 @@ class _Run:
                 },
             )
             return
-        # It did not happen, so the rule has not had its turn: a level
-        # trigger is unlatched and tries again when the world changes —
-        # which is exactly when somebody shuts the window that stopped it.
-        # Without this the commonest rule of all (absence, guards off) is
-        # dead for the rest of the day after one open window.
-        self.spend(rule)
+        # It did not happen. A level trigger waits rather than asking again
+        # at once: `evaluate_rules` runs in this same call, so unlatching
+        # here would start another countdown immediately and every two
+        # minutes after that — an actionable push saying "the house will arm
+        # in two minutes", all night, about an arming that cannot happen.
+        # What it waits for depends on what refused it: an open window is
+        # something a zone can put right, and the rule tries again the moment
+        # the areas it wants are ready (`unblock_when_ready`). Anything else
+        # waits for the condition to go false and true again, like a rule
+        # that has had its turn.
+        self.refused(rule, outcome.reason)
         if outcome.reason is Reason.INVALID_STATE:
             # Already armed, or already this scenario: not a failure, and not
             # worth a warning row every evening.

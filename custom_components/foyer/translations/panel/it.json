@@ -2013,6 +2013,11 @@
     "weekday_3": "Gio",
     "weekday_4": "Ven",
     "weekday_5": "Sab",
-    "weekday_6": "Dom"
+    "weekday_6": "Dom",
+    "block_not_ready_refused": "Rifiutata: una zona non era pronta",
+    "block_refused": "L'ultimo tentativo è stato rifiutato",
+    "because": " · {name}",
+    "block_alarm_in_progress": "C'è un allarme in corso",
+    "block_missed": "Persa: Home Assistant era spento"
   }
 }

@@ -6457,6 +6457,7 @@ var Ut = class extends I {
 			scenario: this._scenarioName(n.scenario_id),
 			seconds: Math.max(0, Math.round((Date.parse(n.due) - t.now()) / 1e3))
 		})}
+            ${n.suspension_name ? D`<em>${B(e, "rules.because", { name: n.suspension_name })}</em>` : k}
           </div>
           <span class="spacer"></span>
           <button

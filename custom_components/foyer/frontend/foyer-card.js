@@ -836,14 +836,16 @@ var ye = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", b
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._timer = window.setInterval(() => {
-			(this._area?.timer || this._isMaster || this._pendingAuto) && (this._tick += 1);
+			(this._area?.timer || this._status?.areas.some((e) => e.timer) || this._status?.walk_test || this._pendingAuto) && (this._tick += 1);
 		}, 1e3);
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0, window.clearInterval(this._timer);
 	}
 	willUpdate(e) {
-		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, X(this.hass).then((e) => this._strings = e)), !this._unsubscribe && this.isConnected && (this._unsubscribe = this.hass.connection.subscribeMessage((e) => {
+		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, X(this.hass).then((e) => this._strings = e).catch(() => {
+			this._language = void 0;
+		})), !this._unsubscribe && this.isConnected && (this._unsubscribe = this.hass.connection.subscribeMessage((e) => {
 			this._offset = Date.parse(e.now) - Date.now(), this._status = e;
 		}, { type: "foyer/subscribe" }), this._unsubscribe.catch(() => this._unsubscribe = void 0)));
 	}
@@ -863,10 +865,11 @@ var ye = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", b
 				...e,
 				...t ? { code: t } : {}
 			});
-			this._pending = void 0, n.success && n.low_battery_zones.length && (this._feedback = {
+			if (this._pending = void 0, n.success && n.low_battery_zones.length && (this._feedback = {
 				text: Z(this._strings, "card.low_battery", { zones: n.low_battery_zones.map((e) => e.name).join(", ") }),
 				warning: !0
-			}), n.success || (xe.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
+			}), !n.success && n.reason === "nothing_to_cancel" && e.type === "foyer/auto/cancel") return;
+			n.success || (xe.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
 				text: Z(this._strings, `reason.${n.reason ?? "unknown"}`, { zones: n.blocking_zones.map((e) => e.name).join(", ") }),
 				retry: e.type === "foyer/arm" && !e.force && be.has(n.reason ?? "") ? {
 					...e,
@@ -941,6 +944,7 @@ var ye = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", b
             ${a ? L`<span class="state memory">${Z(e, "overview.memory")}</span>` : z}
           </div>
           ${l ? this._countdown(e, l) : z}
+          ${this._renderInlinePad(e)}
           <div class="buttons">
             ${r ? L`<select
                   ?disabled=${this._busy}
@@ -1149,6 +1153,7 @@ var ye = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", b
 			scenario: n?.name ?? "",
 			seconds: r
 		})}
+          ${t.suspension_name ? L`<em>${Z(e, "rules.because", { name: t.suspension_name })}</em>` : z}
         </span>
         <button
           ?disabled=${this._busy}

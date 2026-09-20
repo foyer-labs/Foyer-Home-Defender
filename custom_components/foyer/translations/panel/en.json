@@ -2013,6 +2013,11 @@
     "weekday_3": "Thu",
     "weekday_4": "Fri",
     "weekday_5": "Sat",
-    "weekday_6": "Sun"
+    "weekday_6": "Sun",
+    "block_not_ready_refused": "Refused: a zone was not ready",
+    "block_refused": "The last attempt was refused",
+    "because": " · {name}",
+    "block_alarm_in_progress": "An alarm is in progress",
+    "block_missed": "Missed: Home Assistant was down"
   }
 }
