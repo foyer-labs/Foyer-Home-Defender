@@ -152,6 +152,9 @@ export interface FoyerStatus {
    * layout read the banner from here: one payload, so the two can never
    * disagree about whether the house is answering. */
   walk_test: WalkTestStatus | null;
+  /** Automatic arming (§9.4). On the live status, not only on page 12: two
+   * minutes is not long enough to go and find the right page. */
+  auto: AutoStatus;
 }
 
 /** What a walk test looks like from outside (SPEC §11.3). */
@@ -212,6 +215,110 @@ export interface AreaConfig {
    * the strictest explicit setting wins (SPEC §8.2, decision 80). */
   require_code_to_arm: boolean | null;
   require_code_to_disarm: boolean | null;
+  /** The outer defence ring (§4.5). An automatic rule never disarms it,
+   * whatever the rule says: enforced in the engine, not here (§9.4). */
+  is_perimeter: boolean;
+}
+
+// --- automatic arming rules (SPEC §9.4) -------------------------------------------
+
+export type RuleTriggerKind = "absence" | "presence" | "time" | "entity";
+export type RuleActionKind = "arm" | "disarm" | "switch";
+export type SuspensionKind = "until" | "next" | "visitor";
+
+export interface RuleTriggerConfig {
+  kind: RuleTriggerKind;
+  /** The people an absence or presence rule watches, or the one entity an
+   * entity rule does. */
+  entity_ids: string[];
+  state: string | null;
+  minutes: number;
+  /** "HH:MM" for a time rule. */
+  at: string | null;
+  /** 0 = Monday. Empty means every day. */
+  weekdays: number[];
+}
+
+export interface RuleGuardsConfig {
+  only_when_disarmed: boolean;
+  only_when_ready: boolean;
+  /** No interior zone has moved for this many minutes. null is off. */
+  quiet_minutes: number | null;
+}
+
+export interface RuleWindowConfig {
+  weekdays: number[];
+  after: string | null;
+  before: string | null;
+}
+
+export interface RuleConfig {
+  id?: string;
+  name: string;
+  trigger: RuleTriggerConfig;
+  action: RuleActionKind;
+  scenario_id: string | null;
+  area_ids: string[];
+  window: RuleWindowConfig;
+  guards: RuleGuardsConfig;
+  /** The cancellable countdown before it acts. 0 means at once. */
+  grace_seconds: number;
+  notify_contact_ids: string[];
+  enabled: boolean;
+}
+
+/** A suspension, or an expected-visitor window (§9.4). Runtime state, not
+ * configuration: it expires, and setting one is three clicks rather than a
+ * configuration edit (part 2 decision 7). */
+export interface SuspensionConfig {
+  id: string;
+  kind: SuspensionKind;
+  rule_ids: string[];
+  name: string | null;
+  start: string | null;
+  until: string | null;
+  reduced_scenario_id: string | null;
+  created_at: string | null;
+  user_id: string | null;
+  user_name: string | null;
+}
+
+export interface PendingRuleAction {
+  id: string;
+  rule_id: string;
+  rule_name: string;
+  action: RuleActionKind;
+  due: string;
+  started_at: string;
+  seconds: number;
+  scenario_id: string | null;
+  area_ids: string[];
+  suspension_name: string | null;
+}
+
+export interface NextAutoAction {
+  rule_id: string;
+  rule_name: string;
+  action: RuleActionKind;
+  at: string | null;
+  scenario_id: string | null;
+  area_ids: string[];
+  /** Set while it is already counting down, which is the one state in which
+   * somebody can still stop it. */
+  pending_id: string | null;
+  suspension: SuspensionConfig | null;
+}
+
+export interface AutoStatus {
+  /** switch.foyer_auto_arming (§9.4, §13). */
+  enabled: boolean;
+  /** Whether a rule may leave the house less protected at all (§9.4). */
+  allow_auto_disarm: boolean;
+  next: NextAutoAction | null;
+  pending: PendingRuleAction[];
+  suspensions: SuspensionConfig[];
+  /** Which guard is currently holding each rule back, by rule id. */
+  blocked: Record<string, string>;
 }
 
 // --- response profiles (SPEC §6) --------------------------------------------------
@@ -463,6 +570,9 @@ export interface SettingsConfig {
    * A Home Assistant webhook is not authenticated, so this URL is a way of
    * stopping an alarm: it exists only while somebody wants it to. */
   ack_webhook_id: string | null;
+  /** Whether an automatic rule may disarm anything at all (§9.4 point 2).
+   * Off until somebody turns it on, having read what it costs. */
+  allow_auto_disarm: boolean;
 }
 
 export interface FoyerConfig {
@@ -476,6 +586,7 @@ export interface FoyerConfig {
   users: UserConfig[];
   devices: DeviceConfig[];
   contacts: ContactConfig[];
+  rules: RuleConfig[];
   code_policy: CodePolicyConfig;
 }
 
@@ -498,6 +609,13 @@ export interface ConfigMeta {
   log_severities: string[];
   outcomes: string[];
   retention_bounds: [number, number];
+  /** What page 12 needs to build a rule without knowing §9.4 by heart. */
+  rule_triggers: RuleTriggerKind[];
+  rule_actions: RuleActionKind[];
+  suspension_kinds: SuspensionKind[];
+  presence_domains: string[];
+  max_grace_seconds: number;
+  max_rule_minutes: number;
   /** §8.3, and the operations of the §8.2 table, for page 7. */
   permissions: string[];
   operations: string[];
@@ -790,4 +908,5 @@ export type PageId =
   | "contacts"
   | "log"
   | "settings"
+  | "rules"
   | "test";

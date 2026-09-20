@@ -17,6 +17,7 @@ const NEW_AREA: AreaConfig = {
   response_profile_id: null,
   require_code_to_arm: null,
   require_code_to_disarm: null,
+  is_perimeter: false,
 };
 
 class FoyerPageAreas extends LitElement {
@@ -182,6 +183,18 @@ class FoyerPageAreas extends LitElement {
               this.ctx!.status.security.enforced,
             )}
           </div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${draft.is_perimeter}
+              @change=${(e: Event) =>
+                this._set("is_perimeter", (e.target as HTMLInputElement).checked)}
+            />
+            <span>
+              ${t(s, "field.is_perimeter")}
+              <span class="hint">${t(s, "areas.perimeter_hint")}</span>
+            </span>
+          </label>
           ${effectiveHint(this.ctx!, draft.id ?? null)}
           ${this._problems.length
             ? html`<div class="problems" role="alert">

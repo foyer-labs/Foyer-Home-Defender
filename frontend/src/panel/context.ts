@@ -22,6 +22,7 @@ import type {
   SettingsConfig,
   Simulation,
   SimulationQuery,
+  SuspensionKind,
   TestActionQuery,
   TestActionResult,
   UserConfig,
@@ -51,6 +52,20 @@ export interface PanelContext {
   /** Switch the DTMF acknowledgement webhook on or off (§7.2). The id is
    * the backend's to generate and this never sends one. */
   setAckWebhook(enabled: boolean): Promise<EditResult>;
+  /** Automatic arming (§9.4). Cancelling stops a countdown before it acts;
+   * the switch is the global kill switch; a suspension holds rules back
+   * until a date, for one occurrence, or for a named visitor window. */
+  cancelAuto(pendingId?: string): Promise<CommandResult>;
+  setAutoArming(enabled: boolean): Promise<CommandResult>;
+  suspend(suspension: {
+    kind: SuspensionKind;
+    rule_ids?: string[];
+    name?: string | null;
+    start?: string | null;
+    until?: string | null;
+    reduced_scenario_id?: string | null;
+  }): Promise<CommandResult>;
+  liftSuspension(id: string): Promise<CommandResult>;
   /** Create or change a person. The codes travel separately and one way:
    * absent means "leave it", null means "remove it" (SPEC §8.1). */
   saveUser(

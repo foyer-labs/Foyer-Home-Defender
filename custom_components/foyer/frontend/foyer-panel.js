@@ -1528,7 +1528,8 @@ var Ye = {
 	default_exit_delay: 30,
 	response_profile_id: null,
 	require_code_to_arm: null,
-	require_code_to_disarm: null
+	require_code_to_disarm: null,
+	is_perimeter: !1
 }, Xe = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
@@ -1671,6 +1672,17 @@ var Ye = {
             ${G(this.ctx, t.response_profile_id, (e) => this._set("response_profile_id", e))}
             ${Ke(e, t, (e, t) => this._set(e, t), this.ctx.status.security.enforced)}
           </div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t.is_perimeter}
+              @change=${(e) => this._set("is_perimeter", e.target.checked)}
+            />
+            <span>
+              ${B(e, "field.is_perimeter")}
+              <span class="hint">${B(e, "areas.perimeter_hint")}</span>
+            </span>
+          </label>
           ${Je(this.ctx, t.id ?? null)}
           ${this._problems.length ? D`<div class="problems" role="alert">
                 <ul>
@@ -6272,8 +6284,791 @@ var zt = class extends I {
 };
 customElements.define("foyer-page-contacts", zt);
 //#endregion
+//#region src/panel/pages/rules.ts
+var Bt = [
+	0,
+	1,
+	2,
+	3,
+	4,
+	5,
+	6
+];
+function Vt(e) {
+	return e ? new Date(e).toLocaleString(void 0, {
+		dateStyle: "short",
+		timeStyle: "short"
+	}) : "";
+}
+function Ht() {
+	return {
+		name: "",
+		trigger: {
+			kind: "absence",
+			entity_ids: [],
+			state: null,
+			minutes: 30,
+			at: null,
+			weekdays: []
+		},
+		action: "arm",
+		scenario_id: null,
+		area_ids: [],
+		window: {
+			weekdays: [],
+			after: null,
+			before: null
+		},
+		guards: {
+			only_when_disarmed: !0,
+			only_when_ready: !0,
+			quiet_minutes: null
+		},
+		grace_seconds: 120,
+		notify_contact_ids: [],
+		enabled: !0
+	};
+}
+var Ut = class extends I {
+	constructor(...e) {
+		super(...e), this._visitor = {
+			name: "",
+			start: "",
+			until: "",
+			reduced_scenario_id: null
+		}, this._problems = [], this._busy = !1;
+	}
+	static {
+		this.properties = {
+			ctx: { attribute: !1 },
+			_draft: { state: !0 },
+			_visitor: { state: !0 },
+			_problems: { state: !0 },
+			_busy: { state: !0 },
+			_error: { state: !0 }
+		};
+	}
+	get _auto() {
+		return this.ctx?.status?.auto;
+	}
+	_edit(e) {
+		this._draft = e ? structuredClone(e) : Ht(), this._problems = [];
+	}
+	_set(e, t) {
+		this._draft &&= {
+			...this._draft,
+			[e]: t
+		};
+	}
+	_setTrigger(e, t) {
+		this._draft && this._set("trigger", {
+			...this._draft.trigger,
+			[e]: t
+		});
+	}
+	_setGuard(e, t) {
+		this._draft && this._set("guards", {
+			...this._draft.guards,
+			[e]: t
+		});
+	}
+	_setWindow(e, t) {
+		this._draft && this._set("window", {
+			...this._draft.window,
+			[e]: t
+		});
+	}
+	async _save() {
+		if (this.ctx && this._draft) {
+			this._busy = !0;
+			try {
+				let e = await this.ctx.save("rule", this._draft);
+				this._problems = e.problems, e.success && (this._draft = void 0);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _delete() {
+		if (this.ctx && this._draft?.id) {
+			this._busy = !0;
+			try {
+				let e = await this.ctx.remove("rule", this._draft.id);
+				this._problems = e.problems, e.success && (this._draft = void 0);
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _run(e) {
+		this._busy = !0, this._error = void 0;
+		try {
+			let t = await e();
+			t.success || (this._error = B(this.ctx.strings, `reason.${t.reason ?? "unknown"}`));
+		} finally {
+			this._busy = !1;
+		}
+	}
+	async _addVisitor() {
+		let e = this.ctx, t = this._visitor;
+		e && t.name.trim() && t.until && (await this._run(() => e.suspend({
+			kind: "visitor",
+			name: t.name.trim(),
+			start: t.start ? new Date(t.start).toISOString() : null,
+			until: new Date(t.until).toISOString(),
+			reduced_scenario_id: t.reduced_scenario_id
+		})), this._visitor = {
+			name: "",
+			start: "",
+			until: "",
+			reduced_scenario_id: null
+		});
+	}
+	render() {
+		let e = this.ctx;
+		if (!e?.config) return k;
+		let t = e.strings, n = this._auto;
+		return D`
+      ${this._renderNext(t)}
+      ${this._error ? D`<div class="problems" role="alert">${this._error}</div>` : k}
+      ${this._renderRules(t)}
+      ${this._draft ? this._renderEditor(t, this._draft) : k}
+      ${this._renderSuspensions(t, n?.suspensions ?? [])}
+      ${this._renderDisarming(t)}
+    `;
+	}
+	_renderNext(e) {
+		let t = this.ctx, n = this._auto, r = n?.next, i = n?.pending ?? [];
+		return n?.enabled ? i.length ? D`${i.map((n) => D`<div class="banner crit">
+          <div>
+            ${B(e, `rules.counting_${n.action}`, {
+			rule: n.rule_name,
+			scenario: this._scenarioName(n.scenario_id),
+			seconds: Math.max(0, Math.round((Date.parse(n.due) - t.now()) / 1e3))
+		})}
+          </div>
+          <span class="spacer"></span>
+          <button
+            class="btn sm primary"
+            ?disabled=${this._busy}
+            @click=${() => this._run(() => t.cancelAuto(n.id))}
+          >
+            ${B(e, "rules.cancel_now")}
+          </button>
+        </div>`)}` : D`<div class="banner info">
+      <div>
+        ${r ? B(e, `rules.next_${r.action}`, {
+			rule: r.rule_name,
+			scenario: this._scenarioName(r.scenario_id),
+			when: Vt(r.at)
+		}) : B(e, "rules.next_none")}
+      </div>
+      <span class="spacer"></span>
+      <button
+        class="btn sm"
+        ?disabled=${this._busy}
+        @click=${() => this._run(() => t.setAutoArming(!1))}
+      >
+        ${B(e, "rules.switch_off")}
+      </button>
+    </div>` : D`<div class="banner warn">
+        <div>${B(e, "rules.switched_off")}</div>
+        <span class="spacer"></span>
+        <button
+          class="btn sm"
+          ?disabled=${this._busy}
+          @click=${() => this._run(() => t.setAutoArming(!0))}
+        >
+          ${B(e, "rules.switch_on")}
+        </button>
+      </div>`;
+	}
+	_scenarioName(e) {
+		return e ? this.ctx?.config?.scenarios.find((t) => t.id === e)?.name ?? "" : "";
+	}
+	_triggerText(e, t) {
+		let n = t.trigger, r = n.entity_ids.length;
+		switch (n.kind) {
+			case "absence": return B(e, "rules.trigger_absence", {
+				n: r,
+				minutes: n.minutes
+			});
+			case "presence": return B(e, "rules.trigger_presence", { n: r });
+			case "time": return B(e, "rules.trigger_time", {
+				at: n.at ?? "",
+				days: this._days(e, n.weekdays)
+			});
+			default: return B(e, "rules.trigger_entity", {
+				entity: n.entity_ids[0] ?? "",
+				state: n.state ?? "",
+				minutes: n.minutes
+			});
+		}
+	}
+	_days(e, t) {
+		return t.length ? t.map((t) => B(e, `rules.weekday_${t}`)).join(", ") : B(e, "rules.every_day");
+	}
+	_actionText(e, t) {
+		if (t.action === "disarm") {
+			let n = this.ctx?.config?.areas ?? [];
+			return B(e, "rules.action_disarm", { areas: t.area_ids.map((e) => n.find((t) => t.id === e)).filter((e) => e !== void 0).map((e) => e.name).join(", ") });
+		}
+		return B(e, `rules.action_${t.action}`, { scenario: this._scenarioName(t.scenario_id) });
+	}
+	_guardText(e, t) {
+		let n = [];
+		return t.guards.only_when_disarmed && n.push(B(e, "rules.guard_disarmed")), t.guards.only_when_ready && n.push(B(e, "rules.guard_ready")), t.guards.quiet_minutes !== null && n.push(B(e, "rules.guard_quiet", { minutes: t.guards.quiet_minutes })), n.length ? n.join(" · ") : B(e, "rules.guard_none");
+	}
+	_renderRules(e) {
+		let t = this.ctx.config?.rules ?? [], n = this._auto?.blocked ?? {};
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "rules.title")}</h2>
+          <button class="btn primary" @click=${() => this._edit()}>
+            ${B(e, "rules.add")}
+          </button>
+        </div>
+        ${t.length ? D`<div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>${B(e, "field.name")}</th>
+                    <th>${B(e, "field.trigger")}</th>
+                    <th>${B(e, "rules.action")}</th>
+                    <th>${B(e, "field.window")}</th>
+                    <th>${B(e, "field.guards")}</th>
+                    <th>${B(e, "field.grace_seconds")}</th>
+                    <th>${B(e, "rules.status")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${t.map((t) => D`<tr
+                      class="clickable"
+                      aria-selected=${this._draft?.id === t.id ? "true" : "false"}
+                      @click=${() => this._edit(t)}
+                    >
+                      <td><strong>${t.name}</strong></td>
+                      <td>${this._triggerText(e, t)}</td>
+                      <td>
+                        <span class=${t.action === "arm" ? "pill ok" : "pill warn"}>
+                          ${this._actionText(e, t)}
+                        </span>
+                      </td>
+                      <td class="muted">
+                        ${t.window.after && t.window.before ? `${this._days(e, t.window.weekdays)} ${t.window.after}–${t.window.before}` : this._days(e, t.window.weekdays)}
+                      </td>
+                      <td class="muted small">${this._guardText(e, t)}</td>
+                      <td class="num">
+                        ${t.grace_seconds ? B(e, "common.seconds", { n: t.grace_seconds }) : B(e, "rules.at_once")}
+                      </td>
+                      <td>
+                        ${t.enabled ? n[t.id ?? ""] ? D`<span class="pill warn"
+                                >${B(e, `rules.block_${n[t.id ?? ""]}`)}</span
+                              >` : D`<span class="pill ok">${B(e, "rules.active")}</span>` : D`<span class="pill idle">${B(e, "rules.disabled")}</span>`}
+                      </td>
+                    </tr>`)}
+                </tbody>
+              </table>
+            </div>` : D`<div class="empty">${B(e, "rules.none")}</div>`}
+      </div>
+    `;
+	}
+	_renderEditor(e, t) {
+		let n = this.ctx, r = q(n.hass, n.meta?.presence_domains ?? ["person"]), i = n.meta?.max_grace_seconds ?? 900, a = n.meta?.max_rule_minutes ?? 1440, o = t.trigger;
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${t.id ? t.name : B(e, "rules.new")}</h2>
+        </div>
+        <div class="card-bd">
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.name")}</span>
+              <input
+                .value=${t.name}
+                @input=${(e) => this._set("name", e.target.value)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.trigger")}</span>
+              <select
+                @change=${(e) => this._setTrigger("kind", e.target.value)}
+              >
+                ${(n.meta?.rule_triggers ?? []).map((t) => D`<option .value=${t} ?selected=${t === o.kind}>
+                      ${B(e, `rules.trigger_kind_${t}`)}
+                    </option>`)}
+              </select>
+              <span class="hint">${B(e, `rules.trigger_hint_${o.kind}`)}</span>
+            </label>
+            ${o.kind === "time" ? D`<label class="field">
+                  <span class="lbl">${B(e, "rules.at")}</span>
+                  <input
+                    type="time"
+                    .value=${o.at ?? ""}
+                    @change=${(e) => this._setTrigger("at", e.target.value || null)}
+                  />
+                </label>` : D`<label class="field">
+                  <span class="lbl">${B(e, "rules.for_minutes")}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max=${a}
+                    .value=${String(o.minutes)}
+                    ?disabled=${o.kind === "presence"}
+                    @input=${(e) => this._setTrigger("minutes", W(e.target.value) ?? 0)}
+                  />
+                </label>`}
+          </div>
+
+          ${o.kind === "absence" || o.kind === "presence" ? D`<div class="block">
+                <div class="lbl strong">${B(e, "rules.people")}</div>
+                <div class="chips">
+                  ${r.length ? r.map((e) => D`<label class="chip">
+                          <input
+                            type="checkbox"
+                            .checked=${o.entity_ids.includes(e.id)}
+                            @change=${(t) => this._setTrigger("entity_ids", t.target.checked ? [...o.entity_ids, e.id] : o.entity_ids.filter((t) => t !== e.id))}
+                          />
+                          <span>${e.name}</span>
+                        </label>`) : D`<span class="hint">${B(e, "rules.no_people")}</span>`}
+                </div>
+                <span class="hint">${B(e, "rules.people_hint")}</span>
+              </div>` : k}
+          ${o.kind === "entity" ? D`<div class="grid-form">
+                <label class="field">
+                  <span class="lbl">${B(e, "field.entity_id")}</span>
+                  <input
+                    .value=${o.entity_ids[0] ?? ""}
+                    @change=${(e) => this._setTrigger("entity_ids", [e.target.value].filter(Boolean))}
+                  />
+                </label>
+                <label class="field">
+                  <span class="lbl">${B(e, "field.state")}</span>
+                  <input
+                    .value=${o.state ?? ""}
+                    @change=${(e) => this._setTrigger("state", e.target.value || null)}
+                  />
+                </label>
+              </div>` : k}
+          ${o.kind === "time" ? this._renderDays(e, o.weekdays, (e) => this._setTrigger("weekdays", e)) : k}
+
+          <div class="hr"></div>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "rules.action")}</span>
+              <select
+                @change=${(e) => this._set("action", e.target.value)}
+              >
+                ${(n.meta?.rule_actions ?? []).map((n) => D`<option .value=${n} ?selected=${n === t.action}>
+                      ${B(e, `rules.action_kind_${n}`)}
+                    </option>`)}
+              </select>
+            </label>
+            ${t.action === "disarm" ? k : D`<label class="field">
+                  <span class="lbl">${B(e, "field.scenario_id")}</span>
+                  <select
+                    @change=${(e) => this._set("scenario_id", e.target.value || null)}
+                  >
+                    <option value="" ?selected=${!t.scenario_id}>
+                      ${B(e, "rules.choose_scenario")}
+                    </option>
+                    ${(n.config?.scenarios ?? []).map((e) => D`<option .value=${e.id ?? ""} ?selected=${e.id === t.scenario_id}>
+                          ${e.name}
+                        </option>`)}
+                  </select>
+                </label>`}
+          </div>
+          ${t.action === "disarm" ? this._renderDisarmAreas(e, t) : k}
+
+          <div class="hr"></div>
+          <div class="lbl strong">${B(e, "field.window")}</div>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.after")}</span>
+              <input
+                type="time"
+                .value=${t.window.after ?? ""}
+                @change=${(e) => this._setWindow("after", e.target.value || null)}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.before")}</span>
+              <input
+                type="time"
+                .value=${t.window.before ?? ""}
+                @change=${(e) => this._setWindow("before", e.target.value || null)}
+              />
+            </label>
+          </div>
+          ${this._renderDays(e, t.window.weekdays, (e) => this._setWindow("weekdays", e))}
+          <span class="hint">${B(e, "rules.window_hint")}</span>
+
+          <div class="hr"></div>
+          <div class="lbl strong">${B(e, "field.guards")}</div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t.guards.only_when_disarmed}
+              @change=${(e) => this._setGuard("only_when_disarmed", e.target.checked)}
+            />
+            <span>${B(e, "rules.guard_disarmed")}</span>
+          </label>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t.guards.only_when_ready}
+              @change=${(e) => this._setGuard("only_when_ready", e.target.checked)}
+            />
+            <span>
+              ${B(e, "rules.guard_ready")}
+              <span class="hint">${B(e, "rules.guard_ready_hint")}</span>
+            </span>
+          </label>
+          <label class="field">
+            <span class="lbl">${B(e, "rules.guard_quiet_label")}</span>
+            <input
+              type="number"
+              min="1"
+              max=${a}
+              .value=${t.guards.quiet_minutes === null ? "" : String(t.guards.quiet_minutes)}
+              @input=${(e) => this._setGuard("quiet_minutes", W(e.target.value))}
+            />
+            <span class="hint">${B(e, "rules.guard_quiet_hint")}</span>
+          </label>
+
+          <div class="hr"></div>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "field.grace_seconds")}</span>
+              <input
+                type="number"
+                min="0"
+                max=${i}
+                .value=${String(t.grace_seconds)}
+                @input=${(e) => this._set("grace_seconds", W(e.target.value) ?? 0)}
+              />
+              <span class="hint">${B(e, "rules.grace_hint")}</span>
+            </label>
+          </div>
+          <div class="block">
+            <div class="lbl strong">${B(e, "field.notify_contact_ids")}</div>
+            <div class="chips">
+              ${(n.config?.contacts ?? []).map((e) => D`<label class="chip">
+                  <input
+                    type="checkbox"
+                    .checked=${t.notify_contact_ids.includes(e.id ?? "")}
+                    @change=${(n) => this._set("notify_contact_ids", n.target.checked ? [...t.notify_contact_ids, e.id ?? ""] : t.notify_contact_ids.filter((t) => t !== e.id))}
+                  />
+                  <span>${e.name}</span>
+                </label>`)}
+            </div>
+            <span class="hint">${B(e, "rules.notify_hint")}</span>
+          </div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${t.enabled}
+              @change=${(e) => this._set("enabled", e.target.checked)}
+            />
+            <span>${B(e, "rules.enabled")}</span>
+          </label>
+
+          ${this._problems.length ? D`<div class="problems" role="alert">
+                <ul>
+                  ${this._problems.map((t) => D`<li>${U(e, t)}</li>`)}
+                </ul>
+              </div>` : k}
+          <div class="actions">
+            <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
+              ${B(e, "common.save")}
+            </button>
+            <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
+              ${B(e, "common.cancel")}
+            </button>
+            ${t.id ? D`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
+                  ${B(e, "common.delete")}
+                </button>` : k}
+          </div>
+        </div>
+      </div>
+    `;
+	}
+	_renderDays(e, t, n) {
+		return D`<div class="chips days">
+      ${Bt.map((r) => D`<label class="chip">
+          <input
+            type="checkbox"
+            .checked=${t.includes(r)}
+            @change=${(e) => n(e.target.checked ? [...t, r].sort((e, t) => e - t) : t.filter((e) => e !== r))}
+          />
+          <span>${B(e, `rules.weekday_${r}`)}</span>
+        </label>`)}
+    </div>`;
+	}
+	_renderDisarmAreas(e, t) {
+		let n = this.ctx?.config?.areas ?? [];
+		return D`<div class="block">
+      <div class="lbl strong">${B(e, "field.area_ids")}</div>
+      <div class="chips">
+        ${n.map((n) => {
+			let r = t.area_ids.includes(n.id ?? "");
+			return D`<label class=${n.is_perimeter ? "chip never" : "chip"}>
+            <input
+              type="checkbox"
+              .checked=${r}
+              ?disabled=${n.is_perimeter}
+              @change=${(e) => this._set("area_ids", e.target.checked ? [...t.area_ids, n.id ?? ""] : t.area_ids.filter((e) => e !== n.id))}
+            />
+            <span>
+              ${n.name}
+              ${n.is_perimeter ? D`<em>&nbsp;· ${B(e, "rules.never_disarmed")}</em>` : k}
+            </span>
+          </label>`;
+		})}
+      </div>
+    </div>`;
+	}
+	_renderSuspensions(e, t) {
+		let n = this.ctx, r = n.config?.rules ?? [], i = this._visitor;
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "rules.suspensions")}</h2>
+        </div>
+        <div class="card-bd">
+          <p class="hint">${B(e, "rules.visitor_intro")}</p>
+          ${t.length ? D`<div class="stack">
+                ${t.map((t) => D`<div class="suspension">
+                    <div>
+                      <div class="lbl strong">
+                        ${t.name ?? B(e, `rules.suspension_${t.kind}`)}
+                      </div>
+                      <div class="hint mono">
+                        ${t.kind === "next" ? B(e, "rules.suspension_next_hint") : `${Vt(t.start)} – ${Vt(t.until)}`}
+                        ${t.rule_ids.length ? ` · ${t.rule_ids.map((e) => r.find((t) => t.id === e)?.name ?? e).join(", ")}` : ` · ${B(e, "rules.every_rule")}`}
+                        ${t.reduced_scenario_id ? ` · ${B(e, "rules.instead", { scenario: this._scenarioName(t.reduced_scenario_id) })}` : ""}
+                      </div>
+                    </div>
+                    <span class="spacer"></span>
+                    <button
+                      class="btn sm"
+                      ?disabled=${this._busy}
+                      @click=${() => this._run(() => n.liftSuspension(t.id))}
+                    >
+                      ${B(e, "rules.lift")}
+                    </button>
+                  </div>`)}
+              </div>` : D`<div class="empty">${B(e, "rules.no_suspensions")}</div>`}
+
+          <div class="hr"></div>
+          <div class="lbl strong">${B(e, "rules.visitor")}</div>
+          <div class="grid-form">
+            <label class="field">
+              <span class="lbl">${B(e, "rules.reason")}</span>
+              <input
+                .value=${i.name}
+                placeholder=${B(e, "rules.reason_placeholder")}
+                @input=${(e) => this._visitor = {
+			...i,
+			name: e.target.value
+		}}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.after")}</span>
+              <input
+                type="datetime-local"
+                .value=${i.start}
+                @change=${(e) => this._visitor = {
+			...i,
+			start: e.target.value
+		}}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "field.before")}</span>
+              <input
+                type="datetime-local"
+                .value=${i.until}
+                @change=${(e) => this._visitor = {
+			...i,
+			until: e.target.value
+		}}
+              />
+            </label>
+            <label class="field">
+              <span class="lbl">${B(e, "rules.instead_label")}</span>
+              <select
+                @change=${(e) => this._visitor = {
+			...i,
+			reduced_scenario_id: e.target.value || null
+		}}
+              >
+                <option value="" ?selected=${!i.reduced_scenario_id}>
+                  ${B(e, "rules.instead_nothing")}
+                </option>
+                ${(n.config?.scenarios ?? []).map((e) => D`<option
+                      .value=${e.id ?? ""}
+                      ?selected=${e.id === i.reduced_scenario_id}
+                    >
+                      ${e.name}
+                    </option>`)}
+              </select>
+              <span class="hint">${B(e, "rules.instead_hint")}</span>
+            </label>
+          </div>
+          <div class="actions">
+            <button
+              class="btn primary"
+              ?disabled=${this._busy || !i.name.trim() || !i.until}
+              @click=${this._addVisitor}
+            >
+              ${B(e, "rules.add_visitor")}
+            </button>
+            ${(n.config?.rules ?? []).length ? D`<button
+                  class="btn"
+                  ?disabled=${this._busy}
+                  @click=${() => this._run(() => n.suspend({
+			kind: "next",
+			rule_ids: []
+		}))}
+                >
+                  ${B(e, "rules.skip_next")}
+                </button>` : k}
+          </div>
+        </div>
+      </div>
+    `;
+	}
+	_renderDisarming(e) {
+		let t = this.ctx, n = t.config?.settings.allow_auto_disarm ?? !1, r = t.config?.areas ?? [];
+		return D`
+      <div class="card">
+        <div class="card-hd">
+          <h2>${B(e, "rules.disarming")}</h2>
+        </div>
+        <div class="card-bd">
+          <div class="notice">${B(e, "rules.disarming_warning")}</div>
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${n}
+              ?disabled=${this._busy || !t.isAdmin}
+              @change=${async (e) => {
+			let n = e.target.checked;
+			this._busy = !0;
+			try {
+				await t.saveSettings({ allow_auto_disarm: n });
+			} finally {
+				this._busy = !1;
+			}
+		}}
+            />
+            <span>
+              ${B(e, "rules.allow_disarm")}
+              <span class="hint">${B(e, "rules.allow_disarm_hint")}</span>
+            </span>
+          </label>
+          <div class="hr"></div>
+          <div class="lbl strong">${B(e, "rules.areas_a_rule_may_disarm")}</div>
+          <div class="chips">
+            ${r.map((t) => D`<span class=${t.is_perimeter ? "pill bad" : "pill ok"}>
+                  ${t.name}${t.is_perimeter ? ` · ${B(e, "rules.never_disarmed")}` : ""}
+                </span>`)}
+          </div>
+          <p class="hint">${B(e, "rules.perimeter_note")}</p>
+        </div>
+      </div>
+    `;
+	}
+	static {
+		this.styles = [
+			V,
+			H,
+			o`
+      .banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        border: 1px solid var(--divider-color);
+        background: var(--card-background-color);
+        font-size: 13.5px;
+      }
+      .banner.warn {
+        border-color: var(--warning-color, #c77700);
+      }
+      .banner.crit {
+        border-color: var(--error-color, #d32f2f);
+      }
+      .spacer {
+        flex: 1;
+      }
+      .block {
+        margin-top: 14px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 6px 0;
+      }
+      label.chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border: 1px solid var(--divider-color);
+        border-radius: 999px;
+        font-size: 13px;
+      }
+      label.chip.never {
+        opacity: 0.7;
+        border-style: dashed;
+      }
+      label.chip em {
+        color: var(--secondary-text-color);
+        font-style: normal;
+      }
+      .lbl.strong {
+        font-weight: 500;
+        display: block;
+        margin: 14px 0 6px;
+        font-size: 13px;
+      }
+      .suspension {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--divider-color);
+        border-radius: 8px;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .hr {
+        height: 1px;
+        background: var(--divider-color);
+        margin: 16px 0;
+        border: 0;
+      }
+      td.small {
+        font-size: 12.5px;
+      }
+    `
+		];
+	}
+};
+customElements.get("foyer-page-rules") || customElements.define("foyer-page-rules", Ut);
+//#endregion
 //#region src/panel/pages/log.ts
-var X = 50, Bt = class extends I {
+var X = 50, Wt = class extends I {
 	constructor(...e) {
 		super(...e), this._rows = [], this._total = 0, this._offset = 0, this._filters = {}, this._busy = !1, this._confirmClear = !1, this._loaded = !1;
 	}
@@ -6533,14 +7328,14 @@ var X = 50, Bt = class extends I {
       <tr class="clickable" aria-selected=${a ? "true" : "false"} @click=${() => this._open = a ? void 0 : t.id}>
         <td class="mono">${new Date(t.ts).toLocaleString(n.hass.language)}</td>
         <td>
-          <span class="state ${Ut(t.severity)}">
-            ${Vt(e, t.event_type)}
+          <span class="state ${qt(t.severity)}">
+            ${Gt(e, t.event_type)}
           </span>
         </td>
         <td><span class="tag">${B(e, `category.${t.category}`)}</span></td>
         <td>${o}</td>
         <td>
-          ${t.user_name ?? (t.channel ? Ht(e, t.channel) : "")}
+          ${t.user_name ?? (t.channel ? Kt(e, t.channel) : "")}
           ${t.detail?.attributed === "claimed" ? D`<span class="claimed">${B(e, "log.claimed")}</span>` : k}
         </td>
         <td class="detail">${this._summary(e, t)}</td>
@@ -6562,7 +7357,7 @@ var X = 50, Bt = class extends I {
                 ${t.outcome ? D`<dt>${B(e, "log.outcome")}</dt>
                       <dd>${B(e, `outcome.${t.outcome}`)}</dd>` : k}
                 ${t.channel ? D`<dt>${B(e, "log.channel")}</dt>
-                      <dd>${Ht(e, t.channel)}</dd>` : k}
+                      <dd>${Kt(e, t.channel)}</dd>` : k}
                 ${this._changeLines(e, t).map((t, n) => D`<dt>${n ? "" : B(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
                 ${this._plainDetail(t).map(([t, n]) => D`<dt>${B(e, `detail.${t}`)}</dt>
@@ -6691,23 +7486,23 @@ var X = 50, Bt = class extends I {
 		];
 	}
 };
-function Vt(e, t) {
+function Gt(e, t) {
 	let n = B(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
 	let r = B(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-function Ht(e, t) {
+function Kt(e, t) {
 	let n = B(e, `log_channel.${t}`);
 	return n.startsWith("log_channel.") ? t : n;
 }
-function Ut(e) {
+function qt(e) {
 	return e === "alarm" ? "triggered" : e === "warning" ? "arming" : "disarmed";
 }
-customElements.get("foyer-page-log") || customElements.define("foyer-page-log", Bt);
+customElements.get("foyer-page-log") || customElements.define("foyer-page-log", Wt);
 //#endregion
 //#region src/panel/pages/settings.ts
-var Wt = ["en", "it"], Gt = {
+var Jt = ["en", "it"], Yt = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -6716,7 +7511,7 @@ var Wt = ["en", "it"], Gt = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, Kt = class extends I {
+}, Xt = class extends I {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1;
 	}
@@ -6732,7 +7527,7 @@ var Wt = ["en", "it"], Gt = {
 		};
 	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Gt);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Yt);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -6943,7 +7738,7 @@ var Wt = ["en", "it"], Gt = {
               <option value="" ?selected=${!n.language}>
                 ${B(e, "settings.language_system")}
               </option>
-              ${Wt.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
+              ${Jt.map((t) => D`<option .value=${t} ?selected=${t === n.language}>
                     ${B(e, `language.${t}`)}
                   </option>`)}
             </select>
@@ -7201,7 +7996,7 @@ var Wt = ["en", "it"], Gt = {
     `];
 	}
 };
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Kt);
+customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Xt);
 //#endregion
 //#region src/panel/wizard.ts
 var Z = [
@@ -7210,7 +8005,7 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], qt = 3, Jt = class extends I {
+], Zt = 3, Qt = class extends I {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -7368,7 +8163,7 @@ var Z = [
 		return D`
       <p>${B(e, "wizard.zones_text", {
 			have: n.length,
-			want: qt
+			want: Zt
 		})}</p>
       <ul class="zones">
         ${n.map((t) => D`<li>
@@ -7705,10 +8500,10 @@ var Z = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", Jt);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", Qt);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var Yt = [
+var $t = [
 	"overview",
 	"areas",
 	"zones",
@@ -7718,10 +8513,11 @@ var Yt = [
 	"users",
 	"devices",
 	"contacts",
+	"rules",
 	"test",
 	"log",
 	"settings"
-], Xt = [
+], en = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -7730,8 +8526,9 @@ var Yt = [
 	"users",
 	"devices",
 	"contacts",
+	"rules",
 	"settings"
-], Zt = {
+], tn = {
 	overview: [
 		"area",
 		"master",
@@ -7802,6 +8599,15 @@ var Yt = [
 		"webhook",
 		"test"
 	],
+	rules: [
+		"trigger",
+		"guards",
+		"grace",
+		"suspension",
+		"visitor",
+		"disarming",
+		"next"
+	],
 	test: [
 		"trigger_column",
 		"blocks",
@@ -7835,7 +8641,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var Qt = class extends I {
+var nn = class extends I {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._offset = 0;
 	}
@@ -7941,6 +8747,26 @@ var Qt = class extends I {
 				type: "foyer/ack_webhook",
 				enabled: e
 			}),
+			cancelAuto: (t) => this._coded((n) => e.callWS({
+				type: "foyer/auto/cancel",
+				...t ? { pending_id: t } : {},
+				...Q(n)
+			})),
+			setAutoArming: (t) => this._coded((n) => e.callWS({
+				type: "foyer/auto/switch",
+				enabled: t,
+				...Q(n)
+			})),
+			suspend: (t) => this._coded((n) => e.callWS({
+				type: "foyer/auto/suspend",
+				...$(t),
+				...Q(n)
+			})),
+			liftSuspension: (t) => this._coded((n) => e.callWS({
+				type: "foyer/auto/suspend",
+				suspension_id: t,
+				...Q(n)
+			})),
 			saveSettings: (e) => this._edit("settings", {
 				type: "foyer/config/settings",
 				settings: {
@@ -8135,7 +8961,7 @@ var Qt = class extends I {
     `;
 	}
 	_renderTabs(e) {
-		let t = this._canConfigure ? Yt : Yt.filter((e) => !Xt.includes(e));
+		let t = this._canConfigure ? $t : $t.filter((e) => !en.includes(e));
 		return t.length < 2 ? k : D`
       <nav class="tabs" role="tablist">
         ${t.map((t) => D`
@@ -8173,6 +8999,7 @@ var Qt = class extends I {
 			case "users": return D`<foyer-page-users .ctx=${t}></foyer-page-users>`;
 			case "devices": return D`<foyer-page-devices .ctx=${t}></foyer-page-devices>`;
 			case "contacts": return D`<foyer-page-contacts .ctx=${t}></foyer-page-contacts>`;
+			case "rules": return D`<foyer-page-rules .ctx=${t}></foyer-page-rules>`;
 			case "test": return D`<foyer-page-test .ctx=${t}></foyer-page-test>`;
 			case "log": return D`<foyer-page-log .ctx=${t}></foyer-page-log>`;
 			case "settings": return D`<foyer-page-settings .ctx=${t}></foyer-page-settings>`;
@@ -8196,7 +9023,7 @@ var Qt = class extends I {
         ${r ? D`<div class="help-body">
               <p>${B(e, `${n}.intro`)}</p>
               <dl>
-                ${Zt[t].map((t) => D`
+                ${tn[t].map((t) => D`
                     <dt>${B(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${B(e, `${n}.items.${t}.text`)}</dd>
                   `)}
@@ -8440,5 +9267,5 @@ var Qt = class extends I {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", Qt);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", nn);
 //#endregion

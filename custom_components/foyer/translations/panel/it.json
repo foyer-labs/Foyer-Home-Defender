@@ -27,7 +27,8 @@
     "users": "Utenti",
     "devices": "Dispositivi di inserimento",
     "test": "Test e diagnostica",
-    "contacts": "Contatti"
+    "contacts": "Contatti",
+    "rules": "Regole automatiche"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -340,7 +341,8 @@
     "notify_contact_ids": "Annuncia a",
     "area_ids": "Aree",
     "after": "Dalle",
-    "before": "Alle"
+    "before": "Alle",
+    "is_perimeter": "Area perimetrale"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -447,7 +449,8 @@
     "zones": "Zone",
     "reports_as_hint": "Ciò che vedono assistenti vocali e HomeKit. Non cambia il comportamento.",
     "entry_hint": "Per le zone che non ne impostano uno proprio.",
-    "exit_hint": "Il tempo per uscire dopo l'inserimento, salvo che lo scenario ne imposti uno proprio."
+    "exit_hint": "Il tempo per uscire dopo l'inserimento, salvo che lo scenario ne imposti uno proprio.",
+    "perimeter_hint": "L'anello esterno di difesa. Una regola automatica non disarma mai un'area perimetrale, qualunque cosa dica la regola (§9.4)."
   },
   "zones": {
     "title": "Zone",
@@ -940,6 +943,40 @@
         "test": {
           "term": "Prova i canali",
           "text": "Invia davvero. Usalo: un canale d'emergenza mai provato è un canale che si scopre durante l'emergenza."
+        }
+      }
+    },
+    "rules": {
+      "title": "Cosa decide questa pagina",
+      "intro": "Un modello chiuso di regole, non un motore di automazioni: quattro attivazioni, tre azioni, una finestra di attività e tre condizioni di sicurezza. Le regole agiscono come farebbe una persona, quindi tutto ciò che fanno finisce nel log con il nome della regola sul canale auto_rule — e anche tutto ciò che una condizione ha fermato, perché «perché non si è armata ieri sera?» è una domanda che la gente fa.",
+      "items": {
+        "trigger": {
+          "term": "Attivazione",
+          "text": "L'assenza e lo stato di un'entità sono condizioni che restano vere, quindi una regola bloccata agisce appena la condizione si libera. Un orario o un arrivo accadono una volta: se bloccati, quell'occasione è persa."
+        },
+        "guards": {
+          "term": "Condizioni di sicurezza",
+          "text": "Ognuna è un motivo per non agire. Vengono rivalutate alla fine del conto alla rovescia, perché due minuti bastano a far rientrare qualcuno."
+        },
+        "grace": {
+          "term": "Periodo di grazia",
+          "text": "Una notifica con un bottone Annulla prima che la regola agisca. Se nessuno preme nulla, succede; se qualcuno annulla, la regola aspetta che la sua condizione torni vera."
+        },
+        "suspension": {
+          "term": "Sospensione",
+          "text": "Tiene ferme le regole fino a una data e un'ora, o per una sola occasione. Non è una modifica di configurazione: scade da sola."
+        },
+        "visitor": {
+          "term": "Visita prevista",
+          "text": "La stessa sospensione con un nome sopra. Meccanicamente identica; la differenza è che fra sei mesi il log dice ancora perché."
+        },
+        "disarming": {
+          "term": "Disarmo automatico",
+          "text": "Spento finché non lo accendi, e mai su un'area perimetrale. Un cambio di scenario che lascerebbe disarmata un'area armata conta come disarmo."
+        },
+        "next": {
+          "term": "Prossima azione automatica",
+          "text": "Ciò che è programmato, non ciò che accadrà di sicuro: le condizioni si valutano nel momento in cui la regola agisce, e il log dice quale l'ha fermata."
         }
       }
     }
@@ -1878,5 +1915,103 @@
     "webhook_hint": "Il provider vocale fa una POST su questo percorso quando il tasto viene premuto. Disattivandolo l'indirizzo viene dimenticato: riattivandolo ne viene dato uno nuovo.",
     "no_quiet_hours": "Sempre raggiungibile",
     "actionable_entity": "Questa è un'entità notify: porta un messaggio e un titolo e nient'altro, quindi al telefono non arrivano né il pulsante né i dati aggiuntivi. Usa il servizio notify che ci sta dietro se da questo canale si deve poter prendere atto."
+  },
+  "rules": {
+    "title": "Regole",
+    "add": "Aggiungi regola",
+    "new": "Nuova regola",
+    "none": "Nessuna regola. La casa si arma da sola solo quando ne esiste una.",
+    "action": "Azione",
+    "status": "Stato",
+    "active": "Attiva",
+    "disabled": "Spenta",
+    "at_once": "Subito",
+    "enabled": "Regola attiva",
+    "switched_off": "Le regole automatiche sono spente. Nulla si armerà o disarmerà da solo.",
+    "switch_on": "Accendi",
+    "switch_off": "Spegni",
+    "counting_arm": "{rule}: arma {scenario} fra {seconds} s.",
+    "counting_disarm": "{rule}: disarma fra {seconds} s.",
+    "counting_switch": "{rule}: passa a {scenario} fra {seconds} s.",
+    "cancel_now": "Annulla",
+    "next_arm": "Prossima: {rule} arma {scenario}, {when}.",
+    "next_disarm": "Prossima: {rule} disarma, {when}.",
+    "next_switch": "Prossima: {rule} passa a {scenario}, {when}.",
+    "next_none": "Non è programmato nulla.",
+    "trigger_absence": "{n} persone assenti da {minutes} min",
+    "trigger_presence": "una di {n} persone arriva",
+    "trigger_time": "alle {at}, {days}",
+    "trigger_entity": "{entity} è {state} da {minutes} min",
+    "every_day": "tutti i giorni",
+    "trigger_kind_absence": "Assenza — tutti fuori",
+    "trigger_kind_presence": "Presenza — qualcuno arriva",
+    "trigger_kind_time": "Ora del giorno",
+    "trigger_kind_entity": "Stato di un'entità",
+    "trigger_hint_absence": "Tutte le persone scelte devono essere fuori per tutto il tempo.",
+    "trigger_hint_presence": "Scatta quando una di loro rientra. Chi è già in casa non è arrivato.",
+    "trigger_hint_time": "Accade una volta. Se una condizione la blocca, l'occasione è persa, non rimandata.",
+    "trigger_hint_entity": "L'entità deve mantenere quello stato per tutto il tempo.",
+    "at": "Alle",
+    "for_minutes": "Per (minuti)",
+    "people": "Persone osservate da questa regola",
+    "no_people": "Non è stata trovata nessuna entità person o device_tracker.",
+    "people_hint": "Una persona che Home Assistant non riesce a leggere non è mai la prova che non ci sia nessuno.",
+    "action_kind_arm": "Arma uno scenario",
+    "action_kind_disarm": "Disarma le aree indicate",
+    "action_kind_switch": "Passa a un altro scenario",
+    "action_arm": "Arma {scenario}",
+    "action_disarm": "Disarma {areas}",
+    "action_switch": "Passa a {scenario}",
+    "choose_scenario": "Scegli uno scenario",
+    "window_hint": "Fuori da questa finestra la regola non esiste: non viene bloccata e non scrive nulla nel log.",
+    "guard_disarmed": "Solo se è tutto disarmato",
+    "guard_ready": "Solo se tutte le zone sono pronte",
+    "guard_ready_hint": "Altrimenti la regola armerebbe attorno a una finestra aperta.",
+    "guard_quiet": "nessun movimento interno da {minutes} min",
+    "guard_quiet_label": "Solo se nessun movimento interno da (minuti)",
+    "guard_quiet_hint": "Prende il caso del telefono scarico: qualcuno è in casa, il suo telefono no.",
+    "guard_none": "Nessuna",
+    "grace_hint": "Una notifica con un bottone Annulla prima di agire. 0 agisce subito.",
+    "notify_hint": "Chi sente il conto alla rovescia e ha il bottone Annulla. Le loro ore di quiete valgono comunque.",
+    "never_disarmed": "mai disarmata da una regola",
+    "suspensions": "Sospensioni",
+    "visitor_intro": "Una finestra con un nome sospende l'armatura automatica — e fra sei mesi il log dice perché, cosa che una sospensione anonima non farà mai.",
+    "suspension_until": "Sospesa fino a",
+    "suspension_next": "Salta la prossima occasione",
+    "suspension_visitor": "Visita prevista",
+    "suspension_next_hint": "Finisce la prossima volta che la regola avrebbe agito.",
+    "every_rule": "tutte le regole",
+    "instead": "arma {scenario} al suo posto",
+    "lift": "Togli",
+    "no_suspensions": "Non c'è nessuna sospensione.",
+    "visitor": "Visita prevista",
+    "reason": "Motivo",
+    "reason_placeholder": "Tecnico della caldaia",
+    "instead_label": "Applica al suo posto",
+    "instead_nothing": "Niente — lascia disarmato",
+    "instead_hint": "Si applica quando la regola sospesa avrebbe armato, non all'apertura della finestra.",
+    "add_visitor": "Aggiungi finestra",
+    "skip_next": "Salta la prossima occasione",
+    "disarming": "Disarmo automatico",
+    "disarming_warning": "La presenza è dedotta da un telefono. Un telefono rubato apre la casa, una deriva GPS di 200 metri apre la casa, un MAC clonato sulla rete di casa apre la casa. È l'attacco più banale contro un allarme fai-da-te, ed è la ragione per cui questo è spento per default.",
+    "allow_disarm": "Permetti alle regole di disarmare",
+    "allow_disarm_hint": "Vale anche per un cambio di scenario che lascerebbe disarmata un'area armata.",
+    "areas_a_rule_may_disarm": "Aree che una regola può disarmare",
+    "perimeter_note": "Le aree perimetrali sono escluse nel motore, non in questa schermata. Chi entra con un telefono rubato trova comunque armata ogni porta e finestra esterna.",
+    "block_switch_off": "Spente",
+    "block_suspended": "Sospesa",
+    "block_walk_test": "Walk test",
+    "block_not_disarmed": "Non disarmato",
+    "block_not_ready": "Una zona non è pronta",
+    "block_motion": "Movimento in casa",
+    "block_auto_disarm_disabled": "Disarmo non permesso",
+    "block_perimeter": "Solo perimetro",
+    "weekday_0": "Lun",
+    "weekday_1": "Mar",
+    "weekday_2": "Mer",
+    "weekday_3": "Gio",
+    "weekday_4": "Ven",
+    "weekday_5": "Sab",
+    "weekday_6": "Dom"
   }
 }

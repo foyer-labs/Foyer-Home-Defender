@@ -29,6 +29,7 @@ import "./pages/groups";
 import "./pages/users";
 import "./pages/devices";
 import "./pages/contacts";
+import "./pages/rules";
 import "./pages/test";
 import "./pages/log";
 import "./pages/settings";
@@ -45,6 +46,7 @@ const PAGES: PageId[] = [
   "users",
   "devices",
   "contacts",
+  "rules",
   "test",
   "log",
   "settings",
@@ -58,6 +60,7 @@ const CONFIG_PAGES: PageId[] = [
   "users",
   "devices",
   "contacts",
+  "rules",
   "settings",
 ];
 
@@ -81,6 +84,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   users: ["own_code", "policy", "identified", "duress", "lockout", "scope"],
   devices: ["declared", "device_id", "identifies", "topics", "detail", "last_result"],
   contacts: ["order", "quiet", "linked", "step", "acknowledge", "webhook", "test"],
+  rules: ["trigger", "guards", "grace", "suspension", "visitor", "disarming", "next"],
   test: ["trigger_column", "blocks", "battery", "nothing_runs", "clock", "skipped", "inherited"],
   log: ["category", "zone_disarmed", "incident", "user", "export"],
   settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
@@ -311,6 +315,40 @@ class FoyerPanel extends LitElement {
       // guess it (§7.2, part 1 decision 6).
       setAckWebhook: (enabled) =>
         this._edit("settings", { type: "foyer/ack_webhook", enabled }),
+      // Automatic arming (§9.4). Cancelling carries a code only where an
+      // installation has raised the policy for it; the backend decides.
+      cancelAuto: (pendingId) =>
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/auto/cancel",
+            ...(pendingId ? { pending_id: pendingId } : {}),
+            ...withCode(code),
+          }),
+        ),
+      setAutoArming: (enabled) =>
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/auto/switch",
+            enabled,
+            ...withCode(code),
+          }),
+        ),
+      suspend: (suspension) =>
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/auto/suspend",
+            ...prune(suspension),
+            ...withCode(code),
+          }),
+        ),
+      liftSuspension: (id) =>
+        this._coded((code) =>
+          hass.callWS<CommandResult>({
+            type: "foyer/auto/suspend",
+            suspension_id: id,
+            ...withCode(code),
+          }),
+        ),
       saveSettings: (settings) =>
         this._edit("settings", {
           type: "foyer/config/settings",
@@ -597,6 +635,8 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-devices .ctx=${ctx}></foyer-page-devices>`;
       case "contacts":
         return html`<foyer-page-contacts .ctx=${ctx}></foyer-page-contacts>`;
+      case "rules":
+        return html`<foyer-page-rules .ctx=${ctx}></foyer-page-rules>`;
       case "test":
         return html`<foyer-page-test .ctx=${ctx}></foyer-page-test>`;
       case "log":

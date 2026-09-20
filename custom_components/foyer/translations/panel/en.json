@@ -27,7 +27,8 @@
     "users": "Users",
     "devices": "Arming devices",
     "test": "Test & diagnostics",
-    "contacts": "Contacts"
+    "contacts": "Contacts",
+    "rules": "Automation rules"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -340,7 +341,8 @@
     "notify_contact_ids": "Announce to",
     "area_ids": "Areas",
     "after": "From",
-    "before": "Until"
+    "before": "Until",
+    "is_perimeter": "Perimeter area"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -447,7 +449,8 @@
     "zones": "Zones",
     "reports_as_hint": "What voice assistants and HomeKit see. Changes nothing about behaviour.",
     "entry_hint": "For zones that do not set their own.",
-    "exit_hint": "Time to leave after arming, unless the scenario sets its own."
+    "exit_hint": "Time to leave after arming, unless the scenario sets its own.",
+    "perimeter_hint": "The outer defence ring. An automatic rule never disarms a perimeter area, whatever the rule says (§9.4)."
   },
   "zones": {
     "title": "Zones",
@@ -940,6 +943,40 @@
         "test": {
           "term": "Test channels",
           "text": "Really sends. Use it — an untested emergency channel is one you discover during the emergency."
+        }
+      }
+    },
+    "rules": {
+      "title": "What this page decides",
+      "intro": "A closed rule model, not an automation engine: four triggers, three actions, an active window and three guards. Rules act as a user would, so everything they do is logged with the rule's name against the auto_rule channel — and everything a guard stopped is logged too, because “why did it not arm last night?” is a question people ask.",
+      "items": {
+        "trigger": {
+          "term": "Trigger",
+          "text": "Absence and entity state are conditions that stay true, so a rule a guard blocked acts as soon as the guard clears. A time or an arrival happens once: blocked, that occurrence is missed."
+        },
+        "guards": {
+          "term": "Guards",
+          "text": "Each one is a reason not to act. They are evaluated again when the countdown ends, because two minutes is long enough for somebody to come home."
+        },
+        "grace": {
+          "term": "Grace period",
+          "text": "A notification with a Cancel button before the rule acts. Nobody presses anything and it happens; somebody presses Cancel and the rule waits until its condition becomes true again."
+        },
+        "suspension": {
+          "term": "Suspension",
+          "text": "Holds rules back until a date and time, or for one occurrence. It is not a configuration change: it expires on its own."
+        },
+        "visitor": {
+          "term": "Expected visitor",
+          "text": "The same suspension with a name on it. Mechanically identical; the difference is that the log still says why in six months."
+        },
+        "disarming": {
+          "term": "Automatic disarming",
+          "text": "Off until you turn it on, and never on a perimeter area. A scenario switch that would leave an armed area disarmed counts as disarming."
+        },
+        "next": {
+          "term": "Next automatic action",
+          "text": "What is scheduled, not what will certainly happen: the guards are evaluated at the moment the rule acts, and the log says which one stopped it."
         }
       }
     }
@@ -1878,5 +1915,103 @@
     "webhook_hint": "Post to this path from the voice provider when the key is pressed. Switching this off forgets the address: switching it on again gives out a new one.",
     "no_quiet_hours": "Always reachable",
     "actionable_entity": "This is a notify entity: it carries a message and a title and nothing else, so no button, no target and no extra data reach the phone. Use the notify service behind it if this channel should be able to acknowledge."
+  },
+  "rules": {
+    "title": "Rules",
+    "add": "Add rule",
+    "new": "New rule",
+    "none": "No rules yet. The house arms itself only once one exists.",
+    "action": "Action",
+    "status": "Status",
+    "active": "Active",
+    "disabled": "Off",
+    "at_once": "At once",
+    "enabled": "Rule is on",
+    "switched_off": "Automatic rules are switched off. Nothing will arm or disarm on its own.",
+    "switch_on": "Switch on",
+    "switch_off": "Switch off",
+    "counting_arm": "{rule}: arming {scenario} in {seconds} s.",
+    "counting_disarm": "{rule}: disarming in {seconds} s.",
+    "counting_switch": "{rule}: switching to {scenario} in {seconds} s.",
+    "cancel_now": "Cancel",
+    "next_arm": "Next: {rule} arms {scenario}, {when}.",
+    "next_disarm": "Next: {rule} disarms, {when}.",
+    "next_switch": "Next: {rule} switches to {scenario}, {when}.",
+    "next_none": "Nothing is scheduled.",
+    "trigger_absence": "{n} people away for {minutes} min",
+    "trigger_presence": "one of {n} people arrives",
+    "trigger_time": "at {at}, {days}",
+    "trigger_entity": "{entity} is {state} for {minutes} min",
+    "every_day": "every day",
+    "trigger_kind_absence": "Absence — everyone away",
+    "trigger_kind_presence": "Presence — somebody arrives",
+    "trigger_kind_time": "Time of day",
+    "trigger_kind_entity": "Entity state",
+    "trigger_hint_absence": "Every person chosen has to be away for the whole time.",
+    "trigger_hint_presence": "Fires when one of them comes home. Somebody already at home has not arrived.",
+    "trigger_hint_time": "Happens once. Blocked by a guard, the occurrence is missed rather than postponed.",
+    "trigger_hint_entity": "The entity has to hold that state for the whole time.",
+    "at": "At",
+    "for_minutes": "For (minutes)",
+    "people": "People this rule watches",
+    "no_people": "No person or device tracker entities were found.",
+    "people_hint": "A person Home Assistant cannot read is never taken as evidence that nobody is in.",
+    "action_kind_arm": "Arm a scenario",
+    "action_kind_disarm": "Disarm named areas",
+    "action_kind_switch": "Switch to another scenario",
+    "action_arm": "Arm {scenario}",
+    "action_disarm": "Disarm {areas}",
+    "action_switch": "Switch to {scenario}",
+    "choose_scenario": "Choose a scenario",
+    "window_hint": "Outside this window the rule does not exist: it is not blocked and nothing is logged.",
+    "guard_disarmed": "Only if currently disarmed",
+    "guard_ready": "Only if every zone is ready",
+    "guard_ready_hint": "Otherwise the rule would arm around an open window.",
+    "guard_quiet": "no interior motion for {minutes} min",
+    "guard_quiet_label": "Only if no interior motion for (minutes)",
+    "guard_quiet_hint": "Catches the flat phone battery: somebody is in, their phone is not.",
+    "guard_none": "None",
+    "grace_hint": "A notification with a Cancel button before it acts. 0 acts at once.",
+    "notify_hint": "Who hears the countdown and holds the Cancel button. Their quiet hours still apply.",
+    "never_disarmed": "never disarmed by a rule",
+    "suspensions": "Suspensions",
+    "visitor_intro": "A named window suspends automatic arming — and in six months the log says why, which a bare suspension never will.",
+    "suspension_until": "Suspended until",
+    "suspension_next": "Skip the next occurrence",
+    "suspension_visitor": "Expected visitor",
+    "suspension_next_hint": "Ends the next time the rule would have acted.",
+    "every_rule": "every rule",
+    "instead": "arms {scenario} instead",
+    "lift": "Lift",
+    "no_suspensions": "Nothing is suspended.",
+    "visitor": "Expected visitor",
+    "reason": "Reason",
+    "reason_placeholder": "Boiler engineer",
+    "instead_label": "Apply instead",
+    "instead_nothing": "Nothing — leave it disarmed",
+    "instead_hint": "Applied when the suspended rule would have armed, not when the window opens.",
+    "add_visitor": "Add window",
+    "skip_next": "Skip the next occurrence",
+    "disarming": "Automatic disarming",
+    "disarming_warning": "Presence is inferred from a phone. A stolen phone disarms the house, GPS drift of 200 metres disarms the house, a cloned MAC address on the home network disarms the house. This is the most banal attack against a DIY alarm, which is why this is off by default.",
+    "allow_disarm": "Allow rules to disarm",
+    "allow_disarm_hint": "Also covers a scenario switch that would drop an armed area.",
+    "areas_a_rule_may_disarm": "Areas a rule may disarm",
+    "perimeter_note": "Perimeter areas are excluded in the engine, not on this screen. Whoever walks in on a stolen phone still finds every external door and window armed.",
+    "block_switch_off": "Switched off",
+    "block_suspended": "Suspended",
+    "block_walk_test": "Walk test",
+    "block_not_disarmed": "Not disarmed",
+    "block_not_ready": "A zone is not ready",
+    "block_motion": "Motion inside",
+    "block_auto_disarm_disabled": "Disarming not allowed",
+    "block_perimeter": "Perimeter only",
+    "weekday_0": "Mon",
+    "weekday_1": "Tue",
+    "weekday_2": "Wed",
+    "weekday_3": "Thu",
+    "weekday_4": "Fri",
+    "weekday_5": "Sat",
+    "weekday_6": "Sun"
   }
 }
