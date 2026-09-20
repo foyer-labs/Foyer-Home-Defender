@@ -99,6 +99,12 @@ e nessuna connessione verso l'esterno che parta da Foyer.
 - **Un registro eventi in un archivio tutto suo**, che la cancellazione dopo
   dieci giorni del recorder non può toccare: cosa è successo, dove, attraverso
   quale canale, se ogni azione ha davvero funzionato, e chi ha cambiato cosa.
+- **Il registro parla di persone, e sa lasciarne andare una.** Consegna a
+  qualcuno ogni riga che lo nomina, come file. Togli una persona dal registro
+  senza perdere un solo evento — il racconto di *cosa è successo* sopravvive
+  alla rimozione di *chi*. Accorcia la conservazione sulle categorie che
+  nominano persone, oppure lascia che i nomi invecchino da soli, dopo che ti è
+  stato detto chiaramente quanto costa.
 - **Un simulatore che risponde a «cosa succederebbe se…» senza che succeda
   niente.** Scegli uno scenario e un'ora, forza l'apertura di una finestra un
   minuto dopo, e leggi tutta la decisione, comprese le azioni che *non*
@@ -377,6 +383,46 @@ corrente, perché un UPS sul router è la cosa che rende di più fra quelle che
 puoi comprare, e perché un canale GSM locale è l'unico che sopravvive al
 taglio della fibra.
 
+## Il registro parla di persone
+
+Il registro racconta chi era in casa, quando è arrivato e quando è uscito. In
+una famiglia non sono affari di nessun altro — l'esenzione domestica del GDPR
+lo copre e non c'è niente da fare. **Smette di coprirlo nel momento in cui il
+registro scrive qualcun altro**: la signora delle pulizie le cui entrate
+restano per un mese, il tecnico della caldaia, la babysitter. E non si applica
+affatto al B&B, alla casa vacanze o al piccolo ufficio.
+
+Così, su pagina 10, accanto al registro stesso:
+
+- **Esporta le righe di una persona** in CSV o JSON, in un file che porta il
+  suo nome. Largo apposta: quello che ha fatto, più quello che la casa ha fatto
+  a lei — il suo tag rifiutato, un'escalation che l'ha raggiunta.
+- **Cancella una persona**, che non è la stessa cosa che cancellare il suo
+  utente. Cancellare un utente lascia la storia di quello che ha fatto, perché
+  il nome è copiato dentro ogni riga proprio perché resti. La cancellazione
+  svuota il nome, l'account, il canale e il dispositivo sulle sue righe e
+  lascia ogni evento dov'era: il registro continua a rispondere a *cosa è
+  successo la notte del quattordici*, e non risponde più a *chi*. Viene
+  registrata a sua volta, senza nominarla.
+
+E su pagina 11:
+
+- **Un preset di conservazione a sette giorni** che tocca solo le categorie che
+  nominano persone, e lascia stare guasti e stati delle porte — quelli non
+  nominano nessuno e sono quello che leggi quando un sensore non ha reagito tre
+  settimane fa.
+- **La pseudonimizzazione a tempo**, spenta per default, che dopo N giorni
+  sostituisce i nomi con un identificatore stabile. Il pannello dice, prima che
+  tu la accenda, che rinuncia alla risposta a *chi ha disinserito quella notte*
+  per ogni riga più vecchia — che è esattamente la domanda per cui il registro
+  esiste. Uno scambio vero, non una sicurezza gratuita, e non si torna indietro
+  rispegnendola.
+
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+è la versione pratica: cosa contiene una riga, dove finisce l'esenzione, e cosa
+farci. È informazione, non consulenza legale — ed è in inglese, come tutta la
+documentazione tecnica.
+
 ## Tastiere, tag e telecomandi
 
 Foyer non parla con le singole tastiere: espone un contratto. I modelli cambiano ogni
@@ -447,10 +493,6 @@ card.
 
 ## Cosa manca ancora, e conta
 
-- **Nessuno strumento per la privacy, ancora.** Cancellare la storia di una
-  sola persona, la pseudonimizzazione a tempo e l'esportazione per persona
-  sono la prossima cosa, e fino ad allora il registro tiene i nomi per trenta
-  giorni. *La prossima.*
 - **Nessuna tastiera ESPHome nostra.** Una costruzione fai-da-te rientra nel
   contratto come qualunque altra, ma questo progetto non ne mantiene una
   in v1.
@@ -706,10 +748,25 @@ non capisce potrebbe smettere in silenzio di proteggere qualcosa.
 <details>
 <summary>Cosa succede se rimuovo l'integrazione?</summary>
 
-Se ne vanno la sua configurazione, lo stato dell'allarme salvato e le sue
-entità. L'archivio del registro eventi resta apposta sul disco: se cancellare
-trenta giorni di storia è una domanda che va fatta a te, e farla per bene è
-nella tabella di marcia.
+Se ne vanno la sua configurazione, lo stato dell'allarme salvato, ogni entità e
+dispositivo che ha creato, il pannello nella barra laterale, le sue
+segnalazioni in Impostazioni, le notifiche che aveva messo su e il messaggio
+MQTT ritenuto — un messaggio ritenuto sopravvive all'integrazione e
+continuerebbe a raccontare a chiunque si colleghi dopo cosa stava facendo la
+casa.
+
+L'archivio del registro eventi se ne va solo se lo hai detto tu, con un
+interruttore su pagina 11 che è spento per default. La conferma di Home
+Assistant è l'ultima finestra che c'è, quindi la domanda si fa prima — e
+tenere trenta giorni di storia è l'unica risposta che non può distruggere
+qualcosa che nessuno voleva distruggere. Il file è `foyer-log.db` nella
+cartella di configurazione.
+
+Gli scatti delle telecamere non vengono mai cancellati. Sono fotografie
+dell'interno di casa tua, in una cartella che hai scelto tu e che può contenere
+file che non sono mai stati di Foyer — rimuoverli sta a te.
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+lo ripete tutto, nel posto dove uno lo va a cercare.
 
 </details>
 

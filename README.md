@@ -95,6 +95,11 @@ outbound connection of Foyer's own.
 - **An event log in a database of its own**, which the recorder's ten-day purge
   cannot touch: what happened, where, through which channel, whether each
   action actually worked, and who changed what.
+- **The log is about people, and it can let one go.** Hand somebody every row
+  that names them, as a file. Take a person out of the log without losing a
+  single event — the record of *what happened* survives the removal of *who*.
+  Shorten retention on the categories that name people, or let names age out
+  on their own, having been told plainly what that costs.
 - **A simulator that answers "what would happen if…" without anything
   happening.** Pick a scenario and an hour, force a window open a minute in,
   and read the whole decision, including the actions that would *not* have run
@@ -336,6 +341,42 @@ interference opens an incident, as jamming does in a professional panel.
 Persistent problems also become Home Assistant repair issues, in Settings,
 where somebody meets them without opening the Foyer panel.
 
+## The log is about people
+
+The log records who was in the house, when they arrived and when they left. In
+a family that is nobody's business but yours — the GDPR's household exemption
+covers it and there is nothing to do. **It stops covering it the moment the log
+records somebody else**: the cleaner whose arrivals are kept for a month, the
+boiler engineer, the babysitter. And it does not apply at all to the B&B, the
+holiday let or the small office.
+
+So, on page 10, beside the log itself:
+
+- **Export one person's rows** as CSV or JSON, in a file named after them.
+  Wide on purpose: what they did, plus what the house did to them — their tag
+  refused, an escalation that reached them.
+- **Erase one person**, which is not the same as deleting their user. Deleting
+  a user leaves the history of what they did, because the name is copied into
+  every row precisely so that it does. Erasing empties the name, the account,
+  the channel and the device on their rows and leaves every event where it
+  was: the log still answers *what happened on the night of the fourteenth*,
+  and no longer answers *who*. It is itself recorded, without naming them.
+
+And on page 11:
+
+- **A seven-day retention preset** that touches only the categories naming
+  people, leaving faults and door states alone — those name nobody and are
+  what you read when a sensor did not react three weeks ago.
+- **Timed pseudonymisation**, off by default, which after N days replaces names
+  with a stable identifier. The panel says before you switch it on that it
+  trades away the answer to *who disarmed that night* for every older row —
+  which is the very question the log exists to answer. A real trade, not a
+  free safety feature, and it cannot be undone by switching it off again.
+
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+is the practical version: what a row contains, where the exemption stops, and
+what to do about it. It is information, not legal advice.
+
 [docs/system-health.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/system-health.md)
 has the detail and states the heuristic as a heuristic;
 [docs/resilience.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/resilience.md)
@@ -420,9 +461,6 @@ everything it records, and it can call any service you like.
 
 ## Not yet, and it matters
 
-- **No privacy tooling yet.** Deleting one person's history, timed
-  pseudonymisation and a per-person export are the next thing, and the log
-  keeps names for thirty days until they land. *Next.*
 - **No ESPHome keypad of our own.** DIY builds fit the contract like anything
   else, but this project does not maintain one in v1.
 
@@ -655,10 +693,22 @@ something.
 <details>
 <summary>What happens if I remove the integration?</summary>
 
-Its configuration, its saved alarm state and its entities go with it. The event
-log database is deliberately left on disk: whether to delete thirty days of
-history is a question you should be asked, and being asked it properly is on
-the roadmap.
+Its configuration, its saved alarm state, every entity and device it created,
+the sidebar panel, its repair issues, the notifications it put up and its
+retained MQTT message — a retained message outlives the integration and would
+keep telling whoever connects to that broker next what the house was doing.
+
+The event log database goes only if you said so, with a switch on page 11 that
+is off by default. Home Assistant's own confirmation is the last dialogue
+there is, so the question is asked in advance, and keeping thirty days of
+history is the only answer that cannot destroy something nobody meant to
+destroy. The file is `foyer-log.db` in your configuration directory.
+
+Camera snapshots are never deleted. They are photographs of the inside of your
+house, in a folder you chose, which may hold files that were never Foyer's —
+so removing them is left to you.
+[docs/privacy.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/privacy.md)
+says all of this again, in the place somebody looks for it.
 
 </details>
 
