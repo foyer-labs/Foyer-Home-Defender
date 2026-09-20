@@ -486,7 +486,11 @@ class LogStore:
             # everything: an erasure with nothing to match on must erase
             # nothing at all.
             return " WHERE 0", []
-        return " WHERE " + " OR ".join("(" + c + ")" for c in clauses), params
+        # The whole group in one pair of brackets, because callers append
+        # " AND ts < ?" to this and SQL binds AND tighter than OR: without
+        # them the time condition would apply to the last clause alone, and
+        # the daily sweep would pseudonymise rows written this morning.
+        return " WHERE (" + " OR ".join("(" + c + ")" for c in clauses) + ")", params
 
     async def async_person_count(self, ref: PersonRef) -> dict[str, int]:
         """How many rows each key finds, before anybody presses the button.
