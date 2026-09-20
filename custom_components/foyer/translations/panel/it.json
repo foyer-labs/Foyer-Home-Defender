@@ -1586,17 +1586,17 @@
     "person_intro": "Il registro racconta chi era in casa e quando, per tutto il tempo che la conservazione tiene. L'esportazione consegna a qualcuno ogni riga che la riguarda; la cancellazione la toglie dal registro e lascia ogni evento dov'è, così il racconto di cosa è successo sopravvive alla rimozione di chi.",
     "person": "Persona",
     "person_none": "Scegli una persona",
-    "person_found": "Verrebbero cancellate {total} righe: {by_id} trovate dall'account, {by_name} dal solo nome — righe scritte prima che fosse un utente Foyer, o sotto un nome che ha poi cambiato.",
-    "person_export_rows": "Un'esportazione porta {rows} righe: quello che ha fatto, più quello che la casa ha fatto a lei — il suo tag rifiutato, un'escalation che l'ha raggiunta.",
+    "person_found": "Righe che verrebbero cancellate: {total} — {by_id} trovate dal suo account, {by_name} dal solo nome (scritte prima che fosse un utente Foyer, o sotto un nome che ha poi cambiato), {about} sul suo account.",
+    "person_export_rows": "Righe nell'esportazione: {rows} — quello che ha fatto, più quello che la casa ha fatto a lei: il suo tag rifiutato, un'escalation che l'ha raggiunta.",
     "person_export_csv": "Esporta le sue righe (CSV)",
     "person_export_json": "Esporta le sue righe (JSON)",
     "person_erase": "Cancella la sua storia",
     "person_erase_yes": "Cancella",
-    "person_erase_confirm": "Questo svuota il nome, l'account, il canale e il dispositivo su {rows} righe, per sempre. Gli eventi restano: il registro continuerà a dire cosa è successo quella notte, e non dirà più chi. La cancellazione stessa viene registrata, senza nominarla.",
-    "person_erase_confirm_pseudonym": "Questo sostituisce il nome su {rows} righe con un identificatore stabile, per sempre. Il registro continuerà a dire che la stessa persona ha agito in due notti diverse — che non è la stessa cosa che dimenticarla. La cancellazione stessa viene registrata, senza nominarla.",
+    "person_erase_confirm": "Questo svuota il nome, l'account, il canale e il dispositivo su tutte le righe trovate — {rows} — per sempre. Gli eventi restano: il registro continuerà a dire cosa è successo quella notte, e non dirà più chi. La cancellazione stessa viene registrata, senza nominarla.",
+    "person_erase_confirm_pseudonym": "Questo sostituisce il nome su tutte le righe trovate — {rows} — con un identificatore stabile, per sempre. Il registro continuerà a dire che la stessa persona ha agito in due notti diverse, che non è la stessa cosa che dimenticarla. La cancellazione stessa viene registrata, senza nominarla.",
     "person_keep_pseudonym": "Tieni un identificatore stabile invece di dimenticare",
     "person_keep_pseudonym_hint": "Spento, le righe perdono la persona del tutto. Acceso, tengono un identificatore opaco che non dice nulla di lei ma continua a legare le sue righe fra loro. Chi chiede di essere dimenticato di solito chiede la prima.",
-    "person_erased": "{rows} righe non nominano più nessuno."
+    "person_erased": "Righe che non nominano più nessuno: {rows}."
   },
   "language": {
     "en": "English",

@@ -1586,17 +1586,17 @@
     "person_intro": "The log records who was in the house and when, for as long as retention keeps it. Export hands somebody every row that is about them; erasing takes them out of the log and leaves every event where it is, so the record of what happened survives the removal of who.",
     "person": "Person",
     "person_none": "Choose a person",
-    "person_found": "{total} rows would be erased: {by_id} found by account, {by_name} by name alone — rows written before they were a Foyer user, or under a name they have since changed.",
-    "person_export_rows": "An export carries {rows} rows: what they did, plus what the house did to them — their tag refused, an escalation that reached them.",
+    "person_found": "Rows that would be erased: {total} — {by_id} found by their account, {by_name} by name alone (written before they were a Foyer user, or under a name they have since changed), {about} about their account.",
+    "person_export_rows": "Rows in an export: {rows} — what they did, plus what the house did to them: their tag refused, an escalation that reached them.",
     "person_export_csv": "Export their rows (CSV)",
     "person_export_json": "Export their rows (JSON)",
     "person_erase": "Erase their history",
     "person_erase_yes": "Erase",
-    "person_erase_confirm": "This empties the name, the account, the channel and the device on {rows} rows, for good. The events stay: the log will still say what happened that night, and will no longer say who. The erasure itself is recorded, without naming them.",
-    "person_erase_confirm_pseudonym": "This replaces the name on {rows} rows with a stable identifier, for good. The log will still say that the same person acted on two different nights — which is not the same as forgetting them. The erasure itself is recorded, without naming them.",
+    "person_erase_confirm": "This empties the name, the account, the channel and the device on every row found — {rows} of them — for good. The events stay: the log will still say what happened that night, and will no longer say who. The erasure itself is recorded, without naming them.",
+    "person_erase_confirm_pseudonym": "This replaces the name on every row found — {rows} of them — with a stable identifier, for good. The log will still say that the same person acted on two different nights, which is not the same as forgetting them. The erasure itself is recorded, without naming them.",
     "person_keep_pseudonym": "Keep a stable identifier instead of forgetting",
     "person_keep_pseudonym_hint": "Off, the rows lose the person entirely. On, they keep an opaque identifier that says nothing about them but still links their rows to each other. Somebody asking to be forgotten is usually asking for the first.",
-    "person_erased": "{rows} rows no longer name anybody."
+    "person_erased": "Rows that no longer name anybody: {rows}."
   },
   "language": {
     "en": "English",

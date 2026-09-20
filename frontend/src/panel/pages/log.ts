@@ -220,6 +220,7 @@ class FoyerPageLog extends LitElement {
                     total: counts.total,
                     by_id: counts.by_id,
                     by_name: counts.by_name,
+                    about: counts.about,
                   })}
                 </p>
                 <p class="hint">${t(s, "log.person_export_rows", { rows: counts.wide })}</p>
@@ -613,7 +614,15 @@ class FoyerPageLog extends LitElement {
     if (row.event_type === "reloaded") {
       return t(s, "log.gap_short", { seconds: String(detail.gap_seconds ?? "") });
     }
-    if (row.event_type === "system_unavailable" && typeof detail.down_since === "string") {
+    // An empty `down_since` is a first start with nothing saved before it, and
+    // "from Invalid Date to …" is what a truthy check on an empty string
+    // renders. There is no honest range to show, so the row says only what it
+    // already says: Foyer was not running.
+    if (
+      row.event_type === "system_unavailable" &&
+      typeof detail.down_since === "string" &&
+      detail.down_since !== ""
+    ) {
       return t(s, "log.gap", {
         from: new Date(detail.down_since).toLocaleString(ctx.hass.language),
         to: new Date(String(detail.up_at)).toLocaleString(ctx.hass.language),

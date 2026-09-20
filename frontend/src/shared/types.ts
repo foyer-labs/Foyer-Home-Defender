@@ -528,6 +528,8 @@ export interface LogSettingsConfig {
 export interface PersonCounts {
   by_id: number;
   by_name: number;
+  /** Configuration rows about their account, written by whoever edited it. */
+  about: number;
   total: number;
   wide: number;
 }

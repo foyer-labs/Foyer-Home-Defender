@@ -89,8 +89,18 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   contacts: ["order", "quiet", "linked", "step", "acknowledge", "webhook", "test"],
   rules: ["trigger", "guards", "grace", "suspension", "visitor", "disarming", "next"],
   test: ["trigger_column", "blocks", "battery", "nothing_runs", "clock", "skipped", "inherited"],
-  log: ["category", "zone_disarmed", "incident", "user", "export"],
-  settings: ["targets", "mode", "quiet", "during_exit", "response", "retention", "backup", "language"],
+  log: ["category", "zone_disarmed", "incident", "user", "export", "personal"],
+  settings: [
+    "targets",
+    "mode",
+    "quiet",
+    "during_exit",
+    "response",
+    "retention",
+    "privacy",
+    "backup",
+    "language",
+  ],
   health: ["mains", "channels", "watchdog", "payload", "radio", "coordinator", "diagnostics"],
 };
 

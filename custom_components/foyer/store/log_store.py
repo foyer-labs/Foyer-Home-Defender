@@ -502,7 +502,7 @@ class LogStore:
         return await self.hass.async_add_executor_job(self._person_count, ref)
 
     def _person_count(self, ref: PersonRef) -> dict[str, int]:
-        empty = {"by_id": 0, "by_name": 0, "total": 0, "wide": 0}
+        empty = {"by_id": 0, "by_name": 0, "about": 0, "total": 0, "wide": 0}
         with self._lock:
             connection = self._connection
             if connection is None:
@@ -525,11 +525,25 @@ class LogStore:
                 if ref.names
                 else 0
             )
+            # Configuration rows *about* their account, written by whoever
+            # edited it. Counted separately because the panel shows these
+            # numbers to somebody about to erase a person, and two numbers
+            # that did not add up to the total would be a panel asking to be
+            # distrusted.
+            about = (
+                count(
+                    " WHERE category = 'config' AND instr(detail, ?) > 0",
+                    ['"item_id": "' + ref.item_id + '"'],
+                )
+                if ref.item_id
+                else 0
+            )
             narrow, narrow_params = self._person_where(ref, wide=False)
             wide, wide_params = self._person_where(ref, wide=True)
             return {
                 "by_id": by_id,
                 "by_name": by_name,
+                "about": about,
                 "total": count(narrow, narrow_params),
                 "wide": count(wide, wide_params),
             }

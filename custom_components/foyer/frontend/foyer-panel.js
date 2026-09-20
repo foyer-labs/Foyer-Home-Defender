@@ -7254,7 +7254,8 @@ var X = 50, Wt = class extends P {
                   ${R(e, "log.person_found", {
 			total: n.total,
 			by_id: n.by_id,
-			by_name: n.by_name
+			by_name: n.by_name,
+			about: n.about
 		})}
                 </p>
                 <p class="hint">${R(e, "log.person_export_rows", { rows: n.wide })}</p>
@@ -7546,7 +7547,7 @@ var X = 50, Wt = class extends P {
 		if (typeof r.error == "string") return r.error;
 		if (t.event_type === "zone_state") return `${r.from ?? "?"} → ${r.to ?? "?"}`;
 		if (t.event_type === "reloaded") return R(e, "log.gap_short", { seconds: String(r.gap_seconds ?? "") });
-		if (t.event_type === "system_unavailable" && typeof r.down_since == "string") return R(e, "log.gap", {
+		if (t.event_type === "system_unavailable" && typeof r.down_since == "string" && r.down_since !== "") return R(e, "log.gap", {
 			from: new Date(r.down_since).toLocaleString(n.hass.language),
 			to: new Date(String(r.up_at)).toLocaleString(n.hass.language)
 		});
@@ -9407,7 +9408,8 @@ var tn = [
 		"zone_disarmed",
 		"incident",
 		"user",
-		"export"
+		"export",
+		"personal"
 	],
 	settings: [
 		"targets",
@@ -9416,6 +9418,7 @@ var tn = [
 		"during_exit",
 		"response",
 		"retention",
+		"privacy",
 		"backup",
 		"language"
 	],
