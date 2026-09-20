@@ -94,6 +94,19 @@ const HELP_ITEMS: Record<PageId, string[]> = {
   health: ["mains", "channels", "watchdog", "payload", "radio", "coordinator", "diagnostics"],
 };
 
+// The "Learn more" deep link §15.2 asks every help panel to carry. Only the
+// pages whose document exists are in here, and a page that is not is simply
+// rendered without a link: a link to a file nobody has written yet is worse
+// than none, because it teaches the reader that the links do not work.
+const DOCS = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs";
+const HELP_DOCS: Partial<Record<PageId, string>> = {
+  devices: "keypads.md",
+  contacts: "notification-channels.md",
+  rules: "automation-rules.md",
+  test: "simulator.md",
+  health: "system-health.md",
+};
+
 /** The code, when there is one. An absent key means "nothing typed", which is
  * not the same as an empty string: one is a request without a code, the other
  * is a wrong code. */
@@ -696,6 +709,15 @@ class FoyerPanel extends LitElement {
                   `,
                 )}
               </dl>
+              ${HELP_DOCS[page]
+                ? html`<a
+                    class="learn-more"
+                    href=${`${DOCS}/${HELP_DOCS[page]}`}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    >${t(s, "help.learn_more")}</a
+                  >`
+                : nothing}
             </div>`
           : nothing}
       </section>
@@ -711,6 +733,12 @@ class FoyerPanel extends LitElement {
         min-height: 100vh;
         background: var(--primary-background-color);
         color: var(--primary-text-color);
+      }
+      .learn-more {
+        display: inline-block;
+        margin-top: 10px;
+        color: var(--primary-color);
+        font-size: 13px;
       }
       /* The code dialog: over everything, because nothing else can happen
          until it is answered — the command that opened it is waiting. */

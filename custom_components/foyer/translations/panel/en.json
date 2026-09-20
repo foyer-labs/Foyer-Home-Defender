@@ -1036,7 +1036,8 @@
           "text": "Home Assistant's own download button, with everything personal removed and entity ids replaced."
         }
       }
-    }
+    },
+    "learn_more": "Learn more →"
   },
   "notification": {
     "device_rejected": {

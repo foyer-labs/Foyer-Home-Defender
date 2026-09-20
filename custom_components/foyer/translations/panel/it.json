@@ -1036,7 +1036,8 @@
           "text": "Il bottone di download di Home Assistant, con tutto il personale rimosso e gli id delle entità sostituiti."
         }
       }
-    }
+    },
+    "learn_more": "Approfondisci →"
   },
   "notification": {
     "device_rejected": {
