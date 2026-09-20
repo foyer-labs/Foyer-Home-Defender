@@ -5,7 +5,7 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
-## [Unreleased] — an alarm that can say it has stopped working
+## [0.1.0-beta.9] — an alarm that can say it has stopped working
 
 System health (§12): the first part of Phase 5. **The stored configuration
 moves to schema 7.2, a minor step** — the whole block is additive, and a 7.1
