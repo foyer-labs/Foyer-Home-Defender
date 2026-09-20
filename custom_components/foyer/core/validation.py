@@ -17,6 +17,8 @@ from .models import (
     ARMED_HA_STATES,
     FAULT_STATES,
     MAX_ARM_HOLD_TIMEOUT,
+    MAX_CHANNEL_FAILURES,
+    MAX_CHANNEL_SWEEP,
     MAX_CODE_LENGTH,
     MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
@@ -28,20 +30,34 @@ from .models import (
     MAX_LOW_BATTERY_THRESHOLD,
     MAX_MQTT_QOS,
     MAX_MQTT_TOPIC,
+    MAX_RF_CONFIRM,
+    MAX_RF_WINDOW,
+    MAX_RF_ZONES,
     MAX_RULE_MINUTES,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_VERIFICATION_WINDOW,
     MAX_WALK_TEST_TIMEOUT,
+    MAX_WATCHDOG_FAILURES,
+    MAX_WATCHDOG_INTERVAL,
+    MAX_WATCHDOG_TIMEOUT,
     MIN_ARM_HOLD_TIMEOUT,
+    MIN_CHANNEL_FAILURES,
+    MIN_CHANNEL_SWEEP,
     MIN_CODE_LENGTH,
     MIN_LOCKOUT_FAILURES,
     MIN_LOCKOUT_SECONDS,
     MIN_LOW_BATTERY_THRESHOLD,
+    MIN_RF_CONFIRM,
+    MIN_RF_WINDOW,
+    MIN_RF_ZONES,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
     MIN_WALK_TEST_TIMEOUT,
+    MIN_WATCHDOG_FAILURES,
+    MIN_WATCHDOG_INTERVAL,
+    MIN_WATCHDOG_TIMEOUT,
     MQTT_TOPIC_FORBIDDEN,
     NOTIFY_ATTACHMENTS,
     SILENCEABLE,
@@ -280,6 +296,7 @@ def validate(config: FoyerConfig) -> list[Problem]:
 
     problems.extend(_group_problems(config, zones, area_ids))
     problems.extend(_chime_problems(config.chime))
+    problems.extend(_health_problems(config))
     problems.extend(_user_problems(config, area_ids, scenario_ids))
     problems.extend(
         _device_problems(config, scenario_ids, {u.id for u in config.users})
@@ -921,6 +938,99 @@ def _group_problems(
     for zone_id, count in sorted(memberships.items()):
         if count > 1:
             problems.append(Problem("zone_in_two_groups", "zone", zone_id))
+    return problems
+
+
+def _health_problems(config: FoyerConfig) -> list[Problem]:
+    """System health (§12): the mains entity, the watchdog and the radios.
+
+    The two rules worth naming here are the ones that would otherwise fail
+    silently. A watchdog switched on with no URL pings nothing and reports a
+    failure every quarter of an hour, which teaches the household to ignore
+    the one warning that means Foyer cannot reach the outside world. And a
+    radio with no coordinator entity cannot be gated at all — §12.5 is
+    explicit that the gate is what separates interference from a dead
+    switch — so it is refused rather than accepted as half a heuristic.
+    """
+    health = config.health
+    problems: list[Problem] = []
+
+    def add(code: str, field: str, item: str | None = None) -> None:
+        problems.append(Problem(code, "health", item, field))
+
+    entity = health.mains_entity_id
+    if entity is not None and "." not in entity:
+        add("health_entity_invalid", "mains_entity_id")
+    if entity and not health.mains_lost_states:
+        add("mains_states_required", "mains_lost_states")
+
+    watchdog = health.watchdog
+    if watchdog.enabled and not watchdog.url.startswith(("http://", "https://")):
+        add("watchdog_url_required", "url")
+    if not _in_range(watchdog.interval, MIN_WATCHDOG_INTERVAL, MAX_WATCHDOG_INTERVAL):
+        add("health_out_of_range", "interval")
+    if not _in_range(watchdog.timeout, MIN_WATCHDOG_TIMEOUT, MAX_WATCHDOG_TIMEOUT):
+        add("health_out_of_range", "timeout")
+    if not _in_range(watchdog.failures, MIN_WATCHDOG_FAILURES, MAX_WATCHDOG_FAILURES):
+        add("health_out_of_range", "failures")
+    if watchdog.timeout >= watchdog.interval:
+        # A ping that may take longer than the gap to the next one is a
+        # queue, not a heartbeat.
+        add("watchdog_timeout_too_long", "timeout")
+
+    for value, field, low, high in (
+        (health.rf_zones, "rf_zones", MIN_RF_ZONES, MAX_RF_ZONES),
+        (health.rf_window, "rf_window", MIN_RF_WINDOW, MAX_RF_WINDOW),
+        (health.rf_confirm, "rf_confirm", MIN_RF_CONFIRM, MAX_RF_CONFIRM),
+        (
+            health.channel_sweep,
+            "channel_sweep",
+            MIN_CHANNEL_SWEEP,
+            MAX_CHANNEL_SWEEP,
+        ),
+        (
+            health.channel_failures,
+            "channel_failures",
+            MIN_CHANNEL_FAILURES,
+            MAX_CHANNEL_FAILURES,
+        ),
+    ):
+        if not _in_range(value, low, high):
+            add("health_out_of_range", field)
+
+    ids = [r.id for r in health.radios]
+    for dup in sorted({i for i in ids if ids.count(i) > 1}):
+        problems.append(Problem("duplicate_id", "radio", dup))
+    entry_ids = [r.entry_id for r in health.radios if r.entry_id]
+    for dup in sorted({i for i in entry_ids if entry_ids.count(i) > 1}):
+        # Two radios claiming one config entry would count the same zones
+        # twice and gate them on two coordinators.
+        problems.append(Problem("duplicate_radio_entry", "radio", dup))
+    for radio in health.radios:
+        if not radio.name.strip():
+            problems.append(Problem("name_required", "radio", radio.id, "name"))
+        if not radio.entry_id:
+            problems.append(
+                Problem("radio_entry_required", "radio", radio.id, "entry_id")
+            )
+        if radio.coordinator_entity_id and "." not in radio.coordinator_entity_id:
+            problems.append(
+                Problem("health_entity_invalid", "radio", radio.id, "coordinator_entity_id")
+            )
+        if radio.enabled and not radio.coordinator_entity_id:
+            problems.append(
+                Problem(
+                    "coordinator_required", "radio", radio.id, "coordinator_entity_id"
+                )
+            )
+        if radio.n_zones is not None and not _in_range(
+            radio.n_zones, MIN_RF_ZONES, MAX_RF_ZONES
+        ):
+            problems.append(Problem("health_out_of_range", "radio", radio.id, "n_zones"))
+        if radio.window is not None and not _in_range(
+            radio.window, MIN_RF_WINDOW, MAX_RF_WINDOW
+        ):
+            problems.append(Problem("health_out_of_range", "radio", radio.id, "window"))
     return problems
 
 

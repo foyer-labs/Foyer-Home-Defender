@@ -38,6 +38,7 @@ from .schema import (
     contact_from_dict,
     device_from_dict,
     group_from_dict,
+    health_from_dict,
     log_from_dict,
     mqtt_from_dict,
     profile_from_dict,
@@ -536,7 +537,7 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
         }
         if entry:
             changes[kind] = entry
-    for block in ("settings", "chime", "code_policy"):
+    for block in ("settings", "chime", "code_policy", "health"):
         was_block, now_block = before.get(block) or {}, after.get(block) or {}
         if was_block != now_block:
             changes[block] = _fields(was_block, now_block)
@@ -575,6 +576,24 @@ def update_chime(
         new = replace(config, chime=chime_from_dict(chime))
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "chime"))
+    return _check(config, new, state, None)
+
+
+def update_health(
+    config: FoyerConfig, state: RuntimeState, health: dict[str, Any]
+) -> EditResult:
+    """The system-health block (§12): the mains, the watchdog, the radios.
+
+    One block rather than three editable objects, for the reason the chime
+    is one block: it is a page of settings about the installation itself,
+    not a list of things a household creates and deletes. The radios inside
+    it are a list because there can be two, and a Zigbee outage says nothing
+    about Z-Wave.
+    """
+    try:
+        new = replace(config, health=health_from_dict(health))
+    except (ConfigError, KeyError, TypeError, ValueError):
+        return _fail(Problem("invalid", "health"))
     return _check(config, new, state, None)
 
 

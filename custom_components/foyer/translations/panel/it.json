@@ -221,7 +221,15 @@
     "rule_countdown_without_contacts": "Un conto alla rovescia ha bisogno di qualcuno a cui annunciarsi, o non c'è nessuno che possa annullarlo.",
     "weekday_invalid": "Scegli giorni della settimana validi.",
     "window_incomplete": "Imposta entrambi gli estremi della finestra, o nessuno dei due.",
-    "rule_out_of_range": "Quel valore è fuori dall'intervallo ammesso."
+    "rule_out_of_range": "Quel valore è fuori dall'intervallo ammesso.",
+    "health_out_of_range": "Valore fuori dall'intervallo ammesso per questa impostazione.",
+    "health_entity_invalid": "Questo non è un id di entità.",
+    "mains_states_required": "Indica quale stato di quell'entità significa rete elettrica assente.",
+    "watchdog_url_required": "Un watchdog acceso ha bisogno di un URL http o https.",
+    "watchdog_timeout_too_long": "Il timeout deve essere più breve dell'intervallo fra due ping.",
+    "duplicate_radio_entry": "Un'altra radio usa già quell'integrazione.",
+    "radio_entry_required": "Scegli quale integrazione è questa radio.",
+    "coordinator_required": "Indica l'entità coordinatore, oppure disattiva questa radio. Senza, Foyer non può distinguere l'interferenza da un coordinatore morto, e non tira a indovinare."
   },
   "field": {
     "name": "Nome",
@@ -342,7 +350,16 @@
     "area_ids": "Aree",
     "after": "Dalle",
     "before": "Alle",
-    "is_perimeter": "Area perimetrale"
+    "is_perimeter": "Area perimetrale",
+    "mains_entity_id": "Entità della rete elettrica",
+    "mains_lost_states": "Stati che significano rete assente",
+    "url": "URL",
+    "interval": "Intervallo",
+    "timeout": "Timeout",
+    "failures": "Fallimenti prima di segnalare",
+    "entry_id": "Integrazione",
+    "coordinator_entity_id": "Entità coordinatore",
+    "n_zones": "Zone prima del sospetto"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -1556,7 +1573,9 @@
     "code_policy": "Politica dei codici",
     "log": "Registro eventi",
     "user": "Utente",
-    "security": "Codici e blocco"
+    "security": "Codici e blocco",
+    "health": "Salute di sistema",
+    "radio": "Radio"
   },
   "detail": {
     "skip_exit_delay": "Inserito senza ritardo d'uscita",

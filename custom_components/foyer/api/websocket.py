@@ -118,6 +118,7 @@ from ..store.editing import (
     EditResult,
     delete,
     update_chime,
+    update_health,
     update_security,
     update_settings,
     upsert,
@@ -307,6 +308,9 @@ def async_register(hass: HomeAssistant) -> None:
         ws_config_delete,
         ws_settings_save,
         ws_chime_save,
+        ws_health,
+        ws_health_save,
+        ws_radio_candidates,
         ws_ack_webhook,
         ws_security_save,
         ws_user_save,
@@ -1010,6 +1014,106 @@ async def ws_chime_save(
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="chime"
     )
+
+
+@websocket_api.websocket_command({vol.Required("type"): "foyer/health"})
+@websocket_api.async_response
+async def ws_health(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Page 14 (§12, §15.1), gated on ``view_log`` (part 1 decision 12).
+
+    The same threshold as the Log page, and for the same reason: this page
+    says what has been wrong with the house and for how long, which is the
+    history of the installation read from a different angle. Reading it
+    changes nothing, so it asks for no code.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.VIEW_LOG,
+            need_code=False,
+        )
+    ) is None:
+        return
+    connection.send_result(msg["id"], system.health_status())
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/config/health",
+        vol.Required("health"): dict,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_health_save(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """The system-health block (§12), validated like every other edit.
+
+    Configuration, so ``edit_config`` and its code policy — the page itself
+    is open to anyone who may read the log, and changing the watchdog's URL
+    or which entity is the mains is not reading.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
+        )
+    ) is None:
+        return
+    result = update_health(system.config, system.state, msg["health"])
+    await _apply(
+        hass, connection, msg["id"], system, result, operation="save", kind="health"
+    )
+
+
+@websocket_api.websocket_command({vol.Required("type"): "foyer/health/radios"})
+@websocket_api.async_response
+async def ws_radio_candidates(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Which config entries the zones of this installation actually come from.
+
+    A radio is a config entry (part 1 decision 7), so this is the honest
+    menu: the integrations that back at least one zone, with how many. An
+    installation whose sensors are all on Wi-Fi sees an empty list, which is
+    the true answer rather than a list of integrations that are not radios.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
+            need_code=False,
+        )
+    ) is None:
+        return
+    connection.send_result(msg["id"], {"radios": system.radio_candidates()})
 
 
 @websocket_api.websocket_command(

@@ -221,7 +221,15 @@
     "rule_countdown_without_contacts": "A countdown needs somebody to announce it to, or there is nobody to cancel it.",
     "weekday_invalid": "Choose valid days of the week.",
     "window_incomplete": "Set both ends of the window, or neither.",
-    "rule_out_of_range": "That value is outside the range this setting allows."
+    "rule_out_of_range": "That value is outside the range this setting allows.",
+    "health_out_of_range": "That value is outside the range this setting allows.",
+    "health_entity_invalid": "That is not an entity id.",
+    "mains_states_required": "Say which state of that entity means the mains has failed.",
+    "watchdog_url_required": "A watchdog that is switched on needs an http or https URL.",
+    "watchdog_timeout_too_long": "The timeout must be shorter than the interval between pings.",
+    "duplicate_radio_entry": "Another radio already uses that integration.",
+    "radio_entry_required": "Choose which integration this radio is.",
+    "coordinator_required": "Name the coordinator entity, or switch this radio off. Without it Foyer cannot tell interference from a dead coordinator, and will not guess."
   },
   "field": {
     "name": "Name",
@@ -342,7 +350,16 @@
     "area_ids": "Areas",
     "after": "From",
     "before": "Until",
-    "is_perimeter": "Perimeter area"
+    "is_perimeter": "Perimeter area",
+    "mains_entity_id": "Mains power entity",
+    "mains_lost_states": "States that mean the mains has failed",
+    "url": "URL",
+    "interval": "Interval",
+    "timeout": "Timeout",
+    "failures": "Failures before reporting",
+    "entry_id": "Integration",
+    "coordinator_entity_id": "Coordinator entity",
+    "n_zones": "Zones before suspecting"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -1556,7 +1573,9 @@
     "code_policy": "Code policy",
     "log": "Event log",
     "user": "User",
-    "security": "Codes and lockout"
+    "security": "Codes and lockout",
+    "health": "System health",
+    "radio": "Radio"
   },
   "detail": {
     "skip_exit_delay": "Armed with no exit delay",
