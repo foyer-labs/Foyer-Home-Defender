@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from functools import partial
 from typing import Any
+import uuid
 
 from homeassistant.components import webhook, websocket_api
 from homeassistant.core import HomeAssistant, callback
@@ -19,7 +20,13 @@ from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
 from .. import i18n
-from ..const import ACK_PATHS, CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
+from ..const import (
+    ACK_PATHS,
+    CANCEL_VIA_COMMAND,
+    CHANNEL_HA_UI,
+    DOMAIN,
+    SIGNAL_UPDATE,
+)
 from ..core import authz
 from ..core.journal import config_row, system_row
 from ..core.models import (
@@ -30,10 +37,12 @@ from ..core.models import (
     MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
     MAX_EXIT_DELAY,
+    MAX_GRACE_SECONDS,
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
     MAX_LOW_BATTERY_THRESHOLD,
     MAX_RETENTION_DAYS,
+    MAX_RULE_MINUTES,
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
@@ -57,6 +66,7 @@ from ..core.models import (
     ArmModeRequest,
     ArmRequest,
     BypassZone,
+    CancelAutoAction,
     CodeResult,
     ContactChannelKind,
     Decision,
@@ -68,6 +78,12 @@ from ..core.models import (
     Outcome,
     Permission,
     Reason,
+    RuleActionKind,
+    RuleTriggerKind,
+    SetAutoArming,
+    SetSuspension,
+    Suspension,
+    SuspensionKind,
     User,
     WalkTestRequest,
     ZoneType,
@@ -90,6 +106,7 @@ from ..core.validation import (
     MAX_ACTION_DELAY,
     MAX_ESCALATION_OFFSET,
     MAX_SEVERITY,
+    PRESENCE_DOMAINS,
     ZONE_DOMAINS,
     Problem,
 )
@@ -309,6 +326,9 @@ def async_register(hass: HomeAssistant) -> None:
         ws_simulate,
         ws_walk_test,
         ws_test_action,
+        ws_auto_cancel,
+        ws_auto_switch,
+        ws_auto_suspend,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -511,6 +531,136 @@ async def ws_bypass(
     connection.send_result(msg["id"], _result(system, decision, connection.user))
 
 
+# --- automatic arming (§9.4) ------------------------------------------------------
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/auto/cancel",
+        # Which countdown. Omitted, it stops whatever is counting down, which
+        # is what the panel's single button means when only one is.
+        vol.Optional("pending_id"): vol.Any(str, None),
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_auto_cancel(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Stop an automatic rule before it acts (§9.4).
+
+    Its own operation in the code policy, without a code by default (part 2
+    decision 3). The engine decides, here as everywhere (INV-2): an
+    installation that raised the policy gets a refusal the panel can show.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    decision = await system.async_handle(
+        CancelAutoAction(
+            pending_id=msg.get("pending_id"),
+            actor=await _actor(hass, system, connection, msg),
+            via=CANCEL_VIA_COMMAND,
+        )
+    )
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/auto/switch",
+        vol.Required("enabled"): bool,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_auto_switch(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """The global kill switch (§9.4), from the panel rather than the entity."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    decision = await system.async_handle(
+        SetAutoArming(msg["enabled"], await _actor(hass, system, connection, msg))
+    )
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/auto/suspend",
+        # One command for the three forms §9.4 says are mechanically one:
+        # until a date and time, skip the next occurrence, or a named
+        # expected-visitor window. With only `suspension_id`, it lifts one.
+        vol.Optional("kind"): vol.In([k.value for k in SuspensionKind]),
+        vol.Optional("suspension_id"): vol.Any(str, None),
+        vol.Optional("rule_ids", default=[]): [str],
+        vol.Optional("name"): vol.Any(str, None),
+        vol.Optional("start"): vol.Any(str, None),
+        vol.Optional("until"): vol.Any(str, None),
+        vol.Optional("reduced_scenario_id"): vol.Any(str, None),
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_auto_suspend(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Suspend automatic arming, or lift a suspension (§9.4).
+
+    Runtime state, not configuration (part 2 decision 7), so this is not an
+    ``edit_config`` operation: §9.4 asks for three clicks from the panel or
+    the card the evening before the boiler engineer comes.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    actor = await _actor(hass, system, connection, msg)
+    user = system.config.user(actor.user_id)
+    suspension: Suspension | None = None
+    if msg.get("kind"):
+        try:
+            start = _parse_time(msg.get("start"))
+            until = _parse_time(msg.get("until"))
+        except ValueError:
+            connection.send_error(msg["id"], "invalid_format", "invalid timestamp")
+            return
+        suspension = Suspension(
+            id=uuid.uuid4().hex,
+            kind=SuspensionKind(msg["kind"]),
+            rule_ids=tuple(msg["rule_ids"]),
+            name=msg.get("name") or None,
+            start=start,
+            until=until,
+            reduced_scenario_id=msg.get("reduced_scenario_id") or None,
+            created_at=dt_util.utcnow(),
+            user_id=actor.user_id,
+            # Denormalised for the same reason the log denormalises it: the
+            # row this writes has to still name somebody in six months.
+            user_name=user.name if user else None,
+        )
+    decision = await system.async_handle(
+        SetSuspension(suspension, msg.get("suspension_id"), actor)
+    )
+    connection.send_result(msg["id"], _result(system, decision, connection.user))
+
+
+def _parse_time(value: str | None) -> Any:
+    """An ISO timestamp from the panel, or None. A bad one is refused rather
+    than guessed at: a suspension that ends at the wrong hour is a house
+    armed at the wrong hour."""
+    if not value:
+        return None
+    parsed = dt_util.parse_datetime(value)
+    if parsed is None:
+        raise ValueError(value)
+    return dt_util.as_utc(parsed)
+
+
 # --- configuration (admin only) -------------------------------------------------------
 
 
@@ -586,6 +736,14 @@ def _meta() -> dict[str, Any]:
         # Every operation of §8.2 has a caller now: part 2 built the last two.
         "future_operations": [],
         "identifying_channels": sorted(IDENTIFYING_CHANNELS),
+        # What page 12 needs to build a rule without knowing §9.4 by heart:
+        # the closed sets, the bounds, and which entities a rule may watch.
+        "rule_triggers": [k.value for k in RuleTriggerKind],
+        "rule_actions": [k.value for k in RuleActionKind],
+        "suspension_kinds": [k.value for k in SuspensionKind],
+        "presence_domains": sorted(PRESENCE_DOMAINS),
+        "max_grace_seconds": MAX_GRACE_SECONDS,
+        "max_rule_minutes": MAX_RULE_MINUTES,
         "schema_version": [STORAGE_VERSION, STORAGE_MINOR_VERSION],
     }
 

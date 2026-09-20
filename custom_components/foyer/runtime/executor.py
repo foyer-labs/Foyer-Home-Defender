@@ -27,7 +27,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util, slugify
 
 from .. import i18n
-from ..const import ACK_ACTION
+from ..const import ACK_ACTION, CANCEL_ACTION, CANCEL_PENDING_KEY
 from ..core.models import (
     ATTACH_TELEGRAM,
     DEFAULT_CAMERA_DIR,
@@ -138,6 +138,34 @@ class Executor:
             notification_id=f"foyer_{intent.action_id}_{intent.moment.value}",
         )
 
+    async def _async_text(self, intent: ActionIntent) -> tuple[str, str]:
+        """The title and message of a notification that carries none.
+
+        A profile's action carries text the user wrote, rendered in ``core``.
+        What Foyer sends of its own — an automatic rule's countdown (§9.4) —
+        carries none, and the words then come from ``translations/panel``,
+        in the language the house speaks (§15.1, decision 73). The backend
+        writes no user-visible string anywhere else either: this is the same
+        lookup ``_async_persistent`` does, for the same reason.
+        """
+        strings = await self.hass.async_add_executor_job(
+            i18n.load_strings, self.language
+        )
+        base = f"notification.{intent.moment.value}"
+        if intent.variant:
+            variant = f"{base}_{intent.variant}"
+            # A missing key comes back as the key itself, so this is how the
+            # variant is asked for without demanding that every moment have
+            # one: an `arm` countdown reads differently from a `disarm` one,
+            # and a moment with no variants falls back to its own text.
+            key = f"{variant}.message"
+            if i18n.translate(strings, key) != key:
+                base = variant
+        return (
+            i18n.translate(strings, f"{base}.title", **intent.placeholders),
+            i18n.translate(strings, f"{base}.message", **intent.placeholders),
+        )
+
     async def _async_notify(self, intent: ActionIntent) -> None:
         """A notification, to a `notify.*` service or to the address book.
 
@@ -149,7 +177,10 @@ class Executor:
         """
         service = str(intent.params.get("service") or "")
         data: dict[str, Any] = {"message": intent.params.get("message", "")}
-        if title := intent.params.get("title"):
+        title = intent.params.get("title")
+        if not data["message"]:
+            title, data["message"] = await self._async_text(intent)
+        if title:
             data["title"] = title
         extra = dict(intent.params.get("data") or {})
         if camera := intent.params.get("camera_entity_id"):
@@ -220,6 +251,26 @@ class Executor:
         """
         payload = dict(data)
         extra = {**dict(payload.get("data") or {}), **dict(recipient.get("data") or {})}
+        if cancel := recipient.get("cancel"):
+            # The Cancel button of §9.4: the same mechanism as the
+            # acknowledgement below, with a different action id and a
+            # different handler. It carries which countdown it would stop,
+            # so the button on last night's notification cannot stop
+            # tonight's arming.
+            strings = await self.hass.async_add_executor_job(
+                i18n.load_strings, self.language
+            )
+            extra.setdefault(
+                "actions",
+                [
+                    {
+                        "action": CANCEL_ACTION,
+                        "title": i18n.translate(strings, "notification.cancel"),
+                        CANCEL_PENDING_KEY: cancel,
+                        "foyer_contact": recipient.get("contact_id", ""),
+                    }
+                ],
+            )
         if recipient.get("ack"):
             # The button that stops the escalation (§7.2). Only a channel
             # declared actionable carries it: a transport discards a key it

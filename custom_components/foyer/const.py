@@ -38,6 +38,9 @@ CHANNEL_AUTOMATION: Final = "automation"
 CHANNEL_API: Final = "api"
 CHANNEL_MQTT: Final = "mqtt"
 CHANNEL_KEYPAD: Final = "keypad"
+# §9.4: what the engine calls itself when a rule acts. Never accepted from a
+# caller — §9.1 lets a request claim only `api` or `automation`.
+CHANNEL_AUTO_RULE: Final = "auto_rule"
 
 
 # The action a button in an actionable notification sends back when somebody
@@ -45,12 +48,24 @@ CHANNEL_KEYPAD: Final = "keypad"
 # in docs/notification-channels.md and the listener agree on it.
 ACK_ACTION = "FOYER_ACKNOWLEDGE"
 
+# The action a Cancel button sends back when somebody stops an automatic
+# rule's grace countdown (§9.4). The same mechanism as the acknowledgement
+# above with a different id and a different handler — deliberately not a
+# second one built beside it.
+CANCEL_ACTION = "FOYER_CANCEL_AUTO"
+# Where the countdown's id travels on that button, so pressing the button on
+# last night's notification cannot stop tonight's arming.
+CANCEL_PENDING_KEY = "foyer_pending"
+
 # The four paths an acknowledgement arrives by (§7.2). Every one records who
 # and through which channel; the word itself grants nothing.
 ACK_VIA_COMMAND = "acknowledge"
 ACK_VIA_DISARM = "disarm"
 ACK_VIA_PUSH = "push"
 ACK_VIA_DTMF = "dtmf"
+# How a cancellation arrived, for the row §9.4 asks to carry the user.
+CANCEL_VIA_PUSH = "push"
+CANCEL_VIA_COMMAND = "command"
 ACK_PATHS: Final = (ACK_VIA_COMMAND, ACK_VIA_DISARM, ACK_VIA_PUSH, ACK_VIA_DTMF)
 
 # The event Home Assistant's own Companion app fires when a notification

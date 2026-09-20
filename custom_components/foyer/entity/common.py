@@ -50,6 +50,11 @@ def expected_unique_ids(entry_id: str, config: FoyerConfig) -> set[str]:
             "chime",
             "walk_test",
             "acknowledge",
+            # §9.4: the kill switch and what happens next. Missing from this
+            # set, an entity is created at every start and deleted again as
+            # stale, which is a switch that never appears.
+            "auto_arming",
+            "next_auto_action",
         )
     }
     for area in config.areas:

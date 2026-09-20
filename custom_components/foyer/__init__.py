@@ -114,6 +114,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # if this installation switched it on, because an unauthenticated URL
     # that stops an alarm is a decision the household makes knowingly.
     entry.async_on_unload(acknowledge.async_listen_push(hass, system))
+    entry.async_on_unload(acknowledge.async_listen_cancel(hass, system))
     entry.async_on_unload(acknowledge.async_register_webhook(hass, system))
     await async_register_frontend(hass)
     return True

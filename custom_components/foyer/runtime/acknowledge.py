@@ -36,11 +36,19 @@ from ..const import (
     ACK_ACTION,
     ACK_VIA_DTMF,
     ACK_VIA_PUSH,
+    CANCEL_ACTION,
+    CANCEL_PENDING_KEY,
+    CANCEL_VIA_PUSH,
     CHANNEL_API,
     DOMAIN,
     MOBILE_APP_ACTION_EVENT,
 )
-from ..core.models import AcknowledgeIncident, AcknowledgeTechnical, Actor
+from ..core.models import (
+    AcknowledgeIncident,
+    AcknowledgeTechnical,
+    Actor,
+    CancelAutoAction,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -111,6 +119,42 @@ def async_listen_push(hass: HomeAssistant, system) -> Any:
             CHANNEL_API,
         ):
             await system.async_handle(ack)
+
+    return hass.bus.async_listen(MOBILE_APP_ACTION_EVENT, _handle)
+
+
+@callback
+def async_listen_cancel(hass: HomeAssistant, system) -> Any:
+    """Cancel an automatic rule from the button in its countdown (§9.4).
+
+    The same Companion app event the acknowledgement listens for, with a
+    different action id: one mechanism, two buttons. The countdown's id
+    travels on the button, so pressing yesterday's notification cannot stop
+    what is running now — and an answer that arrives without one cancels
+    whatever is counting down, because the person pressed a button that said
+    the house was about to arm.
+
+    It carries no code. That is the shape of §8.2's entry for it (part 2
+    decision 3): no push carries a code, so demanding one by default would be
+    a button that never works — and an installation that raises the policy
+    gets a refusal it can see, in the log, rather than silence.
+    """
+
+    async def _handle(event: HassEvent) -> None:
+        data = event.data or {}
+        if data.get("action") != CANCEL_ACTION:
+            return
+        # Android echoes the extra keys beside the action; iOS carries them
+        # under `action_data`. Both are read, and neither is required.
+        extra = {**dict(data.get("action_data") or {}), **data}
+        await system.async_handle(
+            CancelAutoAction(
+                pending_id=str(extra.get(CANCEL_PENDING_KEY) or "") or None,
+                actor=Actor(channel=CHANNEL_API),
+                via=CANCEL_VIA_PUSH,
+                contact_id=extra.get("foyer_contact") or None,
+            )
+        )
 
     return hass.bus.async_listen(MOBILE_APP_ACTION_EVENT, _handle)
 

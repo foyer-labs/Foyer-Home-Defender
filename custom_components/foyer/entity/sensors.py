@@ -61,6 +61,7 @@ async def async_setup_sensors(
             FoyerTechnicalCause(system, entry.entry_id),
             FoyerIncident(system, entry.entry_id),
             FoyerLastEvent(system, entry.entry_id),
+            FoyerNextAutoAction(system, entry.entry_id),
         ]
     )
 
@@ -383,3 +384,68 @@ class FoyerCountdown(FoyerEntity, SensorEntity):
         if self._unsub_tick is not None:
             self._unsub_tick()
             self._unsub_tick = None
+
+
+class FoyerNextAutoAction(FoyerEntity, SensorEntity):
+    """``sensor.foyer_next_auto_action`` (§9.4, §13): what happens next.
+
+    The state is the **action** — `arm`, `disarm`, `switch`, or `idle` when
+    nothing is scheduled — because that is a closed set an automation can
+    trigger on and a panel can translate, and because a rule's name is free
+    text that changes when somebody renames it (part 2 decision 10). When it
+    happens, which rule, and any suspension covering it are attributes.
+
+    It reports what is **scheduled**, not what will certainly happen: the
+    guards are evaluated at the moment the rule acts. Predicting them here
+    would be a second code path able to contradict the Decision (INV-1), and
+    "it said it would arm and then did not" is exactly the mistrust §9.4's
+    logging exists to prevent — the row under `system` is where the answer
+    lives.
+    """
+
+    _attr_translation_key = "next_auto_action"
+    IDLE = "idle"
+
+    def __init__(self, system: FoyerSystem, entry_id: str) -> None:
+        super().__init__(system)
+        self._attr_unique_id = f"{entry_id}_next_auto_action"
+        self.entity_id = f"sensor.{DOMAIN}_next_auto_action"
+        self._attr_device_info = hub_device(entry_id)
+
+    def _next(self) -> dict[str, Any] | None:
+        return self._system.auto_status()["next"]
+
+    @property
+    def native_value(self) -> str:
+        upcoming = self._next()
+        return upcoming["action"] if upcoming else self.IDLE
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        upcoming = self._next()
+        if upcoming is None:
+            return {
+                "rule": None,
+                "at": None,
+                "scenario": None,
+                "areas": [],
+                "counting_down": False,
+                "suspension": None,
+                "enabled": self._system.state.auto_arming,
+            }
+        scenarios = {s.id: s.name for s in self._system.config.scenarios}
+        areas = {a.id: a.name for a in self._system.config.areas}
+        suspension = upcoming["suspension"]
+        return {
+            "rule": upcoming["rule_name"],
+            "rule_id": upcoming["rule_id"],
+            "at": upcoming["at"],
+            "scenario": scenarios.get(upcoming["scenario_id"] or ""),
+            "areas": [areas.get(a, a) for a in upcoming["area_ids"]],
+            # Whether the countdown is already running, which is the one
+            # state in which somebody can still stop it.
+            "counting_down": upcoming["pending_id"] is not None,
+            "suspension": (suspension or {}).get("name")
+            or (suspension["kind"] if suspension else None),
+            "enabled": self._system.state.auto_arming,
+        }

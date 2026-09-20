@@ -29,7 +29,7 @@ from homeassistant.util import dt as dt_util
 
 from .. import i18n
 from ..const import CHANNEL_HA_UI, SIGNAL_UPDATE
-from ..core import authz
+from ..core import authz, rules as rules_engine
 from ..core.conditions import condition_entities
 from ..core.diagnostics import as_dict as diagnostics_dict, diagnose
 from ..core.engine import (
@@ -56,6 +56,7 @@ from ..core.models import (
     RuntimeState,
     Scenario,
     Startup,
+    Suspension,
     SystemSnapshot,
     Tick,
     User,
@@ -95,6 +96,45 @@ PURGE_INTERVAL = timedelta(days=1)
 _QUIET_CATEGORIES = frozenset(
     {LogCategory.ZONE_ARMED, LogCategory.ZONE_DISARMED, LogCategory.ACTION}
 )
+
+
+def _suspension_dict(suspension: Suspension) -> dict[str, Any]:
+    """One suspension, as the panel and the card show it (§9.4)."""
+    return {
+        "id": suspension.id,
+        "kind": suspension.kind.value,
+        "rule_ids": list(suspension.rule_ids),
+        "name": suspension.name,
+        "start": suspension.start.isoformat() if suspension.start else None,
+        "until": suspension.until.isoformat() if suspension.until else None,
+        "reduced_scenario_id": suspension.reduced_scenario_id,
+        "created_at": (
+            suspension.created_at.isoformat() if suspension.created_at else None
+        ),
+        "user_id": suspension.user_id,
+        "user_name": suspension.user_name,
+    }
+
+
+def _next_action_dict(
+    upcoming: rules_engine.NextAction | None,
+) -> dict[str, Any] | None:
+    if upcoming is None:
+        return None
+    return {
+        "rule_id": upcoming.rule_id,
+        "rule_name": upcoming.rule_name,
+        "action": upcoming.action.value,
+        "at": upcoming.at.isoformat() if upcoming.at else None,
+        "scenario_id": upcoming.scenario_id,
+        "area_ids": list(upcoming.area_ids),
+        "pending_id": upcoming.pending_id,
+        "suspension": (
+            _suspension_dict(upcoming.suspension)
+            if upcoming.suspension is not None
+            else None
+        ),
+    }
 
 
 def _ok(row: LogRow) -> bool:
@@ -376,6 +416,11 @@ class FoyerSystem:
         return sorted(
             {z.entity_id for z in self.config.zones}
             | {d.entity_id for d in self.config.devices if d.entity_id}
+            # And the people an automatic rule watches (§9.4). A phone leaving
+            # the house is a state change like any other, and a rule reading
+            # an entity nobody subscribed to would arm the house at the next
+            # periodic wake-up instead of when everybody actually left.
+            | set(self.rule_entity_ids())
         )
 
     def watched_entity_ids(self) -> list[str]:
@@ -392,10 +437,62 @@ class FoyerSystem:
             z.battery_entity_id for z in self.config.zones if z.battery_entity_id
         )
         entities.update(d.entity_id for d in self.config.devices if d.entity_id)
+        entities.update(self.rule_entity_ids())
         for profile in self.config.profiles:
             for action in profile.actions:
                 entities.update(condition_entities(action))
         return sorted(entities)
+
+    def rule_entity_ids(self) -> list[str]:
+        """Every entity an automatic rule reads (§9.4): people, and the one
+        entity an ``entity`` rule watches."""
+        return sorted(
+            {
+                entity_id
+                for rule in self.config.rules
+                if rule.enabled
+                for entity_id in rule.trigger.entity_ids
+            }
+        )
+
+    def auto_status(self) -> dict[str, Any]:
+        """Automatic arming, as page 12 and the two entities read it (§9.4).
+
+        Everything here comes off the state the engine produced or from
+        ``core.rules``: the panel never recomputes what a rule would do, or
+        it would be able to disagree with the engine that does it.
+        """
+        now = dt_util.utcnow()
+        tz = dt_util.get_default_time_zone()
+        upcoming = rules_engine.next_action(self.config, self.state, now, tz)
+        return {
+            "enabled": self.state.auto_arming,
+            "allow_auto_disarm": self.config.settings.allow_auto_disarm,
+            "next": _next_action_dict(upcoming),
+            "pending": [
+                {
+                    "id": pending.id,
+                    "rule_id": pending.rule_id,
+                    "rule_name": pending.rule_name,
+                    "action": pending.action.value,
+                    "due": pending.due.isoformat(),
+                    "started_at": pending.started_at.isoformat(),
+                    "seconds": pending.seconds,
+                    "scenario_id": pending.scenario_id,
+                    "area_ids": list(pending.area_ids),
+                    "suspension_name": pending.suspension_name,
+                }
+                for pending in self.state.pending_rules
+            ],
+            "suspensions": [
+                _suspension_dict(suspension) for suspension in self.state.suspensions
+            ],
+            "blocked": {
+                rule_id: runtime.blocked.value
+                for rule_id, runtime in self.state.rules.items()
+                if runtime.blocked is not None
+            },
+        }
 
     def _snapshot(
         self, overrides: Mapping[str, EntityState] | None = None
@@ -727,6 +824,11 @@ class FoyerSystem:
             # §11.3: an unmissable banner in the panel and on every card
             # while it is active. Both read it from here.
             "walk_test": self.walk_test_status(),
+            # Automatic arming (§9.4). On the live status rather than only on
+            # page 12, because a countdown is something the card has to be
+            # able to show and stop: two minutes is not long enough to go and
+            # find the right page.
+            "auto": self.auto_status(),
             "master": {"state": master.value, "mode": mode},
             "areas": areas,
             "scenarios": [

@@ -1,4 +1,4 @@
-"""The two switches of §13: the chime, and the walk test.
+"""The three switches of §13: the chime, the walk test and automatic arming.
 
 Neither holds state of its own: turning one goes through the engine like every
 other command, so the choice survives a restart (INV-3) and is recorded.
@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from ..const import DOMAIN
-from ..core.models import SetChime, WalkTestRequest
+from ..core.models import SetAutoArming, SetChime, WalkTestRequest
 from ..runtime.system import FoyerSystem
 from .common import FoyerEntity, actor_of, hub_device, raise_if_rejected
 
@@ -29,6 +29,7 @@ async def async_setup_switches(
         [
             FoyerChimeSwitch(system, entry.entry_id),
             FoyerWalkTestSwitch(system, entry.entry_id),
+            FoyerAutoArmingSwitch(system, entry.entry_id),
         ]
     )
 
@@ -117,6 +118,59 @@ class FoyerWalkTestSwitch(FoyerEntity, SwitchEntity):
         actor = await actor_of(self.hass, self._system, self._context)
         decision = await self._system.async_handle(WalkTestRequest(enable, actor))
         raise_if_rejected(self._system, decision)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)
+
+
+class FoyerAutoArmingSwitch(FoyerEntity, SwitchEntity):
+    """``switch.foyer_auto_arming`` (§9.4, §13): the global kill switch.
+
+    It exists so the whole mechanism can be driven from a dashboard, an
+    automation or a keypad — a fortnight away, a house full of guests, a
+    weekend when the rules would be wrong. Off cancels whatever is counting
+    down as well: a switch that let an announced arming happen anyway would
+    not be doing what it says at the one moment somebody reaches for it.
+
+    It holds no state of its own. Like the chime's, the decision goes through
+    the engine, is recorded, and survives a restart (INV-3).
+    """
+
+    _attr_translation_key = "auto_arming"
+
+    def __init__(self, system: FoyerSystem, entry_id: str) -> None:
+        super().__init__(system)
+        self._attr_unique_id = f"{entry_id}_auto_arming"
+        self.entity_id = f"switch.{DOMAIN}_auto_arming"
+        self._attr_device_info = hub_device(entry_id)
+
+    @property
+    def is_on(self) -> bool:
+        return self._system.state.auto_arming
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """How many rules are running behind it, and what is counting down.
+
+        The detail belongs on ``sensor.foyer_next_auto_action``; what a
+        switch owes its dashboard is whether switching it off would stop
+        something that is about to happen.
+        """
+        state = self._system.state
+        return {
+            "rules": sum(1 for rule in self._system.config.rules if rule.enabled),
+            "counting_down": [pending.rule_name for pending in state.pending_rules],
+            "suspensions": len(state.suspensions),
+        }
+
+    async def _set(self, enabled: bool) -> None:
+        if enabled == self.is_on:
+            return
+        actor = await actor_of(self.hass, self._system, self._context)
+        await self._system.async_handle(SetAutoArming(enabled, actor))
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._set(True)

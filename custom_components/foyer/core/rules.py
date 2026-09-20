@@ -26,6 +26,7 @@ Two distinctions carry most of the weight:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, tzinfo
 
 from .clock import in_daily_window, parse_hhmm
@@ -215,6 +216,84 @@ def substitute_scenario(suspension: Suspension | None) -> str | None:
     if suspension is None or suspension.kind is not SuspensionKind.VISITOR:
         return None
     return suspension.reduced_scenario_id
+
+
+# --- what happens next (§9.4, §13) ------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class NextAction:
+    """What the house will do on its own next, and when (§9.4).
+
+    A read model, pure, so that ``sensor.foyer_next_auto_action``, page 12 and
+    the simulator's trace all say the same thing. It is deliberately what is
+    **scheduled**, not what will certainly happen: the guards are evaluated at
+    the moment the rule acts, and a second code path that tried to predict
+    them here would be a prediction the Decision could contradict (INV-1).
+    """
+
+    rule_id: str
+    rule_name: str
+    action: RuleActionKind
+    at: datetime | None
+    scenario_id: str | None = None
+    area_ids: tuple[str, ...] = ()
+    pending_id: str | None = None  # set when it is already counting down
+    suspension: Suspension | None = None
+
+
+def next_action(
+    config: FoyerConfig, state: RuntimeState, now: datetime, tz: tzinfo
+) -> NextAction | None:
+    """The nearest scheduled automatic action, countdowns first.
+
+    A ``presence`` rule has no next time — nobody knows when somebody will
+    come home — so it appears here only while it is counting down. That is
+    honest rather than tidy: a sensor that invented a time for it would be
+    inventing the one thing it exists to report.
+    """
+    candidates: list[NextAction] = []
+    for pending in state.pending_rules:
+        rule = config.rule(pending.rule_id)
+        candidates.append(
+            NextAction(
+                rule_id=pending.rule_id,
+                rule_name=pending.rule_name or (rule.name if rule else ""),
+                action=pending.action,
+                at=pending.due,
+                scenario_id=pending.scenario_id,
+                area_ids=pending.area_ids,
+                pending_id=pending.id,
+            )
+        )
+    counting = {p.rule_id for p in state.pending_rules}
+    if not state.auto_arming:
+        # The whole mechanism is off (§9.4). What is already counting down is
+        # cancelled by the switch, so nothing is scheduled at all.
+        return min(candidates, key=_when) if candidates else None
+    for rule in config.rules:
+        if not rule.enabled or rule.id in counting:
+            continue
+        at = matures_at(rule, state.rule(rule.id)) or next_occurrence(rule, now, tz)
+        if at is None:
+            continue
+        candidates.append(
+            NextAction(
+                rule_id=rule.id,
+                rule_name=rule.name,
+                action=rule.action,
+                at=max(at, now),
+                scenario_id=rule.scenario_id,
+                area_ids=rule.area_ids,
+                suspension=covering(state, rule, at),
+            )
+        )
+    return min(candidates, key=_when) if candidates else None
+
+
+def _when(candidate: NextAction) -> datetime:
+    assert candidate.at is not None
+    return candidate.at
 
 
 # --- guards (§9.4) ----------------------------------------------------------------
