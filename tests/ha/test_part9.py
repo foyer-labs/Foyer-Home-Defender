@@ -632,9 +632,17 @@ async def test_removing_the_integration_takes_its_cards_with_it(
 
 async def test_a_stopped_system_decides_nothing_more(hass, loaded, hass_ws_client):
     """A reload while a ping is in flight would otherwise leave the old
-    instance writing its state over the new one's (INV-3)."""
+    instance writing its state over the new one's (INV-3).
+
+    The flag is set directly rather than by calling async_stop(): a stopped
+    but still-loaded entry is a state nothing else in this suite produces,
+    and leaving one behind is how a test makes the *next* test flake.
+    """
     system = _system(hass)
     before = system.state
-    await system.async_stop()
-    await system.async_handle(HealthReport(watchdog=False))
-    assert system.state is before
+    system._stopped = True
+    try:
+        await system.async_handle(HealthReport(watchdog=False))
+        assert system.state is before
+    finally:
+        system._stopped = False

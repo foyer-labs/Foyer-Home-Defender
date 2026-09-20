@@ -388,7 +388,11 @@ class FoyerSystem:
             self.state,
             health=replace(self.state.health, acknowledged_issues=issues),
         )
-        self.hass.async_create_task(self._async_save(), eager_start=True)
+        if not self._stopped:
+            # Nothing this instance starts may outlive its unload: a save
+            # scheduled here would write the old entry's state over the new
+            # one's, which is the same hole the ping in flight had.
+            self.hass.async_create_task(self._async_save(), eager_start=True)
 
     async def async_acknowledge_issue(self, issue_id: str) -> None:
         """Somebody pressed "mark as seen" on a repair card (§12.4)."""
