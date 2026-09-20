@@ -89,6 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         log = None
 
     system = FoyerSystem(hass, config, state_store, stored, log)
+    system.entry_id = entry.entry_id
     entry.runtime_data = system
     hass.data[DOMAIN] = system
 

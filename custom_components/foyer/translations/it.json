@@ -145,6 +145,12 @@
       },
       "technical_alarm": {
         "name": "Allarme tecnico"
+      },
+      "system_health": {
+        "name": "Salute di sistema"
+      },
+      "rf_interference": {
+        "name": "Interferenza radio ({radio})"
       }
     },
     "sensor": {
@@ -526,6 +532,85 @@
         "device_id": {
           "name": "Dispositivo",
           "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
+        }
+      }
+    }
+  },
+  "issues": {
+    "zone_unreachable": {
+      "title": "Foyer: {zone} non si vede da {days} giorni",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "La zona {zone} è illeggibile da {days} giorni. Finché lo è, è un guasto: blocca l'inserimento e non viene mai considerata “chiusa”. Batteria scarica, sensore fuori portata, o un'integrazione che non si carica più.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+          }
+        }
+      }
+    },
+    "channel_broken": {
+      "title": "Foyer: {contact} non è raggiungibile tramite {service}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "Il canale di notifica {service} di {contact} è {detail}. Le integrazioni vengono rimosse, rinominate o non si caricano più dopo un aggiornamento, e un canale scoperto rotto durante un allarme è esattamente il fallimento che questo controllo esiste per evitare. Correggilo nella pagina Contatti e manda una prova.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+          }
+        }
+      }
+    },
+    "watchdog_never_worked": {
+      "title": "Foyer: il watchdog esterno non ha mai risposto",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "Nessun ping a {url} è mai riuscito. Quasi sempre un URL sbagliato o un endpoint mai creato. Ultimo errore: {error}. Finché non funziona, niente fuori casa sa se Home Assistant è ancora vivo.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+          }
+        }
+      }
+    },
+    "watchdog_unreachable": {
+      "title": "Foyer: il watchdog esterno ha smesso di rispondere",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "I ping a {url} falliscono. Ultimo errore: {error}. Non riuscire a raggiungerlo significa che nemmeno una notifica che passa da internet ti raggiungerebbe.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+          }
+        }
+      }
+    },
+    "rf_interference": {
+      "title": "Foyer: sospetta interferenza radio su {radio}",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "{count} zone su {of} di {radio} sono ammutolite insieme mentre il coordinatore continuava a rispondere. È un'euristica, non un rilevamento di jamming: un crash del coordinatore, un aggiornamento firmware, un cambio di canale o un black-out in una stanza piena di router alimentati a rete hanno tutti questo aspetto. Vedi docs/system-health.md.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+          }
+        }
+      }
+    },
+    "coordinator_down": {
+      "title": "Foyer: il coordinatore di {radio} è irraggiungibile",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "{entity_id} non è leggibile, quindi nessuna zona di {radio} è sorvegliata. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete. Un coordinatore in PoE muore con il suo switch.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+          }
+        }
+      }
+    },
+    "mains_lost": {
+      "title": "Foyer: la casa sta andando senza rete elettrica",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Segna come visto",
+            "description": "{entity_id} segnala che la rete elettrica è venuta a mancare. Tutto ciò che passa da internet si ferma quando si ferma il router: vedi docs/resilience.md.\n\nChiude questa scheda. Torna se il problema si ripresenta."
+          }
         }
       }
     }

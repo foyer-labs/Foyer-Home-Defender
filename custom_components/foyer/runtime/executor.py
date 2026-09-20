@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import os
 from typing import Any
@@ -60,6 +60,13 @@ class ActionResult:
     kind: str
     ok: bool
     error: str | None = None
+    # What each contact channel this action used actually did (§12.2). The
+    # send is the only honest test of a channel there is — a service that is
+    # in the registry can still fail every time it is called — so the
+    # outcome is carried back and the engine counts it. Keyed
+    # "<contact_id>:<channel_id>", empty for everything that is not a
+    # notification to the address book.
+    sends: Mapping[str, bool] = field(default_factory=dict)
 
 
 class Executor:
@@ -71,6 +78,7 @@ class Executor:
     def __init__(self, hass: HomeAssistant, language: str | None = None) -> None:
         self.hass = hass
         self._language = language
+        self._sends: dict[str, bool] = {}
 
     @property
     def language(self) -> str:
@@ -82,14 +90,28 @@ class Executor:
     async def async_run(self, decision: Decision) -> list[ActionResult]:
         results: list[ActionResult] = []
         for intent in decision.actions:
+            # Filled by whatever ran this intent, and read back whether it
+            # raised or not: a notification to three contacts that fails for
+            # one of them has still told the other two something true about
+            # their channels.
+            self._sends = {}
             try:
                 await self._async_run_one(intent)
-                results.append(ActionResult(intent.action_id, intent.kind, True))
+                results.append(
+                    ActionResult(intent.action_id, intent.kind, True, sends=self._sends)
+                )
             except Exception as err:  # one failed action must not stop the others
                 _LOGGER.exception("Foyer action %s failed", intent.action_id)
                 results.append(
-                    ActionResult(intent.action_id, intent.kind, False, str(err))
+                    ActionResult(
+                        intent.action_id,
+                        intent.kind,
+                        False,
+                        str(err),
+                        sends=self._sends,
+                    )
                 )
+        self._sends = {}
         return results
 
     async def _async_run_one(self, intent: ActionIntent) -> None:
@@ -232,6 +254,7 @@ class Executor:
         # not close an incident.
         kind = "technical" if intent.moment is Moment.TECHNICAL_RAISED else "incident"
         for recipient in recipients:
+            key = f"{recipient.get('contact_id')}:{recipient.get('channel_id')}"
             try:
                 await self._async_reach(recipient, dict(data), kind)
             except Exception as err:  # one dead channel must not stop the rest
@@ -240,7 +263,10 @@ class Executor:
                     recipient.get("contact_name"),
                     recipient.get("service"),
                 )
+                self._sends[key] = False
                 errors.append(f"{recipient.get('contact_name')}: {err}")
+            else:
+                self._sends[key] = True
         if errors:
             raise HomeAssistantError("; ".join(errors))
 

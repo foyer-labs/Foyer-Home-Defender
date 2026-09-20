@@ -10,6 +10,7 @@
     "frontend",
     "http",
     "panel_custom",
+    "repairs",
     "webhook",
     "websocket_api"
   ],

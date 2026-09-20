@@ -55,8 +55,16 @@ def expected_unique_ids(entry_id: str, config: FoyerConfig) -> set[str]:
             # stale, which is a switch that never appears.
             "auto_arming",
             "next_auto_action",
+            # §12, §13. The same trap as the two above, found the hard way
+            # in part 4: an entity missing from this set is created at every
+            # start and deleted again as stale, which is a sensor that never
+            # appears.
+            "system_health",
         )
     }
+    ids.update(
+        f"{entry_id}_rf_interference_{radio.id}" for radio in config.health.radios
+    )
     for area in config.areas:
         for prefix in ("area", "ready_to_arm", "countdown"):
             ids.add(f"{entry_id}_{prefix}_{area.id}")

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
+from aiohttp import ClientError, ClientTimeout
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import (
     CALLBACK_TYPE,
@@ -20,6 +21,8 @@ from homeassistant.core import (
     State,
     callback,
 )
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_point_in_utc_time,
@@ -27,9 +30,9 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
-from .. import i18n
+from .. import i18n, repairs
 from ..const import CHANNEL_HA_UI, SIGNAL_UPDATE
-from ..core import authz, rules as rules_engine
+from ..core import authz, health as health_engine, rules as rules_engine
 from ..core.conditions import condition_entities
 from ..core.diagnostics import as_dict as diagnostics_dict, diagnose
 from ..core.engine import (
@@ -49,6 +52,7 @@ from ..core.models import (
     EntityState,
     Event,
     FoyerConfig,
+    HealthReport,
     LogCategory,
     Operation,
     Outcome,
@@ -87,6 +91,12 @@ ALIVE_INTERVAL = timedelta(minutes=5)
 # How often the log drops what is older than its retention (SPEC §10.3).
 PURGE_INTERVAL = timedelta(days=1)
 
+# How long one watchdog ping may take before it counts as a failure (§12.3).
+# The interval between pings is a setting; this is not, because thirty
+# seconds is already longer than any healthy endpoint takes and a longer one
+# would only delay the answer Foyer is waiting for.
+WATCHDOG_USER_AGENT = "FoyerHomeDefender"
+
 # Categories that do not become sensor.foyer_last_event. Zone activity is the
 # noisy part of the log and would keep overwriting the event that matters; an
 # action is the consequence of an event rather than an event, and "Foyer sent
@@ -96,6 +106,10 @@ PURGE_INTERVAL = timedelta(days=1)
 _QUIET_CATEGORIES = frozenset(
     {LogCategory.ZONE_ARMED, LogCategory.ZONE_DISARMED, LogCategory.ACTION}
 )
+
+
+def _iso(value: datetime | None) -> str | None:
+    return value.isoformat() if value is not None else None
 
 
 def _suspension_dict(suspension: Suspension) -> dict[str, Any]:
@@ -217,6 +231,11 @@ class FoyerSystem:
         self._unsub_wakeup: CALLBACK_TYPE | None = None
         self._unsubs: list[CALLBACK_TYPE] = []
         self._started = False
+        # Guards the one-level recursion of _async_report_sends.
+        self._reporting = False
+        # Which config entry this system belongs to, for the repair issues
+        # of §12.4. Set by __init__.py once the entry exists.
+        self.entry_id: str | None = None
 
     @property
     def language(self) -> str:
@@ -248,6 +267,25 @@ class FoyerSystem:
             self._unsubs.append(
                 async_track_time_interval(self.hass, self._on_purge, PURGE_INTERVAL)
             )
+        # The third and fourth periodic jobs in this file (§12.2, §12.3).
+        # Both are registered whatever the configuration says, because both
+        # read the configuration when they fire: a watchdog switched on from
+        # the panel must not wait for a reload, and the entry reloads on
+        # every configuration change anyway, which is what unregisters them.
+        self._unsubs.append(
+            async_track_time_interval(
+                self.hass,
+                self._on_watchdog,
+                timedelta(seconds=self.config.health.watchdog.interval),
+            )
+        )
+        self._unsubs.append(
+            async_track_time_interval(
+                self.hass,
+                self._on_channel_sweep,
+                timedelta(seconds=self.config.health.channel_sweep),
+            )
+        )
         self._reschedule()
 
     async def async_stop(self) -> None:
@@ -270,6 +308,7 @@ class FoyerSystem:
         self._started = True
         self.settling = False
         await self.async_handle(Startup(down_since=self._down_since, cause=cause))
+        self.async_reconcile_issues()
         # Once at every start, as well as daily. A timer that only fires after
         # twenty-four hours never fires at all on a house that restarts more
         # often than that — and every configuration change reloads the entry,
@@ -296,10 +335,116 @@ class FoyerSystem:
     @callback
     def _on_alive(self, _now: datetime) -> None:
         self.hass.async_create_task(self._async_save(), eager_start=True)
+        # Persistent problems belong in Settings, where somebody sees them
+        # without opening the Foyer panel (§12.4). Reconciled here rather
+        # than after every decision: these are measured in hours and days,
+        # and a door opening is not news about any of them.
+        self.async_reconcile_issues()
+
+    @callback
+    def async_reconcile_issues(self) -> None:
+        if self.entry_id is None:
+            return
+        try:
+            repairs.reconcile(self.hass, self.entry_id, self.health_status())
+        except Exception:
+            # A repair card nobody could raise must never stop the alarm.
+            _LOGGER.exception("Foyer could not reconcile its repair issues")
 
     @callback
     def _on_ha_stop(self, _event: HassEvent) -> None:
         self.hass.async_create_task(self._async_save(), eager_start=True)
+
+    # --- system health (§12) -------------------------------------------------
+
+    @callback
+    def _on_watchdog(self, _now: datetime) -> None:
+        self.hass.async_create_task(self._async_watchdog(), eager_start=True)
+
+    async def _async_watchdog(self) -> None:
+        """Ping the external URL and tell the engine how it went (§12.3).
+
+        The timer lives here and the meaning lives in ``core``: this method
+        knows how to make an HTTP request and nothing else. How many
+        failures in a row amount to an outage, when to say so and what to
+        say is the engine's, which is why the simulator can show the moment
+        this produces without anything reaching the network.
+        """
+        settings = self.config.health.watchdog
+        if not settings.enabled or not settings.url:
+            return
+        if self.settling:
+            # Not while Home Assistant is still starting (part 1 decision 6):
+            # a ping that fails because the network stack is not up yet is a
+            # failure about Home Assistant's boot order, not about the
+            # watchdog, and three of them would announce an outage that
+            # never happened.
+            return
+        payload = health_engine.watchdog_payload(self.config, self._snapshot())
+        session = async_get_clientsession(self.hass)
+        error = ""
+        ok = False
+        try:
+            # GET with nothing at all unless the household explicitly asked
+            # for a payload (P-1, decision 29). The default heartbeat is the
+            # request itself: its arrival is the whole message.
+            if payload is None:
+                response = await session.get(
+                    settings.url,
+                    timeout=ClientTimeout(total=settings.timeout),
+                    headers={"User-Agent": WATCHDOG_USER_AGENT},
+                )
+            else:
+                response = await session.post(
+                    settings.url,
+                    json=dict(payload),
+                    timeout=ClientTimeout(total=settings.timeout),
+                    headers={"User-Agent": WATCHDOG_USER_AGENT},
+                )
+            async with response:
+                ok = response.status < 400
+                if not ok:
+                    error = f"HTTP {response.status}"
+        except (TimeoutError, ClientError, OSError, ValueError) as err:
+            error = f"{type(err).__name__}: {err}"
+        await self.async_handle(HealthReport(watchdog=ok, watchdog_error=error))
+
+    @callback
+    def _on_channel_sweep(self, _now: datetime) -> None:
+        self.hass.async_create_task(self._async_channel_sweep(), eager_start=True)
+
+    async def _async_channel_sweep(self) -> None:
+        """Is every configured notification channel still real? (§12.2)
+
+        A read of the service registry, which is a dictionary in memory —
+        cheap enough to do every quarter of an hour and the only way to
+        notice that an integration was removed, renamed or failed to load
+        after an update before the night somebody needs it.
+        """
+        present = {
+            key: self._service_exists(service)
+            for key, service in health_engine.configured_channels(self.config).items()
+        }
+        if present:
+            await self.async_handle(HealthReport(channels_present=present))
+
+    def _service_exists(self, service: str) -> bool:
+        """Whether a channel's ``notify`` target is there to be called.
+
+        Two shapes are configurable (§7.1): a ``notify.*`` service, and a
+        ``notify`` entity. The first is a registry lookup; the second is an
+        entity that has to exist and be readable, which is INV-4 read in the
+        one other place it applies.
+        """
+        if not service:
+            return False
+        if "." not in service:
+            return self.hass.services.has_service("notify", service)
+        domain, _, name = service.partition(".")
+        if self.hass.services.has_service(domain, name):
+            return True
+        state = self.hass.states.get(service)
+        return state is not None and state.state not in health_engine.UNREADABLE
 
     # --- events --------------------------------------------------------------
 
@@ -335,7 +480,31 @@ class FoyerSystem:
         )
         results = await self._executor.async_run(decision)
         self.async_record(_action_rows(decision, results))
+        await self._async_report_sends(results)
         return decision
+
+    async def _async_report_sends(self, results: list[ActionResult]) -> None:
+        """Tell the engine how each notification channel actually did (§12.2).
+
+        One level deep and no further. The report itself may produce a
+        notification — that is the whole of "announce a broken channel over
+        a channel that still works" — and feeding *its* sends back in turn
+        would be a loop that runs until something fails differently. What is
+        lost is one cycle's evidence about the channel that carried the
+        warning, which the next sweep or the next real send says again.
+        """
+        if self._reporting:
+            return
+        sends: dict[str, bool] = {}
+        for result in results:
+            sends.update(result.sends)
+        if not sends:
+            return
+        self._reporting = True
+        try:
+            await self.async_handle(HealthReport(channel_sends=sends))
+        finally:
+            self._reporting = False
 
     async def async_zone_changed(
         self, entity_id: str, old: State | None, new: State | None
@@ -438,6 +607,18 @@ class FoyerSystem:
         )
         entities.update(d.entity_id for d in self.config.devices if d.entity_id)
         entities.update(self.rule_entity_ids())
+        # System health (§12): the mains entity and every radio's
+        # coordinator. Both are read on every decision — a power cut raises
+        # a moment, a coordinator that has gone changes what a silent radio
+        # means — so an entity nobody subscribed to is a power cut Foyer
+        # notices at the next door opening.
+        if self.config.health.mains_entity_id:
+            entities.add(self.config.health.mains_entity_id)
+        entities.update(
+            r.coordinator_entity_id
+            for r in self.config.health.radios
+            if r.enabled and r.coordinator_entity_id
+        )
         for profile in self.config.profiles:
             for action in profile.actions:
                 entities.update(condition_entities(action))
@@ -494,6 +675,167 @@ class FoyerSystem:
             },
         }
 
+    def health_status(self) -> dict[str, Any]:
+        """System health, as page 14 and the two entities read it (§12, §13).
+
+        Everything here comes off the state the engine produced or from
+        ``core.health``: the panel never works out for itself whether a
+        radio is being jammed, or it would be able to disagree with the
+        engine that decides it.
+        """
+        now = dt_util.utcnow()
+        snapshot = self._snapshot()
+        state = self.state.health
+        config = self.config.health
+        contacts = {c.id: c.name for c in self.config.contacts}
+        names = {z.id: z.name for z in self.config.zones}
+        return {
+            "now": now.isoformat(),
+            # Zones that have been unreadable long enough to be worth a card
+            # in Settings (§12.4). "Unreachable for days" is a different
+            # fact from "in fault", which is true the instant an entity
+            # blinks, and only the first one is somebody's to act on.
+            "unreachable_zones": [
+                {
+                    "id": zone_id,
+                    "name": names.get(zone_id, zone_id),
+                    "since": since.isoformat(),
+                    "days": int((now - since).total_seconds() // 86400),
+                }
+                for zone_id, since in sorted(state.quiet_since.items())
+                if (now - since).total_seconds() >= config.repair_after
+            ],
+            "causes": [
+                c.value for c in health_engine.causes(state, self.config, snapshot)
+            ],
+            "mains": {
+                "entity_id": config.mains_entity_id,
+                "lost_states": list(config.mains_lost_states),
+                "state": (
+                    snapshot.entity(config.mains_entity_id).state
+                    if config.mains_entity_id
+                    else None
+                ),
+                "lost": health_engine.mains_state(self.config, snapshot),
+                "since": _iso(state.mains_lost_since),
+            },
+            "watchdog": {
+                "enabled": config.watchdog.enabled,
+                "url": config.watchdog.url,
+                "interval": config.watchdog.interval,
+                "timeout": config.watchdog.timeout,
+                "failures_allowed": config.watchdog.failures,
+                "payload": config.watchdog.payload,
+                "failures": state.watchdog.failures,
+                "down_since": _iso(state.watchdog.down_since),
+                "last_ok": _iso(state.watchdog.last_ok),
+                "last_attempt": _iso(state.watchdog.last_attempt),
+                "last_error": state.watchdog.last_error,
+                "ever_ok": state.watchdog.ever_ok,
+            },
+            "channels": [
+                {
+                    "key": key,
+                    "contact_id": contact.id,
+                    "contact_name": contacts.get(contact.id, contact.id),
+                    "channel_id": channel.id,
+                    "kind": channel.kind.value,
+                    "service": channel.service,
+                    "fault": (
+                        state.channel(key).fault.value
+                        if state.channel(key).fault
+                        else None
+                    ),
+                    "since": _iso(state.channel(key).since),
+                    "failures": state.channel(key).failures,
+                    "last_ok": _iso(state.channel(key).last_ok),
+                    "checked": state.channel(key).present is not None,
+                }
+                for contact in self.config.contacts
+                if contact.enabled
+                for channel in contact.channels
+                if channel.enabled
+                for key in (f"{contact.id}:{channel.id}",)
+            ],
+            "radios": [
+                {
+                    "id": radio.id,
+                    "name": radio.name,
+                    "entry_id": radio.entry_id,
+                    "coordinator_entity_id": radio.coordinator_entity_id,
+                    "coordinator_state": (
+                        snapshot.entity(radio.coordinator_entity_id).state
+                        if radio.coordinator_entity_id
+                        else None
+                    ),
+                    "enabled": radio.enabled,
+                    "zones": len(health_engine.zones_on(self.config, snapshot, radio)),
+                    "quiet": len(
+                        health_engine.burst(
+                            state.quiet_since,
+                            health_engine.zones_on(self.config, snapshot, radio),
+                            config.rf_window_of(radio),
+                        )
+                    ),
+                    "threshold": config.rf_threshold(
+                        radio, len(health_engine.zones_on(self.config, snapshot, radio))
+                    ),
+                    "window": config.rf_window_of(radio),
+                    "suspected_since": _iso(state.radio(radio.id).suspected_since),
+                    "confirmed": state.radio(radio.id).confirmed,
+                    "coordinator_down_since": _iso(
+                        state.radio(radio.id).coordinator_down_since
+                    ),
+                }
+                for radio in config.radios
+            ],
+            "rf": {
+                "zones": config.rf_zones,
+                "window": config.rf_window,
+                "confirm": config.rf_confirm,
+            },
+            "faults": sorted(self.state.faults),
+            "repair_after": config.repair_after,
+        }
+
+    def radio_candidates(self) -> list[dict[str, Any]]:
+        """Config entries that back at least one zone, for page 14's picker.
+
+        A radio is a config entry (part 1 decision 7), so the honest way to
+        offer them is to ask which entries the zones of this installation
+        actually come from. An installation with everything on Wi-Fi sees an
+        empty list, which is the true answer rather than a menu of
+        integrations that are not radios.
+        """
+        registry = er.async_get(self.hass)
+        counts: dict[str, int] = {}
+        for zone in self.config.zones:
+            entry = registry.async_get(zone.entity_id)
+            if entry is not None and entry.config_entry_id:
+                counts[entry.config_entry_id] = counts.get(entry.config_entry_id, 0) + 1
+        out: list[dict[str, Any]] = []
+        for entry_id, zones in counts.items():
+            entry = self.hass.config_entries.async_get_entry(entry_id)
+            if entry is None:
+                continue
+            out.append(
+                {
+                    "entry_id": entry_id,
+                    "title": entry.title,
+                    "domain": entry.domain,
+                    "zones": zones,
+                }
+            )
+        return sorted(out, key=lambda e: (-e["zones"], e["title"]))
+
+    def snapshot(self) -> SystemSnapshot:
+        """The world as the engine would be handed it, for whoever reads it.
+
+        Public because the diagnostics dump needs one and building a second
+        one would be a second answer to "what does Foyer see".
+        """
+        return self._snapshot()
+
     def _snapshot(
         self, overrides: Mapping[str, EntityState] | None = None
     ) -> SystemSnapshot:
@@ -503,8 +845,58 @@ class FoyerSystem:
         }
         entities.update(overrides or {})
         return SystemSnapshot(
-            self.state, entities, self.settling, dt_util.get_default_time_zone()
+            self.state,
+            entities,
+            self.settling,
+            dt_util.get_default_time_zone(),
+            self.radio_map(),
         )
+
+    def radio_map(self) -> dict[str, str]:
+        """Which radio each entity sits on (§12.5): entity id -> Radio.id.
+
+        Home Assistant has no general notion of a radio, and this is the
+        closest honest thing there is: every entity of one ZHA, Z-Wave JS or
+        Zigbee2MQTT installation shares that integration's config entry. The
+        household names the entry once, on page 14, and forty zones assign
+        themselves.
+
+        It covers the coordinators and the entities actions target as well
+        as the zones, because "do not notify over the affected radio" is
+        decided in ``core`` and a lookup it was never handed is a lookup it
+        cannot make (INV-1).
+        """
+        radios = {r.entry_id: r.id for r in self.config.health.radios if r.enabled}
+        if not radios:
+            return {}
+        registry = er.async_get(self.hass)
+        out: dict[str, str] = {}
+        for entity_id in self.radio_entity_ids():
+            entry = registry.async_get(entity_id)
+            if entry is not None and (radio := radios.get(entry.config_entry_id or "")):
+                out[entity_id] = radio
+        return out
+
+    def radio_entity_ids(self) -> list[str]:
+        """Everything whose radio Foyer needs to know: the zones it counts,
+        the coordinators it gates on, and every entity an action targets."""
+        entities = {z.entity_id for z in self.config.zones}
+        entities.update(
+            r.coordinator_entity_id
+            for r in self.config.health.radios
+            if r.coordinator_entity_id
+        )
+        for profile in self.config.profiles:
+            for action in profile.actions:
+                target = action.params.get("entity_ids") or action.params.get(
+                    "entity_id"
+                )
+                if isinstance(target, str):
+                    entities.add(target)
+                elif isinstance(target, list | tuple):
+                    entities.update(str(t) for t in target)
+        entities.update(t.entity_id for t in self.config.chime.targets)
+        return sorted(e for e in entities if e)
 
     # --- listeners -----------------------------------------------------------
 

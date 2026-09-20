@@ -18,7 +18,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util, slugify
 
 from ..const import DOMAIN
-from ..core.models import Area, Channel, TimerKind, Zone
+from ..core.models import Area, Channel, Radio, TimerKind, Zone
 from ..runtime.system import FoyerSystem
 from .common import FoyerEntity, area_device, hub_device
 
@@ -38,7 +38,12 @@ async def async_setup_binary_sensors(
             FoyerReadyToArm(system, entry_id, None),
             *(FoyerReadyToArm(system, entry_id, a) for a in system.config.areas),
             FoyerFault(system, entry_id),
+            FoyerSystemHealth(system, entry_id),
             FoyerTechnicalAlarm(system, entry_id),
+            *(
+                FoyerRfInterference(system, entry_id, radio)
+                for radio in system.config.health.radios
+            ),
             *(
                 FoyerZoneSensor(system, entry_id, z, areas[z.area_id])
                 for z in system.config.zones
@@ -158,6 +163,102 @@ class FoyerFault(FoyerEntity, BinarySensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         names = {z.id: z.name for z in self._system.config.zones}
         return {"zones": sorted(names[z] for z in self._system.state.faults)}
+
+
+class FoyerSystemHealth(FoyerEntity, BinarySensorEntity):
+    """Is anything wrong with the system itself? (SPEC §13, §12)
+
+    One entity with the causes as attributes rather than five entities,
+    because the question a dashboard asks is "is anything wrong" and the
+    answer to "what" belongs on page 14, where there is room to say it
+    properly. It overlaps binary_sensor.foyer_fault on purpose: that one
+    answers "can I arm", this one answers "is Foyer still able to do its
+    job", and a house whose only trouble is a removed Telegram integration
+    lights exactly one of them.
+    """
+
+    _attr_translation_key = "system_health"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, system: FoyerSystem, entry_id: str) -> None:
+        super().__init__(system)
+        self._attr_unique_id = f"{entry_id}_system_health"
+        self.entity_id = f"binary_sensor.{DOMAIN}_system_health"
+        self._attr_device_info = hub_device(entry_id)
+
+    @property
+    def is_on(self) -> bool:
+        return bool(self._system.health_status()["causes"])
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        status = self._system.health_status()
+        names = {z.id: z.name for z in self._system.config.zones}
+        return {
+            "causes": status["causes"],
+            "faulted_zones": sorted(names.get(z, z) for z in status["faults"]),
+            "mains_lost_since": status["mains"]["since"],
+            "broken_channels": [
+                f"{c['contact_name']} · {c['service']}"
+                for c in status["channels"]
+                if c["fault"]
+            ],
+            "watchdog_down_since": status["watchdog"]["down_since"],
+            "radios_suspected": [r["name"] for r in status["radios"] if r["confirmed"]],
+        }
+
+
+class FoyerRfInterference(FoyerEntity, BinarySensorEntity):
+    """Correlated silence on one radio, coordinator still answering (§12.5).
+
+    One per radio, because a Zigbee outage says nothing about Z-Wave. The
+    attributes carry the first line §12.5 asks for — how many zones, of how
+    many, and whether the coordinator is still there — because those three
+    numbers are what let somebody tell jamming from the four other things
+    that produce exactly this signature.
+    """
+
+    _attr_translation_key = "rf_interference"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, system: FoyerSystem, entry_id: str, radio: Radio) -> None:
+        super().__init__(system)
+        self._radio = radio
+        self._attr_unique_id = f"{entry_id}_rf_interference_{radio.id}"
+        self.entity_id = f"binary_sensor.{DOMAIN}_rf_interference_{slugify(radio.name)}"
+        self._attr_translation_placeholders = {"radio": radio.name}
+        self._attr_device_info = hub_device(entry_id)
+
+    def _status(self) -> dict[str, Any] | None:
+        return next(
+            (
+                r
+                for r in self._system.health_status()["radios"]
+                if r["id"] == self._radio.id
+            ),
+            None,
+        )
+
+    @property
+    def is_on(self) -> bool:
+        status = self._status()
+        return bool(status and status["confirmed"])
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        status = self._status() or {}
+        return {
+            "radio": self._radio.name,
+            "zones_quiet": status.get("quiet", 0),
+            "zones_on_radio": status.get("zones", 0),
+            "threshold": status.get("threshold"),
+            "window": status.get("window"),
+            "coordinator_entity_id": self._radio.coordinator_entity_id,
+            "coordinator_answering": status.get("coordinator_down_since") is None,
+            "suspected_since": status.get("suspected_since"),
+        }
 
 
 class FoyerTechnicalAlarm(FoyerEntity, BinarySensorEntity):
