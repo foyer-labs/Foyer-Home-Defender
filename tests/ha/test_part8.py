@@ -282,3 +282,48 @@ async def test_the_zone_still_works_while_rules_exist(hass, loaded, hass_ws_clie
     await _rule(hass, client)
     await _set(hass, ZONE, "on")
     assert hass.states.get("binary_sensor.foyer_zone_front_door").state == "on"
+
+
+async def test_the_card_path_cancels_by_id(hass, loaded, hass_ws_client, freezer):
+    """What the card sends: `foyer/auto/cancel` naming the countdown it is
+    showing. The engine decides, as it does for every command (INV-2)."""
+    client = await hass_ws_client(hass)
+    await _set(hass, PERSON, "home")
+    await _rule(hass, client)
+    await _notify_recorder(hass)
+    await _set(hass, PERSON, "not_home")
+    await _advance(hass, freezer, 11 * 60)
+    [pending] = _system(hass).state.pending_rules
+
+    result = await _ws(client, {"type": "foyer/auto/cancel", "pending_id": pending.id})
+    assert result["success"], result
+    assert not _system(hass).state.pending_rules
+
+    # And pressing it twice is refused rather than silent: there is nothing
+    # left to cancel, and somebody pressed a button.
+    await client.send_json(
+        {"id": 990, "type": "foyer/auto/cancel", "pending_id": pending.id}
+    )
+    again = await client.receive_json()
+    assert again["result"]["success"] is False
+    assert again["result"]["reason"] == "nothing_to_cancel"
+
+
+async def test_the_status_the_card_reads_carries_the_countdown(
+    hass, loaded, hass_ws_client, freezer
+):
+    client = await hass_ws_client(hass)
+    await _set(hass, PERSON, "home")
+    await _rule(hass, client)
+    await _notify_recorder(hass)
+    await _set(hass, PERSON, "not_home")
+    await _advance(hass, freezer, 11 * 60)
+
+    status = await _ws(client, {"type": "foyer/status"})
+    auto = status["auto"]
+    assert auto["enabled"] is True
+    [pending] = auto["pending"]
+    assert pending["rule_name"] == "Empty house"
+    assert pending["action"] == "arm"
+    assert pending["seconds"] == 120
+    assert auto["next"]["pending_id"] == pending["id"]
