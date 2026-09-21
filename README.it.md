@@ -567,6 +567,42 @@ non farla suonare quando non serve. Quella che decide resta la maturità: se
 vuoi un impianto che sia già stato collaudato da molti altri prima che da te,
 usa Alarmo.
 
+### Portare in Foyer una configurazione di Alarmo
+
+Nessuno con quaranta sensori configurati li rimappa a mano per provare
+qualcosa di nuovo, quindi Foyer può leggere la configurazione di Alarmo e
+portarla dentro, da **Impostazioni → Importa da Alarmo** a pagina 11. Leggi
+cos'è prima di usarlo.
+
+**È uno strumento al meglio delle possibilità, non una migrazione.** Legge
+`.storage/alarmo.storage`, che è il formato interno di Alarmo: il suo autore
+può cambiarlo in qualunque versione, senza preavviso e senza colpa, perché non
+è mai stato offerto a nessuno come interfaccia. Per questo l'importatore ti
+dice tutto quello che non è riuscito a convertire, e rifiuta un file scritto
+in una versione di archiviazione su cui non è stato verificato — dicendo quale
+— invece di tirare a indovinare. Oggi sono le versioni da 6.1 a 6.3, quelle
+che scrivono Alarmo da 1.9.5 a 1.10.19.
+
+Ti mostra cosa farebbe prima di scrivere qualsiasi cosa, e aggiunge a quello
+che c'è già invece di sostituirlo:
+
+- **Aree, sensori e modalità** diventano aree, zone e scenari di Foyer: uno
+  scenario per ogni modalità che avevi attivato. Dove Alarmo aveva più
+  ritardi e Foyer ha posto per uno, prende il più lungo; dove un valore
+  supera il limite di Foyer — una sirena che suonava mezz'ora — prende il
+  limite. In entrambi i casi il report lo dice.
+- **Ogni zona arriva spenta.** Alarmo legge `on` come allarme per qualunque
+  sensore, che è esattamente il presupposto che Foyer è costruito per
+  rifiutare: ogni zona porta la proposta di Foyer e non sorveglia niente
+  finché non ne hai confermato il trigger a pagina 3.
+- **Le persone arrivano senza codice, sempre.** Alarmo cifra i codici in un
+  modo che Foyer non può verificare, quindi ognuno ha bisogno di un codice
+  nuovo a pagina 7 prima di poter disinserire con quello. Il report lo dice
+  nella prima riga.
+- **Sirene e interruttori** arrivano in un profilo di risposta. Notifiche,
+  gruppi e tutto il resto sono elencati nel report, non indovinati: una
+  notifica che arriva dove non dovrebbe è peggio di una che imposti di nuovo.
+
 ## Come puoi verificarlo invece di fidarti
 
 Tre di queste cose puoi farle stasera: provare una notte nel
@@ -748,7 +784,9 @@ Si possono installare entrambi, ma non puntarli sugli stessi sensori: avresti
 due sistemi che decidono cosa significa una finestra aperta, e che si
 inseriscono e disinseriscono l'uno all'insaputa dell'altro. Prova Foyer su
 qualche zona, o su un'installazione di prova, e spostaci il resto quando se lo
-sarà guadagnato.
+sarà guadagnato. L'[importatore](#portare-in-foyer-una-configurazione-di-alarmo)
+è fatto proprio per questo: porta le zone spente, quindi niente viene
+sorvegliato due volte finché non lo decidi tu.
 
 </details>
 

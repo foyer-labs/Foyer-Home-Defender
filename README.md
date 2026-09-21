@@ -530,6 +530,40 @@ If you need an alarm that thousands of houses have already shaken the bugs out
 of, use Alarmo. Foyer is a beta, and the honest difference between the two
 columns above is time.
 
+### Bringing an Alarmo configuration across
+
+Nobody with forty configured sensors remaps them by hand to try something new,
+so Foyer can read Alarmo's configuration and bring it in, from **Settings →
+Import from Alarmo** on page 11. Read what it is before you use it.
+
+**It is a best-effort tool, not a migration.** It reads
+`.storage/alarmo.storage`, which is Alarmo's internal format: its author may
+change it in any release, without notice and without fault, because it was
+never offered as an interface to anybody. So the importer tells you everything
+it could not convert, and it refuses a file written in a storage version it
+has not been checked against — by name — rather than guess. Today that is
+storage 6.1 to 6.3, which Alarmo 1.9.5 to 1.10.19 write.
+
+It shows you what it would do before it writes anything, and adds to what is
+already here rather than replacing it:
+
+- **Areas, sensors and modes** become Foyer areas, zones and scenarios — one
+  scenario per mode you had switched on. Where Alarmo had several delays and
+  Foyer has room for one, it takes the longest; where a value is past Foyer's
+  limit — a siren that sounded for half an hour — it takes the limit. Either
+  way, the report says so.
+- **Every zone arrives switched off.** Alarmo reads `on` as alarm for every
+  sensor, which is exactly the assumption Foyer is built to refuse, so each
+  zone carries Foyer's own proposal and watches nothing until you have
+  confirmed its trigger on page 3.
+- **People come across without a code, always.** Alarmo's codes are hashed in
+  a way Foyer cannot verify, so everybody needs a new one on page 7 before
+  they can disarm with it. The report says so in its first line.
+- **Sirens and switches** come across into a response profile. Notifications,
+  groups and everything else are listed in the report, not guessed at: a
+  notification that arrives somewhere unintended is worse than one you set up
+  again.
+
 ## How you can check it rather than trust it
 
 Three of these you can do this evening: rehearse a night in the
@@ -693,7 +727,10 @@ refused it and the way past it.
 Both can be installed, but do not point them at the same sensors: you would
 have two systems deciding what an open window means, arming and disarming
 independently of each other. Try Foyer on a few zones, or on a test
-installation, and move the rest when it has earned it.
+installation, and move the rest when it has earned it. The
+[importer](#bringing-an-alarmo-configuration-across) is built for exactly
+that: it brings the zones in switched off, so nothing is watched twice until
+you decide.
 
 </details>
 

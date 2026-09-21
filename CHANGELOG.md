@@ -5,6 +5,64 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.12] — the way in, and the way to help
+
+The third part of Phase 5 (§20.2, §20.3): a way in for a house that already
+runs Alarmo, and a way to report a defect that arrives answerable. **The stored
+configuration moves to schema 7.4, a minor step**: a zone gains one field that
+records whether its trigger was confirmed, every zone already stored is, and a
+7.3 build reading this document ignores it. The reasoning is in
+`store/schema.py`, beside the others.
+
+### Added
+- **Import from Alarmo**, on page 11. It reads Alarmo's configuration from
+  this Home Assistant's own `.storage/alarmo.storage` and brings its areas,
+  sensors, modes and people in **beside what is already here**. It is a
+  best-effort tool and says so: that file is Alarmo's internal format, which
+  may change in any release without notice and without anybody being at
+  fault, so the importer reads only the storage versions it was checked
+  against — 6.1 to 6.3, written by Alarmo 1.9.5 to 1.10.19 — refuses any other
+  by name, refuses a file whose shape is wrong rather than bring half of it,
+  and lists everything it could not convert. It shows what it would do first;
+  **Apply** stores exactly that, and is refused if the file, the configuration,
+  or the name or kind of a sensor changed in between — never because a sensor
+  moved while somebody was reading. It is a configuration change like any other:
+  `edit_config` with a code, `manage_users` too because it creates people, the
+  same validation, refused while an area it would change is armed, and a row
+  in the log.
+- What it makes of Alarmo, in short: one Foyer area per Alarmo area and set
+  of modes its sensors were watched in; one scenario per mode you had switched
+  on, or the existing scenario for that master state extended with the new
+  areas, so HomeKit's "away" keeps working; the longest delay wherever Alarmo
+  had several and Foyer has room for one; sirens and switches into a response
+  profile that starts as a copy of your default one. Notifications, groups and
+  the rest are report lines, not guesses.
+- **Imported zones arrive switched off, with their trigger unconfirmed.**
+  Alarmo reads `on`, `open` and `unlocked` as alarm for every sensor, which is
+  the assumption INV-5 exists to refuse. Each zone carries Foyer's own proposal
+  and a notice on page 3, and cannot be switched on until somebody confirms it
+  — enforced by validation on every path that stores a configuration, not
+  only by the editor.
+- **Nobody arrives with a code.** Alarmo's codes are hashed in a format Foyer
+  cannot verify, and the report says in its first line that every person
+  brought in needs a new one.
+- **Issue templates.** The bug form asks for the Foyer and Home Assistant
+  versions, Foyer's own log and the diagnostics download, and says where each
+  is — but requires only the versions, because a Foyer that did not load has
+  no diagnostics button. Blank issues are off, and the chooser leads with the
+  private advisory. A pull-request template carries the checklist.
+- **`CONTRIBUTING.md`**: the development setup, the `core/` purity rule, what a
+  pull request has to carry, and the two files a translator copies.
+
+### Fixed
+- **Adding a language touched code**, whatever the README said. The
+  translation test pinned English and Italian and failed on a third file
+  without naming it, and the list of languages Foyer can send messages in was
+  written in the Settings page. Languages are now the files on disk, each
+  file names its own language, and every one is checked against English.
+- **Page 10's help panel had no "Learn more" link**, though `docs/privacy.md`
+  was written for it in the previous release.
+
 ## [0.1.0-beta.11] — what a full review found
 
 No new features. Five reviewers read the whole repository — the pure engine,
