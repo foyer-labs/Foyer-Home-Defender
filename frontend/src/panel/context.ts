@@ -9,6 +9,8 @@ import type {
   CommandResult,
   ConfigBackup,
   ConfigMeta,
+  AlarmoLabels,
+  AlarmoPreview,
   EditResult,
   FoyerConfig,
   FoyerStatus,
@@ -115,6 +117,11 @@ export interface PanelContext {
   /** Configuration backup and restore (§15.1). */
   exportConfig(): Promise<{ filename: string; document: ConfigBackup }>;
   importConfig(document: unknown): Promise<EditResult>;
+  /** The Alarmo importer (§20.2): a preview that reads and writes nothing,
+   * then an apply that stores exactly what the preview showed — refused, by
+   * the backend, if anything it was computed from has changed since. */
+  alarmoPreview(labels: AlarmoLabels): Promise<AlarmoPreview>;
+  alarmoApply(fingerprint: string, labels: AlarmoLabels): Promise<AlarmoPreview>;
 }
 
 /** Offer a file to the browser. Used by both exports: the content crosses the

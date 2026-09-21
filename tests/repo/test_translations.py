@@ -396,3 +396,37 @@ def test_the_outgoing_language_list_is_read_from_the_files():
     found = {entry["code"]: entry["name"] for entry in i18n.languages()}
     assert set(found) == set(LANGUAGES)
     assert found["en"] == "English" and found["it"] == "Italiano"
+
+
+def test_every_line_and_refusal_the_alarmo_importer_can_produce_is_translated():
+    """The panel builds `alarmo.line.<code>` and `alarmo.refused.<code>` at
+    run time, which the frontend key check only matches loosely: every code
+    the importer can emit is read out of its source and checked here."""
+    from custom_components.foyer.store.alarmo import MODES
+
+    package = ROOT / "custom_components" / "foyer"
+    sources = (
+        (package / "store" / "alarmo.py").read_text(encoding="utf-8")
+        + (package / "api" / "alarmo.py").read_text(encoding="utf-8")
+        + (package / "api" / "websocket.py").read_text(encoding="utf-8")
+    )
+    lines = set(re.findall(r"""(?:note|Line)\(\s*["'](\w+)["']""", sources))
+    refusals = set(re.findall(r"""Refused\(\s*["'](\w+)["']""", sources))
+    refusals |= {"invalid", "changed"}
+    settings = set(
+        re.findall(
+            r"""["'](code_\w+_required|disarm_after_trigger|ignore_blocking_\w+)["']""",
+            sources,
+        )
+    ) | {"mqtt"}
+    assert {"codes", "zones_to_confirm", "sensor_exists"} <= lines
+    assert {"version_unsupported", "not_found", "nothing_to_import"} <= refusals
+    for language in LANGUAGES:
+        strings = load(TRANSLATIONS / "panel", language)["alarmo"]
+        missing = sorted(
+            [f"line.{c}" for c in lines if c not in strings["line"]]
+            + [f"refused.{c}" for c in refusals if c not in strings["refused"]]
+            + [f"setting.{c}" for c in settings if c not in strings["setting"]]
+            + [f"mode.{m}" for m in MODES if m not in strings["mode"]]
+        )
+        assert not missing, f"{language}: {missing}"

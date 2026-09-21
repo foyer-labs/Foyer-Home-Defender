@@ -773,6 +773,10 @@
           "term": "Backup",
           "text": "A JSON file of the whole configuration. Restoring it goes through the same validation as any edit, and is refused while an area it would change is armed."
         },
+        "alarmo": {
+          "term": "Import from Alarmo",
+          "text": "Brings Alarmo's areas, sensors, modes and people in beside what is here, after showing what it would do. Zones arrive switched off until you confirm them, and nobody arrives with a code."
+        },
         "language": {
           "term": "Language of messages",
           "text": "The language of what Foyer sends out — notifications, the spoken zone name. This panel already follows each Home Assistant user's own language."
@@ -1528,6 +1532,7 @@
     "chime_rejected": "Chime change refused",
     "config_save": "Configuration saved",
     "config_delete": "Configuration item deleted",
+    "config_import": "Configuration imported from Alarmo",
     "config_restore": "Configuration restored",
     "config_log_cleared": "Log emptied",
     "action_notify": "Notification",
@@ -1616,6 +1621,106 @@
   },
   "language": {
     "self": "English"
+  },
+  "alarmo": {
+    "title": "Import from Alarmo",
+    "intro": "Reads Alarmo's configuration from this Home Assistant and brings its areas, sensors, modes and people into Foyer, beside what is already here. It is a best-effort tool, not a migration: the file it reads is Alarmo's internal format, which may change in any Alarmo release without notice and without anybody being at fault, so it tells you everything it could not bring across. Nothing is written until you have read that and pressed Apply.",
+    "read": "Read Alarmo's configuration",
+    "apply": "Apply",
+    "summary_title": "What would be added",
+    "report_title": "What to know before you apply",
+    "applied": "Imported. Now give each person a code on page 7, and confirm each zone on page 3 before switching it on.",
+    "hint": "Until Foyer's zones are confirmed, keep Alarmo watching the house — but never arm both on the same sensors.",
+    "created": {
+      "areas": "Areas: {names}",
+      "scenarios": "New scenarios: {names}",
+      "extended": "Scenarios that would also arm what is brought in: {names}",
+      "people": "People, without codes: {names}",
+      "profiles": "Response profiles: {names}",
+      "zones": "Zones, switched off until confirmed: {count}"
+    },
+    "split_name": "{area} ({modes})",
+    "profile_name": "{area} (from Alarmo)",
+    "mode": {
+      "armed_away": "Away",
+      "armed_home": "Home",
+      "armed_night": "Night",
+      "armed_vacation": "Vacation",
+      "armed_custom_bypass": "Custom"
+    },
+    "kind": {
+      "area": "An area",
+      "scenario": "A scenario"
+    },
+    "sensor_type": {
+      "environmental": "smoke, gas or water",
+      "tamper": "tamper"
+    },
+    "setting": {
+      "code_arm_required": "a code to arm",
+      "code_mode_change_required": "a code to change mode",
+      "code_disarm_required": "a code to disarm",
+      "disarm_after_trigger": "disarm when the siren time runs out",
+      "ignore_blocking_sensors_after_trigger": "re-arm past open sensors",
+      "mqtt": "MQTT"
+    },
+    "refused": {
+      "not_found": "There is no Alarmo configuration in this Home Assistant (.storage/alarmo.storage).",
+      "unreadable": "Alarmo's configuration file is there, but it could not be read.",
+      "too_large": "Alarmo's configuration file is far larger than any house needs, and was not read.",
+      "not_json": "Alarmo's configuration file is not valid JSON.",
+      "not_alarmo": "The file is not an Alarmo configuration.",
+      "version_unsupported": "This file is in Alarmo's storage format {version}, which this importer has not been checked against. It reads formats 6.1 to 6.3, written by Alarmo 1.9.5 to 1.10.19. Nothing was brought across.",
+      "invalid": "The file does not have the shape this importer was written for, at {where}. Rather than bring half of it across, it brought nothing.",
+      "too_many": "{where} has more than {limit} entries, which is not a house. Nothing was brought across.",
+      "nothing_to_import": "There is nothing in Alarmo's configuration that Foyer does not already have.",
+      "changed": "Something changed since the preview — Alarmo's file, Foyer's configuration or one of the sensors. Read it again, and look before applying."
+    },
+    "line": {
+      "codes": "No code came across, and none ever will: Alarmo hashes its codes in a way Foyer cannot verify. Everybody brought in — {people} in all — needs a new code on page 7 before they can disarm with one.",
+      "codes_nobody": "No code came across, and none ever will: Alarmo hashes its codes in a way Foyer cannot verify. Nobody new was brought in, so the people who can disarm are the ones already on page 7.",
+      "zones_to_confirm": "Zones brought in: {zones}, every one switched off. Each trigger is Foyer's proposal from the kind of sensor, not something anybody has checked: until you confirm it on page 3 and switch the zone on, it watches nothing.",
+      "unavailable_is_fault": "A sensor that goes unavailable is a fault in Foyer, never a quiet one: it blocks arming and is reported. Alarmo read it as closed unless told otherwise.",
+      "sensor_duplicate": "{entity} is listed twice in the file; it was brought in once.",
+      "sensor_exists": "{entity} is already Foyer's zone “{zone}”, which was left exactly as it is.",
+      "sensor_domain": "{entity} is not a kind of entity Alarmo could see open or closed, so there was no zone to make of it.",
+      "sensor_no_area": "{entity} belongs to an area that is not in the file, and was not brought in.",
+      "sensor_made_always_on": "{entity} was a {type} sensor that was not always on in Alarmo. In Foyer it watches all the time, as that kind of sensor must.",
+      "sensor_no_mode": "{entity} was not active in any mode its area had switched on, so Alarmo never watched it; it was not brought in.",
+      "entry_delay_varies": "{entity} had a different entry delay in different modes. Foyer gives a zone one, and it took the longest: {seconds} s.",
+      "sensor_missing": "{entity} does not exist in Home Assistant right now. The zone “{zone}” was made anyway, and will show as a fault until the entity is back.",
+      "trigger_unavailable": "“{zone}” sounded the alarm in Alarmo when it became unavailable. In Foyer that is a fault: it blocks arming and is reported, but it does not sound.",
+      "delay_on": "“{zone}” had to stay triggered {seconds} s before Alarmo acted on it. Foyer has no such wait and acts the first time; counting triggers on the zone is the nearest thing.",
+      "sensor_was_disabled": "“{zone}” was switched off in Alarmo too. Confirming its trigger does not oblige you to switch it on.",
+      "delay_capped": "“{item}” had a delay of {seconds} s. Foyer's maximum is {max} s, and that is what it has now.",
+      "area_empty": "Alarmo's area “{area}” had no sensor left to bring in, so it did not become a Foyer area.",
+      "area_no_modes": "Alarmo's area “{area}” had no mode switched on, so nothing in it was ever armed; it was not brought in.",
+      "renamed": "{kind} named “{wanted}” already exists, so the new one is “{name}”.",
+      "exit_delay_varies": "“{area}” had a different exit delay in different modes or areas. Foyer gives it one, and it took the longest, {seconds} s: a delay too short locks you out with the siren going.",
+      "area_split": "Alarmo's area “{area}” became {areas}: its sensors were watched in different modes, and in Foyer a scenario arms whole areas.",
+      "arm_while_open": "Sensors that Alarmo let you arm with open, as long as they were closed when the exit delay ran out: {zones}. In Foyer they must be closed when you press arm — or be set to arm after closing.",
+      "arm_on_close": "“{zone}” armed the house five seconds after it closed, in Alarmo. In Foyer it is set to arm after closing, which also waits for the exit delay.",
+      "auto_bypass_partial": "“{zone}” was bypassed automatically in some modes and not in others. Foyer has one policy per zone, and it took the one that refuses to arm with the zone open.",
+      "mode_unused": "The mode {mode} was switched on in Alarmo but watched no sensor that came across, so no scenario was made for it.",
+      "scenario_extended": "Your scenario “{scenario}” already reports {mode} to Home Assistant, so it now also arms the areas brought in for that mode — a second scenario would make the master refuse it. Its own exit delay and siren duration apply to them.",
+      "scenario_mode_ambiguous": "Two scenarios already report {mode}, so the master refuses that mode. A new one was made anyway, and the master refuses the mode until only one is left.",
+      "siren_capped": "Alarmo sounded for {seconds} s in this mode (0 means until somebody disarmed). Foyer's hard maximum is {max} s, so “{scenario}” sounds for {max} s.",
+      "person_unnamed": "A person with no name in the file was not brought in.",
+      "person_exists": "{person} is already a Foyer user, and was left exactly as they are.",
+      "override_code": "{person} had an override code in Alarmo, which armed past open sensors. In Foyer that is the force-arm permission, and it was given.",
+      "person_scope_empty": "{person} was limited to areas that did not come across, so for now they may use none; widen it on page 7.",
+      "automation_disabled": "The automation “{automation}” was switched off in Alarmo, and was not brought in.",
+      "automation_notification": "The notification “{automation}” was not brought in. A notification that arrives somewhere unintended is worse than one you set up again: in Foyer, notifications go to contacts, on page 6.",
+      "automation_trigger": "“{automation}” starts on something Foyer's response profiles have no moment for, and was not brought in.",
+      "automation_modes": "“{automation}” ran only in some modes. A Foyer profile answers for an area whatever the scenario, so it was not brought in.",
+      "action_not_imported": "“{automation}” calls {service}, which is not a siren or a switch; that part was not brought in.",
+      "siren_off_not_needed": "“{automation}” turned a siren off. Foyer does that itself when you disarm and when the siren time runs out, so it was not needed.",
+      "automation_imported": "“{automation}” came across: its sirens and switches.",
+      "profile_created": "The response profile “{profile}” starts as a copy of your default one, plus the sirens and switches from Alarmo, and answers for the areas brought in.",
+      "group_not_imported": "The group “{group}” ({n} of {members} within {seconds} s) was not made: a group needs its members switched on, and every zone brought in starts switched off. Make it on page 13 once they are confirmed.",
+      "setting_not_imported": "Alarmo's setting “{setting}” was not brought across; Foyer's own settings were left as they are.",
+      "unknown_field": "The file has a field this importer does not know: {field}. It was written by a newer Alarmo than the one this was checked against, and whatever that field does was not brought across."
+    }
   },
   "wizard": {
     "title": "Finish setting up Foyer",

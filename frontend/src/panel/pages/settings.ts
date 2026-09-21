@@ -6,6 +6,9 @@ import { LitElement, css, html, nothing } from "lit";
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles } from "../../shared/styles";
 import type {
+  AlarmoLabels,
+  AlarmoLine,
+  AlarmoPreview,
   ChimeConfig,
   ChimeTarget,
   LogSettingsConfig,
@@ -15,8 +18,6 @@ import type {
 import { download, optionalNumber, problemText, type PanelContext } from "../context";
 import { chimeTargets, entityTargets } from "../ha-targets";
 
-// The languages the panel itself ships (translations/panel/). Foyer's own
-// messages can only be sent in one it actually has.
 // What the switch starts at when somebody turns it on. Thirty days is the
 // retention every category has by default, so names age out with the rows
 // rather than before them.
@@ -44,6 +45,8 @@ class FoyerPageSettings extends LitElement {
     _restored: { state: true },
     _confirmPseudonymise: { state: true },
     _languages: { state: true },
+    _alarmo: { state: true },
+    _alarmoDone: { state: true },
   };
 
   ctx?: PanelContext;
@@ -61,6 +64,9 @@ class FoyerPageSettings extends LitElement {
   // Read from the files on disk, each named in itself, so that a language is
   // added by copying two files and never by editing a list here (§20.3).
   private _languages: { code: string; name: string }[] = [];
+  // The Alarmo importer's preview, until it is applied or read again.
+  private _alarmo?: AlarmoPreview;
+  private _alarmoDone = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -137,7 +143,7 @@ class FoyerPageSettings extends LitElement {
     return html`${this._renderDefaults(ctx.strings)} ${this._renderResponse(ctx.strings)}
     ${this._renderChime(ctx.strings, this._chime)} ${this._renderLog(ctx.strings)}
     ${this._renderPrivacy(ctx.strings)} ${this._renderBackup(ctx.strings)}
-    ${this._renderLanguage(ctx.strings)}`;
+    ${this._renderAlarmo(ctx.strings)} ${this._renderLanguage(ctx.strings)}`;
   }
 
   private _entities(domains: string[]): { id: string; name: string }[] {
@@ -448,6 +454,148 @@ class FoyerPageSettings extends LitElement {
     }
   }
 
+  // --- importing from Alarmo (§20.2) -----------------------------------------------
+
+  /** The words new areas, scenarios and profiles are named with, in the
+   * language of whoever pressed the button. */
+  private _alarmoLabels(s: Strings): AlarmoLabels {
+    const modes = [
+      "armed_away",
+      "armed_home",
+      "armed_night",
+      "armed_vacation",
+      "armed_custom_bypass",
+    ];
+    return {
+      modes: Object.fromEntries(modes.map((m) => [m, t(s, `alarmo.mode.${m}`)])),
+      split: t(s, "alarmo.split_name"),
+      profile: t(s, "alarmo.profile_name"),
+    };
+  }
+
+  /** A report line in words. Values that are identifiers — a mode, a
+   * setting, a kind — are translated too; names are shown as they are. */
+  private _alarmoText(s: Strings, group: "line" | "refused", line: AlarmoLine): string {
+    const words: Record<string, string> = {
+      mode: "alarmo.mode",
+      setting: "alarmo.setting",
+      kind: "alarmo.kind",
+      type: "alarmo.sensor_type",
+    };
+    const params = Object.fromEntries(
+      Object.entries(line.params).map(([key, value]) => [
+        key,
+        key in words ? t(s, `${words[key]}.${value}`) : value,
+      ]),
+    );
+    return t(s, `alarmo.${group}.${line.code}`, params);
+  }
+
+  private async _alarmoRead(): Promise<void> {
+    if (!this.ctx) return;
+    this._busy = true;
+    this._alarmoDone = false;
+    try {
+      this._alarmo = await this.ctx.alarmoPreview(this._alarmoLabels(this.ctx.strings));
+    } catch {
+      this._alarmo = { success: false, refused: { code: "unreadable", params: {} } };
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private async _alarmoApply(): Promise<void> {
+    const fingerprint = this._alarmo?.fingerprint;
+    if (!this.ctx || !fingerprint) return;
+    this._busy = true;
+    try {
+      const result = await this.ctx.alarmoApply(
+        fingerprint,
+        this._alarmoLabels(this.ctx.strings),
+      );
+      if (result.success) {
+        this._alarmo = undefined;
+        this._alarmoDone = true;
+      } else {
+        // The report stays on screen; what refused the apply is added to it.
+        this._alarmo = {
+          ...this._alarmo!,
+          success: false,
+          refused: result.refused,
+          problems: result.problems ?? [],
+        };
+      }
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  private _renderAlarmo(s: Strings) {
+    const preview = this._alarmo;
+    const created = preview?.created;
+    const list = (key: keyof NonNullable<AlarmoPreview["created"]>) =>
+      created && created[key].length
+        ? html`<li>${t(s, `alarmo.created.${key}`, { names: created[key].join(", ") })}</li>`
+        : nothing;
+    return html`
+      <div class="card">
+        <div class="card-hd"><h2>${t(s, "alarmo.title")}</h2></div>
+        <div class="card-bd">
+          <p class="intro">${t(s, "alarmo.intro")}</p>
+          <div class="actions">
+            <button class="btn" ?disabled=${this._busy} @click=${this._alarmoRead}>
+              ${t(s, "alarmo.read")}
+            </button>
+            ${preview?.fingerprint
+              ? html`<button
+                  class="btn primary"
+                  ?disabled=${this._busy || !preview.success}
+                  @click=${this._alarmoApply}
+                >
+                  ${t(s, "alarmo.apply")}
+                </button>`
+              : nothing}
+          </div>
+          ${this._alarmoDone
+            ? html`<div class="notice" role="status">${t(s, "alarmo.applied")}</div>`
+            : nothing}
+          ${preview?.refused
+            ? html`<div class="problems" role="alert">
+                ${this._alarmoText(s, "refused", preview.refused)}
+              </div>`
+            : nothing}
+          ${preview?.problems?.length
+            ? html`<div class="problems" role="alert">
+                <ul>
+                  ${preview.problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+                </ul>
+              </div>`
+            : nothing}
+          ${created
+            ? html`<h3>${t(s, "alarmo.summary_title")}</h3>
+                <ul class="alarmo-list">
+                  ${list("areas")}
+                  <li>
+                    ${t(s, "alarmo.created.zones", { count: preview?.counts?.zones ?? 0 })}
+                  </li>
+                  ${list("scenarios")} ${list("extended")} ${list("people")}
+                  ${list("profiles")}
+                </ul>`
+            : nothing}
+          ${preview?.lines?.length
+            ? html`<h3>${t(s, "alarmo.report_title")}</h3>
+                <ul class="alarmo-list">
+                  ${preview.lines.map(
+                    (line) => html`<li>${this._alarmoText(s, "line", line)}</li>`,
+                  )}
+                </ul>`
+            : nothing}
+          <p class="hint">${t(s, "alarmo.hint")}</p>
+        </div>
+      </div>
+    `;
+  }
+
   // --- language of the messages Foyer sends out ------------------------------------
 
   private _renderLanguage(s: Strings) {
@@ -753,6 +901,21 @@ class FoyerPageSettings extends LitElement {
   static override styles = [
     formStyles,
     css`
+      .alarmo-list {
+        margin: 4px 0 12px;
+        padding-left: 20px;
+        max-width: 80ch;
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .alarmo-list li + li {
+        margin-top: 6px;
+      }
+      .card-bd h3 {
+        margin: 16px 0 4px;
+        font-size: 14px;
+        font-weight: 600;
+      }
       .intro {
         margin: 0 0 8px;
         color: var(--secondary-text-color);

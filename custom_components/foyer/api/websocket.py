@@ -150,6 +150,7 @@ from ..store.schema import (
     STORAGE_VERSION,
     settings_to_dict,
 )
+from .alarmo import async_plan as async_alarmo_plan
 from .backup import (
     async_write,
     backup_document,
@@ -379,6 +380,8 @@ def async_register(hass: HomeAssistant) -> None:
         ws_privacy_erase,
         ws_config_export,
         ws_config_import,
+        ws_alarmo_preview,
+        ws_alarmo_apply,
         ws_diagnostics,
         ws_simulate,
         ws_walk_test,
@@ -1956,6 +1959,144 @@ async def ws_config_import(
     result = restore(system, msg["document"])
     await _apply(
         hass, connection, msg["id"], system, result, operation="restore", kind="config"
+    )
+
+
+# --- bringing an Alarmo configuration across (SPEC §20.2) -------------------------
+#
+# A preview, then an apply, the shape the erasure of §10.4 already uses: what
+# would be created and what could not be brought across are on the screen
+# before anything is written, and the apply is refused if anything the
+# preview was computed from has changed since (part 3 decision 2).
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/alarmo/preview",
+        # The words new areas and scenarios are named with, from the panel's
+        # translations; checked field by field, and never more than names.
+        vol.Optional("labels"): dict,
+    }
+)
+@websocket_api.async_response
+async def ws_alarmo_preview(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """What an import would do. Reads, writes nothing, so asks no code."""
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
+            need_code=False,
+        )
+    ) is None:
+        return
+    _, answer = await async_alarmo_plan(hass, system, msg.get("labels"))
+    connection.send_result(msg["id"], answer)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/alarmo/apply",
+        vol.Required("fingerprint"): str,
+        vol.Optional("labels"): dict,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_alarmo_apply(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Store what the preview showed, and nothing it did not.
+
+    A configuration change like any other: ``edit_config`` with a code, the
+    same validation, the same refusal while an area it would change is armed,
+    the same row in the log. It creates people too, so it also needs the
+    permission that owns people — as saving a tag does.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        actor := await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
+        )
+    ) is None:
+        return
+    result, answer = await async_alarmo_plan(hass, system, msg.get("labels"))
+    if result is None:
+        connection.send_result(msg["id"], answer)
+        return
+    if answer["fingerprint"] != msg["fingerprint"]:
+        connection.send_result(
+            msg["id"],
+            {"success": False, "refused": {"code": "changed", "params": {}}},
+        )
+        return
+    if result.counts["people"] and (
+        reason := _may_configure(
+            system,
+            connection,
+            actor,
+            Operation.EDIT_CONFIG,
+            Permission.MANAGE_USERS,
+            need_code=False,
+        )
+    ):
+        # A refusal is a row of its own (§10.2), as _gate writes one.
+        system.async_record(
+            (
+                config_row(
+                    dt_util.utcnow(),
+                    operation="refused",
+                    kind=Operation.EDIT_CONFIG.value,
+                    user_id=actor.user_id,
+                    user_name=(
+                        named.name
+                        if (named := system.config.user(actor.user_id))
+                        else None
+                    ),
+                    channel=CHANNEL_HA_UI,
+                    changes={"reason": reason.value},
+                ),
+            )
+        )
+        connection.send_result(
+            msg["id"],
+            {
+                "success": False,
+                "reason": reason.value,
+                "problems": [asdict(Problem(reason.value, "code", None, "code"))],
+            },
+        )
+        return
+    if answer["problems"]:
+        connection.send_result(
+            msg["id"], {"success": False, "problems": answer["problems"]}
+        )
+        return
+    await _apply(
+        hass,
+        connection,
+        msg["id"],
+        system,
+        EditResult(result.config),
+        operation="import",
+        kind="alarmo",
     )
 
 

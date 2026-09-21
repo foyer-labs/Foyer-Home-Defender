@@ -173,6 +173,13 @@ class FoyerPageZones extends LitElement {
     );
   }
 
+  /** Whether the confirmation can be given at all: whenever it is needed,
+   * and on a zone nobody has confirmed yet even while it stays off — that is
+   * the zone somebody opened precisely to confirm it. */
+  private _confirmable(): boolean {
+    return this._needsConfirmation() || this._saved?.trigger_confirmed === false;
+  }
+
   private async _save(): Promise<void> {
     if (!this.ctx || !this._draft) return;
     this._busy = true;
@@ -430,8 +437,8 @@ class FoyerPageZones extends LitElement {
         <label class="check confirm">
           <input
             type="checkbox"
-            .checked=${this._confirmed || !this._needsConfirmation()}
-            ?disabled=${!this._needsConfirmation()}
+            .checked=${this._confirmed || !this._confirmable()}
+            ?disabled=${!this._confirmable()}
             @change=${(e: Event) => (this._confirmed = (e.target as HTMLInputElement).checked)}
           />
           <span>

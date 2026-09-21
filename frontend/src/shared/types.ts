@@ -849,6 +849,35 @@ export interface EditResult {
   problems: Problem[];
 }
 
+/** One sentence of the Alarmo importer's report (§20.2): a stable code the
+ * panel turns into words, and the values that fill it. */
+export interface AlarmoLine {
+  code: string;
+  params: Record<string, string | number>;
+}
+
+/** The words the importer names new things with, from this panel's own
+ * translations: the backend writes no word a person reads. */
+export interface AlarmoLabels {
+  modes: Record<string, string>;
+  split: string;
+  profile: string;
+}
+
+/** What an import would do, before anything is written. `refused` when the
+ * file is not one it will read; otherwise the report, what would be created,
+ * and the fingerprint the apply must carry back. */
+export interface AlarmoPreview {
+  success: boolean;
+  refused?: AlarmoLine;
+  lines?: AlarmoLine[];
+  counts?: Record<string, number>;
+  created?: Record<"areas" | "scenarios" | "extended" | "people" | "profiles", string[]>;
+  problems?: Problem[];
+  fingerprint?: string;
+  reason?: string;
+}
+
 export interface ZoneProposal {
   entity_id: string;
   name: string;

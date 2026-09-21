@@ -1924,6 +1924,9 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
 	_needsConfirmation() {
 		return !this._saved || !st(this._saved.trigger, this._draft?.trigger) || this._saved.trigger_confirmed === !1 && !!this._draft?.enabled;
 	}
+	_confirmable() {
+		return this._needsConfirmation() || this._saved?.trigger_confirmed === !1;
+	}
 	async _save() {
 		if (this.ctx && this._draft) {
 			this._busy = !0;
@@ -2118,8 +2121,8 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
         <label class="check confirm">
           <input
             type="checkbox"
-            .checked=${this._confirmed || !this._needsConfirmation()}
-            ?disabled=${!this._needsConfirmation()}
+            .checked=${this._confirmed || !this._confirmable()}
+            ?disabled=${!this._confirmable()}
             @change=${(e) => this._confirmed = e.target.checked}
           />
           <span>
@@ -7754,7 +7757,7 @@ var Jt = 30, Yt = {
 	during_exit: !1
 }, Xt = class extends P {
 	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1, this._languages = [];
+		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1, this._languages = [], this._alarmoDone = !1;
 	}
 	static {
 		this.properties = {
@@ -7766,7 +7769,9 @@ var Jt = 30, Yt = {
 			_saved: { state: !0 },
 			_restored: { state: !0 },
 			_confirmPseudonymise: { state: !0 },
-			_languages: { state: !0 }
+			_languages: { state: !0 },
+			_alarmo: { state: !0 },
+			_alarmoDone: { state: !0 }
 		};
 	}
 	connectedCallback() {
@@ -7828,7 +7833,7 @@ var Jt = 30, Yt = {
 		return e?.config ? E`${this._renderDefaults(e.strings)} ${this._renderResponse(e.strings)}
     ${this._renderChime(e.strings, this._chime)} ${this._renderLog(e.strings)}
     ${this._renderPrivacy(e.strings)} ${this._renderBackup(e.strings)}
-    ${this._renderLanguage(e.strings)}` : O;
+    ${this._renderAlarmo(e.strings)} ${this._renderLanguage(e.strings)}` : O;
 	}
 	_entities(e) {
 		return K(this.ctx.hass, e);
@@ -8059,6 +8064,109 @@ var Jt = 30, Yt = {
 			}
 		}
 	}
+	_alarmoLabels(e) {
+		return {
+			modes: Object.fromEntries([
+				"armed_away",
+				"armed_home",
+				"armed_night",
+				"armed_vacation",
+				"armed_custom_bypass"
+			].map((t) => [t, R(e, `alarmo.mode.${t}`)])),
+			split: R(e, "alarmo.split_name"),
+			profile: R(e, "alarmo.profile_name")
+		};
+	}
+	_alarmoText(e, t, n) {
+		let r = {
+			mode: "alarmo.mode",
+			setting: "alarmo.setting",
+			kind: "alarmo.kind",
+			type: "alarmo.sensor_type"
+		}, i = Object.fromEntries(Object.entries(n.params).map(([t, n]) => [t, t in r ? R(e, `${r[t]}.${n}`) : n]));
+		return R(e, `alarmo.${t}.${n.code}`, i);
+	}
+	async _alarmoRead() {
+		if (this.ctx) {
+			this._busy = !0, this._alarmoDone = !1;
+			try {
+				this._alarmo = await this.ctx.alarmoPreview(this._alarmoLabels(this.ctx.strings));
+			} catch {
+				this._alarmo = {
+					success: !1,
+					refused: {
+						code: "unreadable",
+						params: {}
+					}
+				};
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	async _alarmoApply() {
+		let e = this._alarmo?.fingerprint;
+		if (this.ctx && e) {
+			this._busy = !0;
+			try {
+				let t = await this.ctx.alarmoApply(e, this._alarmoLabels(this.ctx.strings));
+				t.success ? (this._alarmo = void 0, this._alarmoDone = !0) : this._alarmo = {
+					...this._alarmo,
+					success: !1,
+					refused: t.refused,
+					problems: t.problems ?? []
+				};
+			} finally {
+				this._busy = !1;
+			}
+		}
+	}
+	_renderAlarmo(e) {
+		let t = this._alarmo, n = t?.created, r = (t) => n && n[t].length ? E`<li>${R(e, `alarmo.created.${t}`, { names: n[t].join(", ") })}</li>` : O;
+		return E`
+      <div class="card">
+        <div class="card-hd"><h2>${R(e, "alarmo.title")}</h2></div>
+        <div class="card-bd">
+          <p class="intro">${R(e, "alarmo.intro")}</p>
+          <div class="actions">
+            <button class="btn" ?disabled=${this._busy} @click=${this._alarmoRead}>
+              ${R(e, "alarmo.read")}
+            </button>
+            ${t?.fingerprint ? E`<button
+                  class="btn primary"
+                  ?disabled=${this._busy || !t.success}
+                  @click=${this._alarmoApply}
+                >
+                  ${R(e, "alarmo.apply")}
+                </button>` : O}
+          </div>
+          ${this._alarmoDone ? E`<div class="notice" role="status">${R(e, "alarmo.applied")}</div>` : O}
+          ${t?.refused ? E`<div class="problems" role="alert">
+                ${this._alarmoText(e, "refused", t.refused)}
+              </div>` : O}
+          ${t?.problems?.length ? E`<div class="problems" role="alert">
+                <ul>
+                  ${t.problems.map((t) => E`<li>${H(e, t)}</li>`)}
+                </ul>
+              </div>` : O}
+          ${n ? E`<h3>${R(e, "alarmo.summary_title")}</h3>
+                <ul class="alarmo-list">
+                  ${r("areas")}
+                  <li>
+                    ${R(e, "alarmo.created.zones", { count: t?.counts?.zones ?? 0 })}
+                  </li>
+                  ${r("scenarios")} ${r("extended")} ${r("people")}
+                  ${r("profiles")}
+                </ul>` : O}
+          ${t?.lines?.length ? E`<h3>${R(e, "alarmo.report_title")}</h3>
+                <ul class="alarmo-list">
+                  ${t.lines.map((t) => E`<li>${this._alarmoText(e, "line", t)}</li>`)}
+                </ul>` : O}
+          <p class="hint">${R(e, "alarmo.hint")}</p>
+        </div>
+      </div>
+    `;
+	}
 	_renderLanguage(e) {
 		let t = this.ctx, n = this._settings ?? t.config.settings;
 		return E`
@@ -8284,6 +8392,21 @@ var Jt = 30, Yt = {
 	}
 	static {
 		this.styles = [B, o`
+      .alarmo-list {
+        margin: 4px 0 12px;
+        padding-left: 20px;
+        max-width: 80ch;
+        font-size: 13.5px;
+        line-height: 1.5;
+      }
+      .alarmo-list li + li {
+        margin-top: 6px;
+      }
+      .card-bd h3 {
+        margin: 16px 0 4px;
+        font-size: 14px;
+        font-weight: 600;
+      }
       .intro {
         margin: 0 0 8px;
         color: var(--secondary-text-color);
@@ -9519,6 +9642,7 @@ var tn = [
 		"retention",
 		"privacy",
 		"backup",
+		"alarmo",
 		"language"
 	],
 	health: [
@@ -9728,6 +9852,15 @@ var sn = class extends P {
 			importConfig: (e) => this._edit("config", {
 				type: "foyer/config/import",
 				document: e
+			}),
+			alarmoPreview: (t) => e.callWS({
+				type: "foyer/alarmo/preview",
+				labels: t
+			}),
+			alarmoApply: (e, t) => this._edit("config", {
+				type: "foyer/alarmo/apply",
+				fingerprint: e,
+				labels: t
 			}),
 			bypass: (t, n, r) => this._coded((i) => e.callWS({
 				type: "foyer/bypass",

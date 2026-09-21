@@ -10,6 +10,7 @@ import { loadStrings, t, type Strings } from "../shared/i18n";
 import { formStyles, stateStyles } from "../shared/styles";
 import { mmss, secondsUntil } from "../shared/time";
 import type {
+  AlarmoPreview,
   CommandResult,
   TestActionResult,
   ConfigMeta,
@@ -99,6 +100,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
     "retention",
     "privacy",
     "backup",
+    "alarmo",
     "language",
   ],
   health: ["mains", "channels", "watchdog", "payload", "radio", "coordinator", "diagnostics"],
@@ -443,6 +445,13 @@ class FoyerPanel extends LitElement {
       exportConfig: () => hass.callWS({ type: "foyer/config/export" }),
       importConfig: (document) =>
         this._edit("config", { type: "foyer/config/import", document }),
+      alarmoPreview: (labels) => hass.callWS({ type: "foyer/alarmo/preview", labels }),
+      alarmoApply: (fingerprint, labels) =>
+        this._edit("config", {
+          type: "foyer/alarmo/apply",
+          fingerprint,
+          labels,
+        }) as Promise<AlarmoPreview>,
       bypass: (zoneId, bypass, seconds) =>
         this._coded((code) =>
           hass.callWS<CommandResult>({

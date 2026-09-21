@@ -773,6 +773,10 @@
           "term": "Backup",
           "text": "Un file JSON dell'intera configurazione. Il ripristino passa dalla stessa validazione di ogni modifica, e viene rifiutato se toccherebbe un'area inserita."
         },
+        "alarmo": {
+          "term": "Importa da Alarmo",
+          "text": "Porta le aree, i sensori, le modalità e le persone di Alarmo accanto a quello che c'è, dopo averti mostrato cosa farebbe. Le zone arrivano spente finché non le confermi, e nessuno arriva con un codice."
+        },
         "language": {
           "term": "Lingua dei messaggi",
           "text": "La lingua di ciò che Foyer manda fuori: notifiche, nome della zona pronunciato. Questo pannello segue già la lingua di ogni utente di Home Assistant."
@@ -1528,6 +1532,7 @@
     "chime_rejected": "Modifica del campanello rifiutata",
     "config_save": "Configurazione salvata",
     "config_delete": "Elemento di configurazione eliminato",
+    "config_import": "Configurazione importata da Alarmo",
     "config_restore": "Configurazione ripristinata",
     "config_log_cleared": "Registro svuotato",
     "action_notify": "Notifica",
@@ -1616,6 +1621,106 @@
   },
   "language": {
     "self": "Italiano"
+  },
+  "alarmo": {
+    "title": "Importa da Alarmo",
+    "intro": "Legge la configurazione di Alarmo da questo Home Assistant e porta in Foyer le sue aree, i sensori, le modalità e le persone, accanto a quello che c'è già. È uno strumento al meglio delle possibilità, non una migrazione: il file che legge è il formato interno di Alarmo, che può cambiare in qualunque versione di Alarmo senza preavviso e senza colpa di nessuno, e per questo ti dice tutto quello che non è riuscito a portare. Non viene scritto niente finché non l'hai letto e hai premuto Applica.",
+    "read": "Leggi la configurazione di Alarmo",
+    "apply": "Applica",
+    "summary_title": "Cosa verrebbe aggiunto",
+    "report_title": "Cosa sapere prima di applicare",
+    "applied": "Importato. Ora dai un codice a ogni persona a pagina 7, e conferma ogni zona a pagina 3 prima di attivarla.",
+    "hint": "Finché le zone di Foyer non sono confermate, lascia che Alarmo sorvegli la casa — ma non inserire mai entrambi sugli stessi sensori.",
+    "created": {
+      "areas": "Aree: {names}",
+      "scenarios": "Nuovi scenari: {names}",
+      "extended": "Scenari che inserirebbero anche ciò che viene importato: {names}",
+      "people": "Persone, senza codice: {names}",
+      "profiles": "Profili di risposta: {names}",
+      "zones": "Zone, spente finché non confermate: {count}"
+    },
+    "split_name": "{area} ({modes})",
+    "profile_name": "{area} (da Alarmo)",
+    "mode": {
+      "armed_away": "Fuori casa",
+      "armed_home": "In casa",
+      "armed_night": "Notte",
+      "armed_vacation": "Vacanza",
+      "armed_custom_bypass": "Personalizzata"
+    },
+    "kind": {
+      "area": "Un'area",
+      "scenario": "Uno scenario"
+    },
+    "sensor_type": {
+      "environmental": "di fumo, gas o acqua",
+      "tamper": "antimanomissione"
+    },
+    "setting": {
+      "code_arm_required": "codice per inserire",
+      "code_mode_change_required": "codice per cambiare modalità",
+      "code_disarm_required": "codice per disinserire",
+      "disarm_after_trigger": "disinserisci quando finisce il tempo della sirena",
+      "ignore_blocking_sensors_after_trigger": "reinserisci anche con sensori aperti",
+      "mqtt": "MQTT"
+    },
+    "refused": {
+      "not_found": "In questo Home Assistant non c'è una configurazione di Alarmo (.storage/alarmo.storage).",
+      "unreadable": "Il file di configurazione di Alarmo c'è, ma non è stato possibile leggerlo.",
+      "too_large": "Il file di configurazione di Alarmo è molto più grande di quanto serva a qualunque casa, e non è stato letto.",
+      "not_json": "Il file di configurazione di Alarmo non è un JSON valido.",
+      "not_alarmo": "Il file non è una configurazione di Alarmo.",
+      "version_unsupported": "Questo file è nel formato di archiviazione {version} di Alarmo, che questo importatore non è stato verificato a leggere. Legge i formati da 6.1 a 6.3, scritti da Alarmo 1.9.5 fino a 1.10.19. Non è stato portato niente.",
+      "invalid": "Il file non ha la forma per cui questo importatore è stato scritto, in {where}. Invece di portarne metà, non ha portato niente.",
+      "too_many": "{where} ha più di {limit} elementi, e questa non è una casa. Non è stato portato niente.",
+      "nothing_to_import": "Nella configurazione di Alarmo non c'è niente che Foyer non abbia già.",
+      "changed": "Qualcosa è cambiato dall'anteprima: il file di Alarmo, la configurazione di Foyer o uno dei sensori. Rileggila, e guarda prima di applicare."
+    },
+    "line": {
+      "codes": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo cifra i codici in un modo che Foyer non può verificare. Chiunque sia stato importato — {people} in tutto — ha bisogno di un codice nuovo a pagina 7 prima di poter disinserire con un codice.",
+      "codes_nobody": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo cifra i codici in un modo che Foyer non può verificare. Non è stata importata nessuna persona nuova, quindi chi può disinserire è chi è già a pagina 7.",
+      "zones_to_confirm": "Zone importate: {zones}, tutte spente. Ogni trigger è la proposta di Foyer ricavata dal tipo di sensore, non qualcosa che qualcuno abbia verificato: finché non lo confermi a pagina 3 e non attivi la zona, non sorveglia niente.",
+      "unavailable_is_fault": "In Foyer un sensore che diventa non disponibile è un guasto, mai un silenzio: blocca l'inserimento e viene segnalato. Alarmo lo leggeva come chiuso, se non gli si diceva altro.",
+      "sensor_duplicate": "{entity} compare due volte nel file; è stato importato una volta sola.",
+      "sensor_exists": "{entity} è già la zona Foyer «{zone}», che è rimasta esattamente com'era.",
+      "sensor_domain": "{entity} non è un tipo di entità che Alarmo potesse vedere aperta o chiusa, quindi non c'era una zona da ricavarne.",
+      "sensor_no_area": "{entity} appartiene a un'area che non è nel file, e non è stato importato.",
+      "sensor_made_always_on": "{entity} era un sensore {type} che in Alarmo non era sempre attivo. In Foyer sorveglia sempre, come quel tipo di sensore deve fare.",
+      "sensor_no_mode": "{entity} non era attivo in nessuna modalità abilitata nella sua area, quindi Alarmo non lo sorvegliava mai; non è stato importato.",
+      "entry_delay_varies": "{entity} aveva un ritardo di ingresso diverso a seconda della modalità. Foyer ne dà uno per zona, e ha preso il più lungo: {seconds} s.",
+      "sensor_missing": "{entity} in questo momento non esiste in Home Assistant. La zona «{zone}» è stata creata comunque, e risulterà in guasto finché l'entità non torna.",
+      "trigger_unavailable": "In Alarmo «{zone}» faceva scattare l'allarme quando diventava non disponibile. In Foyer è un guasto: blocca l'inserimento e viene segnalato, ma non fa suonare.",
+      "delay_on": "«{zone}» doveva restare attiva {seconds} s prima che Alarmo intervenisse. Foyer non ha un'attesa del genere e interviene alla prima volta; contare gli scatti della zona è la cosa più vicina.",
+      "sensor_was_disabled": "«{zone}» era disattivata anche in Alarmo. Confermarne il trigger non ti obbliga ad attivarla.",
+      "delay_capped": "«{item}» aveva un ritardo di {seconds} s. Il massimo di Foyer è {max} s, ed è quello che ha adesso.",
+      "area_empty": "L'area «{area}» di Alarmo non aveva più sensori da importare, quindi non è diventata un'area Foyer.",
+      "area_no_modes": "L'area «{area}» di Alarmo non aveva nessuna modalità abilitata, quindi niente al suo interno veniva mai inserito; non è stata importata.",
+      "renamed": "{kind} con il nome «{wanted}» esiste già, quindi il nuovo nome è «{name}».",
+      "exit_delay_varies": "«{area}» aveva un ritardo di uscita diverso a seconda della modalità o dell'area. Foyer gliene dà uno, e ha preso il più lungo, {seconds} s: un ritardo troppo corto ti chiude fuori con la sirena che suona.",
+      "area_split": "L'area «{area}» di Alarmo è diventata {areas}: i suoi sensori erano sorvegliati in modalità diverse, e in Foyer uno scenario inserisce aree intere.",
+      "arm_while_open": "Sensori con cui Alarmo ti lasciava inserire da aperti, purché fossero chiusi alla fine del ritardo di uscita: {zones}. In Foyer devono essere chiusi quando premi inserisci, oppure essere impostati per inserirsi dopo la chiusura.",
+      "arm_on_close": "In Alarmo «{zone}» inseriva la casa cinque secondi dopo essersi chiusa. In Foyer è impostata per inserirsi dopo la chiusura, che aspetta anche il ritardo di uscita.",
+      "auto_bypass_partial": "«{zone}» veniva esclusa automaticamente in alcune modalità e non in altre. Foyer ha una sola regola per zona, e ha preso quella che rifiuta di inserire con la zona aperta.",
+      "mode_unused": "La modalità {mode} era abilitata in Alarmo ma non sorvegliava nessun sensore tra quelli importati, quindi non è stato creato uno scenario.",
+      "scenario_extended": "Il tuo scenario «{scenario}» riporta già {mode} a Home Assistant, quindi ora inserisce anche le aree importate per quella modalità: un secondo scenario farebbe rifiutare quella modalità al master. Il suo ritardo di uscita e la sua durata della sirena valgono anche per loro.",
+      "scenario_mode_ambiguous": "Due scenari riportano già {mode}, quindi il master rifiuta quella modalità. Ne è stato creato uno nuovo comunque, e il master la rifiuta finché non ne resta uno solo.",
+      "siren_capped": "In questa modalità Alarmo suonava per {seconds} s (0 vuol dire finché qualcuno non disinseriva). Il massimo inderogabile di Foyer è {max} s, quindi «{scenario}» suona per {max} s.",
+      "person_unnamed": "Una persona senza nome nel file non è stata importata.",
+      "person_exists": "{person} è già un utente Foyer, ed è rimasto esattamente com'era.",
+      "override_code": "In Alarmo {person} aveva un codice di forzatura, che inseriva anche con sensori aperti. In Foyer è il permesso di inserimento forzato, ed è stato dato.",
+      "person_scope_empty": "{person} era limitato ad aree che non sono state importate, quindi per ora non può usarne nessuna; allarga il permesso a pagina 7.",
+      "automation_disabled": "L'automazione «{automation}» era disattivata in Alarmo, e non è stata importata.",
+      "automation_notification": "La notifica «{automation}» non è stata importata. Una notifica che arriva dove non dovrebbe è peggio di una che imposti di nuovo: in Foyer le notifiche vanno ai contatti, a pagina 6.",
+      "automation_trigger": "«{automation}» parte da qualcosa per cui i profili di risposta di Foyer non hanno un momento, e non è stata importata.",
+      "automation_modes": "«{automation}» funzionava solo in alcune modalità. Un profilo Foyer risponde per un'area qualunque sia lo scenario, quindi non è stata importata.",
+      "action_not_imported": "«{automation}» chiama {service}, che non è una sirena né un interruttore; quella parte non è stata importata.",
+      "siren_off_not_needed": "«{automation}» spegneva una sirena. Foyer lo fa da sé quando disinserisci e quando finisce il tempo della sirena, quindi non serviva.",
+      "automation_imported": "«{automation}» è stata importata: le sue sirene e i suoi interruttori.",
+      "profile_created": "Il profilo di risposta «{profile}» parte come copia del tuo profilo predefinito, più le sirene e gli interruttori di Alarmo, e risponde per le aree importate.",
+      "group_not_imported": "Il gruppo «{group}» ({n} su {members} entro {seconds} s) non è stato creato: un gruppo ha bisogno dei suoi membri attivi, e ogni zona importata parte spenta. Crealo a pagina 13 quando saranno confermate.",
+      "setting_not_imported": "L'impostazione di Alarmo «{setting}» non è stata importata; le impostazioni di Foyer sono rimaste come erano.",
+      "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. È stato scritto da un Alarmo più recente di quello su cui è stato verificato, e quello che fa quel campo non è stato importato."
+    }
   },
   "wizard": {
     "title": "Completa la configurazione di Foyer",
