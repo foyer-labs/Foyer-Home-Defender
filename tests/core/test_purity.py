@@ -35,6 +35,9 @@ PURE_MODULES = [
     "custom_components.foyer.store.seed",
     "custom_components.foyer.store.migrations",
     "custom_components.foyer.store.editing",
+    # The Alarmo importer reads a foreign document and writes nothing: it is
+    # tested without Home Assistant, so it must import without it (§20.2).
+    "custom_components.foyer.store.alarmo",
     # security/ is not core/ — it holds a code in the clear for as long as a
     # comparison takes — but it must stay free of Home Assistant too, so that
     # the rules protecting codes are testable without one.
