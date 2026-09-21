@@ -38,6 +38,20 @@ def load_strings(language: str) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def languages() -> list[dict[str, str]]:
+    """Every language on disk, each named in itself. Blocking; use an executor.
+
+    The name comes from the language's own file (``language.self``) rather than
+    from a table here or in the frontend, so that adding a language is copying
+    two files and nothing else (§20.3): a list written in code is a line a
+    translator has to find, and one they will not know exists.
+    """
+    return [
+        {"code": code, "name": translate(load_strings(code), "language.self")}
+        for code in available_languages()
+    ]
+
+
 def translate(strings: dict[str, Any], key: str, **placeholders: str) -> str:
     """Look up a dotted key and fill ``{placeholders}``. Missing keys return the key."""
     node: Any = strings

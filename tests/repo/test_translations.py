@@ -1,8 +1,11 @@
 """Every user-visible string resolves through translations/ (SPEC §19).
 
-* ``en`` and ``it`` carry the same key set and the same placeholders, in both
-  the Home Assistant file and the panel file — a missing translation fails CI
-  rather than shipping an English screen to an Italian user;
+* every language carries the same key set and the same placeholders as
+  ``en``, in both the Home Assistant file and the panel file — a missing
+  translation fails CI rather than shipping an English screen to an Italian
+  user. The languages are whatever files are on disk, so a new one is checked
+  the moment somebody copies ``en.json`` (§20.3) and nobody has to add it to a
+  list first;
 * every key the frontend asks for exists;
 * frontend templates contain no literal text;
 * every rejection reason and notification the backend can produce is translated.
@@ -23,11 +26,17 @@ from custom_components.foyer.store.seed import seed_config
 ROOT = Path(__file__).resolve().parents[2]
 TRANSLATIONS = ROOT / "custom_components" / "foyer" / "translations"
 FRONTEND_SRC = ROOT / "frontend" / "src"
-LANGUAGES = ("en", "it")
 FILE_SETS = {
     "home assistant": TRANSLATIONS,
     "panel": TRANSLATIONS / "panel",
 }
+# English first: it is the reference every other file is compared with.
+LANGUAGES = tuple(
+    sorted(
+        (p.stem for p in (TRANSLATIONS / "panel").glob("*.json")),
+        key=lambda code: (code != "en", code),
+    )
+)
 
 
 def load(directory: Path, language: str) -> dict:
@@ -50,9 +59,21 @@ def placeholders(text: str) -> set[str]:
 
 
 def test_every_language_directory_has_the_same_languages():
+    """A language is two files; one without the other is half a translation."""
+    assert LANGUAGES[:1] == ("en",) and "it" in LANGUAGES
     for name, directory in FILE_SETS.items():
         found = sorted(p.stem for p in directory.glob("*.json"))
-        assert found == sorted(LANGUAGES), f"{name}: {found}"
+        assert found == sorted(LANGUAGES), (
+            f"{name}: {found} — every language needs both translations/<code>.json "
+            "and translations/panel/<code>.json"
+        )
+
+
+def test_every_language_names_itself():
+    """The selector of outgoing languages shows this, read from the file."""
+    for language in LANGUAGES:
+        name = load(TRANSLATIONS / "panel", language).get("language", {}).get("self")
+        assert isinstance(name, str) and name.strip(), language
 
 
 @pytest.mark.parametrize("name", FILE_SETS)
@@ -366,3 +387,12 @@ def test_every_placeholder_is_filled_by_the_code_that_uses_it():
         assert not offenders, (
             f"{language}: placeholders no call site fills:\n" + "\n".join(offenders)
         )
+
+
+def test_the_outgoing_language_list_is_read_from_the_files():
+    """No list in code to extend: a copied pair of files is a new language."""
+    from custom_components.foyer import i18n
+
+    found = {entry["code"]: entry["name"] for entry in i18n.languages()}
+    assert set(found) == set(LANGUAGES)
+    assert found["en"] == "English" and found["it"] == "Italiano"

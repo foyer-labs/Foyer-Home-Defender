@@ -7740,7 +7740,7 @@ function qt(e) {
 customElements.get("foyer-page-log") || customElements.define("foyer-page-log", Wt);
 //#endregion
 //#region src/panel/pages/settings.ts
-var Jt = 30, Yt = ["en", "it"], Xt = {
+var Jt = 30, Yt = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -7749,9 +7749,9 @@ var Jt = 30, Yt = ["en", "it"], Xt = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, Zt = class extends P {
+}, Xt = class extends P {
 	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1;
+		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1, this._languages = [];
 	}
 	static {
 		this.properties = {
@@ -7762,11 +7762,15 @@ var Jt = 30, Yt = ["en", "it"], Xt = {
 			_busy: { state: !0 },
 			_saved: { state: !0 },
 			_restored: { state: !0 },
-			_confirmPseudonymise: { state: !0 }
+			_confirmPseudonymise: { state: !0 },
+			_languages: { state: !0 }
 		};
 	}
+	connectedCallback() {
+		super.connectedCallback(), this.ctx?.hass.callWS({ type: "foyer/languages" }).then((e) => this._languages = e.languages).catch(() => this._languages = []);
+	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Xt);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Yt);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -8066,8 +8070,11 @@ var Jt = 30, Yt = ["en", "it"], Xt = {
               <option value="" ?selected=${!n.language}>
                 ${R(e, "settings.language_system")}
               </option>
-              ${Yt.map((t) => E`<option .value=${t} ?selected=${t === n.language}>
-                    ${R(e, `language.${t}`)}
+              ${this._languages.map((e) => E`<option
+                    .value=${e.code}
+                    ?selected=${e.code === n.language}
+                  >
+                    ${e.name}
                   </option>`)}
             </select>
             <span class="hint">${R(e, "settings.language_hint")}</span>
@@ -8324,13 +8331,13 @@ var Jt = 30, Yt = ["en", "it"], Xt = {
     `];
 	}
 };
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Zt);
+customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Xt);
 //#endregion
 //#region src/panel/pages/health.ts
-function Qt(e, t) {
+function Zt(e, t) {
 	return t ? new Date(t).toLocaleString(e.hass.language) : "—";
 }
-var $t = class extends P {
+var Qt = class extends P {
 	constructor(...e) {
 		super(...e), this._candidates = [], this._problems = [], this._busy = !1, this._error = "";
 	}
@@ -8493,7 +8500,7 @@ var $t = class extends P {
                         ${t.fault ? R(e, `health.fault_${t.fault}`) : t.checked ? R(e, "health.healthy") : R(e, "health.untested")}
                       </span>
                     </td>
-                    <td>${Qt(this.ctx, t.since ?? t.last_ok)}</td>
+                    <td>${Zt(this.ctx, t.since ?? t.last_ok)}</td>
                   </tr>`)}
               </tbody>
             </table>
@@ -8870,7 +8877,7 @@ var $t = class extends P {
 		];
 	}
 };
-customElements.get("foyer-page-health") || customElements.define("foyer-page-health", $t);
+customElements.get("foyer-page-health") || customElements.define("foyer-page-health", Qt);
 //#endregion
 //#region src/panel/wizard.ts
 var Z = [
@@ -8879,7 +8886,7 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], en = 3, tn = class extends P {
+], $t = 3, en = class extends P {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -9037,7 +9044,7 @@ var Z = [
 		return E`
       <p>${R(e, "wizard.zones_text", {
 			have: n.length,
-			want: en
+			want: $t
 		})}</p>
       <ul class="zones">
         ${n.map((t) => E`<li>
@@ -9374,10 +9381,10 @@ var Z = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", tn);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", en);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var nn = [
+var tn = [
 	"overview",
 	"areas",
 	"zones",
@@ -9392,7 +9399,7 @@ var nn = [
 	"log",
 	"health",
 	"settings"
-], rn = [
+], nn = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -9403,7 +9410,7 @@ var nn = [
 	"contacts",
 	"rules",
 	"settings"
-], an = {
+], rn = {
 	overview: [
 		"area",
 		"master",
@@ -9520,7 +9527,7 @@ var nn = [
 		"coordinator",
 		"diagnostics"
 	]
-}, on = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", sn = {
+}, an = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", on = {
 	devices: "keypads.md",
 	contacts: "notification-channels.md",
 	rules: "automation-rules.md",
@@ -9533,7 +9540,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var cn = class extends P {
+var sn = class extends P {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._offset = 0;
 	}
@@ -9874,7 +9881,7 @@ var cn = class extends P {
     `;
 	}
 	_renderTabs(e) {
-		let t = this._canConfigure ? nn : nn.filter((e) => !rn.includes(e));
+		let t = this._canConfigure ? tn : tn.filter((e) => !nn.includes(e));
 		return t.length < 2 ? O : E`
       <nav class="tabs" role="tablist">
         ${t.map((t) => E`
@@ -9937,14 +9944,14 @@ var cn = class extends P {
         ${r ? E`<div class="help-body">
               <p>${R(e, `${n}.intro`)}</p>
               <dl>
-                ${an[t].map((t) => E`
+                ${rn[t].map((t) => E`
                     <dt>${R(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${R(e, `${n}.items.${t}.text`)}</dd>
                   `)}
               </dl>
-              ${sn[t] ? E`<a
+              ${on[t] ? E`<a
                     class="learn-more"
-                    href=${`${on}/${sn[t]}`}
+                    href=${`${an}/${on[t]}`}
                     target="_blank"
                     rel="noreferrer noopener"
                     >${R(e, "help.learn_more")}</a
@@ -10194,5 +10201,5 @@ var cn = class extends P {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", cn);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", sn);
 //#endregion

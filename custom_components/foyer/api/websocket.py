@@ -352,6 +352,7 @@ def async_register(hass: HomeAssistant) -> None:
         ws_status,
         ws_subscribe,
         ws_translations,
+        ws_languages,
         ws_config,
         ws_config_save,
         ws_config_delete,
@@ -457,6 +458,18 @@ async def ws_translations(
     language = i18n.resolve_language(msg.get("language") or hass.config.language)
     strings = await hass.async_add_executor_job(i18n.load_strings, language)
     connection.send_result(msg["id"], {"language": language, "strings": strings})
+
+
+@websocket_api.websocket_command({vol.Required("type"): "foyer/languages"})
+@websocket_api.async_response
+async def ws_languages(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """The languages Foyer can send its messages in, read from the files."""
+    found = await hass.async_add_executor_job(i18n.languages)
+    connection.send_result(msg["id"], {"languages": found})
 
 
 # --- arming from the panel and the card -----------------------------------------------

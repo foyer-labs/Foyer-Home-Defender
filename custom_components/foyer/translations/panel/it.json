@@ -1613,8 +1613,7 @@
     "person_erased": "Righe che non nominano più nessuno: {rows}."
   },
   "language": {
-    "en": "English",
-    "it": "Italiano"
+    "self": "Italiano"
   },
   "wizard": {
     "title": "Completa la configurazione di Foyer",

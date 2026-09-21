@@ -22,8 +22,6 @@ import { chimeTargets, entityTargets } from "../ha-targets";
 // rather than before them.
 const DEFAULT_PSEUDONYMISE_DAYS = 30;
 
-const LANGUAGES = ["en", "it"];
-
 const NO_CHIME: ChimeConfig = {
   targets: [],
   mode: "sound",
@@ -45,6 +43,7 @@ class FoyerPageSettings extends LitElement {
     _saved: { state: true },
     _restored: { state: true },
     _confirmPseudonymise: { state: true },
+    _languages: { state: true },
   };
 
   ctx?: PanelContext;
@@ -59,6 +58,19 @@ class FoyerPageSettings extends LitElement {
   // So it is confirmed, like erasing somebody, rather than acted on from a
   // tick nobody meant (found in review).
   private _confirmPseudonymise = false;
+  // Read from the files on disk, each named in itself, so that a language is
+  // added by copying two files and never by editing a list here (§20.3).
+  private _languages: { code: string; name: string }[] = [];
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    void this.ctx?.hass
+      .callWS<{ languages: { code: string; name: string }[] }>({
+        type: "foyer/languages",
+      })
+      .then((result) => (this._languages = result.languages))
+      .catch(() => (this._languages = []));
+  }
 
   private get _chime(): ChimeConfig {
     return this._draft ?? structuredClone(this.ctx?.config?.chime ?? NO_CHIME);
@@ -456,10 +468,13 @@ class FoyerPageSettings extends LitElement {
               <option value="" ?selected=${!settings.language}>
                 ${t(s, "settings.language_system")}
               </option>
-              ${LANGUAGES.map(
-                (code) =>
-                  html`<option .value=${code} ?selected=${code === settings.language}>
-                    ${t(s, `language.${code}`)}
+              ${this._languages.map(
+                (language) =>
+                  html`<option
+                    .value=${language.code}
+                    ?selected=${language.code === settings.language}
+                  >
+                    ${language.name}
                   </option>`,
               )}
             </select>

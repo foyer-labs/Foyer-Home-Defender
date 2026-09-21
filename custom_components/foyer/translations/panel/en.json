@@ -1613,8 +1613,7 @@
     "person_erased": "Rows that no longer name anybody: {rows}."
   },
   "language": {
-    "en": "English",
-    "it": "Italiano"
+    "self": "English"
   },
   "wizard": {
     "title": "Finish setting up Foyer",
