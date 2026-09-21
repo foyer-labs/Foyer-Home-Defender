@@ -506,6 +506,19 @@ def _v7_2_to_v7_3(data: Document) -> Document:
     return out
 
 
+def _v7_3_to_v7_4(data: Document) -> Document:
+    """Phase 5 part 3: a zone records whether its trigger was confirmed.
+
+    Every zone already stored was saved through the editor, which has refused
+    an unconfirmed trigger since Phase 1 (INV-5), so every one of them is
+    confirmed and says so. Only the Alarmo importer ever writes ``False``.
+    """
+    out = copy.deepcopy(data)
+    for zone in out.get("zones", []):
+        zone.setdefault("trigger_confirmed", True)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -535,6 +548,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (6, 1): (_v6_1_to_v7_1, (7, 1)),
     (7, 1): (_v7_1_to_v7_2, (7, 2)),
     (7, 2): (_v7_2_to_v7_3, (7, 3)),
+    (7, 3): (_v7_3_to_v7_4, (7, 4)),
 }
 
 

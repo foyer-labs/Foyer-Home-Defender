@@ -127,6 +127,7 @@ def anonymised(
                 "silent": zone.silent,
                 "bypassable": zone.bypassable,
                 "enabled": zone.enabled,
+                "trigger_confirmed": zone.trigger_confirmed,
                 "supervision_timeout": zone.supervision_timeout,
                 "has_battery_entity": bool(zone.battery_entity_id),
                 "in_fault": zone.id in state.faults,

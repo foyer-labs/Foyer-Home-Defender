@@ -1921,8 +1921,8 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
 	_typeAvailable(e) {
 		return this.ctx?.meta?.zone_types.find((t) => t.type === e)?.available ?? !1;
 	}
-	_triggerChanged() {
-		return !this._saved || !st(this._saved.trigger, this._draft?.trigger);
+	_needsConfirmation() {
+		return !this._saved || !st(this._saved.trigger, this._draft?.trigger) || this._saved.trigger_confirmed === !1 && !!this._draft?.enabled;
 	}
 	async _save() {
 		if (this.ctx && this._draft) {
@@ -1979,7 +1979,9 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
                   <td>${n.get(e.area_id) ?? ""}</td>
                   <td><span class="tag">${R(t, `zone_type.${e.type}`)}</span></td>
                   <td>${R(t, `arm_policy.${e.arm_policy}`)}</td>
-                  <td>${this._health(t, r.get(e.id ?? ""))}</td>
+                  <td>
+                    ${e.trigger_confirmed === !1 ? E`<span class="state fault">${R(t, "zone_status.unconfirmed")}</span>` : this._health(t, r.get(e.id ?? ""))}
+                  </td>
                 </tr>`)}
             </tbody>
           </table>
@@ -2004,6 +2006,7 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
           <h2>${t.id ? t.name : R(e, "zones.new")}</h2>
         </div>
         <div class="card-bd">
+          ${this._saved?.trigger_confirmed === !1 ? E`<div class="notice">${R(e, "zones.unconfirmed_notice")}</div>` : O}
           ${t.id ? O : this._renderEntityPicker(e, t)}
           ${t.entity_id ? E`
                 ${this._renderTrigger(e, t)} ${this._renderProperties(e, t)}
@@ -2019,7 +2022,7 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
           <div class="actions">
             <button
               class="btn primary"
-              ?disabled=${this._busy || !t.entity_id || this._triggerChanged() && !this._confirmed}
+              ?disabled=${this._busy || !t.entity_id || this._needsConfirmation() && !this._confirmed}
               @click=${this._save}
             >
               ${R(e, "common.save")}
@@ -2031,7 +2034,7 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
                   ${R(e, "common.delete")}
                 </button>` : O}
           </div>
-          ${this._triggerChanged() && !this._confirmed && t.entity_id ? E`<div class="hint">${R(e, "zones.confirm_first")}</div>` : O}
+          ${this._needsConfirmation() && !this._confirmed && t.entity_id ? E`<div class="hint">${R(e, "zones.confirm_first")}</div>` : O}
           ${n.status.areas.some((e) => e.id === t.area_id && e.state !== "disarmed") ? E`<div class="notice">${R(e, "zones.area_armed")}</div>` : O}
         </div>
       </div>
@@ -2115,8 +2118,8 @@ var st = (e, t) => JSON.stringify(e) === JSON.stringify(t), ct = class extends P
         <label class="check confirm">
           <input
             type="checkbox"
-            .checked=${this._confirmed || !this._triggerChanged()}
-            ?disabled=${!this._triggerChanged()}
+            .checked=${this._confirmed || !this._needsConfirmation()}
+            ?disabled=${!this._needsConfirmation()}
             @change=${(e) => this._confirmed = e.target.checked}
           />
           <span>

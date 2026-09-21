@@ -305,3 +305,78 @@ def test_a_long_value_says_it_changed_without_dragging_itself_in(config):
 
     fields = config_diff(config, new)["profiles"]["changed"][profile.name]
     assert fields["actions"] == []
+
+
+def _unconfirmed(config):
+    """A zone as the Alarmo importer leaves it: off, its trigger a proposal."""
+    from dataclasses import replace
+
+    window = config.zone("window")
+    return replace(
+        config,
+        zones=tuple(
+            replace(z, enabled=False, trigger_confirmed=False) if z is window else z
+            for z in config.zones
+        ),
+    )
+
+
+def test_an_unconfirmed_zone_may_not_be_switched_on_without_confirming(config):
+    """INV-5: a proposal nobody checked may exist, but it may not watch."""
+    from custom_components.foyer.store.schema import zone_to_dict
+
+    config = _unconfirmed(config)
+    item = {**zone_to_dict(config.zone("window")), "enabled": True}
+    refused = upsert(config, RuntimeState(), "zone", item)
+    assert refused.config is None
+    assert [p.code for p in refused.problems] == ["trigger_not_confirmed"]
+
+    accepted = upsert(config, RuntimeState(), "zone", item, trigger_confirmed=True)
+    zone = accepted.config.zone("window")
+    assert zone.enabled and zone.trigger_confirmed
+
+
+def test_the_item_cannot_claim_its_own_confirmation(config):
+    """The flag is this request's confirmation or the stored zone's, never a
+    field a client writes into the body."""
+    from custom_components.foyer.store.schema import zone_to_dict
+
+    config = _unconfirmed(config)
+    item = {
+        **zone_to_dict(config.zone("window")),
+        "enabled": True,
+        "trigger_confirmed": True,
+    }
+    assert upsert(config, RuntimeState(), "zone", item).config is None
+
+
+def test_an_unconfirmed_zone_stays_editable_while_it_is_off(config):
+    """Renaming a zone nobody has confirmed yet does not confirm it."""
+    from custom_components.foyer.store.schema import zone_to_dict
+
+    config = _unconfirmed(config)
+    item = {**zone_to_dict(config.zone("window")), "name": "Kitchen window"}
+    result = upsert(config, RuntimeState(), "zone", item)
+    zone = result.config.zone("window")
+    assert zone.name == "Kitchen window"
+    assert zone.trigger_confirmed is False and zone.enabled is False
+
+
+def test_validation_refuses_an_enabled_unconfirmed_zone_on_every_path(config):
+    """A restore or an import goes through validate() and not through
+    upsert(), so the rule has to live there too."""
+    from dataclasses import replace
+
+    from custom_components.foyer.core.validation import validate
+
+    window = config.zone("window")
+    bad = replace(
+        config,
+        zones=tuple(
+            replace(z, trigger_confirmed=False) if z is window else z
+            for z in config.zones
+        ),
+    )
+    assert ("trigger_not_confirmed", "window") in {
+        (p.code, p.ref) for p in validate(bad)
+    }

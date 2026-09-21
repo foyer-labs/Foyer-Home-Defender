@@ -435,6 +435,10 @@ export interface ZoneConfig {
   /** The entity reporting this zone's battery (§4.2), for diagnostics and
    * the low_battery moment. Never the zone's own entity. */
   battery_entity_id: string | null;
+  /** False only for a zone an importer brought across with a proposed
+   * trigger (INV-5): it stays off until somebody confirms it. Set by the
+   * backend, never by the page. */
+  trigger_confirmed?: boolean;
 }
 
 export interface GroupConfig {

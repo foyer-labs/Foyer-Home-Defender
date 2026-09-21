@@ -162,8 +162,15 @@ class FoyerPageZones extends LitElement {
     return this.ctx?.meta?.zone_types.find((z) => z.type === type)?.available ?? false;
   }
 
-  private _triggerChanged(): boolean {
-    return !this._saved || !sameTrigger(this._saved.trigger, this._draft?.trigger);
+  /** A new zone, a changed trigger, or a zone that arrived with a proposal
+   * nobody has checked and is being switched on (INV-5). The backend refuses
+   * each of these without the confirmation; this only asks for it first. */
+  private _needsConfirmation(): boolean {
+    return (
+      !this._saved ||
+      !sameTrigger(this._saved.trigger, this._draft?.trigger) ||
+      (this._saved.trigger_confirmed === false && !!this._draft?.enabled)
+    );
   }
 
   private async _save(): Promise<void> {
@@ -231,7 +238,11 @@ class FoyerPageZones extends LitElement {
                   <td>${areas.get(zone.area_id) ?? ""}</td>
                   <td><span class="tag">${t(s, `zone_type.${zone.type}`)}</span></td>
                   <td>${t(s, `arm_policy.${zone.arm_policy}`)}</td>
-                  <td>${this._health(s, live.get(zone.id ?? ""))}</td>
+                  <td>
+                    ${zone.trigger_confirmed === false
+                      ? html`<span class="state fault">${t(s, "zone_status.unconfirmed")}</span>`
+                      : this._health(s, live.get(zone.id ?? ""))}
+                  </td>
                 </tr>`,
               )}
             </tbody>
@@ -267,6 +278,9 @@ class FoyerPageZones extends LitElement {
           <h2>${draft.id ? draft.name : t(s, "zones.new")}</h2>
         </div>
         <div class="card-bd">
+          ${this._saved?.trigger_confirmed === false
+            ? html`<div class="notice">${t(s, "zones.unconfirmed_notice")}</div>`
+            : nothing}
           ${draft.id ? nothing : this._renderEntityPicker(s, draft)}
           ${draft.entity_id
             ? html`
@@ -290,7 +304,7 @@ class FoyerPageZones extends LitElement {
               class="btn primary"
               ?disabled=${this._busy ||
               !draft.entity_id ||
-              (this._triggerChanged() && !this._confirmed)}
+              (this._needsConfirmation() && !this._confirmed)}
               @click=${this._save}
             >
               ${t(s, "common.save")}
@@ -304,7 +318,7 @@ class FoyerPageZones extends LitElement {
                 </button>`
               : nothing}
           </div>
-          ${this._triggerChanged() && !this._confirmed && draft.entity_id
+          ${this._needsConfirmation() && !this._confirmed && draft.entity_id
             ? html`<div class="hint">${t(s, "zones.confirm_first")}</div>`
             : nothing}
           ${ctx.status.areas.some((a) => a.id === draft.area_id && a.state !== "disarmed")
@@ -416,8 +430,8 @@ class FoyerPageZones extends LitElement {
         <label class="check confirm">
           <input
             type="checkbox"
-            .checked=${this._confirmed || !this._triggerChanged()}
-            ?disabled=${!this._triggerChanged()}
+            .checked=${this._confirmed || !this._needsConfirmation()}
+            ?disabled=${!this._needsConfirmation()}
             @change=${(e: Event) => (this._confirmed = (e.target as HTMLInputElement).checked)}
           />
           <span>

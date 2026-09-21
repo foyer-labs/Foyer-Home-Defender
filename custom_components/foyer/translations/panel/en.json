@@ -49,7 +49,8 @@
     "closed": "Ready",
     "open": "Open",
     "fault": "Fault",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "unconfirmed": "Trigger to confirm"
   },
   "fault": {
     "unavailable": "Fault: not reachable",
@@ -511,6 +512,7 @@
     "confirm": "I have checked this against the real sensor",
     "confirm_hint": "A wrong choice is a zone that never fires, found out during a break-in.",
     "confirm_first": "Confirm the trigger to save.",
+    "unconfirmed_notice": "This zone was brought across by an import, and its trigger is a proposal read from the sensor's type, not something anybody has checked. It stays switched off until you have: test the sensor, correct the trigger if it is wrong, tick the confirmation and switch the zone on.",
     "properties_title": "Behaviour",
     "type_unavailable": "{type} — later update",
     "type_hint": "A preset: it fills the fields below, which all stay editable.",

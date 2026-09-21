@@ -264,6 +264,15 @@ def upsert(
                 return _fail(
                     Problem("trigger_not_confirmed", "zone", obj.id, "trigger")
                 )
+            # Whether the trigger was confirmed is never the client's to say
+            # in the item: it is this request's confirmation, or what the
+            # stored zone already had. Otherwise an imported zone could be
+            # switched on by sending `trigger_confirmed: true` in its body.
+            obj = replace(
+                obj,
+                trigger_confirmed=trigger_confirmed
+                or (previous is not None and previous.trigger_confirmed),
+            )
             new = replace(config, zones=_replace_in(config.zones, obj))
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", kind, data["id"]))

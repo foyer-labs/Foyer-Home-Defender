@@ -178,8 +178,21 @@ from ..core.models import (
 # keep the identifier they were written with and stop linking to rows written
 # afterwards. The alternative was deriving the pseudonym from the name, which
 # §12.4 refused for the diagnostics dump and this module refuses again.
+#
+# 7.4 is a *minor* step, and it is the closest call of all the minor steps, so
+# the reasoning is written out. A zone gains ``trigger_confirmed``, which only
+# the Alarmo importer ever sets to false, and only on a zone it also switches
+# off. A 7.3 build reading this document ignores the field: the imported zones
+# stay switched off, as they arrived, and watch nothing — exactly what a 7.4
+# build does with them. What the older build loses is the refusal: somebody
+# who ticks "enabled" on such a zone in a 7.3 panel, without touching its
+# trigger, is not made to confirm it first. That is a check the downgraded
+# build never had rather than protection it had and lost — every zone it ever
+# enabled itself went through the confirmation — and refusing the whole file
+# to keep it would lock a household out of its alarm over a zone that is off.
+# Nothing it would have protected goes unprotected.
 STORAGE_VERSION = 7
-STORAGE_MINOR_VERSION = 3
+STORAGE_MINOR_VERSION = 4
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -818,6 +831,7 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
         response_profile_id=z.get("response_profile_id") or None,
         silent=bool(z["silent"]),
         battery_entity_id=z.get("battery_entity_id") or None,
+        trigger_confirmed=bool(z.get("trigger_confirmed", True)),
     )
 
 
@@ -857,6 +871,7 @@ def zone_to_dict(z: Zone) -> dict[str, Any]:
         "response_profile_id": z.response_profile_id,
         "silent": z.silent,
         "battery_entity_id": z.battery_entity_id,
+        "trigger_confirmed": z.trigger_confirmed,
     }
 
 

@@ -806,3 +806,23 @@ def test_a_pseudonym_round_trips_through_the_document():
     assert (
         config_from_dict(config_to_dict(config)).users[0].pseudonym == "person-abc123"
     )
+
+
+def test_every_stored_zone_is_confirmed_by_the_7_3_to_7_4_step():
+    """Every zone already stored came through the editor, which has refused
+    an unconfirmed trigger since Phase 1 (INV-5): all of them say so."""
+    document = config_to_dict(migrated())
+    for zone in document["zones"]:
+        zone.pop("trigger_confirmed")
+    upgraded = config_from_dict(migrate((7, 3), CURRENT, document))
+    assert upgraded.zones and all(z.trigger_confirmed for z in upgraded.zones)
+
+
+def test_an_unconfirmed_zone_round_trips_through_the_document():
+    from dataclasses import replace
+
+    config = migrated()
+    zone = replace(config.zones[0], enabled=False, trigger_confirmed=False)
+    config = replace(config, zones=(zone, *config.zones[1:]))
+    again = config_from_dict(config_to_dict(config))
+    assert again.zones[0].trigger_confirmed is False

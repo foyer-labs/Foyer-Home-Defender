@@ -938,6 +938,14 @@ class Zone:
     # that cannot be read at all is a different matter and is a fault: it is
     # the sensor saying nothing about itself, which is INV-4 exactly.
     battery_entity_id: str | None = None
+    # Whether somebody has confirmed the trigger against the real sensor
+    # (INV-5). Every zone saved from the editor is, because the editor will not
+    # save one that is not. A zone that arrives any other way — brought across
+    # by an importer from a system that assumed `on` means alarm — carries a
+    # proposal nobody has checked, and a zone like that may exist only switched
+    # off: validation refuses it enabled, so it watches nothing until somebody
+    # has looked (Phase 5 part 3 decision 4).
+    trigger_confirmed: bool = True
 
 
 @dataclass(frozen=True, slots=True)

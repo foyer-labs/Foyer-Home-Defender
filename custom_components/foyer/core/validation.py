@@ -263,6 +263,11 @@ def validate(config: FoyerConfig) -> list[Problem]:
     zones = {z.id: z for z in config.zones}
     for zone in config.zones:
         problems.extend(_zone_problems(zone, area_ids, scenario_ids))
+        # INV-5, on every path that stores a configuration — the editor, a
+        # restore, an import — and not only on the editor's: a trigger nobody
+        # confirmed may exist, but it may not watch anything.
+        if zone.enabled and not zone.trigger_confirmed:
+            add(Problem("trigger_not_confirmed", "zone", zone.id, "trigger"))
         if zone.follows and zone.entry_mode is not EntryMode.FOLLOWER:
             add(Problem("follows_needs_follower", "zone", zone.id, "follows"))
         for followed in zone.follows:

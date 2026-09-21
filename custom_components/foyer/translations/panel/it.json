@@ -49,7 +49,8 @@
     "closed": "Pronta",
     "open": "Aperta",
     "fault": "Guasto",
-    "disabled": "Disattivata"
+    "disabled": "Disattivata",
+    "unconfirmed": "Trigger da confermare"
   },
   "fault": {
     "unavailable": "Guasto: non raggiungibile",
@@ -511,6 +512,7 @@
     "confirm": "Ho verificato questi stati sul sensore reale",
     "confirm_hint": "Una scelta sbagliata è una zona che non scatta mai, e lo scopri durante un'effrazione.",
     "confirm_first": "Conferma il trigger per salvare.",
+    "unconfirmed_notice": "Questa zona è arrivata con un'importazione, e il suo trigger è una proposta ricavata dal tipo di sensore, non qualcosa che qualcuno abbia verificato. Resta spenta finché non lo fai tu: prova il sensore, correggi il trigger se è sbagliato, spunta la conferma e attiva la zona.",
     "properties_title": "Comportamento",
     "type_unavailable": "{type} — aggiornamento successivo",
     "type_hint": "Un preset: compila i campi qui sotto, che restano tutti modificabili.",
