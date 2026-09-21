@@ -818,13 +818,15 @@ Oggi italiano e inglese, pannello, card e aiuto contestuale compresi.
 Aggiungere una lingua non tocca il codice: si copiano due file JSON, si traduce
 e si apre una pull request. La CI fallisce se gli insiemi di chiavi dei due
 file non coincidono, quindi un pannello tradotto a metà non può essere
-pubblicato.
+pubblicato. [CONTRIBUTING.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CONTRIBUTING.md#adding-a-language)
+nomina i due file e l'unica riga che non è una traduzione pura.
 
 </details>
 
 ## Se qualcosa va storto
 
-Apri una [issue](https://github.com/foyer-labs/Foyer-Home-Defender/issues). Di'
+Apri una [issue](https://github.com/foyer-labs/Foyer-Home-Defender/issues/new/choose):
+il modulo chiede quanto segue e dice dove trovare ogni parte. Di'
 quale versione di Foyer e di Home Assistant, cosa ti aspettavi, e cosa mostra
 la pagina del registro: la riga di solito contiene già la risposta, quindi una
 schermata vale più di una descrizione. In italiano o in inglese, come preferisci.
@@ -874,6 +876,8 @@ pytest -p pytest_homeassistant_custom_component -o asyncio_mode=auto tests/ha
 
 `core/` non deve mai importare `homeassistant`. La CI lo verifica; se quel
 controllo fallisce, si corregge il codice, mai il test.
+[CONTRIBUTING.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CONTRIBUTING.md) dice cos'altro deve
+portare una pull request (in inglese).
 
 Il progetto completo, comprese le ragioni dietro le decisioni che sembrano
 arbitrarie finché non si sa perché, è in

@@ -1,0 +1,92 @@
+name: Something does not work
+description: Foyer did something it should not have, or did not do something it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. Three things usually make the first reply an
+        answer rather than a question: the **versions**, the **rows of Foyer's own
+        log** around the moment, and the **diagnostics download**. Only the versions
+        are required, because the other two are not always there to be had — if
+        you cannot produce one, say so and why, and that is useful too.
+
+        English or Italian, whichever you prefer.
+
+        **A way to disarm without a code, to keep it quiet when it should sound, or
+        to read what should not be readable is not an ordinary bug.** Please report
+        it privately instead: the link is on the page before this one.
+
+  - type: input
+    id: foyer_version
+    attributes:
+      label: Foyer version
+      description: In HACS, on Foyer Home Defender's entry — for example `0.1.0-beta.11`.
+      placeholder: 0.1.0-beta.11
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      description: Settings → About.
+      placeholder: "2026.9.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened, and what you expected instead
+      description: |
+        As concretely as you can: which area, which scenario, which zone, and at
+        roughly what time. "The kitchen window did not trigger at 22:14 with Night
+        armed" is answerable; "the alarm does not work" is not yet.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: If you know. The simulator on page 9 is a good place to try, because it fires nothing.
+    validations:
+      required: false
+
+  - type: textarea
+    id: log_rows
+    attributes:
+      label: Foyer's log around that moment
+      description: |
+        Page 10 of the Foyer panel. The row usually contains the answer — a refusal
+        carries its reason and the zones that caused it — so a screenshot or a
+        copy of the rows is worth more than a description. If Home Assistant's own
+        log has errors from `custom_components.foyer`, paste them here too:
+        Settings → Devices & services → Foyer Home Defender → ⋮ →
+        **Enable debug logging**, make it happen again, then **Disable debug
+        logging**, which downloads the file.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics download
+      description: |
+        Settings → Devices & services → Foyer Home Defender → ⋮ → **Download
+        diagnostics**, then drag the file here. It is anonymised on purpose: no
+        names, no codes, no hashes, no URLs, and entity ids replaced by stable
+        placeholders. If the button is missing because Foyer did not load, say
+        that instead — it is itself the most important fact in the report.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: not_security
+    attributes:
+      label: Not a vulnerability
+      options:
+        - label: This is not a way to get past a code, silence the alarm or read something private. Those go through the private advisory instead.
+          required: true

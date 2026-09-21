@@ -759,13 +759,15 @@ says all of this again, in the place somebody looks for it.
 English and Italian today, panel, card and contextual help included. Adding a
 language touches no code: copy two JSON files, translate, open a pull request.
 CI fails if the two files' key sets differ, so a half-translated panel cannot
-ship.
+ship. [CONTRIBUTING.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CONTRIBUTING.md#adding-a-language)
+names the two files and the one line that is not a straight translation.
 
 </details>
 
 ## If something goes wrong
 
-Open an [issue](https://github.com/foyer-labs/Foyer-Home-Defender/issues). Say
+Open an [issue](https://github.com/foyer-labs/Foyer-Home-Defender/issues/new/choose) —
+the form asks for what follows, and says where to find each part. Say
 which version of Foyer and of Home Assistant, what you expected, and what the
 log page shows — the row usually contains the answer, so a screenshot of it is
 worth more than a description. English or Italian, whichever you prefer.
@@ -812,7 +814,8 @@ pytest -p pytest_homeassistant_custom_component -o asyncio_mode=auto tests/ha
 ```
 
 `core/` must never import `homeassistant`. CI enforces it; if that check fails,
-the fix is the code, never the test.
+the fix is the code, never the test. [CONTRIBUTING.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/CONTRIBUTING.md)
+says what else a pull request has to carry.
 
 The whole design, including the reasoning behind decisions that look arbitrary
 until you know why, is in

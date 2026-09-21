@@ -1,0 +1,46 @@
+name: Something it should do
+description: A behaviour Foyer does not have yet, or one that should be different.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The whole design, including what Foyer deliberately does not do, is in
+        [docs/SPEC.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/SPEC.md).
+        Two limits worth knowing before asking: Foyer orchestrates Home Assistant's
+        own `notify.*` services rather than implementing transports, and it keeps
+        to a closed rule model rather than growing into a second automation engine
+        (§1.2, §6.3). A request that fits inside those is much more likely to land.
+
+        English or Italian, whichever you prefer.
+
+  - type: textarea
+    id: situation
+    attributes:
+      label: The situation
+      description: What is happening in your house that Foyer does not handle well today? The situation matters more than the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: false
+
+  - type: textarea
+    id: today
+    attributes:
+      label: What you do about it today
+      description: An automation, a second integration, putting up with it — it tells how much the change is worth.
+    validations:
+      required: false
+
+  - type: input
+    id: foyer_version
+    attributes:
+      label: Foyer version
+      description: In HACS, on Foyer Home Defender's entry.
+    validations:
+      required: false
