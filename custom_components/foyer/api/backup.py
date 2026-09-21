@@ -179,6 +179,22 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
             ),
         ),
     )
+    # A zone this installation holds unconfirmed stays unconfirmed unless
+    # the document changes its trigger: editing a backup to say `true` is
+    # not somebody checking the sensor (INV-5, Phase 5 part 3). A changed
+    # trigger is a different zone as far as the check is concerned, and the
+    # document is trusted with it as it is trusted with every other zone.
+    config = replace(
+        config,
+        zones=tuple(
+            replace(zone, trigger_confirmed=False)
+            if (held := system.config.zone(zone.id)) is not None
+            and not held.trigger_confirmed
+            and held.trigger == zone.trigger
+            else zone
+            for zone in config.zones
+        ),
+    )
     seen: set[str] = set()
     users = []
     for user in config.users:

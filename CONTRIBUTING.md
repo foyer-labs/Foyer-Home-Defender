@@ -53,7 +53,7 @@ You need Python 3.12 or later and, for the panel and the card, Node 24.
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate    Linux, macOS: source .venv/bin/activate
-pip install pytest bcrypt ruff
+pip install pytest bcrypt ruff tzdata   # tzdata: Windows has no time zone database
 pytest                                  # the pure suite: engine, stores, translations
 ruff check . && ruff format --check .
 ```
@@ -66,6 +66,11 @@ pip install pytest-homeassistant-custom-component
 pytest -p pytest_homeassistant_custom_component -o asyncio_mode=auto \
   -o asyncio_default_fixture_loop_scope=function tests/ha
 ```
+
+Foyer depends on Home Assistant's `frontend` integration, so the harness also
+needs the `home-assistant-frontend` package at the version Home Assistant pins
+in its frontend `manifest.json`. `.github/workflows/ci.yml` shows how CI
+installs it, and the older pins the lowest supported version needs.
 
 The frontend lives in `frontend/` and builds into
 `custom_components/foyer/frontend/`, which is committed because HACS installs
@@ -133,15 +138,16 @@ No code, and no Python needed. A language is two files:
 4. Run the translation checks, if you can:
 
    ```bash
-   pip install pytest bcrypt
+   pip install pytest bcrypt tzdata
    pytest tests/repo/test_translations.py
    ```
 
    They fail if a key is missing or extra, if a placeholder differs from the
    English one, if a string is empty, or if one of the two files is missing.
-5. Open a pull request with both files. CI runs the same checks, plus
-   Home Assistant's own validation of the first file, and tells you what you
-   missed if anything.
+5. Open a pull request with both files. CI runs the same checks and tells you
+   what you missed, if anything. Home Assistant's own validator reads only the
+   English file of a custom integration, so these tests are what stands
+   between a new language and a missing key.
 
 The panel follows each Home Assistant user's own language automatically, and
 falls back to English for a language it does not have. Once the files are in,

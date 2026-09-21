@@ -548,7 +548,10 @@ It shows you what it would do before it writes anything, and adds to what is
 already here rather than replacing it:
 
 - **Areas, sensors and modes** become Foyer areas, zones and scenarios — one
-  scenario per mode you had switched on. Where Alarmo had several delays and
+  scenario per mode you had switched on that watches something, or, when you
+  already have a scenario reporting that mode to Home Assistant, that one arms
+  the new areas as well, so voice assistants and HomeKit keep working. Where
+  Alarmo had several delays and
   Foyer has room for one, it takes the longest; where a value is past Foyer's
   limit — a siren that sounded for half an hour — it takes the limit. Either
   way, the report says so.
@@ -556,11 +559,13 @@ already here rather than replacing it:
   sensor, which is exactly the assumption Foyer is built to refuse, so each
   zone carries Foyer's own proposal and watches nothing until you have
   confirmed its trigger on page 3.
-- **People come across without a code, always.** Alarmo's codes are hashed in
-  a way Foyer cannot verify, so everybody needs a new one on page 7 before
-  they can disarm with it. The report says so in its first line.
+- **People come across without a code, always.** Alarmo keeps its codes as
+  hashes in its own format, and Foyer does not take a credential from another
+  system on trust, so everybody needs a new one on page 7 before they can
+  disarm with it. The report says so in its first line.
 - **Sirens and switches** come across into a response profile. Notifications,
-  groups and everything else are listed in the report, not guessed at: a
+  groups and the other things Foyer cannot bring are listed in the report, not
+  guessed at: a
   notification that arrives somewhere unintended is worse than one you set up
   again.
 

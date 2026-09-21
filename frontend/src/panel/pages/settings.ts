@@ -497,8 +497,14 @@ class FoyerPageSettings extends LitElement {
     this._alarmoDone = false;
     try {
       this._alarmo = await this.ctx.alarmoPreview(this._alarmoLabels(this.ctx.strings));
-    } catch {
-      this._alarmo = { success: false, refused: { code: "unreadable", params: {} } };
+    } catch (err) {
+      // Refused (a permission, a reload) or failed outright: said as what it
+      // is, never as a file that could not be read.
+      const detail = String((err as { message?: string })?.message ?? err);
+      this._alarmo = {
+        success: false,
+        problems: [{ code: "request_failed", kind: "config", ref: null, field: null, detail }],
+      };
     } finally {
       this._busy = false;
     }
@@ -616,6 +622,12 @@ class FoyerPageSettings extends LitElement {
               <option value="" ?selected=${!settings.language}>
                 ${t(s, "settings.language_system")}
               </option>
+              ${settings.language &&
+              !this._languages.some((language) => language.code === settings.language)
+                ? html`<option .value=${settings.language} selected>
+                    ${settings.language}
+                  </option>`
+                : nothing}
               ${this._languages.map(
                 (language) =>
                   html`<option

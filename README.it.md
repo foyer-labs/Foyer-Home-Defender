@@ -587,7 +587,10 @@ Ti mostra cosa farebbe prima di scrivere qualsiasi cosa, e aggiunge a quello
 che c'è già invece di sostituirlo:
 
 - **Aree, sensori e modalità** diventano aree, zone e scenari di Foyer: uno
-  scenario per ogni modalità che avevi attivato. Dove Alarmo aveva più
+  scenario per ogni modalità attivata che sorveglia qualcosa, oppure, se hai
+  già uno scenario che riporta quella modalità a Home Assistant, è quello a
+  inserire anche le nuove aree, così assistenti vocali e HomeKit continuano a
+  funzionare. Dove Alarmo aveva più
   ritardi e Foyer ha posto per uno, prende il più lungo; dove un valore
   supera il limite di Foyer — una sirena che suonava mezz'ora — prende il
   limite. In entrambi i casi il report lo dice.
@@ -595,12 +598,14 @@ che c'è già invece di sostituirlo:
   sensore, che è esattamente il presupposto che Foyer è costruito per
   rifiutare: ogni zona porta la proposta di Foyer e non sorveglia niente
   finché non ne hai confermato il trigger a pagina 3.
-- **Le persone arrivano senza codice, sempre.** Alarmo cifra i codici in un
-  modo che Foyer non può verificare, quindi ognuno ha bisogno di un codice
-  nuovo a pagina 7 prima di poter disinserire con quello. Il report lo dice
+- **Le persone arrivano senza codice, sempre.** Alarmo conserva i codici come
+  hash nel proprio formato, e Foyer non accetta sulla fiducia una credenziale
+  da un altro sistema, quindi ognuno ha bisogno di un codice nuovo a pagina 7
+  prima di poter disinserire con quello. Il report lo dice
   nella prima riga.
 - **Sirene e interruttori** arrivano in un profilo di risposta. Notifiche,
-  gruppi e tutto il resto sono elencati nel report, non indovinati: una
+  gruppi e le altre cose che Foyer non può portare sono elencati nel report,
+  non indovinati: una
   notifica che arriva dove non dovrebbe è peggio di una che imposti di nuovo.
 
 ## Come puoi verificarlo invece di fidarti

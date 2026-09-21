@@ -190,7 +190,12 @@ from ..core.models import (
 # build never had rather than protection it had and lost — every zone it ever
 # enabled itself went through the confirmation — and refusing the whole file
 # to keep it would lock a household out of its alarm over a zone that is off.
-# Nothing it would have protected goes unprotected.
+# One consequence is not small and is stated rather than hidden: a 7.3 build
+# that writes the document back drops the field, and the 7.3 → 7.4 step then
+# reads every zone as confirmed, because it cannot tell an imported zone from
+# any other. Downgrading after an import and upgrading again therefore
+# forgets which zones were never checked. The zones are still off; what is
+# lost is the refusal to switch them on without confirming.
 STORAGE_VERSION = 7
 STORAGE_MINOR_VERSION = 4
 
@@ -831,7 +836,9 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
         response_profile_id=z.get("response_profile_id") or None,
         silent=bool(z["silent"]),
         battery_entity_id=z.get("battery_entity_id") or None,
-        trigger_confirmed=bool(z.get("trigger_confirmed", True)),
+        # Strictly: only a real `true` confirms, so a hand-edited "false" is
+        # not read as the truthy string it is.
+        trigger_confirmed=z.get("trigger_confirmed", True) is True,
     )
 
 

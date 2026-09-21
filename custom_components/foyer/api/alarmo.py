@@ -43,16 +43,11 @@ from ..store.schema import config_to_dict
 MAX_BYTES = 4 * 1024 * 1024
 
 
-def _read(path: Path) -> bytes:
-    """Blocking; run in an executor."""
-    with path.open("rb") as handle:
-        return handle.read(MAX_BYTES + 1)
-
-
-async def _load(hass: HomeAssistant) -> tuple[bytes, Any]:
-    path = Path(hass.config.path(".storage", SOURCE_KEY))
+def _read(path: Path) -> tuple[bytes, Any]:
+    """Blocking, parsing included; run in an executor."""
     try:
-        raw = await hass.async_add_executor_job(_read, path)
+        with path.open("rb") as handle:
+            raw = handle.read(MAX_BYTES + 1)
     except FileNotFoundError:
         raise Refused("not_found") from None
     except OSError:
@@ -61,8 +56,26 @@ async def _load(hass: HomeAssistant) -> tuple[bytes, Any]:
         raise Refused("too_large")
     try:
         return raw, json.loads(raw)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise Refused("not_json") from None
+
+
+async def _load(hass: HomeAssistant) -> tuple[bytes, Any]:
+    path = Path(hass.config.path(".storage", SOURCE_KEY))
+    return await hass.async_add_executor_job(_read, path)
+
+
+def _named(document: Any) -> set[str]:
+    """The entities the file names, which are the only ones the plan reads."""
+    data = document.get("data") if isinstance(document, dict) else None
+    sensors = data.get("sensors") if isinstance(data, dict) else None
+    if not isinstance(sensors, list):
+        return set()
+    return {
+        s["entity_id"]
+        for s in sensors
+        if isinstance(s, dict) and isinstance(s.get("entity_id"), str)
+    }
 
 
 def _entities(hass: HomeAssistant) -> dict[str, EntityInfo]:
@@ -98,16 +111,13 @@ def _fingerprint(
     digest.update(
         json.dumps(config_to_dict(config), sort_keys=True, default=str).encode()
     )
-    # What the plan reads of each entity: its name, its device class and
+    # What the plan reads of each entity the file names: its name and
     # whether it exists — never its state, which a motion sensor changes
     # every time somebody walks past and which would refuse every apply in a
     # house anybody is living in.
     digest.update(
         json.dumps(
-            {
-                e: [i.name, i.device_class, i.state is not None]
-                for e, i in sorted(entities.items())
-            }
+            {e: [i.name, i.state is not None] for e, i in sorted(entities.items())}
         ).encode()
     )
     return digest.hexdigest()
@@ -150,7 +160,8 @@ async def async_plan(
     words = Labels.parse(labels)
     try:
         raw, document = await _load(hass)
-        entities = _entities(hass)
+        named = _named(document)
+        entities = {e: i for e, i in _entities(hass).items() if e in named}
         result = plan(
             document,
             system.config,

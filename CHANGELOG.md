@@ -25,17 +25,18 @@ records whether its trigger was confirmed, every zone already stored is, and a
   by name, refuses a file whose shape is wrong rather than bring half of it,
   and lists everything it could not convert. It shows what it would do first;
   **Apply** stores exactly that, and is refused if the file, the configuration,
-  or the name or kind of a sensor changed in between — never because a sensor
-  moved while somebody was reading. It is a configuration change like any other:
+  or the name or presence of one of Alarmo's sensors changed in between —
+  never because a sensor moved while somebody was reading. It is a configuration change like any other:
   `edit_config` with a code, `manage_users` too because it creates people, the
   same validation, refused while an area it would change is armed, and a row
   in the log.
 - What it makes of Alarmo, in short: one Foyer area per Alarmo area and set
   of modes its sensors were watched in; one scenario per mode you had switched
   on, or the existing scenario for that master state extended with the new
-  areas, so HomeKit's "away" keeps working; the longest delay wherever Alarmo
-  had several and Foyer has room for one; sirens and switches into a response
-  profile that starts as a copy of your default one. Notifications, groups and
+  areas, so HomeKit's "away" keeps working; the longest delay or siren time
+  wherever Alarmo had several and Foyer has room for one; a siren sounded when
+  the alarm triggers, and switches, into a response profile that starts as a
+  copy of your default one. Notifications, groups and
   the rest are report lines, not guesses.
 - **Imported zones arrive switched off, with their trigger unconfirmed.**
   Alarmo reads `on`, `open` and `unlocked` as alarm for every sensor, which is
@@ -43,9 +44,10 @@ records whether its trigger was confirmed, every zone already stored is, and a
   and a notice on page 3, and cannot be switched on until somebody confirms it
   — enforced by validation on every path that stores a configuration, not
   only by the editor.
-- **Nobody arrives with a code.** Alarmo's codes are hashed in a format Foyer
-  cannot verify, and the report says in its first line that every person
-  brought in needs a new one.
+- **Nobody arrives with a code.** Alarmo keeps its codes as hashes in its own
+  format, and Foyer does not take a credential from another system on trust;
+  the report says in its first line that every person brought in needs a new
+  one.
 - **Issue templates.** The bug form asks for the Foyer and Home Assistant
   versions, Foyer's own log and the diagnostics download, and says where each
   is — but requires only the versions, because a Foyer that did not load has

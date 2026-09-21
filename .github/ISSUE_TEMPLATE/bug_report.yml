@@ -65,8 +65,7 @@ body:
         log has errors from `custom_components.foyer`, paste them here too:
         Settings → Devices & services → Foyer Home Defender → ⋮ →
         **Enable debug logging**, make it happen again, then **Disable debug
-        logging**, which downloads the file.
-      render: text
+        logging**, which downloads the file — drag it here.
     validations:
       required: false
 

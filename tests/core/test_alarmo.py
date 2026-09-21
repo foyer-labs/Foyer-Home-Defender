@@ -721,3 +721,133 @@ def test_an_area_with_no_mode_enabled_brings_nothing_and_says_why():
     result = run(document)
     assert "area_no_modes" in codes(result)
     assert result.counts["zones"] == 0
+
+
+# --- what the review found -------------------------------------------------------
+
+
+def test_a_chirp_on_arming_is_not_turned_into_the_full_siren():
+    """A siren with a tone or a duration, or at another moment than the alarm,
+    would sound for the whole siren time on every arming (found in review)."""
+    base = alarmo_file()["data"]["automations"][0]
+    chirp = {
+        **base,
+        "triggers": [{"event": "armed", "area": None, "modes": []}],
+    }
+    toned = {
+        **base,
+        "actions": [
+            {
+                "service": "siren.turn_on",
+                "entity_id": "siren.hall",
+                "data": {"tone": "x"},
+            }
+        ],
+    }
+    for automation in (chirp, toned):
+        result = run(alarmo_file(automations=[automation]))
+        assert "siren_not_imported" in codes(result)
+        assert not any(
+            a.kind is ActionKind.SIREN
+            for p in result.config.profiles
+            for a in p.actions
+        )
+
+
+def test_an_area_profile_hiding_a_scenario_profile_is_said():
+    """Extending a scenario with its own profile, and giving the imported area
+    a profile of its own, stops the area inheriting the scenario's — which
+    must be a line, never a notification that quietly stops (found in review)."""
+    config = seed()
+    profile = replace(config.profiles[0], id="phone", name="Phone")
+    config = replace(
+        config,
+        profiles=(*config.profiles, profile),
+        scenarios=(replace(config.scenarios[0], response_profile_id="phone"),),
+    )
+    result = run(config=config)
+    assert "profile_hides_scenario" in codes(result)
+
+
+def test_a_new_scenario_takes_its_times_only_from_areas_that_came_across():
+    document = alarmo_file()
+    document["data"]["areas"].append(
+        {
+            "area_id": "2",
+            "name": "Shed",
+            "modes": {"armed_home": mode(exit_time=200, trigger_time=0)},
+        }
+    )
+    result = run(document)
+    home = by_name(result.config.scenarios, "Home")
+    assert home.exit_delay_override == 0
+    assert home.siren_duration_override == 600
+    assert "area_empty" in codes(result)
+
+
+def test_an_automation_for_an_area_that_did_not_come_across_is_not_imported():
+    document = alarmo_file()
+    document["data"]["areas"].append(
+        {"area_id": "2", "name": "Shed", "modes": {"armed_away": mode()}}
+    )
+    base = document["data"]["automations"][0]
+    document["data"]["automations"] = [
+        {**base, "triggers": [{"event": "triggered", "area": "2", "modes": []}]},
+        {**base, "name": "Nothing", "actions": []},
+    ]
+    result = run(document)
+    assert "automation_no_area" in codes(result)
+    assert "automation_imported" not in codes(result)
+
+
+@pytest.mark.parametrize(
+    ("path", "value"),
+    [
+        (("sensors", 0, "type"), ["door"]),
+        (("automations", 0, "triggers", 0, "event"), ["armed"]),
+        (("areas", 0, "modes", "armed_away", "enabled"), "yes"),
+    ],
+)
+def test_an_unhashable_or_wrong_value_is_refused_not_a_crash(path, value):
+    document = alarmo_file()
+    node = document["data"]
+    for key in path[:-1]:
+        node = node[key]
+    node[path[-1]] = value
+    with pytest.raises(Refused):
+        run(document)
+
+
+def test_two_areas_with_one_id_are_refused():
+    document = alarmo_file()
+    document["data"]["areas"].append({**document["data"]["areas"][0], "name": "Other"})
+    with pytest.raises(Refused) as refused:
+        run(document)
+    assert refused.value.line.params == {"where": "areas[1].area_id"}
+
+
+def test_a_person_twice_in_the_file_is_not_reported_as_already_here():
+    document = alarmo_file()
+    document["data"]["users"].append({**document["data"]["users"][0], "name": "anna"})
+    result = run(document)
+    assert "person_duplicate" in codes(result)
+    assert "person_exists" not in codes(result)
+
+
+def test_a_zone_name_already_taken_is_reported():
+    config = seed()
+    config = replace(config, zones=(replace(config.zones[0], name="Kitchen window"),))
+    result = run(config=config)
+    assert any(
+        line.code == "renamed" and line.params["kind"] == "zone"
+        for line in result.lines
+    )
+
+
+def test_sensors_that_aborted_an_arming_are_counted():
+    document = alarmo_file()
+    document["data"]["sensors"][1]["use_exit_delay"] = False
+    result = run(document)
+    assert any(
+        line.code == "exit_abort" and line.params["zones"] >= 1 for line in result.lines
+    )

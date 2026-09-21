@@ -343,6 +343,7 @@
     "qos": "Quality of service",
     "attachment": "How to attach it",
     "battery_entity_id": "Battery entity",
+    "trigger_confirmed": "Trigger confirmed",
     "low_battery_threshold": "Low battery below",
     "walk_test_timeout": "Walk test timeout",
     "channels": "Channels",
@@ -1650,6 +1651,7 @@
     },
     "kind": {
       "area": "An area",
+      "zone": "A zone",
       "scenario": "A scenario"
     },
     "sensor_type": {
@@ -1677,8 +1679,8 @@
       "changed": "Something changed since the preview — Alarmo's file, Foyer's configuration or one of the sensors. Read it again, and look before applying."
     },
     "line": {
-      "codes": "No code came across, and none ever will: Alarmo hashes its codes in a way Foyer cannot verify. Everybody brought in — {people} in all — needs a new code on page 7 before they can disarm with one.",
-      "codes_nobody": "No code came across, and none ever will: Alarmo hashes its codes in a way Foyer cannot verify. Nobody new was brought in, so the people who can disarm are the ones already on page 7.",
+      "codes": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Everybody brought in — {people} in all — needs a new code on page 7 before they can disarm with one.",
+      "codes_nobody": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Nobody new was brought in, so the people who can disarm are the ones already on page 7.",
       "zones_to_confirm": "Zones brought in: {zones}, every one switched off. Each trigger is Foyer's proposal from the kind of sensor, not something anybody has checked: until you confirm it on page 3 and switch the zone on, it watches nothing.",
       "unavailable_is_fault": "A sensor that goes unavailable is a fault in Foyer, never a quiet one: it blocks arming and is reported. Alarmo read it as closed unless told otherwise.",
       "sensor_duplicate": "{entity} is listed twice in the file; it was brought in once.",
@@ -1702,8 +1704,16 @@
       "arm_on_close": "“{zone}” armed the house five seconds after it closed, in Alarmo. In Foyer it is set to arm after closing, which also waits for the exit delay.",
       "auto_bypass_partial": "“{zone}” was bypassed automatically in some modes and not in others. Foyer has one policy per zone, and it took the one that refuses to arm with the zone open.",
       "mode_unused": "The mode {mode} was switched on in Alarmo but watched no sensor that came across, so no scenario was made for it.",
-      "scenario_extended": "Your scenario “{scenario}” already reports {mode} to Home Assistant, so it now also arms the areas brought in for that mode — a second scenario would make the master refuse it. Its own exit delay and siren duration apply to them.",
+      "scenario_extended": "Your scenario “{scenario}” already reports {mode} to Home Assistant, so it now also arms the areas brought in for that mode — a second scenario would make the master refuse it. Its own exit delay, siren duration and code settings apply to them.",
       "scenario_mode_ambiguous": "Two scenarios already report {mode}, so the master refuses that mode. A new one was made anyway, and the master refuses the mode until only one is left.",
+      "siren_varies": "Alarmo's areas sounded for different times in this mode. “{scenario}” has one siren duration, and it took the longest: {seconds} s.",
+      "exit_abort": "Sensors that stopped an arming in Alarmo the moment they opened during the exit delay: {zones}. Foyer checks them when you press arm and when the delay runs out, not in between.",
+      "scenario_restricted": "Only some people may use “{scenario}”, and the people brought in are not among them until you add them on page 4.",
+      "profile_hides_scenario": "“{area}” answers with its own response profile, so it no longer inherits the one “{scenario}” has. Check on page 5 that it notifies whoever that one did.",
+      "automation_no_area": "“{automation}” acted on an area that did not come across, and was not brought in.",
+      "automation_empty": "“{automation}” had nothing to do, and was not brought in.",
+      "siren_not_imported": "“{automation}” sounds a siren at another moment than the alarm, or with a tone or a duration of its own. Brought across, that would become the full siren for the full time, so it was not.",
+      "person_duplicate": "{person} is in the file twice; they were brought in once.",
       "siren_capped": "Alarmo sounded for {seconds} s in this mode (0 means until somebody disarmed). Foyer's hard maximum is {max} s, so “{scenario}” sounds for {max} s.",
       "person_unnamed": "A person with no name in the file was not brought in.",
       "person_exists": "{person} is already a Foyer user, and was left exactly as they are.",

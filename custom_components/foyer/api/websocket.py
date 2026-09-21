@@ -2041,7 +2041,12 @@ async def ws_alarmo_apply(
     if result is None:
         connection.send_result(msg["id"], answer)
         return
-    if answer["fingerprint"] != msg["fingerprint"]:
+    # A save from another tab reloads the entry while the file is read; the
+    # plan would then be computed against a configuration and an alarm state
+    # that are no longer the installation's, and would overwrite that save.
+    if answer["fingerprint"] != msg["fingerprint"] or hass.data.get(DOMAIN) is not (
+        system
+    ):
         connection.send_result(
             msg["id"],
             {"success": False, "refused": {"code": "changed", "params": {}}},

@@ -207,3 +207,29 @@ async def test_a_sensor_moving_between_preview_and_apply_refuses_nothing(
     )
     assert result["success"], result
     await hass.async_block_till_done()
+
+
+async def test_a_restored_backup_cannot_confirm_a_zone_nobody_checked(
+    hass, hass_ws_client, alarmo
+):
+    """Editing a backup to say `true` is not somebody testing the sensor
+    (found in review): the zone comes back as unconfirmed as it went out."""
+    client = await hass_ws_client(hass)
+    preview = await _ws(client, {"type": "foyer/alarmo/preview", "labels": LABELS})
+    await _ws(
+        client,
+        {
+            "type": "foyer/alarmo/apply",
+            "fingerprint": preview["fingerprint"],
+            "labels": LABELS,
+        },
+    )
+    await hass.async_block_till_done()
+    backup = (await _ws(client, {"type": "foyer/config/export"}))["document"]
+    for zone in backup["config"]["zones"]:
+        if zone["entity_id"] == "binary_sensor.kitchen_window":
+            zone["trigger_confirmed"] = True
+            zone["enabled"] = True
+    result = await _ws(client, {"type": "foyer/config/import", "document": backup})
+    assert not result["success"]
+    assert "trigger_not_confirmed" in [p["code"] for p in result["problems"]]

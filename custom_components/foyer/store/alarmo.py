@@ -397,6 +397,7 @@ class _Trigger:
 class _Action:
     service: str
     entity_ids: tuple[str, ...]
+    has_data: bool  # anything in `data`: a tone, a duration, a volume
 
 
 @dataclass(frozen=True, slots=True)
@@ -553,7 +554,7 @@ def read(document: Any) -> Alarmo:
         where = f"areas[{i}]"
         a = r.obj(raw, where, "areas")
         area_id = r.area_ref(a.get("area_id"), f"{where}.area_id")
-        if area_id is None:
+        if area_id is None or any(a.id == area_id for a in areas):
             raise r.fail(f"{where}.area_id")
         modes = {}
         for mode, entry in r.obj(a.get("modes", {}), f"{where}.modes").items():
@@ -576,7 +577,7 @@ def read(document: Any) -> Alarmo:
         where = f"sensors[{i}]"
         s = r.obj(raw, where, "sensors")
         sensor_type = s.get("type", "other")
-        if sensor_type not in SENSOR_TYPES:
+        if not isinstance(sensor_type, str) or sensor_type not in SENSOR_TYPES:
             raise r.fail(f"{where}.type")
         sensors.append(
             _Sensor(
@@ -636,7 +637,7 @@ def read(document: Any) -> Alarmo:
             t = r.obj(raw_t, here)
             if "event" in t:
                 event = t.get("event")
-                if event not in EVENTS:
+                if not isinstance(event, str) or event not in EVENTS:
                     raise r.fail(f"{here}.event")
                 triggers.append(
                     _Trigger(
@@ -657,6 +658,7 @@ def read(document: Any) -> Alarmo:
                 _Action(
                     service=r.text(act, "service", here).strip(),
                     entity_ids=r.entities(act.get("entity_id"), f"{here}.entity_id"),
+                    has_data=bool(r.obj(act.get("data") or {}, f"{here}.data")),
                 )
             )
         kind = a.get("type")
@@ -681,7 +683,9 @@ def read(document: Any) -> Alarmo:
                 name=r.text(g, "name", where).strip(),
                 entities=r.entities(g.get("entities"), f"{where}.entities"),
                 timeout=r.number(g, "timeout", where) or 0,
-                event_count=r.number(g, "event_count", where) or 2,
+                event_count=(
+                    2 if (count := r.number(g, "event_count", where)) is None else count
+                ),
             )
         )
 
@@ -824,7 +828,10 @@ def plan(
                     entity=entity,
                     seconds=_clamp(max(delays), MAX_ENTRY_DELAY),
                 )
-        name = zone_names.claim((info.name or "").strip()[:MAX_NAME] or entity)
+        wanted = (info.name or "").strip()[:MAX_NAME] or entity
+        name = zone_names.claim(wanted)
+        if name != wanted:
+            note("renamed", kind="zone", wanted=wanted, name=name)
         if info.state is None and info.name is None:
             note("sensor_missing", entity=entity, zone=name)
         drafts.append(
@@ -844,7 +851,11 @@ def plan(
             note("delay_on", zone=name, seconds=sensor.delay_on)
         if not sensor.enabled:
             note("sensor_was_disabled", zone=name)
-        if sensor.entry_delay is not None and sensor.entry_delay > MAX_ENTRY_DELAY:
+        if (
+            zone_type is ZoneType.DELAYED
+            and sensor.entry_delay is not None
+            and sensor.entry_delay > MAX_ENTRY_DELAY
+        ):
             note(
                 "delay_capped",
                 item=name,
@@ -938,6 +949,9 @@ def plan(
     # pressed; Foyer's `block` refuses to start arming with it open (§5.4).
     # One line for all of them, not one per door.
     open_at_arming = 0
+    # Alarmo stopped an arming the moment one of these opened in the exit
+    # delay; Foyer checks them when arm is pressed and when the delay ends.
+    no_exit = 0
     for d in drafts:
         if id(d) not in placed:
             continue
@@ -946,6 +960,8 @@ def plan(
             values["arm_policy"] = d.arm_policy
             if d.arm_policy is ArmPolicy.BLOCK and d.sensor.use_exit_delay:
                 open_at_arming += 1
+            if not d.sensor.use_exit_delay:
+                no_exit += 1
         new_zones.append(
             Zone(
                 id=new_id(),
@@ -968,10 +984,15 @@ def plan(
 
     if open_at_arming:
         note("arm_while_open", zones=open_at_arming)
+    if no_exit:
+        note("exit_abort", zones=no_exit)
 
     # 4. Scenarios: one per mode an imported area is armed in.
     scenario_names = _Names([s.name for s in config.scenarios])
     scenarios = list(config.scenarios)
+    # Extended scenarios that answer with a profile of their own: an imported
+    # area given a profile would stop inheriting it (§6), which must be said.
+    profile_scenarios: dict[str, Scenario] = {}
     new_scenarios = extended = 0
     for mode in MODES:
         members = tuple(a.id for a in new_areas if mode in area_modes[a.id])
@@ -987,10 +1008,20 @@ def plan(
             )
             extended += 1
             note("scenario_extended", scenario=target.name, mode=mode)
+            if target.allowed_user_ids is not None:
+                note("scenario_restricted", scenario=target.name)
+            if target.response_profile_id is not None:
+                profile_scenarios[mode] = target
             continue
         if len(same) > 1:
             note("scenario_mode_ambiguous", mode=mode)
-        watching = [a for a in alarmo.areas if mode in a.enabled_modes]
+        # Only the Alarmo areas that came across and are armed in this mode:
+        # an area left behind has no say in how the new scenario behaves.
+        watching = [
+            a
+            for a in alarmo.areas
+            if any(mode in area_modes[f] for f in by_alarmo.get(a.id, ()))
+        ]
         exits = [a.modes[mode].exit_time for a in watching]
         sirens = [a.modes[mode].trigger_time for a in watching]
         wanted = labels.mode(mode)
@@ -1004,6 +1035,12 @@ def plan(
                 seconds=_clamp(max(exits), MAX_EXIT_DELAY),
             )
         siren = max(sirens) if sirens and 0 not in sirens else 0
+        if len(set(sirens)) > 1:
+            note(
+                "siren_varies",
+                scenario=name,
+                seconds=min(siren or MAX_SIREN_DURATION, MAX_SIREN_DURATION),
+            )
         if siren == 0 or siren > MAX_SIREN_DURATION:
             note(
                 "siren_capped",
@@ -1027,14 +1064,21 @@ def plan(
 
     # 5. People, never with a code.
     known_people = {u.name.strip().casefold() for u in config.users}
+    brought: set[str] = set()
     new_users = []
     for person in alarmo.users:
         if not person.name:
             note("person_unnamed")
             continue
         if person.name.casefold() in known_people:
-            note("person_exists", person=person.name)
+            note(
+                "person_duplicate"
+                if person.name.casefold() in brought
+                else "person_exists",
+                person=person.name,
+            )
             continue
+        brought.add(person.name.casefold())
         known_people.add(person.name.casefold())
         permissions = set()
         if person.can_arm:
@@ -1065,6 +1109,7 @@ def plan(
     # 6. Sirens and switches, into a profile per Alarmo area.
     profiles, assignments = _profiles(
         alarmo,
+        used=frozenset().union(*area_modes.values()),
         config=config,
         by_alarmo=by_alarmo,
         alarmo_area_ids={a.id for a in alarmo.areas},
@@ -1075,6 +1120,7 @@ def plan(
     new_areas = [
         replace(a, response_profile_id=assignments.get(a.id)) for a in new_areas
     ]
+    _hidden_profiles(new_areas, area_modes, profile_scenarios, note)
 
     # 7. What there is no place for.
     for group in alarmo.groups:
@@ -1169,6 +1215,7 @@ def _arm_policy(
 def _profiles(
     alarmo: Alarmo,
     *,
+    used: frozenset[str],
     config: FoyerConfig,
     by_alarmo: Mapping[str, list[str]],
     alarmo_area_ids: set[str],
@@ -1184,7 +1231,6 @@ def _profiles(
     the worst failure there is (decision 63).
     """
     wanted: dict[str, list[ProfileAction]] = {}  # Alarmo area id -> actions
-    used = {m for a in alarmo.areas for m in a.enabled_modes}
     siren_duration = config.settings.siren_duration
     for automation in alarmo.automations:
         label = automation.name or "—"
@@ -1211,11 +1257,23 @@ def _profiles(
         else:
             note("automation_trigger", automation=label)
             continue
+        scope = {a for a in scope if by_alarmo.get(a)}
+        if not scope:
+            note("automation_no_area", automation=label)
+            continue
+        if not automation.actions:
+            note("automation_empty", automation=label)
+            continue
         moments = frozenset().union(*(_MOMENTS[t.event] for t in automation.triggers))
         actions = []
         for action in automation.actions:
             converted = _action(action, moments, siren_duration, new_id)
-            if converted is None and action.service == "siren.turn_off":
+            if converted is None and action.service == "siren.turn_on":
+                # Only the alarm itself, and only the plain one: a tone, a
+                # duration or a chirp on arming carried in `data` would become
+                # the full siren for the full duration (found in review).
+                note("siren_not_imported", automation=label)
+            elif converted is None and action.service == "siren.turn_off":
                 # A disarm and the siren cutoff stop what a siren action
                 # started (§6.2): the automation that did it is not needed.
                 note("siren_off_not_needed", automation=label)
@@ -1256,6 +1314,19 @@ def _profiles(
     return profiles, assignments
 
 
+def _hidden_profiles(
+    new_areas: list[FoyerArea],
+    area_modes: Mapping[str, frozenset[str]],
+    profile_scenarios: Mapping[str, Scenario],
+    note: Callable[..., None],
+) -> None:
+    """An area profile hides the scenario's (§6): say so, never silently."""
+    for mode, scenario in profile_scenarios.items():
+        for area in new_areas:
+            if area.response_profile_id and mode in area_modes[area.id]:
+                note("profile_hides_scenario", area=area.name, scenario=scenario.name)
+
+
 def _action(
     action: _Action,
     moments: frozenset[Moment],
@@ -1267,7 +1338,12 @@ def _action(
     entities = action.entity_ids
     if not entities or any(e.split(".", 1)[0] != domain for e in entities):
         return None
-    if domain == "siren" and service == "turn_on":
+    if (
+        domain == "siren"
+        and service == "turn_on"
+        and not action.has_data
+        and moments == frozenset({Moment.TRIGGERED})
+    ):
         return ProfileAction(
             id=new_id(),
             kind=ActionKind.SIREN,

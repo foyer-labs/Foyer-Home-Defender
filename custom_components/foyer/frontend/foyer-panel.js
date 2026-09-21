@@ -8091,13 +8091,17 @@ var Jt = 30, Yt = {
 			this._busy = !0, this._alarmoDone = !1;
 			try {
 				this._alarmo = await this.ctx.alarmoPreview(this._alarmoLabels(this.ctx.strings));
-			} catch {
+			} catch (e) {
+				let t = String(e?.message ?? e);
 				this._alarmo = {
 					success: !1,
-					refused: {
-						code: "unreadable",
-						params: {}
-					}
+					problems: [{
+						code: "request_failed",
+						kind: "config",
+						ref: null,
+						field: null,
+						detail: t
+					}]
 				};
 			} finally {
 				this._busy = !1;
@@ -8181,6 +8185,9 @@ var Jt = 30, Yt = {
               <option value="" ?selected=${!n.language}>
                 ${R(e, "settings.language_system")}
               </option>
+              ${n.language && !this._languages.some((e) => e.code === n.language) ? E`<option .value=${n.language} selected>
+                    ${n.language}
+                  </option>` : O}
               ${this._languages.map((e) => E`<option
                     .value=${e.code}
                     ?selected=${e.code === n.language}
