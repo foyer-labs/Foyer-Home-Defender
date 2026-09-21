@@ -9532,6 +9532,7 @@ var tn = [
 	contacts: "notification-channels.md",
 	rules: "automation-rules.md",
 	test: "simulator.md",
+	log: "privacy.md",
 	health: "system-health.md"
 };
 function Q(e) {
