@@ -207,6 +207,12 @@ def entity_state(state: State | None) -> EntityState:
 class FoyerSystem:
     """Holds the configuration and the runtime state of one config entry."""
 
+    # Set once this system has written a newer configuration and a reload
+    # is on its way (api/backup.async_write). Until the reload replaces it,
+    # it refuses further edits and the device endpoint answers nothing: both
+    # would otherwise act on a document that is no longer the stored one.
+    superseded: bool = False
+
     def __init__(
         self,
         hass: HomeAssistant,

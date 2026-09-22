@@ -242,7 +242,8 @@
     "camera_required": "Choose the camera this notification always shows, or choose another kind of picture.",
     "tag_has_no_token": "Only a keypad can use the device endpoint. A tag carries no code, so its token would be the key to the house by itself.",
     "token_without_endpoint": "A token belongs to a keypad on the device endpoint. Revoke it, or put the keypad back on the endpoint.",
-    "unknown_device": "That arming device does not exist."
+    "unknown_device": "That arming device does not exist.",
+    "config_reloading": "The previous change is still being applied. Try again in a moment."
   },
   "field": {
     "name": "Name",

@@ -382,7 +382,12 @@ def command_event(config: Any, data: dict[str, Any], actor: Actor) -> Any | None
     the same message differently would eventually be two contracts.
     """
     action = str(data.get("action") or "")
+    # What a message says is the sender's to choose: a scenario that is not a
+    # string is no scenario, and area ids that are not a list of strings are
+    # none, rather than an exception that leaves the keypad unanswered.
     scenario = data.get("scenario")
+    if not isinstance(scenario, str):
+        scenario = None
     force = bool(data.get("force", False))
     skip = bool(data.get("skip_exit_delay", False))
     if action == "arm":
@@ -394,7 +399,9 @@ def command_event(config: Any, data: dict[str, Any], actor: Actor) -> Any | None
         )
     if action == "disarm":
         areas = data.get("area_ids")
-        return DisarmRequest(tuple(str(a) for a in areas) if areas else None, actor)
+        if not isinstance(areas, list) or not all(isinstance(a, str) for a in areas):
+            areas = None
+        return DisarmRequest(tuple(areas) if areas else None, actor)
     if action == "acknowledge":
         return AcknowledgeIncident(actor)
     return None

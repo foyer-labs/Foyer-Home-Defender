@@ -17,6 +17,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 import logging
 import os
+import secrets
 from typing import Any
 
 from homeassistant.components.siren import SirenEntityFeature
@@ -348,6 +349,17 @@ class Executor:
         own server does the fetching from outside the house. A camera that
         does not answer costs its own picture and nothing else.
         """
+        # A notify entity carries a title and a message and nothing else,
+        # so it would receive the name of a camera and no picture: four
+        # messages saying nothing, and — for Telegram — four snapshots taken
+        # for nobody.
+        recipients = tuple(
+            r
+            for r in recipients
+            if self.hass.states.get(str(r.get("service") or "")) is None
+        )
+        if not recipients:
+            return
         telegram = intent.params.get("attachment") == ATTACH_TELEGRAM
         files: dict[str, str | None] = {}
         if telegram:
@@ -378,11 +390,6 @@ class Executor:
             )
             for recipient in recipients:
                 service = str(recipient.get("service") or "")
-                if self.hass.states.get(service) is not None:
-                    # A notify entity carries a title and a message and
-                    # nothing else, so it would receive the name of a camera
-                    # and no picture: four messages saying nothing.
-                    continue
                 # The data of the channel, so the picture arrives the way that
                 # channel delivers anything; but no buttons, and no `tag`,
                 # under which the Companion app would replace the text (and
@@ -653,7 +660,10 @@ class Executor:
         so at the moment of the alarm. Failing here names the setting.
         """
         stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
-        name = f"{slugify(entity_id)}-{stamp}.{suffix}"
+        # A few random characters too: two notifications at one moment take
+        # the same camera in the same second, and one file rewritten under
+        # the other's send is a picture that arrives empty (found in review).
+        name = f"{slugify(entity_id)}-{stamp}-{secrets.token_hex(3)}.{suffix}"
         path = self.hass.config.path(directory, name)
 
         def _prepare() -> bool:

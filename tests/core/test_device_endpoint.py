@@ -224,3 +224,49 @@ def test_a_null_params_document_still_migrates():
         {"profiles": [{"actions": [{"kind": "notify", "params": None}]}]},
     )
     assert out["profiles"][0]["actions"][0]["params"]["images"] == "none"
+
+
+def test_a_request_s_notes_never_land_on_somebody_else_s_row():
+    """An arming by another keypad whose exit delay runs out inside an endpoint
+    request is that keypad's row: no address, and no note about the wrong
+    keypad's transport (found in review)."""
+    from custom_components.foyer.core.models import Actor
+
+    garden = ArmingDevice("garden", "Garden", DeviceKind.KEYPAD, ref="keypad_garden")
+    world = World(replace(house(), devices=(KEYPAD, garden)))
+    world.arm("night", channel="keypad", device_id="garden", user_id="luca")
+    world.now += timedelta(seconds=6)  # past the exit delay, before any Tick
+    decision = world.send(
+        CodeAttempt(
+            None,
+            actor=Actor(
+                channel="keypad",
+                code=CodeResult.INVALID,
+                address="203.0.113.9",
+                encrypted=False,
+            ),
+        )
+    )
+    armed = next(o for o in decision.occurrences if o.moment is Moment.ARMED)
+    assert "address" not in armed.detail
+    assert "encrypted" not in armed.detail
+
+
+def test_an_endpoint_keypad_s_later_rows_say_it_talks_in_the_clear():
+    world = World(house())
+    world.arm("night", channel="keypad", device_id="hall", encrypted=False)
+    decision = world.advance(6)
+    armed = next(o for o in decision.occurrences if o.moment is Moment.ARMED)
+    assert armed.detail["encrypted"] == "false"
+
+
+def test_a_keypad_moved_to_mqtt_is_no_longer_in_the_clear():
+    world = World(house())
+    world.arm("night", channel="keypad", device_id="hall", encrypted=False)
+    assert world.state.in_clear == frozenset({"hall"})
+    world.config = replace(
+        world.config,
+        devices=(replace(KEYPAD, transport=DeviceTransport.MQTT, token_hash=None),),
+    )
+    world.advance(1)
+    assert world.state.in_clear == frozenset()

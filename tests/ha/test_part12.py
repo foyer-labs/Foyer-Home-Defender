@@ -375,3 +375,50 @@ async def test_a_tag_cannot_be_given_a_token(hass, hass_ws_client, loaded):
     )
     assert not answer["success"]
     assert answer["problems"][0]["code"] == "tag_has_no_token"
+
+
+async def test_the_endpoint_is_not_there_where_no_keypad_uses_it(
+    hass, loaded, hass_client_no_auth
+):
+    """An installation that never chose the endpoint advertises nothing and
+    counts nobody's guesses."""
+    http = await hass_client_no_auth()
+    response = await _post(http, "anything", {"action": "status"})
+    assert response.status == 404
+    assert not [k for k in hass.data[DOMAIN].state.lockouts if k.startswith("http:")]
+
+
+async def test_an_edit_racing_a_revocation_cannot_bring_the_token_back(hass, endpoint):
+    """Found in review: an edit built from the configuration the running
+    system still held, between a save and the reload it schedules, wrote the
+    revoked token back over the new document. The superseded system refuses
+    it, and the endpoint stops answering from the old configuration at once."""
+    http, token, _device_id, client = endpoint
+    system = hass.data[DOMAIN]
+    zone = (await _config(client))["zones"][0]
+    system.superseded = True  # a save has been written; the reload is pending
+
+    await client.send_json(
+        {
+            "id": 90002,
+            "type": "foyer/config/save",
+            "kind": "zone",
+            "item": zone,
+            "code": CODE,
+        }
+    )
+    answer = (await client.receive_json())["result"]
+    assert not answer["success"]
+    assert answer["problems"][0]["code"] == "config_reloading"
+    assert (await _post(http, token, {"action": "status"})).status == 503
+    system.superseded = False
+
+
+async def test_a_body_nested_too_deep_is_a_bad_request(hass, endpoint):
+    http, token, _device_id, _client = endpoint
+    response = await http.post(
+        "/api/foyer/device",
+        data="[" * 2000,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status == 400

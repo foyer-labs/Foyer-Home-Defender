@@ -231,9 +231,15 @@ async def async_report_unknown_device(
     key = f"{channel}:{ref or ''}"
     now = dt_util.utcnow()
     recently = seen.get(key)
-    seen[key] = now
     if recently is not None and now - recently < _REPORT_EVERY:
+        # Not refreshed here: a sender retrying every fifty seconds must
+        # leave a row a minute, not one row in total (found in review).
         return
+    # The names are the sender's to choose, so the memory of them is kept
+    # to what a minute of reports can need.
+    for stale in [k for k, at in seen.items() if now - at >= _REPORT_EVERY]:
+        del seen[stale]
+    seen[key] = now
     system.async_record(
         (
             security_row(

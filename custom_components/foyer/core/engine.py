@@ -68,6 +68,7 @@ from .models import (
     Decision,
     Detection,
     DeviceContact,
+    DeviceTransport,
     DisarmRequest,
     EntityState,
     EntryMode,
@@ -567,7 +568,10 @@ class _Run:
         # The keypads whose last request crossed the network in the clear
         # (§9.2.1): what keeps page 8's warning up until one arrives
         # encrypted, across a restart.
-        self.in_clear = set(state.in_clear & {d.id for d in config.devices})
+        self.in_clear = set(
+            state.in_clear
+            & {d.id for d in config.devices if d.transport is DeviceTransport.HTTP}
+        )
         self.faults = frozenset(state.faults & zone_ids)
         self.low_batteries = frozenset(state.low_batteries & zone_ids)
         self.entities: dict[str, EntityState] = dict(snapshot.entities)
@@ -738,6 +742,12 @@ class _Run:
         # by a timer or by a door opening carries another channel, or none,
         # and is left alone: nobody asked for it.
         actor = self.actor
+        # Whether this occurrence replays somebody else's request — an
+        # arming whose exit delay ran out, a walk test timing out — rather
+        # than being caused by the one in hand. Such a row names its own
+        # device and person, and the current request's transport notes do
+        # not belong on it (found in review).
+        replayed = "user_id" in kwargs or "device_id" in kwargs
         if kwargs.get("user_id") and "user_name" not in kwargs:
             named = self.config.user(kwargs["user_id"])
             kwargs["user_name"] = named.name if named else None
@@ -756,19 +766,27 @@ class _Run:
                     kwargs["detail"] = {**kwargs.get("detail", {}), **_CLAIMED}
             if actor.device_id is not None:
                 kwargs["device_id"] = actor.device_id
-        if kwargs.get("channel") == actor.channel:
-            # Every row a request to the device endpoint causes says whether
-            # it arrived in the clear (§9.2.1), and a request with no device
-            # behind it says where it came from — without those, a
-            # token-guessing loop in the log is a list of refusals from
-            # nowhere.
-            extra: dict[str, str] = {}
+        # Every row a request to the device endpoint causes says whether
+        # it arrived in the clear (§9.2.1). For the keypad's own rows that is
+        # read from the keypad — so the `armed` row its exit delay writes
+        # thirty seconds later says it too — and for a request with no
+        # device behind it, from the request, with where it came from:
+        # without that, a token-guessing loop in the log is a list of
+        # refusals from nowhere.
+        extra: dict[str, str] = {}
+        if kwargs.get("device_id") in self.in_clear:
+            extra["encrypted"] = "false"
+        if (
+            not replayed
+            and kwargs.get("channel") == actor.channel
+            and actor.device_id is None
+            and actor.address
+        ):
+            extra["address"] = actor.address
             if actor.encrypted is False:
                 extra["encrypted"] = "false"
-            if actor.address and actor.device_id is None:
-                extra["address"] = actor.address
-            if extra:
-                kwargs["detail"] = {**kwargs.get("detail", {}), **extra}
+        if extra:
+            kwargs["detail"] = {**kwargs.get("detail", {}), **extra}
         self.occurrences.append(Occurrence(moment=moment, **kwargs))
 
     @property

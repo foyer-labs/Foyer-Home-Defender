@@ -242,7 +242,8 @@
     "camera_required": "Scegli la telecamera che questa notifica mostra sempre, oppure scegli un altro tipo di immagine.",
     "tag_has_no_token": "Solo un tastierino può usare l'endpoint dei dispositivi. Un tag non porta nessun codice, quindi il suo token sarebbe da solo la chiave di casa.",
     "token_without_endpoint": "Un token appartiene a un tastierino sull'endpoint dei dispositivi. Revocalo, oppure riporta il tastierino sull'endpoint.",
-    "unknown_device": "Quel dispositivo di inserimento non esiste."
+    "unknown_device": "Quel dispositivo di inserimento non esiste.",
+    "config_reloading": "La modifica precedente è ancora in corso di applicazione. Riprova tra un momento."
   },
   "field": {
     "name": "Nome",

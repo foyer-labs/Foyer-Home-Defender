@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import asyncio
 from http import HTTPStatus
+import ipaddress
 import json
 import logging
 from typing import Any
@@ -101,6 +102,23 @@ _REGISTERED = f"{DOMAIN}_device_views"
 # At most this much body is read. A keypad's command is a few dozen bytes.
 MAX_BODY = 4096
 
+# How many source addresses may hold a bad-token counter of their own. Past
+# it, every new address shares one counter: an attacker rotating addresses —
+# an IPv6 host has a /64 to rotate through — must not grow the persisted
+# state, the log and the notifications without bound (found in review).
+MAX_ADDRESS_COUNTERS = 64
+OVERFLOW_ADDRESS = "*"
+
+# How long a stream waits for a system that has gone before it closes: long
+# enough for the reload every configuration save performs, short enough that
+# a token revoked by a reload that then failed is not kept open for ever.
+STREAM_ORPHAN_SECONDS = 60
+
+# One bad token at a time goes through the engine, so a burst of concurrent
+# requests from one address cannot all pass the lockout check before the
+# first of them has been counted.
+_BAD_TOKEN_LOCK = f"{DOMAIN}_bad_token_lock"
+
 
 def _system(hass: HomeAssistant) -> FoyerSystem | None:
     system = hass.data.get(DOMAIN)
@@ -122,8 +140,44 @@ def _address(request: web.Request) -> str:
     forwarded middleware to the client behind a reverse proxy only when that
     proxy is one it trusts — the same judgement it makes for its own login
     bans. A header is never read here: a header is what an attacker writes.
+
+    An IPv6 address counts by its /64: one host holds the whole prefix and
+    can pick a new address for every guess.
     """
-    return request.remote or "unknown"
+    remote = request.remote or "unknown"
+    try:
+        address = ipaddress.ip_address(remote)
+    except ValueError:
+        return remote
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped is not None:
+            return str(address.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return str(address)
+
+
+def _counted_as(system: FoyerSystem, address: str) -> str:
+    """The counter a bad token from this address spends (§9.2.1)."""
+    known = {
+        key.removeprefix("http:")
+        for key in system.state.lockouts
+        if key.startswith("http:")
+    }
+    if address in known or len(known) < MAX_ADDRESS_COUNTERS:
+        return address
+    return OVERFLOW_ADDRESS
+
+
+def _endpoint_in_use(system: FoyerSystem) -> bool:
+    """Whether any enabled keypad speaks on the endpoint at all.
+
+    Where none does, the routes answer 404 as if they did not exist: an
+    installation that never chose the endpoint must neither advertise an
+    alarm to a scanner nor count strangers' guesses.
+    """
+    return any(
+        d.enabled and d.transport is DeviceTransport.HTTP for d in system.config.devices
+    )
 
 
 def _unauthorised() -> web.Response:
@@ -188,18 +242,24 @@ async def _async_bad_token(
     a token-guessing loop is a tamper signal like a keypad's. Notified once
     per lockout, not once per request.
     """
-    address = _address(request)
-    decision = await system.async_handle(
-        CodeAttempt(
-            None,
-            actor=Actor(
-                channel="keypad",
-                code=CodeResult.INVALID,
-                address=address,
-                encrypted=request.secure,
-            ),
+    lock = hass.data.setdefault(_BAD_TOKEN_LOCK, asyncio.Lock())
+    async with lock:
+        address = _counted_as(system, _address(request))
+        if authz.address_locked_until(system.state.lockouts, address, dt_util.utcnow()):
+            # Locked while this request waited its turn: answered, not
+            # counted again.
+            return
+        decision = await system.async_handle(
+            CodeAttempt(
+                None,
+                actor=Actor(
+                    channel="keypad",
+                    code=CodeResult.INVALID,
+                    address=address,
+                    encrypted=request.secure,
+                ),
+            )
         )
-    )
     if Moment.LOCKOUT not in decision.moments:
         return
     strings = await hass.async_add_executor_job(i18n.load_strings, system.language)
@@ -207,7 +267,10 @@ async def _async_bad_token(
         hass,
         i18n.translate(strings, "notification.token_lockout.message", address=address),
         title=i18n.translate(strings, "notification.token_lockout.title"),
-        notification_id=f"foyer_token_lockout_{address}",
+        # One notification, replaced by the next lockout rather than added
+        # to: a guesser rotating addresses must not be able to bury the
+        # notifications that matter under a pile of these.
+        notification_id="foyer_token_lockout",
     )
 
 
@@ -216,11 +279,15 @@ async def _async_authenticate(
 ) -> tuple[FoyerSystem | None, ArmingDevice | None, web.Response | None]:
     """The keypad behind this request, or the answer to give instead."""
     system = _system(hass)
-    if system is None:
+    if system is None or system.superseded:
         # A reload, which every configuration save performs. The keypad tries
-        # again in a moment, and must not be told its token is wrong.
+        # again in a moment, and must not be told its token is wrong; and a
+        # system that has already stored a newer configuration — a revoked
+        # token, say — must not keep answering from the old one.
         return None, None, web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
-    address = _address(request)
+    if not _endpoint_in_use(system):
+        return system, None, web.Response(status=HTTPStatus.NOT_FOUND)
+    address = _counted_as(system, _address(request))
     if authz.address_locked_until(system.state.lockouts, address, dt_util.utcnow()):
         # Answered here, before the engine: a locked address hammering the
         # endpoint must not write a row per request (decision of this phase).
@@ -267,10 +334,18 @@ class DeviceCommandView(HomeAssistantView):
         if refusal is not None:
             return refusal
         assert system is not None and device is not None
+        data: Any = None
         try:
-            raw = await request.content.read(MAX_BODY + 1)
-            data = json.loads(raw) if len(raw) <= MAX_BODY else None
-        except ValueError:
+            raw = b""
+            # Read to the end, bounded: one `read(n)` may return only the
+            # first segment of a slow keypad's body.
+            while len(raw) <= MAX_BODY and (chunk := await request.content.read(1024)):
+                raw += chunk
+            if len(raw) <= MAX_BODY:
+                data = json.loads(raw)
+        except (ValueError, RecursionError):
+            # RecursionError: a few hundred nested brackets, well inside the
+            # size limit, which is not a ValueError.
             data = None
         if not isinstance(data, dict):
             return web.Response(status=HTTPStatus.BAD_REQUEST)
@@ -355,17 +430,24 @@ async def _async_stream(
 
     remove = async_dispatcher_connect(hass, SIGNAL, wake)
     sent: str | None = None
+    orphaned: float | None = None
+    loop = asyncio.get_running_loop()
     try:
         while True:
             system = _system(hass)
-            if system is None:
-                if not hass.config_entries.async_entries(DOMAIN):
-                    return  # the integration is gone, not reloading
+            if system is None or system.superseded:
+                # Reloading: wait, but not for ever. A reload that failed,
+                # or an entry switched off, would otherwise keep a revoked
+                # token's connection open until Home Assistant restarts.
+                orphaned = orphaned if orphaned is not None else loop.time()
+                if loop.time() - orphaned > STREAM_ORPHAN_SECONDS:
+                    return
             elif not _still_valid(system, device_id, token_hash):
                 # A new token invalidates the old one at once and closes its
                 # streams (§9.2.1), and so does a keypad taken away.
                 return
             else:
+                orphaned = None
                 last = hass.data.get(_LAST, {}).get(device_id)
                 payload = json.dumps(
                     state_payload(system, detail_of(system), last, dt_util.utcnow())

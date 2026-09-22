@@ -254,6 +254,17 @@ async def async_write(
     """
     if result.config is None:
         return {"success": False, "problems": [asdict(p) for p in result.problems]}
+    if system.superseded:
+        # This system has already written a newer configuration and is
+        # waiting to be replaced by it. An edit built from the one it still
+        # holds would write the old document back over the new — a revoked
+        # token restored by somebody renaming a zone in the next second
+        # (found in review). Refused, and the panel asks again once the
+        # reload has happened.
+        return {
+            "success": False,
+            "problems": [asdict(Problem("config_reloading", "config"))],
+        }
     system.async_record(
         (
             config_row(
@@ -268,6 +279,7 @@ async def async_write(
             ),
         )
     )
+    system.superseded = True
     await ConfigStore(hass).async_save(result.config)
     entry = next(iter(hass.config_entries.async_entries(DOMAIN)), None)
     if entry is not None:
