@@ -2767,6 +2767,19 @@ class HealthReport:
             object.__setattr__(self, "channel_sends", _frozen(self.channel_sends))
 
 
+@dataclass(frozen=True, slots=True)
+class DeviceContact:
+    """A keypad reached the device endpoint and asked for nothing (§9.2.1).
+
+    A state stream opening, or a `status` request. Nothing is decided; what
+    the engine records is only whether it crossed the network encrypted,
+    which is a fact about the keypad and keeps page 8's warning honest for a
+    keypad that listens far more than it commands.
+    """
+
+    actor: Actor = field(default_factory=Actor)
+
+
 Event = (
     ArmRequest
     | ArmModeRequest
@@ -2785,6 +2798,7 @@ Event = (
     | SetAutoArming
     | SetSuspension
     | HealthReport
+    | DeviceContact
 )
 
 

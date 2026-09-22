@@ -1422,6 +1422,9 @@ class FoyerSystem:
             "technical": self.technical_status(),
             "incident": self.incident_status(),
             "chime_enabled": self.state.chime_enabled,
+            # The endpoint keypads whose last request arrived unencrypted
+            # (§9.2.1), for page 8's permanent warning.
+            "devices_in_clear": sorted(self.state.in_clear),
             "security": self.security_status(me, now),
         }
 

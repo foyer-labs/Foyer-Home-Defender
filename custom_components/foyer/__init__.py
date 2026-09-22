@@ -39,7 +39,7 @@ PLATFORMS = (
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from homeassistant.exceptions import ConfigEntryError
 
-    from .api import services, websocket
+    from .api import endpoint, services, websocket
     from .panel import async_register_frontend
     from .runtime import acknowledge, mqtt
     from .runtime.system import FoyerSystem
@@ -119,6 +119,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # it is the entry's, shortened, because a topic is something a person
     # types into a keypad's configuration.
     entry.async_on_unload(mqtt.async_start(hass, entry, system, entry.entry_id[:8]))
+    # The device endpoint (§9.2.1): the second transport a keypad may use,
+    # with a token of its own. Its views are registered once and outlive a
+    # reload; its streams follow whichever system is running.
+    entry.async_on_unload(endpoint.async_start(hass, system))
     # The two acknowledgement paths that arrive from outside (§7.2): the
     # button in an actionable push, and the DTMF webhook — which exists only
     # if this installation switched it on, because an unauthenticated URL

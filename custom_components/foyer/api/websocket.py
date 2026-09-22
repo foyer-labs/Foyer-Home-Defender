@@ -133,11 +133,13 @@ from ..core.validation import (
 )
 from ..runtime.system import FoyerSystem
 from ..security import codes
+from ..security.devices import new_token
 from ..security.identity import async_actor
 from ..store.editing import (
     KINDS,
     EditResult,
     delete,
+    set_device_token,
     update_chime,
     update_health,
     update_security,
@@ -363,6 +365,7 @@ def async_register(hass: HomeAssistant) -> None:
         ws_health_save,
         ws_radio_candidates,
         ws_ack_webhook,
+        ws_device_token,
         ws_security_save,
         ws_user_save,
         ws_propose_zone,
@@ -1117,6 +1120,61 @@ async def ws_ack_webhook(
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="settings"
     )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "foyer/device/token",
+        vol.Required("device_id"): str,
+        # False generates a new token; True revokes the one there is.
+        vol.Optional("revoke", default=False): bool,
+        vol.Optional("code"): vol.Any(str, None),
+    }
+)
+@websocket_api.async_response
+async def ws_device_token(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Generate or revoke an endpoint keypad's token (§9.2.1).
+
+    An `edit_config` operation with a code, as saving the keypad is: the
+    token alone disarms nothing, but it is the keypad's identity. Generated
+    here and never accepted from the caller, like the webhook id above. The
+    answer to a generation is the one place the token is ever shown — it is
+    stored as its hash and nothing can read it back — and the reload the save
+    performs is what closes every stream the old token had open.
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
+        )
+    ) is None:
+        return
+    token, hashed = (None, None) if msg["revoke"] else new_token()
+    result = set_device_token(system.config, system.state, msg["device_id"], hashed)
+    me = system.config.user_of_ha(connection.user.id)
+    answer = await async_write(
+        hass,
+        system,
+        result,
+        operation="revoke_token" if msg["revoke"] else "new_token",
+        kind="device",
+        channel=CHANNEL_HA_UI,
+        user_id=me.id if me else connection.user.id,
+        user_name=me.name if me else connection.user.name,
+    )
+    if answer.get("success") and token is not None:
+        answer = {**answer, "token": token}
+    connection.send_result(msg["id"], answer)
 
 
 @websocket_api.websocket_command(

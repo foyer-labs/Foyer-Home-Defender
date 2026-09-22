@@ -88,7 +88,8 @@
     "nothing_to_cancel": "There is no automatic action counting down.",
     "unknown_rule": "That rule does not exist.",
     "unknown_suspension": "That suspension does not exist.",
-    "not_loaded": "Foyer was reloading — nothing was done"
+    "not_loaded": "Foyer was reloading — nothing was done",
+    "bad_token": "The device's token was missing or wrong."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -240,7 +241,8 @@
     "unknown_images": "These are not pictures Foyer knows how to attach.",
     "camera_required": "Choose the camera this notification always shows, or choose another kind of picture.",
     "tag_has_no_token": "Only a keypad can use the device endpoint. A tag carries no code, so its token would be the key to the house by itself.",
-    "token_without_endpoint": "A token belongs to a keypad on the device endpoint. Revoke it, or put the keypad back on the endpoint."
+    "token_without_endpoint": "A token belongs to a keypad on the device endpoint. Revoke it, or put the keypad back on the endpoint.",
+    "unknown_device": "That arming device does not exist."
   },
   "field": {
     "name": "Name",
@@ -560,7 +562,13 @@
     "bypass_minutes": "Minutes",
     "bypass_minutes_placeholder": "e.g. 20",
     "no_battery": "No battery entity",
-    "battery_hint": "For diagnostics and the low-battery warning. A low battery warns and never blocks arming; an entity that cannot be read at all is a fault and does block."
+    "battery_hint": "For diagnostics and the low-battery warning. A low battery warns and never blocks arming; an entity that cannot be read at all is a fault and does block.",
+    "camera_up": "Move up",
+    "camera_down": "Move down",
+    "camera_remove": "Remove",
+    "camera_add": "Add a camera…",
+    "cameras_hint": "A notification set to show the zones' cameras sends these, in this order, one picture each after the text, and at most four cameras across the whole alarm.",
+    "cameras_none_hint": "No cameras: a notification set to show the zones' cameras sends its text alone when this zone goes. Choose the camera that shows it, and the one in the room next door."
   },
   "scenarios": {
     "title": "Scenarios",
@@ -699,6 +707,10 @@
         "verification": {
           "term": "Verification",
           "text": "Cross-zone and activations needed cut false alarms; a group does it for several zones."
+        },
+        "cameras": {
+          "term": "Cameras",
+          "text": "The cameras that show this zone. A notification set to show the zones' cameras sends them when it goes."
         }
       }
     },
@@ -909,6 +921,10 @@
         "last_result": {
           "term": "last_result",
           "text": "Lets a keypad distinguish a wrong code from arming blocked by an open window, instead of failing silently."
+        },
+        "endpoint": {
+          "term": "Device endpoint",
+          "text": "A keypad can speak to Foyer's own endpoint with a token instead of MQTT, never both. The token proves which keypad it is; only HTTPS keeps the token and the codes from being read."
         }
       }
     },
@@ -1285,7 +1301,15 @@
       "title": "Foyer: radio interference suspected",
       "message": "{count} of {of} zones on {radio} went quiet at once and the coordinator is still answering. Suspected, not proven: a coordinator crash, a firmware update or a power cut to a room of routers looks the same. Not used, because they are on that radio: {skipped}"
     },
-    "cameras_omitted": "Cameras not shown: {count}."
+    "cameras_omitted": "Cameras not shown: {count}.",
+    "device_wrong_transport": {
+      "title": "Foyer: a keypad's name used on the wrong path",
+      "message": "Something used the name “{device}” over MQTT or a service call. That keypad speaks only through the device endpoint, with its own token, so the request was refused and nothing was changed. If it was not you, somebody knows the keypad's name."
+    },
+    "token_lockout": {
+      "title": "Foyer: device endpoint locked for one address",
+      "message": "Too many requests with a wrong or missing token came from {address}. That address is refused for the lockout period. A keypad configured with an old token does this too; so does somebody guessing."
+    }
   },
   "chime_mode": {
     "sound": "Single sound",
@@ -1491,7 +1515,9 @@
     "contacts_hint": "Who this notification reaches. Choose contacts or a service, never both.",
     "highest_channel": "Highest priority channel",
     "escalation_hint": "Seconds from the start of the escalation. With a time here this notification becomes a step: it waits, and it stops the moment somebody acknowledges.",
-    "escalation_moment_hint": "Only an alarm or a technical alarm can be escalated: they are the two that can be acknowledged."
+    "escalation_moment_hint": "Only an alarm or a technical alarm can be escalated: they are the two that can be acknowledged.",
+    "images_text_alone": "Pictures go only with an alarm: a trigger, a zone joining it, an escalation step, a technical alarm. At {moments} this notification sends its text alone. Never at the start of an entry delay, which is somebody coming home.",
+    "images_channels": "Only push and chat channels receive the pictures. An SMS, a voice call or an \"other\" channel receives the text alone, rather than one more message per camera."
   },
   "camera_mode": {
     "snapshot": "Snapshot",
@@ -1966,7 +1992,26 @@
     "outbound": "Outbound: Foyer to device",
     "last_result_hint": "last_result is what lets a keypad tell a wrong code from arming blocked by an open window, instead of failing silently.",
     "topic_command_example": "foyer/<install id>/command",
-    "topic_state_example": "foyer/<install id>/state"
+    "topic_state_example": "foyer/<install id>/state",
+    "in_clear_pill": "Unencrypted",
+    "ref_hint_http": "The name this keypad is recorded under. On the endpoint the token is its identity, and this name is refused over MQTT and in service calls, so that knowing it gets nobody round the token.",
+    "transport_hint_mqtt": "The broker: the keypad is the name it gives. Anybody who can publish to the topic can use that name.",
+    "transport_hint_http": "Foyer's own endpoint, with a token for this keypad alone. One or the other, never both: on the endpoint its name is refused everywhere else.",
+    "in_clear": "This keypad is talking in the clear.",
+    "in_clear_hint": "Its last request reached Home Assistant unencrypted. Its token and every code typed on it can be read by anybody on the network in between. Serve Home Assistant over HTTPS, or through a reverse proxy it trusts, and this warning goes the moment a request arrives encrypted.",
+    "token_note": "The token authenticates the keypad; it does not encrypt anything. A stolen token disarms nothing without a code, and the code is still the identity of whoever typed it.",
+    "token_once": "The token, shown this once",
+    "token_once_hint": "Copy it into the keypad now. Foyer keeps only a fingerprint of it and cannot show it again; if it is lost, generate a new one.",
+    "token_save_first": "Save the keypad on the endpoint first; then its token can be generated here.",
+    "token_exists": "This keypad has a token. It cannot be shown again: a new one replaces it at once and closes every connection the old one had open.",
+    "token_none": "No token yet: this keypad cannot reach the endpoint until one is generated.",
+    "token_generate": "Generate token",
+    "token_replace": "Generate a new token",
+    "token_revoke": "Revoke token",
+    "endpoint_request": "A command",
+    "endpoint_stream": "The state stream",
+    "endpoint_stream_hint": "The same message as MQTT's, at the same detail level, the moment anything changes; a comment line every thirty seconds keeps the connection open through proxies.",
+    "detail_shared_hint": "The same level applies to the device endpoint's state stream and to its answers."
   },
   "attachment": {
     "companion": "Companion app — live picture, no file",
@@ -2071,7 +2116,9 @@
       "a_group": "a group",
       "escalation_sent": "✓ escalation step {step} → {who}",
       "reached": "→ {who}",
-      "quiet": "quiet hours held back: {who}"
+      "quiet": "quiet hours held back: {who}",
+      "cameras": "Pictures: {cameras}",
+      "cameras_omitted": "Cameras not shown: {count}"
     },
     "source": {
       "zone": "zone",
@@ -2407,5 +2454,17 @@
     "diagnostics_where": "The download button is Home Assistant's own, on the integration's page, and it is available to administrators.",
     "no_zones": "No zones on it",
     "last_result": "Last result"
+  },
+  "images": {
+    "zone": "The cameras of the zones behind the alarm",
+    "fixed": "Always the same camera",
+    "none": "No pictures",
+    "zone_hint": "Every zone in the alarm, in the order they went, each camera once, at most four. The text goes first, with its buttons; then one notification per camera.",
+    "fixed_hint": "The one camera chosen below, attached to the notification itself, whatever raised it.",
+    "none_hint": "The text alone."
+  },
+  "transport": {
+    "mqtt": "MQTT",
+    "http": "Device endpoint"
   }
 }

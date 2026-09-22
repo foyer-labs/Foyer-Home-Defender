@@ -179,3 +179,14 @@ def test_the_operation_is_optional_for_a_token():
     decision = world.send(CodeAttempt(Operation.ARM, actor=authz_actor(address="x")))
     rejected = next(o for o in decision.occurrences if o.moment is Moment.CODE_REJECTED)
     assert rejected.detail["operation"] == "arm"
+
+
+def test_a_stream_opening_records_only_whether_it_was_encrypted():
+    from custom_components.foyer.core.models import Actor, DeviceContact
+
+    world = World(house())
+    decision = world.send(
+        DeviceContact(Actor(channel="keypad", device_id="hall", encrypted=False))
+    )
+    assert decision.accepted and not decision.occurrences
+    assert world.state.in_clear == frozenset({"hall"})

@@ -126,6 +126,9 @@
     },
     "rejected_not_loaded": {
       "message": "Foyer si stava ricaricando, quindi non è stato fatto niente."
+    },
+    "rejected_bad_token": {
+      "message": "Il token del dispositivo mancava o era sbagliato."
     }
   },
   "entity": {

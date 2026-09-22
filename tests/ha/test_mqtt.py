@@ -168,6 +168,29 @@ async def test_an_undeclared_device_can_do_nothing_a_code_would_allow(hass, brok
     assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
 
 
+async def test_an_endpoint_keypad_is_refused_under_its_own_name(
+    hass, hass_ws_client, broker
+):
+    """Decision 98: a keypad on the device endpoint speaks with its token and
+    nothing else, so its name over the broker is answered as a stranger's."""
+    client = await hass_ws_client(hass)
+    config = (await _ws(client, {"type": "foyer/config"}))["config"]
+    keypad = config["devices"][0]
+    keypad["transport"] = "http"
+    await _save(hass, client, "device", keypad, code=CODE)
+
+    await _send(
+        hass,
+        broker,
+        {"action": "arm", "scenario": SCENARIO, "code": CODE, "device_id": KEYPAD},
+    )
+
+    published = _published(broker)[-1]
+    assert published["last_result"] == "blocked"
+    assert published["last_reason"] == "device_not_registered"
+    assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
+
+
 async def test_a_message_with_no_device_at_all_is_refused(hass, broker):
     """Anybody who can publish to the topic can publish a command."""
     await _send(hass, broker, {"action": "arm", "scenario": SCENARIO, "code": CODE})

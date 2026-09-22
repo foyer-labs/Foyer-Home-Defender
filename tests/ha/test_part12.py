@@ -1,0 +1,377 @@
+"""Zone cameras and the device endpoint, through Home Assistant (§6.2.1, §9.2.1).
+
+The two acceptance sentences, end to end. The kitchen window opens and the
+phone receives the alarm, then one picture per camera, the text first; coming
+home sends no picture. A keypad on the endpoint arms and disarms with its
+token and a code, hears the countdown on its stream at once, is refused on
+MQTT under its own name, and page 8 is told when it talks in the clear.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+
+from homeassistant.components.alarm_control_panel import AlarmControlPanelState
+from homeassistant.components.persistent_notification import DOMAIN as NOTIFICATIONS
+import pytest
+from pytest_homeassistant_custom_component.common import async_mock_service
+
+from custom_components.foyer.api.backup import backup_document
+from custom_components.foyer.const import DOMAIN
+from custom_components.foyer.core.dump import anonymised
+
+from .conftest import PANEL_ENTITY, ZONE
+from .test_part2 import _advance, _state, _ws
+from .test_phase2 import CODE, _make_user
+from .test_services import KEYPAD, SCENARIO, _call, _rows, _save
+
+KITCHEN = "camera.kitchen"
+DINING = "camera.dining"
+
+
+async def _config(client) -> dict:
+    return (await _ws(client, {"type": "foyer/config"}))["config"]
+
+
+async def _person(hass, client) -> None:
+    await _make_user(
+        hass,
+        client,
+        new_code=CODE,
+        permissions=["arm", "disarm", "change_scenario", "edit_config"],
+    )
+
+
+# --- zone cameras -------------------------------------------------------------------
+
+
+@pytest.fixture
+async def pictures(hass, hass_ws_client, loaded):
+    """The front door carries two cameras, and the default profile notifies the
+    phone at `triggered` with the zone's cameras, and at `entry_started`."""
+    for camera, name in ((KITCHEN, "Kitchen"), (DINING, "Dining room")):
+        hass.states.async_set(camera, "idle", {"friendly_name": name})
+    calls = async_mock_service(hass, "notify", "phone")
+    client = await hass_ws_client(hass)
+    config = await _config(client)
+    zone = config["zones"][0]
+    zone["camera_entity_ids"] = [KITCHEN, DINING]
+    await _save(hass, client, "zone", zone)
+    profile = (await _config(client))["profiles"][0]
+    profile["actions"].append(
+        {
+            "kind": "notify",
+            "moments": ["triggered", "entry_started"],
+            "name": "",
+            "params": {
+                "service": "notify.phone",
+                "message": "Alarm: {{ incident_zones }}",
+                "images": "zone",
+                "attachment": "companion",
+                "data": {"tag": "foyer", "push": {"sound": "alarm"}},
+            },
+            "conditions": [],
+            "condition_mode": "all",
+            "enabled": True,
+            "escalation_offset": None,
+        }
+    )
+    await _save(hass, client, "profile", profile)
+    return calls, client
+
+
+async def _settle(hass, calls, expected: int) -> None:
+    """Wait for the pictures, which follow the text off the alarm path.
+
+    They run detached, like the log writer — so waiting for every background
+    task would wait for the log writer too, which never ends.
+    """
+    # No timed sleep: the clock is frozen in these tests, and a sleep would
+    # never end. Yielding to the loop is enough — the snapshots are services
+    # answered in this same loop.
+    for _ in range(200):
+        await hass.async_block_till_done()
+        await asyncio.sleep(0)
+        if len(calls) > expected:
+            break
+
+
+async def _arm(hass, freezer) -> None:
+    await _call(hass, "arm", scenario_name=SCENARIO)
+    await _advance(hass, freezer, 31)
+    assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.ARMED_AWAY
+
+
+async def test_the_text_goes_first_then_one_picture_per_camera(hass, pictures, freezer):
+    calls, _client = pictures
+    await _arm(hass, freezer)
+
+    hass.states.async_set(ZONE, "on")
+    await _settle(hass, calls, 3)
+
+    assert [c.data["message"] for c in calls] == [
+        "Alarm: Front door",
+        "Kitchen",
+        "Dining room",
+    ]
+    text, first, second = (c.data for c in calls)
+    assert "image" not in text.get("data", {})
+    assert first["data"]["image"] == f"/api/camera_proxy/{KITCHEN}"
+    assert second["data"]["image"] == f"/api/camera_proxy/{DINING}"
+    # The picture keeps what the channel needs, and never the `tag` under
+    # which it would replace the text.
+    assert first["data"]["push"] == {"sound": "alarm"}
+    assert "tag" not in first["data"]
+
+
+async def test_coming_home_sends_no_picture(hass, hass_ws_client, pictures, freezer):
+    calls, _client = pictures
+    config = await _config(_client)
+    zone = config["zones"][0]
+    zone.update({"type": "delayed", "entry_mode": "delayed"})
+    await _save(hass, _client, "zone", zone)
+    await _arm(hass, freezer)
+
+    hass.states.async_set(ZONE, "on")
+    await _settle(hass, calls, 3)
+
+    assert [c.data["message"] for c in calls] == ["Alarm: "]
+    assert "image" not in calls[0].data.get("data", {})
+
+
+async def test_a_camera_that_fails_costs_only_its_own_picture(hass, pictures, freezer):
+    calls, client = pictures
+    profile = (await _config(client))["profiles"][0]
+    profile["actions"][-1]["params"]["attachment"] = "telegram"
+    await _save(hass, client, "profile", profile)
+    hass.config.allowlist_external_dirs = {hass.config.path("media")}
+
+    async def snapshot(call):
+        if call.data["entity_id"] == KITCHEN:
+            raise TimeoutError("the kitchen camera is not answering")
+        # The file is never read here: what is checked is that the picture
+        # that did answer is sent, and the one that did not costs only itself.
+
+    hass.services.async_register("camera", "snapshot", snapshot)
+    await _arm(hass, freezer)
+
+    hass.states.async_set(ZONE, "on")
+    await _settle(hass, calls, 2)
+
+    messages = [c.data["message"] for c in calls]
+    assert messages == ["Alarm: Front door", "Dining room"]
+    assert calls[1].data["data"]["photo"][0]["caption"] == "Dining room"
+
+
+async def test_the_cameras_travel_redacted_in_the_diagnostics(hass, pictures):
+    system = hass.data[DOMAIN]
+    dump = json.dumps(anonymised(system.config, system.state))
+    assert KITCHEN not in dump and DINING not in dump
+    assert "camera.zone_1_camera_1" in dump
+
+
+# --- the device endpoint --------------------------------------------------------------
+
+
+@pytest.fixture
+async def endpoint(hass, hass_ws_client, hass_client_no_auth, loaded):
+    """One person with a code, and one keypad on the endpoint with its token."""
+    client = await hass_ws_client(hass)
+    await _person(hass, client)
+    await _save(
+        hass,
+        client,
+        "device",
+        {"name": "Hall keypad", "kind": "keypad", "ref": KEYPAD, "transport": "http"},
+        code=CODE,
+    )
+    device_id = (await _config(client))["devices"][0]["id"]
+    answer = await _ws(
+        client, {"type": "foyer/device/token", "device_id": device_id, "code": CODE}
+    )
+    await hass.async_block_till_done()
+    assert answer["success"] and answer["token"]
+    http = await hass_client_no_auth()
+    return http, answer["token"], device_id, client
+
+
+async def _post(http, token: str | None, body: dict):
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    return await http.post("/api/foyer/device", json=body, headers=headers)
+
+
+async def test_a_keypad_arms_and_disarms_with_its_token_and_a_code(
+    hass, endpoint, freezer
+):
+    http, token, _device_id, _client = endpoint
+    response = await _post(
+        http, token, {"action": "arm", "scenario": SCENARIO, "code": CODE}
+    )
+    answer = await response.json()
+    assert response.status == 200
+    assert answer["success"] and answer["last_result"] == "ok"
+    # The state message of §9.2 at `minimal`, never the panel's status.
+    assert set(answer["state"]) >= {"master", "countdown", "ready_to_arm"}
+    assert "zones" not in answer["state"] and "areas" not in answer["state"]
+
+    await _advance(hass, freezer, 31)
+    assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.ARMED_AWAY
+
+    response = await _post(http, token, {"action": "disarm", "code": "000000"})
+    assert (await response.json())["last_result"] == "bad_code"
+    response = await _post(
+        http, token, {"action": "disarm", "code": CODE, "device_id": "whatever"}
+    )
+    assert (await response.json())["success"]
+    assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
+
+
+async def test_the_code_is_still_required(hass, endpoint, freezer):
+    http, token, _device_id, _client = endpoint
+    await _post(http, token, {"action": "arm", "scenario": SCENARIO, "code": CODE})
+    await _advance(hass, freezer, 31)
+
+    answer = await (await _post(http, token, {"action": "disarm"})).json()
+    assert not answer["success"]
+    assert answer["reason"] == "code_required"
+
+
+async def test_a_wrong_or_missing_token_is_401_and_counted_per_address(hass, endpoint):
+    http, _token, _device_id, _client = endpoint
+    for token in (None, "not-the-token", "still-not", "nope", "no"):
+        response = await _post(http, token, {"action": "status"})
+        assert response.status == 401
+        assert await response.text() == ""
+    system = hass.data[DOMAIN]
+    assert [k for k in system.state.lockouts if k.startswith("http:")]
+    # Past the threshold the address is refused, even with the right token.
+    response = await _post(http, _token, {"action": "status"})
+    assert response.status == 401
+
+
+async def test_the_stream_says_the_countdown_at_once(hass, endpoint):
+    http, token, _device_id, _client = endpoint
+    response = await http.get(
+        "/api/foyer/device/state", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status == 200
+    assert response.headers["Content-Type"].startswith("text/event-stream")
+    first = json.loads((await response.content.readline()).decode()[len("data: ") :])
+    await response.content.readline()
+    assert first["countdown"] is None
+
+    await _post(http, token, {"action": "arm", "scenario": SCENARIO, "code": CODE})
+    line = await asyncio.wait_for(response.content.readline(), 5)
+    update = json.loads(line.decode()[len("data: ") :])
+    assert update["countdown"]["kind"] == "exit"
+    assert update["last_result"] == "ok"
+    response.close()
+
+
+async def test_a_new_token_invalidates_the_old_one_and_its_stream(hass, endpoint):
+    http, token, device_id, client = endpoint
+    response = await http.get(
+        "/api/foyer/device/state", headers={"Authorization": f"Bearer {token}"}
+    )
+    await response.content.readline()
+    await response.content.readline()
+
+    answer = await _ws(
+        client, {"type": "foyer/device/token", "device_id": device_id, "code": CODE}
+    )
+    await hass.async_block_till_done()
+    assert answer["token"] != token
+    # The old stream ends.
+    assert await asyncio.wait_for(response.content.read(), 5) == b""
+    assert (await _post(http, token, {"action": "status"})).status == 401
+    assert (await _post(http, answer["token"], {"action": "status"})).status == 200
+
+
+async def test_the_keypad_is_refused_on_mqtt_and_services_under_its_own_name(
+    hass, endpoint, freezer
+):
+    _http, _token, _device_id, _client = endpoint
+    answer = await _call(
+        hass,
+        "arm",
+        scenario_name=SCENARIO,
+        code=CODE,
+        device_id=KEYPAD,
+    )
+    # Exactly what an unknown device is told: nothing about which names exist.
+    assert answer["reason"] == "device_not_registered"
+    assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
+    await hass.async_block_till_done()
+
+    rows = await _rows(hass, category="security")
+    rejected = [r for r in rows if r["event_type"] == "device_rejected"]
+    assert rejected and rejected[0]["detail"]["wrong_transport"] == "true"
+    shown = hass.data[NOTIFICATIONS]
+    assert any(
+        KEYPAD in n["message"] and "token" in n["message"] for n in shown.values()
+    )
+
+
+async def test_a_plain_http_keypad_is_said_everywhere(hass, endpoint, hass_ws_client):
+    http, token, device_id, client = endpoint
+    await _post(http, token, {"action": "status"})
+    status = await _ws(client, {"type": "foyer/status"})
+    assert status["devices_in_clear"] == [device_id]
+
+
+async def test_the_token_never_leaves(hass, endpoint):
+    _http, token, _device_id, client = endpoint
+    system = hass.data[DOMAIN]
+    config = await _config(client)
+    assert config["devices"][0]["has_token"] is True
+    assert "token_hash" not in config["devices"][0]
+    for document in (
+        json.dumps(config),
+        json.dumps(backup_document(system.config)),
+        json.dumps(anonymised(system.config, system.state)),
+    ):
+        assert token not in document
+        assert system.config.devices[0].token_hash not in document
+
+
+async def test_a_restore_keeps_the_token_and_can_never_set_one(hass, endpoint):
+    from custom_components.foyer.api.backup import restore
+
+    _http, _token, device_id, _client = endpoint
+    system = hass.data[DOMAIN]
+    held = system.config.device(device_id).token_hash
+    document = backup_document(system.config)
+    document["config"]["devices"][0]["token_hash"] = "ff" * 32
+    result = restore(system, document)
+    assert result.config is not None
+    assert result.config.device(device_id).token_hash == held
+
+
+async def test_a_tag_cannot_be_given_a_token(hass, hass_ws_client, loaded):
+    client = await hass_ws_client(hass)
+    await _person(hass, client)
+    hass.states.async_set("tag.luca", "2026-09-22T10:00:00")
+    config = await _config(client)
+    scenario_id = config["scenarios"][0]["id"]
+    user_id = (await _ws(client, {"type": "foyer/config"}))["config"]["users"][0]["id"]
+    await _save(
+        hass,
+        client,
+        "device",
+        {
+            "name": "Tag",
+            "kind": "tag",
+            "entity_id": "tag.luca",
+            "user_id": user_id,
+            "command": "arm",
+            "scenario_id": scenario_id,
+        },
+        code=CODE,
+    )
+    device_id = (await _config(client))["devices"][0]["id"]
+    answer = await _ws(
+        client, {"type": "foyer/device/token", "device_id": device_id, "code": CODE}
+    )
+    assert not answer["success"]
+    assert answer["problems"][0]["code"] == "tag_has_no_token"

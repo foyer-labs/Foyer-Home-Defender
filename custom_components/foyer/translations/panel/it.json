@@ -88,7 +88,8 @@
     "nothing_to_cancel": "Non c'è nessuna azione automatica in conto alla rovescia.",
     "unknown_rule": "Quella regola non esiste.",
     "unknown_suspension": "Quella sospensione non esiste.",
-    "not_loaded": "Foyer si stava ricaricando — non è stato fatto niente"
+    "not_loaded": "Foyer si stava ricaricando — non è stato fatto niente",
+    "bad_token": "Il token del dispositivo mancava o era sbagliato."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -240,7 +241,8 @@
     "unknown_images": "Queste non sono immagini che Foyer sa allegare.",
     "camera_required": "Scegli la telecamera che questa notifica mostra sempre, oppure scegli un altro tipo di immagine.",
     "tag_has_no_token": "Solo un tastierino può usare l'endpoint dei dispositivi. Un tag non porta nessun codice, quindi il suo token sarebbe da solo la chiave di casa.",
-    "token_without_endpoint": "Un token appartiene a un tastierino sull'endpoint dei dispositivi. Revocalo, oppure riporta il tastierino sull'endpoint."
+    "token_without_endpoint": "Un token appartiene a un tastierino sull'endpoint dei dispositivi. Revocalo, oppure riporta il tastierino sull'endpoint.",
+    "unknown_device": "Quel dispositivo di inserimento non esiste."
   },
   "field": {
     "name": "Nome",
@@ -560,7 +562,13 @@
     "bypass_minutes": "Minuti",
     "bypass_minutes_placeholder": "es. 20",
     "no_battery": "Nessuna entità batteria",
-    "battery_hint": "Per la diagnostica e l’avviso di batteria scarica. Una batteria scarica avvisa e non blocca mai l’inserimento; un’entità che non si riesce a leggere è invece un guasto, e blocca."
+    "battery_hint": "Per la diagnostica e l’avviso di batteria scarica. Una batteria scarica avvisa e non blocca mai l’inserimento; un’entità che non si riesce a leggere è invece un guasto, e blocca.",
+    "camera_up": "Sposta su",
+    "camera_down": "Sposta giù",
+    "camera_remove": "Togli",
+    "camera_add": "Aggiungi una telecamera…",
+    "cameras_hint": "Una notifica impostata per mostrare le telecamere delle zone invia queste, in quest'ordine, una foto ciascuna dopo il testo, e al massimo quattro telecamere per tutto l'allarme.",
+    "cameras_none_hint": "Nessuna telecamera: quando scatta questa zona, una notifica impostata per mostrare le telecamere delle zone invia solo il testo. Scegli la telecamera che la inquadra, e quella della stanza accanto."
   },
   "scenarios": {
     "title": "Scenari",
@@ -699,6 +707,10 @@
         "verification": {
           "term": "Verifica",
           "text": "Verifica incrociata e attivazioni necessarie riducono i falsi allarmi; un gruppo lo fa per più zone."
+        },
+        "cameras": {
+          "term": "Telecamere",
+          "text": "Le telecamere che inquadrano questa zona. Una notifica impostata per mostrare le telecamere delle zone le invia quando scatta."
         }
       }
     },
@@ -909,6 +921,10 @@
         "last_result": {
           "term": "last_result",
           "text": "Permette a un tastierino di distinguere un codice sbagliato da un inserimento bloccato da una finestra aperta, invece di fallire in silenzio."
+        },
+        "endpoint": {
+          "term": "Endpoint dei dispositivi",
+          "text": "Un tastierino può parlare con l'endpoint di Foyer con un token invece che via MQTT, mai entrambi. Il token prova quale tastierino è; solo HTTPS evita che il token e i codici vengano letti."
         }
       }
     },
@@ -1285,7 +1301,15 @@
       "title": "Foyer: sospetta interferenza radio",
       "message": "{count} zone su {of} di {radio} sono ammutolite insieme e il coordinatore risponde ancora. Sospetta, non dimostrata: un crash del coordinatore, un aggiornamento firmware o un black-out in una stanza piena di router hanno lo stesso aspetto. Non usati, perché su quella radio: {skipped}"
     },
-    "cameras_omitted": "Telecamere non mostrate: {count}."
+    "cameras_omitted": "Telecamere non mostrate: {count}.",
+    "device_wrong_transport": {
+      "title": "Foyer: nome di un tastierino usato sulla strada sbagliata",
+      "message": "Qualcosa ha usato il nome «{device}» via MQTT o con una chiamata di servizio. Quel tastierino parla solo attraverso l'endpoint dei dispositivi, con il suo token, quindi la richiesta è stata rifiutata e non è cambiato nulla. Se non sei stato tu, qualcuno conosce il nome del tastierino."
+    },
+    "token_lockout": {
+      "title": "Foyer: endpoint dei dispositivi bloccato per un indirizzo",
+      "message": "Troppe richieste con un token sbagliato o mancante sono arrivate da {address}. Quell'indirizzo è rifiutato per la durata del blocco. Lo fa anche un tastierino configurato con un token vecchio; lo fa anche qualcuno che tira a indovinare."
+    }
   },
   "chime_mode": {
     "sound": "Suono singolo",
@@ -1491,7 +1515,9 @@
     "contacts_hint": "Chi raggiunge questa notifica. Scegli i contatti oppure un servizio, mai entrambi.",
     "highest_channel": "Canale più prioritario",
     "escalation_hint": "Secondi dall'inizio dell'escalation. Con un tempo qui questa notifica diventa un passo: aspetta e si ferma appena qualcuno prende atto.",
-    "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto."
+    "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto.",
+    "images_text_alone": "Le immagini partono solo con un allarme: uno scatto, una zona che si aggiunge, un passo di escalation, un allarme tecnico. In {moments} questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
+    "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale \"altro\" riceve solo il testo, invece di un messaggio in più per ogni telecamera."
   },
   "camera_mode": {
     "snapshot": "Scatto",
@@ -1966,7 +1992,26 @@
     "outbound": "In uscita: da Foyer al dispositivo",
     "last_result_hint": "last_result è ciò che permette a un tastierino di distinguere un codice sbagliato da un inserimento bloccato da una finestra aperta, invece di fallire in silenzio.",
     "topic_command_example": "foyer/<id impianto>/command",
-    "topic_state_example": "foyer/<id impianto>/state"
+    "topic_state_example": "foyer/<id impianto>/state",
+    "in_clear_pill": "Non cifrato",
+    "ref_hint_http": "Il nome con cui questo tastierino compare nel registro. Sull'endpoint la sua identità è il token, e questo nome viene rifiutato via MQTT e nelle chiamate di servizio, così conoscerlo non permette a nessuno di aggirare il token.",
+    "transport_hint_mqtt": "Il broker: il tastierino è il nome che dà. Chiunque possa pubblicare sul topic può usare quel nome.",
+    "transport_hint_http": "L'endpoint di Foyer, con un token solo per questo tastierino. O uno o l'altro, mai entrambi: sull'endpoint il suo nome viene rifiutato ovunque altrove.",
+    "in_clear": "Questo tastierino parla in chiaro.",
+    "in_clear_hint": "La sua ultima richiesta è arrivata a Home Assistant non cifrata. Il suo token e ogni codice digitato possono essere letti da chiunque sulla rete in mezzo. Servi Home Assistant in HTTPS, o attraverso un reverse proxy di cui si fida, e questo avviso sparisce appena arriva una richiesta cifrata.",
+    "token_note": "Il token autentica il tastierino; non cifra nulla. Un token rubato non disinserisce niente senza un codice, e il codice resta l'identità di chi lo ha digitato.",
+    "token_once": "Il token, mostrato questa sola volta",
+    "token_once_hint": "Copialo adesso nel tastierino. Foyer ne conserva solo un'impronta e non può mostrarlo di nuovo; se va perso, generane uno nuovo.",
+    "token_save_first": "Prima salva il tastierino sull'endpoint; poi qui potrai generare il suo token.",
+    "token_exists": "Questo tastierino ha un token. Non può essere mostrato di nuovo: uno nuovo lo sostituisce subito e chiude ogni connessione aperta con quello vecchio.",
+    "token_none": "Ancora nessun token: questo tastierino non può raggiungere l'endpoint finché non ne viene generato uno.",
+    "token_generate": "Genera token",
+    "token_replace": "Genera un nuovo token",
+    "token_revoke": "Revoca token",
+    "endpoint_request": "Un comando",
+    "endpoint_stream": "Il flusso di stato",
+    "endpoint_stream_hint": "Lo stesso messaggio di MQTT, allo stesso livello di dettaglio, nel momento in cui cambia qualcosa; una riga di commento ogni trenta secondi tiene aperta la connessione attraverso i proxy.",
+    "detail_shared_hint": "Lo stesso livello vale per il flusso di stato dell'endpoint dei dispositivi e per le sue risposte."
   },
   "attachment": {
     "companion": "App Companion — immagine dal vivo, nessun file",
@@ -2071,7 +2116,9 @@
       "a_group": "un gruppo",
       "escalation_sent": "✓ passo di escalation {step} → {who}",
       "reached": "→ {who}",
-      "quiet": "trattenuti dalle ore di silenzio: {who}"
+      "quiet": "trattenuti dalle ore di silenzio: {who}",
+      "cameras": "Immagini: {cameras}",
+      "cameras_omitted": "Telecamere non mostrate: {count}"
     },
     "source": {
       "zone": "dalla zona",
@@ -2407,5 +2454,17 @@
     "diagnostics_where": "Il bottone di download è quello di Home Assistant, sulla pagina dell'integrazione, ed è riservato agli amministratori.",
     "no_zones": "Nessuna zona",
     "last_result": "Ultimo esito"
+  },
+  "images": {
+    "zone": "Le telecamere delle zone che hanno dato l'allarme",
+    "fixed": "Sempre la stessa telecamera",
+    "none": "Nessuna immagine",
+    "zone_hint": "Tutte le zone dell'allarme, nell'ordine in cui sono scattate, ogni telecamera una volta sola, al massimo quattro. Prima parte il testo, con i suoi pulsanti; poi una notifica per telecamera.",
+    "fixed_hint": "L'unica telecamera scelta qui sotto, allegata alla notifica stessa, qualunque cosa l'abbia generata.",
+    "none_hint": "Solo il testo."
+  },
+  "transport": {
+    "mqtt": "MQTT",
+    "http": "Endpoint dei dispositivi"
   }
 }

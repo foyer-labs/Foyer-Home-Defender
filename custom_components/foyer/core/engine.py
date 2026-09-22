@@ -67,6 +67,7 @@ from .models import (
     Contributor,
     Decision,
     Detection,
+    DeviceContact,
     DisarmRequest,
     EntityState,
     EntryMode,
@@ -247,6 +248,10 @@ def decide(
                 "gap_seconds": str(max(0, gap)) if gap is not None else "",
             },
         )
+    elif isinstance(event, DeviceContact):
+        # Nothing to decide: `note_transport` above has already recorded
+        # whether this keypad reached the endpoint encrypted (§9.2.1).
+        pass
     elif not isinstance(event, ZoneStateChanged | Tick):
         raise TypeError(f"unsupported event: {event!r}")
 

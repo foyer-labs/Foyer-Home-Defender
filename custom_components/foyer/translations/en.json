@@ -126,6 +126,9 @@
     },
     "rejected_not_loaded": {
       "message": "Foyer was reloading, so nothing was done."
+    },
+    "rejected_bad_token": {
+      "message": "The device's token was missing or wrong."
     }
   },
   "entity": {

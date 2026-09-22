@@ -206,7 +206,12 @@ _REPORTED = f"{DOMAIN}_reported_devices"
 
 
 async def async_report_unknown_device(
-    hass: HomeAssistant, system: FoyerSystem, *, channel: str, ref: str | None
+    hass: HomeAssistant,
+    system: FoyerSystem,
+    *,
+    channel: str,
+    ref: str | None,
+    wrong_transport: bool = False,
 ) -> None:
     """Record and show a device that tried to command and is not declared.
 
@@ -216,6 +221,11 @@ async def async_report_unknown_device(
     and no further: it is written the first time, then at most once a minute
     per device, so a broken adapter leaves a legible trail instead of burying
     the category in which it sits.
+
+    ``wrong_transport`` is a keypad of the device endpoint named on another
+    path (decision 98). Whoever sent it was told exactly what an unknown
+    device is told; the household is told the truth — somebody used the name
+    of a keypad that only speaks with its token, and the token is the point.
     """
     seen: dict[str, datetime] = hass.data.setdefault(_REPORTED, {})
     key = f"{channel}:{ref or ''}"
@@ -232,17 +242,20 @@ async def async_report_unknown_device(
                 channel=channel,
                 device_id=ref,
                 outcome=Reason.DEVICE_NOT_REGISTERED.value,
-                detail={"device": ref or "", "channel": channel},
+                detail={
+                    "device": ref or "",
+                    "channel": channel,
+                    **({"wrong_transport": "true"} if wrong_transport else {}),
+                },
             ),
         )
     )
     strings = await hass.async_add_executor_job(i18n.load_strings, system.language)
+    key = "device_wrong_transport" if wrong_transport else "device_rejected"
     notices.async_create(
         hass,
-        i18n.translate(
-            strings, "notification.device_rejected.message", device=ref or "?"
-        ),
-        title=i18n.translate(strings, "notification.device_rejected.title"),
+        i18n.translate(strings, f"notification.{key}.message", device=ref or "?"),
+        title=i18n.translate(strings, f"notification.{key}.title"),
         # Keyed by the device, so the same one retrying replaces its own
         # notification instead of adding a hundred nobody reads.
         notification_id=f"foyer_device_{channel}_{ref}",
@@ -263,7 +276,11 @@ async def _answer(
         # claimed: a caller that may not choose its channel may not choose
         # which counter the refusal is recorded against either.
         await async_report_unknown_device(
-            hass, system, channel=CHANNEL_API, ref=call.data.get("device_id")
+            hass,
+            system,
+            channel=CHANNEL_API,
+            ref=call.data.get("device_id"),
+            wrong_transport=requester.wrong_transport,
         )
         return system.refusal(requester.reason)
     decision = await system.async_handle(event)
@@ -464,6 +481,17 @@ def async_register(hass: HomeAssistant) -> None:
 
         if requester.actor is None:
             assert requester.reason is not None
+            if requester.wrong_transport and requester.device is not None:
+                # Decision 98 on every service, not only the ones that reach
+                # the engine: an endpoint keypad's name is refused, recorded
+                # and notified wherever it is used.
+                await async_report_unknown_device(
+                    hass,
+                    system,
+                    channel=CHANNEL_API,
+                    ref=requester.device.ref,
+                    wrong_transport=True,
+                )
             return system.refusal(requester.reason)
         actor = requester.actor
         now = dt_util.utcnow()

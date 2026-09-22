@@ -389,7 +389,12 @@ class Executor:
                 # its acknowledgement button) with the picture.
                 extra = {
                     key: value
-                    for key, value in dict(recipient.get("data") or {}).items()
+                    for key, value in {
+                        # The action's own transport data, then the channel's,
+                        # merged in the order the text merged them.
+                        **dict(intent.params.get("data") or {}),
+                        **dict(recipient.get("data") or {}),
+                    }.items()
                     if key not in PICTURE_DROPPED_KEYS
                 }
                 payload: dict[str, Any] = {

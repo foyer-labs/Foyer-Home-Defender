@@ -47,6 +47,7 @@ from ..api.services import async_report_unknown_device
 from ..const import CHANNEL_MQTT
 from ..core.models import (
     AcknowledgeIncident,
+    Actor,
     ArmModeRequest,
     ArmRequest,
     Decision,
@@ -348,40 +349,58 @@ async def _async_command(
         system.config,
         transport=CHANNEL_MQTT,
         ref=str(ref),
-        code=_as_code(data.get("code")),
+        code=as_code(data.get("code")),
     )
     if requester.actor is None:
         await async_report_unknown_device(
-            hass, system, channel=CHANNEL_MQTT, ref=str(ref)
+            hass,
+            system,
+            channel=CHANNEL_MQTT,
+            ref=str(ref),
+            wrong_transport=requester.wrong_transport,
         )
         return RESULT_BLOCKED, Reason.DEVICE_NOT_REGISTERED.value
-    actor = requester.actor
-    scenario = data.get("scenario")
-    force = bool(data.get("force", False))
-    skip = bool(data.get("skip_exit_delay", False))
-    if action == "arm":
-        found = next((s for s in system.config.scenarios if s.name == scenario), None)
-        if found is None and scenario in {
-            s.ha_master_state for s in system.config.scenarios
-        }:
-            event: Any = ArmModeRequest(str(scenario), actor, force, skip)
-        else:
-            event = ArmRequest(
-                found.id if found else str(scenario or ""), actor, force, skip
-            )
-    elif action == "disarm":
-        areas = data.get("area_ids")
-        event = DisarmRequest(tuple(str(a) for a in areas) if areas else None, actor)
-    elif action == "acknowledge":
-        event = AcknowledgeIncident(actor)
-    else:
+    event = command_event(system.config, data, requester.actor)
+    if event is None:
         _LOGGER.warning("Foyer: unknown MQTT action %r", action)
-        return RESULT_BLOCKED, "unknown_action"
+        return RESULT_BLOCKED, UNKNOWN_ACTION
     decision = await system.async_handle(event)
     return result_of(decision)
 
 
-def _as_code(value: Any) -> str | None:
+# The one word a keypad is answered with when it asks for something the
+# contract does not have. Not a Reason: nothing was refused, nothing was
+# understood.
+UNKNOWN_ACTION = "unknown_action"
+
+
+def command_event(config: Any, data: dict[str, Any], actor: Actor) -> Any | None:
+    """The engine event one keypad message asks for, or None.
+
+    Shared by the broker and the device endpoint (§9.2.1), which differ in
+    how a keypad proves who it is and in nothing else: two paths that read
+    the same message differently would eventually be two contracts.
+    """
+    action = str(data.get("action") or "")
+    scenario = data.get("scenario")
+    force = bool(data.get("force", False))
+    skip = bool(data.get("skip_exit_delay", False))
+    if action == "arm":
+        found = next((s for s in config.scenarios if s.name == scenario), None)
+        if found is None and scenario in {s.ha_master_state for s in config.scenarios}:
+            return ArmModeRequest(str(scenario), actor, force, skip)
+        return ArmRequest(
+            found.id if found else str(scenario or ""), actor, force, skip
+        )
+    if action == "disarm":
+        areas = data.get("area_ids")
+        return DisarmRequest(tuple(str(a) for a in areas) if areas else None, actor)
+    if action == "acknowledge":
+        return AcknowledgeIncident(actor)
+    return None
+
+
+def as_code(value: Any) -> str | None:
     """A code arrives as a string. A keypad that sends 1234 as a number is
     not wrong about the code, only about JSON."""
     if value is None:
