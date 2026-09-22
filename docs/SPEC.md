@@ -281,6 +281,7 @@ Zone  ──belongs to──▶  Area  ──referenced by──▶  Scenario
 | `allow_arm_when_faulted` | bool | default false; a zone in fault does not block arming (§5.4, INV-4) |
 | `supervision_timeout` | seconds \| null | per zone, **off (null) by default**. No report from the entity within this window — a heartbeat counts even when the state has not changed (Home Assistant's `last_reported`) — ⇒ fault (INV-4). Set it per sensor, longer than that sensor's own reporting interval; leave it off for sensors that report only when they change |
 | `battery_entity_id` | str \| null | optional, for diagnostics and low-battery faults |
+| `camera_entity_ids` | list[str] | ordered, empty by default: the cameras that show this zone and the rooms around it. A notification set to show the zone's cameras attaches these (§6.2.1, decision 91) |
 | `response_profile_id` | uuid \| null | read **only for this zone's own alarm** (§6, decision 61); null = the area answers |
 | `enabled` | bool | |
 
@@ -710,6 +711,65 @@ Four rules the catalogue depends on:
   belongs to the zone: another zone contributing to the same incident still
   sounds.
 
+#### 6.2.1 The zone's cameras in a notification
+
+The kitchen window opens: the household wants the kitchen camera, and the one
+in the room next door, so that the picture says *where* the problem is rather
+than that there is one. The cameras therefore belong to the zone
+(`camera_entity_ids`, §4.2), not to the notification, and a notification can
+ask for "the cameras of the zones that raised this" (decision 91).
+
+**Which images an action carries is a choice on the action**, one selector
+with three values (decision 92):
+
+| Images | What is attached |
+|---|---|
+| `none` | nothing |
+| `fixed` | the one camera the action names, exactly as before this section existed |
+| `zone` | the cameras of the zones behind this alarm, as below |
+
+Existing actions keep what they had — `fixed` where they name a camera,
+`none` otherwise — so a migration changes nothing anybody receives. A new
+notify action starts at `zone`. A zone with no cameras sends the text alone,
+and the zone editor says so where the cameras are chosen.
+
+With `zone`:
+
+- **Every zone that has joined the incident** (§5.6) contributes its cameras,
+  in the order the zones joined and then the order each zone lists them,
+  each camera once (decision 93). A burglar goes from the window to the hall;
+  the notification shows both, not only the way in.
+- **At most four cameras per notification** (decision 95). Past four, the
+  message says how many were left out. The bound is what keeps "every zone,
+  every time" from becoming a wall of pictures.
+- **Every notification repeats all of them, fresh** (decision 95): the first
+  message, each zone joining, each escalation step (§7.2). What the house
+  looks like *now* is the point of a picture, and a step two minutes later
+  with the photograph from two minutes earlier would be the wrong one.
+- **One notification per camera** (decision 94). The Companion app shows one
+  image per notification, so the first message carries the text and the
+  acknowledgement buttons exactly as without cameras, and each camera follows
+  as its own notification carrying only its picture and the camera's name.
+  The transport rules of decision 90 apply to each: a live
+  `/api/camera_proxy/` link for the app, a snapshot file for Telegram.
+- **Only at the moments that are an alarm** (decision 96): `triggered`, a zone
+  joining the incident, each escalation step, and the technical channel
+  (`technical_raised`, with the cameras of the technical zones pending —
+  seeing the kitchen when the smoke detector goes is worth as much as seeing
+  it when the window does). **Never at `entry_started`**: an entry delay is the
+  household coming home (§5.6), and photographing every homecoming and
+  sending it out of the house is what P-1 exists to stop. At any other moment
+  a `zone` action sends its text alone, and the profile editor says so.
+- **A camera never costs the message** (decision 90, again): a camera that
+  does not answer in time costs its own picture and nothing else; the text
+  notification, which is the one the acknowledgement and the channel health
+  of §12.2 are counted on, always goes first.
+
+INV-1 holds as it does for every action: `decide()` names the cameras in the
+`Decision`, the executor fetches the pictures, and the simulator's trace
+lists which cameras each notification would have carried without taking a
+picture of anything.
+
 ### 6.3 Conditions
 
 Each action may carry **at most two** conditions. This bound is deliberate — it
@@ -1044,6 +1104,76 @@ of §8.4 countable per device.
 default, overridable per installation: people run more than one site against one
 broker, and people have an existing topic hierarchy they are not going to
 restructure for a new integration. Cheap to allow now, tedious to retrofit.
+
+### 9.2.1 The device endpoint
+
+MQTT travels in the clear unless the broker is set up with TLS, and on the
+broker a keypad is only the name it gives (decision 81). A second transport
+for keypads is therefore offered: an HTTP endpoint of Foyer's own, where each
+keypad authenticates with a **token of its own** (decision 97).
+
+Be precise about what the token buys, because it is easy to believe it buys
+more. **The token authenticates the device; it does not encrypt anything.**
+Over plain HTTP the token and the code typed on the keypad cross the network
+exactly as readable as over plain MQTT. Confidentiality comes from TLS —
+HTTPS for this endpoint, TLS with per-client credentials on the broker, or
+ESPHome's native API, which is encrypted and can call `foyer.arm` and
+`foyer.disarm` already. `docs/keypads.md` says all three, in that order of
+simplicity.
+
+**One transport per keypad** (decision 98). A keypad is declared on page 8
+with `transport: mqtt | http`, and uses that one and no other. A command that
+names an `http` keypad's `device_id` over MQTT or through a service call is
+refused, recorded under `security` and notified as an unknown device is
+(§9.3): otherwise whoever knows the name reaches the house through the broker
+and the token protects nothing.
+
+**Keypads only** (decision 99). A `tag` (§9.3) carries no code and is its
+person's identity; a tag over this endpoint would make the token by itself
+the key to the house, readable to anybody listening when the request is not
+encrypted. Tags stay `tag`/`event` entities. On a keypad the code is still the
+identity and still required by the policy (§8.2); a stolen or intercepted
+token disarms nothing without a code, and the lockout of §8.4 counts per
+device as it always has.
+
+```
+POST /api/foyer/device                      Authorization: Bearer <token>
+{ "action": "arm"|"disarm"|"status", "scenario": "night", "code": "1234" }
+→ the structured result of §9.1, with last_result / last_reason (§9.2)
+
+GET  /api/foyer/device/state                Authorization: Bearer <token>
+→ text/event-stream: the state message of §9.2, on connect and on every change
+```
+
+- **The token names the device.** A request carries no `device_id`, and one it
+  carries anyway is ignored: the token is the identity of the device, the
+  code the identity of the person.
+- **The state stream is the MQTT message** of §9.2, at the same detail level
+  (`minimal` by default, decision 83), pushed on every change so a countdown
+  and an alarm arrive at once rather than at the next poll. A comment line
+  every thirty seconds keeps a connection alive through proxies.
+- **The token is a credential** and is treated like the acknowledgement webhook
+  and the watchdog URL: 32 random bytes, shown once when it is generated,
+  stored as a SHA-256 hash — a random token needs no slow hash, a guessed code
+  does — compared in constant time, and never returned by any API, written to
+  a log row, put in a backup or the diagnostics dump, or set by a restore.
+  Generating one invalidates the previous token at once and closes its open
+  streams. Generating and revoking are `edit_config` operations with a code,
+  as saving the keypad is: the token alone disarms nothing.
+- **A wrong or missing token** answers 401 with no detail, and is counted per
+  source address: past the lockout thresholds of §8.4 that address is refused
+  for the lockout period, the refusal is recorded under `security`, and it is
+  notified once — a token-guessing loop is a tamper signal like a keypad's.
+- **Plain HTTP is accepted, and said** (decision 97). Foyer knows whether a
+  request arrived encrypted, including behind a reverse proxy Home Assistant
+  trusts. A keypad whose requests arrive in the clear carries a permanent
+  warning on page 8 — its token and its codes can be read on the network —
+  and every row it causes records that the request was not encrypted. Many DIY
+  keypads cannot do TLS at all; refusing them would take the feature away from
+  exactly the people who asked for it, and saying so plainly is the project's
+  answer everywhere else.
+- **The channel is `keypad`**, as for an MQTT keypad: nothing about the
+  transport makes it a channel that identifies a person (§8.2).
 
 ### 9.3 Arming devices, and the adapters
 
@@ -1544,12 +1674,12 @@ mirror the trigger moments in §6.1.
 |---|---|---|
 | 1 | Overview | State of each area, active scenario, not-ready zones, recent events, quick arm/disarm |
 | 2 | Areas | Create areas, assign zones, area defaults and code policy |
-| 3 | Zones | Filterable list + zone detail: entity, type preset, trigger spec, delays, arm policy, bypass, profile, supervision |
+| 3 | Zones | Filterable list + zone detail: entity, type preset, trigger spec, delays, arm policy, bypass, profile, supervision, the zone's cameras |
 | 4 | Scenarios | Create scenarios, choose areas, HA state mapping, default profile, allowed users |
 | 5 | Response profiles | Profiles, action list, per-action conditions, escalation steps |
 | 6 | Contacts | Address book, prioritised channels, quiet hours, escalation policies, per-channel test |
 | 7 | Users & codes | Users, codes, permissions, area/scenario scope, validity, duress code, per-user policy |
-| 8 | Arming devices | Keypads, NFC tags, remotes; MQTT mapping; feedback configuration |
+| 8 | Arming devices | Keypads, NFC tags, remotes; MQTT mapping or the device endpoint and its token (§9.2.1); feedback configuration |
 | 9 | Test & diagnostics | Four tabs: diagnostics · simulator · walk test · action test |
 | 10 | Log | Filter by date, area, zone, user, category, outcome; CSV/JSON export |
 | 11 | Settings | Global defaults, siren duration and cutoff, log retention per category, the language of the messages Foyer sends out, config backup/restore |
@@ -1714,6 +1844,9 @@ rely on.
   left growing in the configuration directory.
 - **Alarmo import** (§20.2).
 - **Contributor infrastructure** (§20.3).
+- **Zone cameras and the device endpoint** (§6.2.1, §9.2.1), added after the
+  third part and before the documentation, so that the documents describe
+  them rather than being rewritten for them.
 - **The disclaimers, last of all** (§20.4). The wording that says what this is
   and what it is not, everywhere somebody meets it rather than only in the
   licence. **Still to be agreed** — it is a conversation, not a task with a
@@ -1833,6 +1966,16 @@ rendition.
   a coordinator failure instead; zones spread across two radios do not trigger it;
   and a Zigbee event never notifies through a Zigbee target.
 - A test asserting diagnostics output contains no code hashes and no personal names.
+- Zone camera tests: a `zone` notification carries the cameras of every zone
+  in the incident, each once and at most four; each escalation step repeats
+  them; `entry_started` never carries one; a `fixed` action is unchanged by
+  the migration; a camera that fails costs only its own picture.
+- Device endpoint tests: a request without the right token is refused and
+  counted per address; an `http` keypad's `device_id` is refused over MQTT and
+  through a service; a tag cannot be given a token; the token never appears in
+  any response, row, backup or dump; a plain-HTTP request is served and
+  recorded as not encrypted; a new token invalidates the old one and its
+  stream.
 - A regression test asserting that `core/` imports nothing from
   `homeassistant.*` — this is what keeps INV-1 true over time.
 
@@ -2018,3 +2161,12 @@ document should make one of them on purpose.
 | 88 | A `user_id` nothing established marks its log row `attributed: claimed` | Arming needs no code, so a caller could otherwise write a name the log had no reason to believe; a wrong answer to "who disarmed at 03:14?" is worse than no answer, and the capability is worth keeping |
 | 89 | P-1: outward, every channel starts at the least that works | The watchdog and the MQTT message reached that conclusion separately, and §9.2 reached the opposite one first; a principle written once is what stops the next channel rediscovering it by accident |
 | 90 | A notification with a camera names the transport the attachment is for, rather than Foyer guessing from the service | The service name is not the transport: a Telegram bot may be called anything, and the guess fails silently because every transport ignores the keys it does not know. The user picked the app; asking which one is one field, and the alternative is a picture that never arrives and never says why |
+| 91 | Cameras belong to the zone, as an ordered list | The picture has to say where: the kitchen window wants the kitchen and the room next door, and that is a property of the window, not of every notification that might mention it |
+| 92 | Which images a notification carries is a selector on the action — none, fixed, zone — and existing actions keep what they had | Changing what arrives on somebody's phone without their touching anything is a failure the migration must not introduce; new actions start where the feature is useful |
+| 93 | A `zone` notification shows the cameras of every zone in the incident, each once | The intruder moves from the window to the hall; a picture of the way in alone shows where they were, not where they are |
+| 94 | One notification per camera, the first carrying the text and the buttons | The Companion app shows one image per notification; a composite would put a file on disk for the one transport that needs none, and the acknowledgement must stay on the message that is always sent |
+| 95 | Every notification repeats all the cameras, fresh, at most four | What the house looks like now is the point of a picture; the bound keeps "every zone, every time" from burying the message it came with |
+| 96 | Zone cameras only at alarm moments and on the technical channel, never at `entry_started` | An entry delay is the household coming home; photographing every homecoming and sending it out of the house is what P-1 exists to stop |
+| 97 | A device endpoint with a token per keypad; plain HTTP accepted and said, never hidden | The token authenticates the device, which MQTT's claimed name cannot; confidentiality is TLS's job, and refusing keypads that cannot do TLS would take the feature from the people who asked for it |
+| 98 | One transport per keypad: MQTT or the endpoint, never both | A token the broker can route around by using the device's name protects nothing |
+| 99 | Only keypads use the endpoint, never tags | On a keypad the code is still the identity and the token disarms nothing alone; a tag's token would be the key to the house, readable on the wire whenever the request is not encrypted |
