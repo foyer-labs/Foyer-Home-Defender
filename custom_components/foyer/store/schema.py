@@ -1133,6 +1133,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
         "active_zones": sorted(state.active_zones),
         "seen_zones": sorted(state.seen_zones),
         "seen_devices": sorted(state.seen_devices),
+        "in_clear": sorted(state.in_clear),
         "faults": sorted(state.faults),
         # The zones already known to be low (§4.2). Without it, every restart
         # — and every configuration save, which reloads the entry — re-raised
@@ -1492,6 +1493,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
             seen_devices=frozenset(
                 d for d in data.get("seen_devices", ()) if d in device_ids
             ),
+            in_clear=frozenset(d for d in data.get("in_clear", ()) if d in device_ids),
             faults=frozenset(z for z in data.get("faults", ()) if z in zone_ids),
             # Filtered against the live configuration like every other set
             # here: a zone that has gone is not a battery anybody can replace.

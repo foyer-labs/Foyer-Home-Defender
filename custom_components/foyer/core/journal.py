@@ -358,6 +358,10 @@ def rejection_row(
         detail["reason"] = decision.reason.value
     if decision.blocking_zones:
         detail["blocking_zones"] = list(decision.blocking_zones)
+    if actor.encrypted is False:
+        # The same note the engine puts on every row a request in the clear
+        # causes (§9.2.1).
+        detail["encrypted"] = "false"
     return LogRow(
         ts=decision.at,
         category=category,

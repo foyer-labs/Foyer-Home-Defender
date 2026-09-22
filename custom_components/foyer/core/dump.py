@@ -26,7 +26,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from .health import causes, configured_channels
-from .models import FoyerConfig, RuntimeState, SystemSnapshot
+from .models import ActionKind, FoyerConfig, RuntimeState, SystemSnapshot
+from .validation import notify_images
 
 
 class Placeholders:
@@ -65,6 +66,14 @@ class Placeholders:
                 self.entity(
                     zone.battery_entity_id,
                     hint=f"{self.ids.get(zone.id, 'zone')}_battery",
+                )
+            # A zone's cameras, named after the first zone that lists each
+            # one (§6.2.1). Placeholders like every other entity id: which
+            # camera looks at which zone is the question an issue about a
+            # missing picture turns on, and the camera's name is not.
+            for index, camera in enumerate(zone.camera_entity_ids, start=1):
+                self.entity(
+                    camera, hint=f"{self.ids.get(zone.id, 'zone')}_camera_{index}"
                 )
 
     def of(self, object_id: str | None) -> str | None:
@@ -130,6 +139,7 @@ def anonymised(
                 "trigger_confirmed": zone.trigger_confirmed,
                 "supervision_timeout": zone.supervision_timeout,
                 "has_battery_entity": bool(zone.battery_entity_id),
+                "cameras": [names.entity(c) for c in zone.camera_entity_ids],
                 "in_fault": zone.id in state.faults,
                 "active": zone.id in state.active_zones,
                 "bypassed": zone.id in state.bypassed,
@@ -160,6 +170,13 @@ def anonymised(
                         # what travels is their shape: which keys were set.
                         "params": sorted(action.params),
                         "targets": [names.entity(e) for e in _targets(action.params)],
+                        # A closed set of three words, never an entity: which
+                        # pictures a notification carries (§6.2.1).
+                        **(
+                            {"images": notify_images(action).value}
+                            if action.kind is ActionKind.NOTIFY
+                            else {}
+                        ),
                     }
                     for action in profile.actions
                 ],
@@ -217,6 +234,10 @@ def anonymised(
                 "enabled": device.enabled,
                 "has_entity": bool(device.entity_id),
                 "names_a_user": bool(device.user_id),
+                # Whether a token exists, never the token nor its hash: the
+                # same treatment as the watchdog URL (§9.2.1).
+                "transport": device.transport.value,
+                "has_token": bool(device.token_hash),
             }
             for device in config.devices
         ],

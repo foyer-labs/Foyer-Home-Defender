@@ -235,7 +235,12 @@
     "radio_entry_required": "Scegli quale integrazione è questa radio.",
     "coordinator_required": "Indica l'entità coordinatore, oppure disattiva questa radio. Senza, Foyer non può distinguere l'interferenza da un coordinatore morto, e non tira a indovinare.",
     "group_members_disabled": "Ci sono meno membri accesi di quanti ne chiede la soglia, quindi questo gruppo non può mai essere soddisfatto.",
-    "propose_failed": "Non è stato possibile chiedere a Home Assistant di quell'entità. Riprova fra un momento."
+    "propose_failed": "Non è stato possibile chiedere a Home Assistant di quell'entità. Riprova fra un momento.",
+    "duplicate_camera": "La stessa telecamera compare due volte. Verrebbe inviata due volte, e ogni copia conta fra le quattro che una notifica può portare.",
+    "unknown_images": "Queste non sono immagini che Foyer sa allegare.",
+    "camera_required": "Scegli la telecamera che questa notifica mostra sempre, oppure scegli un altro tipo di immagine.",
+    "tag_has_no_token": "Solo un tastierino può usare l'endpoint dei dispositivi. Un tag non porta nessun codice, quindi il suo token sarebbe da solo la chiave di casa.",
+    "token_without_endpoint": "Un token appartiene a un tastierino sull'endpoint dei dispositivi. Revocalo, oppure riporta il tastierino sull'endpoint."
   },
   "field": {
     "name": "Nome",
@@ -370,7 +375,10 @@
     "rf_zones": "Zone prima del sospetto",
     "rf_window": "Entro",
     "rf_confirm": "Finestra di conferma",
-    "pseudonymise_after": "Ritardo di pseudonimizzazione"
+    "pseudonymise_after": "Ritardo di pseudonimizzazione",
+    "camera_entity_ids": "Telecamere",
+    "images": "Immagini",
+    "transport": "Collegamento"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -1276,7 +1284,8 @@
     "rf_interference_suspected_skipped": {
       "title": "Foyer: sospetta interferenza radio",
       "message": "{count} zone su {of} di {radio} sono ammutolite insieme e il coordinatore risponde ancora. Sospetta, non dimostrata: un crash del coordinatore, un aggiornamento firmware o un black-out in una stanza piena di router hanno lo stesso aspetto. Non usati, perché su quella radio: {skipped}"
-    }
+    },
+    "cameras_omitted": "Telecamere non mostrate: {count}."
   },
   "chime_mode": {
     "sound": "Suono singolo",

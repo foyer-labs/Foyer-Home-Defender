@@ -65,6 +65,8 @@ _ACTOR_FIELDS = (
     "is_admin",
     "token",
     "claimed",
+    "address",
+    "encrypted",
 )
 
 

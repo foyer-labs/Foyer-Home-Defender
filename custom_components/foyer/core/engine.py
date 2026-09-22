@@ -179,6 +179,7 @@ def decide(
     """Return what should happen in response to ``event``. Executes nothing."""
     run = _Run(snapshot, config, now)
     run.actor = getattr(event, "actor", Actor())
+    run.note_transport()
     run.expire_windows()
     run.expire_bypasses()
     run.expire_running()
@@ -558,6 +559,10 @@ class _Run:
         self.active = set(state.active_zones & zone_ids)
         self.seen = set(state.seen_zones & zone_ids)
         self.seen_devices = set(state.seen_devices & {d.id for d in config.devices})
+        # The keypads whose last request crossed the network in the clear
+        # (§9.2.1): what keeps page 8's warning up until one arrives
+        # encrypted, across a restart.
+        self.in_clear = set(state.in_clear & {d.id for d in config.devices})
         self.faults = frozenset(state.faults & zone_ids)
         self.low_batteries = frozenset(state.low_batteries & zone_ids)
         self.entities: dict[str, EntityState] = dict(snapshot.entities)
@@ -746,6 +751,19 @@ class _Run:
                     kwargs["detail"] = {**kwargs.get("detail", {}), **_CLAIMED}
             if actor.device_id is not None:
                 kwargs["device_id"] = actor.device_id
+        if kwargs.get("channel") == actor.channel:
+            # Every row a request to the device endpoint causes says whether
+            # it arrived in the clear (§9.2.1), and a request with no device
+            # behind it says where it came from — without those, a
+            # token-guessing loop in the log is a list of refusals from
+            # nowhere.
+            extra: dict[str, str] = {}
+            if actor.encrypted is False:
+                extra["encrypted"] = "false"
+            if actor.address and actor.device_id is None:
+                extra["address"] = actor.address
+            if extra:
+                kwargs["detail"] = {**kwargs.get("detail", {}), **extra}
         self.occurrences.append(Occurrence(moment=moment, **kwargs))
 
     @property
@@ -1088,6 +1106,21 @@ class _Run:
 
     # --- walk test (§11.3) ---------------------------------------------------------
 
+    def note_transport(self) -> None:
+        """Remember whether this keypad's request arrived encrypted (§9.2.1).
+
+        Whatever the request goes on to be — accepted, refused, a status —
+        it crossed the network, and whether its token and code could be read
+        on the way is a fact about the keypad, not about the request.
+        """
+        actor = self.actor
+        if actor.device_id is None or actor.encrypted is None:
+            return
+        if actor.encrypted:
+            self.in_clear.discard(actor.device_id)
+        else:
+            self.in_clear.add(actor.device_id)
+
     def code_attempt(self, event: CodeAttempt) -> _Outcome:
         """A code offered to a command that decides for itself (§8.4).
 
@@ -1103,7 +1136,7 @@ class _Run:
                 Moment.CODE_REJECTED,
                 channel=actor.channel,
                 detail={
-                    "operation": event.operation.value,
+                    "operation": event.operation.value if event.operation else "",
                     "reason": Reason.LOCKED_OUT.value,
                     "until": until.isoformat(),
                 },
@@ -2645,7 +2678,7 @@ class _Run:
                 self.lockouts[key] = cleared
         return None
 
-    def code_failed(self, operation: Operation) -> None:
+    def code_failed(self, operation: Operation | None) -> None:
         """A wrong code: count it, and shut the channel if it is one too many.
 
         The admin path is counted like any other and never locked (§8.4), so
@@ -2666,10 +2699,17 @@ class _Run:
             lock = replace(lock, until=None, strikes=0, locked_at=None)
             locked = False
         self.lockouts[key] = lock
+        # A credential with no device behind it is a token that did not
+        # match, at the device endpoint (§9.2.1): the same counter, the same
+        # row, the same moment, and the word that says which it was.
+        token = actor.device_id is None and bool(actor.address)
         self.occur(
             Moment.CODE_REJECTED,
             channel=actor.channel,
-            detail={"operation": operation.value, "reason": Reason.BAD_CODE.value},
+            detail={
+                "operation": operation.value if operation else "",
+                "reason": (Reason.BAD_TOKEN if token else Reason.BAD_CODE).value,
+            },
         )
         if locked and lock.until is not None:
             # A tamper attempt on a keypad is a genuine alarm signal, so this
@@ -3766,6 +3806,14 @@ class _Run:
         if self.incident is not None and plan.started:
             started = dict.fromkeys((*self.incident.actions_started, *plan.started))
             self.incident = replace(self.incident, actions_started=tuple(started))
+        # The device endpoint counts by source address (§9.2.1), and a house
+        # reachable from outside meets many. A counter with nothing left to
+        # count is dropped rather than kept for ever.
+        self.lockouts = {
+            key: lock
+            for key, lock in self.lockouts.items()
+            if not (key.startswith("http:") and authz.stale(lock, self.now))
+        }
         state = RuntimeState(
             areas=self.areas,
             active_scenario_id=self.active_scenario_id,
@@ -3773,6 +3821,7 @@ class _Run:
             active_zones=frozenset(self.active),
             seen_zones=frozenset(self.seen),
             seen_devices=frozenset(self.seen_devices),
+            in_clear=frozenset(self.in_clear),
             faults=self.faults,
             low_batteries=self.low_batteries,
             technical=self.technical,

@@ -183,8 +183,40 @@ def check_user(
 
 
 def lockout_key(actor: Actor) -> str:
-    """One counter per channel and device: the garden keypad is not the hall's."""
+    """One counter per channel and device: the garden keypad is not the hall's.
+
+    A request to the device endpoint without a valid token has no device to
+    count against, so it counts against its source address (§9.2.1): a
+    token-guessing loop is a tamper signal like a keypad's, and one address
+    guessing must not lock every keypad in the house.
+    """
+    if actor.device_id is None and actor.address:
+        return f"http:{actor.address}"
     return f"{actor.channel}:{actor.device_id or ''}"
+
+
+def address_locked_until(
+    lockouts: Mapping[str, Lockout], address: str, now: datetime
+) -> datetime | None:
+    """When this source address may try a token again, or None (§9.2.1)."""
+    lock = lockouts.get(f"http:{address}")
+    if lock is None or lock.until is None or lock.until <= now:
+        return None
+    return lock.until
+
+
+def stale(lock: Lockout, now: datetime) -> bool:
+    """A counter with nothing left to count: no lockout running, no failure
+    inside any window, and no strike still able to lengthen the next one.
+
+    Dropped rather than kept, because the counters of the device endpoint are
+    keyed by address and a house reachable from outside meets many of them.
+    """
+    if lock.until is not None and lock.until > now:
+        return False
+    recent = max(lock.failures, default=None)
+    last = max((t for t in (recent, lock.locked_at) if t is not None), default=None)
+    return last is None or (now - last).total_seconds() > LOCKOUT_STRIKE_RESET
 
 
 def locked_until(

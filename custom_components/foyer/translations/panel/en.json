@@ -235,7 +235,12 @@
     "radio_entry_required": "Choose which integration this radio is.",
     "coordinator_required": "Name the coordinator entity, or switch this radio off. Without it Foyer cannot tell interference from a dead coordinator, and will not guess.",
     "group_members_disabled": "Fewer members are switched on than the threshold needs, so this group can never be satisfied.",
-    "propose_failed": "Home Assistant could not be asked about that entity. Try again in a moment."
+    "propose_failed": "Home Assistant could not be asked about that entity. Try again in a moment.",
+    "duplicate_camera": "The same camera is listed twice. It would be sent twice, and each copy counts against the four a notification may carry.",
+    "unknown_images": "These are not pictures Foyer knows how to attach.",
+    "camera_required": "Choose the camera this notification always shows, or choose another kind of picture.",
+    "tag_has_no_token": "Only a keypad can use the device endpoint. A tag carries no code, so its token would be the key to the house by itself.",
+    "token_without_endpoint": "A token belongs to a keypad on the device endpoint. Revoke it, or put the keypad back on the endpoint."
   },
   "field": {
     "name": "Name",
@@ -370,7 +375,10 @@
     "rf_zones": "Zones before suspecting",
     "rf_window": "Within",
     "rf_confirm": "Confirmation window",
-    "pseudonymise_after": "Pseudonymisation delay"
+    "pseudonymise_after": "Pseudonymisation delay",
+    "camera_entity_ids": "Cameras",
+    "images": "Pictures",
+    "transport": "Connection"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -1276,7 +1284,8 @@
     "rf_interference_suspected_skipped": {
       "title": "Foyer: radio interference suspected",
       "message": "{count} of {of} zones on {radio} went quiet at once and the coordinator is still answering. Suspected, not proven: a coordinator crash, a firmware update or a power cut to a room of routers looks the same. Not used, because they are on that radio: {skipped}"
-    }
+    },
+    "cameras_omitted": "Cameras not shown: {count}."
   },
   "chime_mode": {
     "sound": "Single sound",

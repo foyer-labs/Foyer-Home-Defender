@@ -22,7 +22,7 @@ from homeassistant.util import dt as dt_util
 
 from ..const import DOMAIN
 from ..core.journal import config_row
-from ..core.models import FoyerConfig, User
+from ..core.models import DeviceKind, DeviceTransport, FoyerConfig, User
 from ..core.privacy import new_pseudonym
 from ..core.validation import Problem, edit_conflicts, validate
 from ..runtime.system import FoyerSystem
@@ -73,9 +73,15 @@ def public_user(user: User) -> dict[str, Any]:
 
 
 def public_config(config: FoyerConfig) -> dict[str, Any]:
-    """The configuration as the panel may see it: no hashes, ever (§8.1)."""
+    """The configuration as the panel may see it: no hashes, ever (§8.1).
+
+    A keypad's token hash goes the same way as a code's (§9.2.1): the panel
+    is told whether one exists, never which.
+    """
     document = config_to_dict(config)
     document["users"] = [public_user(u) for u in config.users]
+    for device in document.get("devices", []):
+        device["has_token"] = bool(device.pop("token_hash", None))
     return document
 
 
@@ -177,6 +183,27 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
             watchdog=replace(
                 config.health.watchdog, url=system.config.health.watchdog.url
             ),
+        ),
+    )
+    # A keypad's token is the installation's, like a code (§9.2.1): a backup
+    # never carries one out, and a restore never sets one. The keypad this
+    # installation already holds keeps its own, as long as the document
+    # still puts it on the endpoint; anything else starts with none, and a
+    # restored endpoint keypad waits for a token to be generated on page 8.
+    config = replace(
+        config,
+        devices=tuple(
+            replace(
+                device,
+                token_hash=(
+                    held.token_hash
+                    if (held := system.config.device(device.id)) is not None
+                    and device.kind is DeviceKind.KEYPAD
+                    and device.transport is DeviceTransport.HTTP
+                    else None
+                ),
+            )
+            for device in config.devices
         ),
     )
     # A zone this installation holds unconfirmed stays unconfirmed unless

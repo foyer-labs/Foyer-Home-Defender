@@ -45,6 +45,18 @@ CHIME_SIREN_SECONDS = 1
 # How long a snapshot may take before the notification leaves without it.
 SNAPSHOT_TIMEOUT = 10
 
+# The channel kinds that show a picture (§6.2.1, decision 94 applied to an
+# address book). A push and a chat do; an SMS, a voice call or a channel the
+# household called "other" would turn each camera into another text or
+# another call.
+PICTURE_KINDS: frozenset[str] = frozenset({"push", "chat"})
+
+# What the notification of a picture does not take from its channel: the
+# buttons, which belong to the text, and the `tag` of the Companion app, under
+# which a second notification replaces the first. The picture would take the
+# place of the message that carries the acknowledgement.
+PICTURE_DROPPED_KEYS: frozenset[str] = frozenset({"actions", "tag"})
+
 # How long to wait before the one retry a failed send gets (part 1 decision
 # 4). Short, because an escalation step is worth seconds and not minutes: it
 # exists for the transport that is not ready a second after a restart, not
@@ -249,9 +261,23 @@ class Executor:
                 extra.setdefault("image", f"/api/camera_proxy/{camera}")
         if extra:
             data["data"] = extra
+        cameras = tuple(str(c) for c in intent.params.get("cameras") or ())
+        if omitted := int(intent.params.get("cameras_omitted") or 0):
+            # Past four, the message says how many were left out (decision
+            # 95), in the words of the house (decision 73). On the text,
+            # because the text is the one message that always arrives.
+            strings = await self.hass.async_add_executor_job(
+                i18n.load_strings, self.language
+            )
+            note = i18n.translate(
+                strings, "notification.cameras_omitted", count=omitted
+            )
+            data["message"] = f"{data['message']}\n{note}".strip()
         recipients = intent.params.get("recipients")
         if not recipients:
             await self._async_notify_call(service, data)
+            if cameras:
+                self._pictures_later(intent, cameras, ({"service": service},))
             return
         errors: list[str] = []
         # Which alarm the button would acknowledge. The technical channel is
@@ -272,8 +298,120 @@ class Executor:
                 errors.append(f"{recipient.get('contact_name')}: {err}")
             else:
                 sends[key] = True
+        if cameras:
+            # After the text, whatever happened to it: the pictures are for
+            # whoever the text was for, and a channel that refused the text
+            # may still take a picture. Only a channel that shows pictures
+            # gets them: a push or a chat. An SMS or a voice call would be
+            # four more texts, or four more calls, saying the name of a camera.
+            self._pictures_later(
+                intent,
+                cameras,
+                tuple(r for r in recipients if r.get("kind") in PICTURE_KINDS),
+            )
         if errors:
             raise HomeAssistantError("; ".join(errors))
+
+    def _pictures_later(
+        self,
+        intent: ActionIntent,
+        cameras: tuple[str, ...],
+        recipients: tuple[Mapping[str, Any], ...],
+    ) -> None:
+        """Send the cameras after the text, off the alarm path (§6.2.1).
+
+        Detached, because a snapshot is bounded at ten seconds and four of
+        them must not hold back the siren that comes after this action in
+        the same sequence. The text has already gone, and it is the one the
+        acknowledgement and channel health are counted on (§12.2): nothing
+        that happens here is counted against a channel.
+        """
+        if not recipients:
+            return
+        self.hass.async_create_background_task(
+            self._async_pictures(intent, cameras, recipients),
+            f"foyer_pictures_{intent.action_id}",
+        )
+
+    async def _async_pictures(
+        self,
+        intent: ActionIntent,
+        cameras: tuple[str, ...],
+        recipients: tuple[Mapping[str, Any], ...],
+    ) -> None:
+        """One notification per camera: its picture and its name (decision 94).
+
+        The Companion app shows one image per notification, so each camera is
+        a notification of its own. The transport the action names decides
+        how the picture travels (decision 90): a live link to the
+        authenticated proxy for the app, a snapshot file for Telegram, whose
+        own server does the fetching from outside the house. A camera that
+        does not answer costs its own picture and nothing else.
+        """
+        telegram = intent.params.get("attachment") == ATTACH_TELEGRAM
+        files: dict[str, str | None] = {}
+        if telegram:
+            directory = str(intent.params.get("directory") or DEFAULT_CAMERA_DIR)
+            taken = await asyncio.gather(
+                *(self._async_snapshot(camera, directory) for camera in cameras),
+                return_exceptions=True,
+            )
+            for camera, result in zip(cameras, taken, strict=True):
+                if isinstance(result, BaseException):
+                    _LOGGER.warning(
+                        "Foyer could not snapshot %s for the notification; "
+                        "its picture was not sent",
+                        camera,
+                        exc_info=result,
+                    )
+                    files[camera] = None
+                else:
+                    files[camera] = result
+        for camera in cameras:
+            if telegram and files.get(camera) is None:
+                continue
+            name = self._camera_name(camera)
+            picture: dict[str, Any] = (
+                {"photo": [{"file": files[camera], "caption": name}]}
+                if telegram
+                else {"image": f"/api/camera_proxy/{camera}"}
+            )
+            for recipient in recipients:
+                service = str(recipient.get("service") or "")
+                if self.hass.states.get(service) is not None:
+                    # A notify entity carries a title and a message and
+                    # nothing else, so it would receive the name of a camera
+                    # and no picture: four messages saying nothing.
+                    continue
+                # The data of the channel, so the picture arrives the way that
+                # channel delivers anything; but no buttons, and no `tag`,
+                # under which the Companion app would replace the text (and
+                # its acknowledgement button) with the picture.
+                extra = {
+                    key: value
+                    for key, value in dict(recipient.get("data") or {}).items()
+                    if key not in PICTURE_DROPPED_KEYS
+                }
+                payload: dict[str, Any] = {
+                    "message": name,
+                    "data": {**extra, **picture},
+                }
+                if target := recipient.get("target"):
+                    payload["target"] = target
+                try:
+                    await self._async_notify_call(service, payload)
+                except Exception:  # one picture must not stop the next
+                    _LOGGER.warning(
+                        "Foyer: %s did not accept the picture of %s",
+                        service,
+                        camera,
+                        exc_info=True,
+                    )
+
+    def _camera_name(self, camera: str) -> str:
+        state = self.hass.states.get(camera)
+        name = state.attributes.get("friendly_name") if state else None
+        return str(name or camera)
 
     async def _async_reach(
         self, recipient: Mapping[str, Any], data: dict[str, Any], kind: str = "incident"

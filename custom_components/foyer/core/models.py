@@ -469,6 +469,9 @@ class Reason(StrEnum):
     # considered, so a caller cannot learn which codes exist by trying them
     # from an invented device (part 2 decision 1).
     DEVICE_NOT_REGISTERED = "device_not_registered"
+    # The device endpoint's credential was missing or wrong (§9.2.1). Only
+    # ever written to the log: the caller is answered 401 with no detail.
+    BAD_TOKEN = "bad_token"
     # The instance that received this request has been unloaded — a reload,
     # which every configuration save performs, or the integration going. It
     # is a refusal rather than an accepted nothing (found in review): a
@@ -2331,6 +2334,10 @@ class RuntimeState:
     # The same rule for arming devices (§9.3): a tag entity already carrying
     # the timestamp of a scan from last week is not somebody at the door.
     seen_devices: frozenset[str] = frozenset()
+    # The endpoint keypads whose most recent request arrived unencrypted
+    # (§9.2.1). Additive state, read with a default: an older file restores
+    # as "none known", and the keypad's next request says which it is.
+    in_clear: frozenset[str] = frozenset()
     faults: frozenset[str] = frozenset()
     # The zones already announced as running low (§4.2, §6.1), so the moment
     # is raised once on the way down rather than on every report. Additive
@@ -2511,6 +2518,17 @@ class Actor:
     # log can say how it came by the name it carries. "Who disarmed at 03:14"
     # deserves no answer rather than a wrong one (decision 88).
     claimed: bool = False
+    # Where the request came from, for the one caller that has no device to
+    # count against: a request to the device endpoint carrying no token, or
+    # the wrong one (§9.2.1). The lockout of §8.4 then counts per source
+    # address. Nothing else sets it.
+    address: str | None = None
+    # Whether the request crossed the network encrypted, as Home Assistant
+    # judged it — directly, or behind a reverse proxy it trusts (§9.2.1).
+    # None where the question does not arise; False is recorded on every row
+    # the request causes, because the token and the code it carried could be
+    # read on the way.
+    encrypted: bool | None = None
 
     @property
     def code_verified(self) -> bool:
@@ -2656,7 +2674,10 @@ class CodeAttempt:
     §8.2-§8.4 stay resolved in one place.
     """
 
-    operation: Operation
+    # None for a credential offered with no operation behind it yet: the
+    # device endpoint refuses a wrong token before it reads what the request
+    # asked for, and a state stream asks for nothing (§9.2.1).
+    operation: Operation | None
     actor: Actor = field(default_factory=Actor)
 
 
