@@ -1,7 +1,7 @@
 {
   "name": "foyer-home-defender-frontend",
   "private": true,
-  "version": "0.1.0-beta.12",
+  "version": "0.1.0-beta.13",
   "description": "Sidebar panel and Lovelace card for Foyer Home Defender",
   "license": "Apache-2.0",
   "type": "module",
