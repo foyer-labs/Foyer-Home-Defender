@@ -4602,10 +4602,11 @@ var Dt = {
 			this._busy = !0;
 			try {
 				let n = await this.ctx.deviceToken(t, e);
+				if (this._draft?.id !== t) return;
 				this._tokenProblems = n.problems, this._token = n.success && n.token ? {
 					deviceId: t,
 					value: n.token
-				} : void 0, n.success && this.ctx.config?.devices.find((e) => e.id === t) && this._draft && (this._draft = {
+				} : void 0, n.success && (this._draft = {
 					...this._draft,
 					has_token: !e
 				});
@@ -4631,7 +4632,8 @@ var Dt = {
 		} : {
 			...this._draft,
 			kind: e,
-			ref: null
+			ref: null,
+			transport: "mqtt"
 		};
 	}
 	async _save() {
@@ -4783,6 +4785,7 @@ var Dt = {
                         </option>`)}
                     </select>
                     <span class="hint">${L(e, `devices.transport_hint_${t.transport}`)}</span>
+                    ${t.transport === "mqtt" && this.ctx?.config?.devices.find((e) => e.id === t.id)?.has_token ? E`<span class="hint warn-text">${L(e, "devices.token_dropped")}</span>` : O}
                   </label>
                 </div>
                 ${t.transport === "http" ? this._renderToken(e, t) : O}` : E`
@@ -5077,6 +5080,9 @@ var Dt = {
          anybody. */
       .token {
         margin-top: 12px;
+      }
+      .warn-text {
+        color: var(--warning-color, #c77700);
       }
       .endpoint-samples {
         display: flex;

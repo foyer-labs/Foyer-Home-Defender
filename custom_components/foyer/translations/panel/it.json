@@ -1521,7 +1521,7 @@
     "highest_channel": "Canale più prioritario",
     "escalation_hint": "Secondi dall'inizio dell'escalation. Con un tempo qui questa notifica diventa un passo: aspetta e si ferma appena qualcuno prende atto.",
     "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto.",
-    "images_text_alone": "Le immagini partono solo con un allarme: uno scatto, una zona che si aggiunge, un passo di escalation, un allarme tecnico. Per «{moments}» questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
+    "images_text_alone": "Le immagini partono solo con un allarme: l'allarme stesso, una zona che vi si aggiunge, un passo di escalation, un allarme tecnico. Per «{moments}» questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
     "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale \"altro\" riceve solo il testo, invece di un messaggio in più per ogni telecamera."
   },
   "camera_mode": {
@@ -1999,7 +1999,7 @@
     "topic_command_example": "foyer/<id impianto>/command",
     "topic_state_example": "foyer/<id impianto>/state",
     "in_clear_pill": "Non cifrato",
-    "ref_hint_http": "Il nome con cui questo tastierino compare nel registro. Sull'endpoint la sua identità è il token, e questo nome viene rifiutato via MQTT e nelle chiamate di servizio, così conoscerlo non permette a nessuno di aggirare il token.",
+    "ref_hint_http": "Il nome con cui questo tastierino è configurato e nominato negli eventi. Sull'endpoint la sua identità è il token, e questo nome viene rifiutato via MQTT e nelle chiamate di servizio, così conoscerlo non permette a nessuno di aggirare il token.",
     "transport_hint_mqtt": "Il broker: il tastierino è il nome che dà. Chiunque possa pubblicare sul topic può usare quel nome.",
     "transport_hint_http": "L'endpoint di Foyer, con un token solo per questo tastierino. O uno o l'altro, mai entrambi: sull'endpoint il suo nome viene rifiutato ovunque altrove.",
     "in_clear": "Questo tastierino parla in chiaro.",
@@ -2016,7 +2016,8 @@
     "endpoint_request": "Un comando",
     "endpoint_stream": "Il flusso di stato",
     "endpoint_stream_hint": "Lo stesso messaggio di MQTT, allo stesso livello di dettaglio, nel momento in cui cambia qualcosa; una riga di commento ogni trenta secondi tiene aperta la connessione attraverso i proxy.",
-    "detail_shared_hint": "Lo stesso livello vale per il flusso di stato dell'endpoint dei dispositivi e per le sue risposte."
+    "detail_shared_hint": "Lo stesso livello vale per il flusso di stato dell'endpoint dei dispositivi e per le sue risposte.",
+    "token_dropped": "Salvarlo su MQTT revoca il suo token. Tornato sull'endpoint, ne servirà uno nuovo."
   },
   "attachment": {
     "companion": "App Companion — immagine dal vivo, nessun file",

@@ -80,12 +80,14 @@ class FoyerPageDevices extends LitElement {
     this._busy = true;
     try {
       const result = await this.ctx.deviceToken(id, revoke);
+      // The answer can arrive after somebody has opened another keypad: it
+      // belongs to the one it was asked for, and to no other editor.
+      if (this._draft?.id !== id) return;
       this._tokenProblems = result.problems;
       this._token =
         result.success && result.token ? { deviceId: id, value: result.token } : undefined;
       if (result.success) {
-        const stored = this.ctx.config?.devices.find((d) => d.id === id);
-        if (stored && this._draft) this._draft = { ...this._draft, has_token: !revoke };
+        this._draft = { ...this._draft, has_token: !revoke };
       }
     } finally {
       this._busy = false;
@@ -110,7 +112,10 @@ class FoyerPageDevices extends LitElement {
         ref: this._draft?.ref || "",
       };
     } else {
-      this._draft = { ...this._draft!, kind, ref: null };
+      // A tag never speaks on the endpoint (decision 99): the connection
+      // select is not even shown for one, so it must not carry a hidden
+      // `http` the backend would refuse.
+      this._draft = { ...this._draft!, kind, ref: null, transport: "mqtt" };
     }
   }
 
@@ -304,6 +309,10 @@ class FoyerPageDevices extends LitElement {
                       )}
                     </select>
                     <span class="hint">${t(s, `devices.transport_hint_${draft.transport}`)}</span>
+                    ${draft.transport === "mqtt" &&
+                    this.ctx?.config?.devices.find((d) => d.id === draft.id)?.has_token
+                      ? html`<span class="hint warn-text">${t(s, "devices.token_dropped")}</span>`
+                      : nothing}
                   </label>
                 </div>
                 ${draft.transport === "http" ? this._renderToken(s, draft) : nothing}`
@@ -657,6 +666,9 @@ class FoyerPageDevices extends LitElement {
          anybody. */
       .token {
         margin-top: 12px;
+      }
+      .warn-text {
+        color: var(--warning-color, #c77700);
       }
       .endpoint-samples {
         display: flex;

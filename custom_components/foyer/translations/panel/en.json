@@ -2016,7 +2016,8 @@
     "endpoint_request": "A command",
     "endpoint_stream": "The state stream",
     "endpoint_stream_hint": "The same message as MQTT's, at the same detail level, the moment anything changes; a comment line every thirty seconds keeps the connection open through proxies.",
-    "detail_shared_hint": "The same level applies to the device endpoint's state stream and to its answers."
+    "detail_shared_hint": "The same level applies to the device endpoint's state stream and to its answers.",
+    "token_dropped": "Saving it on MQTT revokes its token. Back on the endpoint it will need a new one."
   },
   "attachment": {
     "companion": "Companion app — live picture, no file",
