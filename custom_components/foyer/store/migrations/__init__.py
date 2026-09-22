@@ -519,6 +519,33 @@ def _v7_3_to_v7_4(data: Document) -> Document:
     return out
 
 
+def _v7_4_to_v8_1(data: Document) -> Document:
+    """Zone cameras and the device endpoint (§6.2.1, §9.2.1).
+
+    Nothing anybody receives changes (decision 92): a notify action that
+    names a camera keeps exactly that camera (``fixed``) and every other one
+    keeps carrying none. Only an action created from now on starts at
+    ``zone``. Every zone starts with no cameras, and every keypad stays on
+    the broker it was declared for — an endpoint keypad exists only once
+    somebody has chosen it on page 8 and generated its token.
+    """
+    out = copy.deepcopy(data)
+    for zone in out.get("zones", []):
+        zone.setdefault("camera_entity_ids", [])
+    for profile in out.get("profiles", []):
+        for action in profile.get("actions", []):
+            if action.get("kind") != "notify":
+                continue
+            params = action.setdefault("params", {})
+            params.setdefault(
+                "images", "fixed" if params.get("camera_entity_id") else "none"
+            )
+    for device in out.get("devices", []):
+        device.setdefault("transport", "mqtt")
+        device.setdefault("token_hash", None)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -549,6 +576,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (7, 1): (_v7_1_to_v7_2, (7, 2)),
     (7, 2): (_v7_2_to_v7_3, (7, 3)),
     (7, 3): (_v7_3_to_v7_4, (7, 4)),
+    (7, 4): (_v7_4_to_v8_1, (8, 1)),
 }
 
 

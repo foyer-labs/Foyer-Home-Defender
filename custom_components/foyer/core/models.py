@@ -196,6 +196,26 @@ ATTACH_TELEGRAM = "telegram"
 NOTIFY_ATTACHMENTS: tuple[str, ...] = (ATTACH_COMPANION, ATTACH_TELEGRAM)
 
 
+class NotifyImages(StrEnum):
+    """Which pictures a notify action carries (§6.2.1, decision 92).
+
+    ``NONE`` carries nothing. ``FIXED`` is the one camera the action names,
+    exactly as before §6.2.1 existed. ``ZONE`` is the cameras of the zones
+    behind the alarm — every zone of the incident, or every technical zone
+    pending — at the moments that are an alarm and at no other.
+    """
+
+    NONE = "none"
+    FIXED = "fixed"
+    ZONE = "zone"
+
+
+# At most this many cameras per notification (§6.2.1, decision 95). The bound
+# is what keeps "every zone, every time" from burying the message it came
+# with; past it, the message says how many were left out.
+MAX_NOTIFY_CAMERAS = 4
+
+
 class ConditionMode(StrEnum):
     """How an action's two conditions combine (part 3 decision 4)."""
 
@@ -758,6 +778,19 @@ class DeviceKind(StrEnum):
     TAG = "tag"
 
 
+class DeviceTransport(StrEnum):
+    """How a keypad reaches the house, one and only one (§9.2.1, decision 98).
+
+    ``MQTT`` is the broker, where a keypad is the name it gives (decision 81).
+    ``HTTP`` is the device endpoint, where it is a token of its own — and
+    then its name is refused on every other path, or whoever knows the name
+    reaches the house through the broker and the token protects nothing.
+    """
+
+    MQTT = "mqtt"
+    HTTP = "http"
+
+
 # --- configuration -----------------------------------------------------------
 
 
@@ -852,6 +885,13 @@ class ArmingDevice:
     command: KeyCommand = KeyCommand.TOGGLE
     scenario_id: str | None = None
     enabled: bool = True
+    # A keypad only: the one path it may speak on (§9.2.1, decision 98).
+    transport: DeviceTransport = DeviceTransport.MQTT
+    # A keypad on the endpoint only: the SHA-256 of its token, hex. A random
+    # token needs no slow hash, a guessed code does. Never returned by any
+    # API, never in a backup or the diagnostics, never set by a restore — the
+    # same treatment as the acknowledgement webhook (§9.2.1).
+    token_hash: str | None = None
 
     @property
     def channel(self) -> str:
@@ -946,6 +986,10 @@ class Zone:
     # off: validation refuses it enabled, so it watches nothing until somebody
     # has looked (Phase 5 part 3 decision 4).
     trigger_confirmed: bool = True
+    # The cameras that show this zone and the rooms around it, in the order
+    # the household wants them (§6.2.1, decision 91). A notification set to
+    # show the zone's cameras attaches these; the zone decides *where*.
+    camera_entity_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

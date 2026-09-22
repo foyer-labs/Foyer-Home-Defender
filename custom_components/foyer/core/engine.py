@@ -3749,6 +3749,7 @@ class _Run:
             broken_channels=frozenset(
                 key for key, health in self.channels.items() if health.fault is not None
             ),
+            technical=dict(self.technical),
         )
         # Escalation steps first, because reaching the end of one raises a
         # moment a profile answers in this same call (§7.2).

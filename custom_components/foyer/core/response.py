@@ -26,6 +26,7 @@ from .clock import in_daily_window
 from .conditions import evaluate, unmet
 from .journal import severity_of
 from .models import (
+    MAX_NOTIFY_CAMERAS,
     ActionIntent,
     ActionKind,
     AreaRuntime,
@@ -36,6 +37,7 @@ from .models import (
     Incident,
     LogSeverity,
     Moment,
+    NotifyImages,
     Occurrence,
     PendingRun,
     ProfileAction,
@@ -43,11 +45,12 @@ from .models import (
     RunningAction,
     StateCondition,
     SystemSnapshot,
+    TechnicalAlarm,
     TimeCondition,
     Zone,
 )
 from .templates import render
-from .validation import notify_contacts
+from .validation import notify_contacts, notify_images
 
 # The log's own scale, ordered (§10.1). A contact's quiet hours are read
 # against it rather than against the profile ``severity`` of §6.5, which that
@@ -86,6 +89,17 @@ UNION_MOMENTS: frozenset[Moment] = frozenset(
     }
 )
 
+# What a zone joining the incident says again every time (§5.6, §6.2.1). The
+# union of §5.6 is for what makes a noise or switches something on: a siren
+# already sounding is not restarted. A message is different — "updating the
+# notification text" is what joining does, and each zone joining is a
+# notification that repeats the cameras, fresh (decision 95) — so the patio
+# joining after the hall is told, rather than swallowed because the hall's
+# message already went.
+REPEATED_ON_JOIN: frozenset[str] = frozenset(
+    {ActionKind.NOTIFY.value, ActionKind.PERSISTENT_NOTIFICATION.value}
+)
+
 # The incident's own moments: they name no zone, so what a silent zone
 # suppresses is read from everything that has joined (see `_silent`).
 INCIDENT_MOMENTS: frozenset[Moment] = frozenset(
@@ -101,6 +115,24 @@ ACK_MOMENTS: frozenset[Moment] = frozenset(
         Moment.TRIGGERED,
         Moment.INCIDENT_OPENED,
         Moment.INCIDENT_JOINED,
+        Moment.TECHNICAL_RAISED,
+    }
+)
+
+# The moments that are an alarm, and the only ones at which a notification
+# set to ``zone`` carries the zones' cameras (§6.2.1, decision 96). An
+# escalation step is one of them by construction: its moment is the one that
+# started the escalation. ``entry_started`` is not, and never will be: an
+# entry delay is the household coming home, and photographing every
+# homecoming and sending it out of the house is what P-1 exists to stop.
+# ``incident_opened`` is the first message and a satisfied group is a
+# confirmed alarm, so both carry them as ``triggered`` does.
+ZONE_IMAGE_MOMENTS: frozenset[Moment] = frozenset(
+    {
+        Moment.TRIGGERED,
+        Moment.INCIDENT_OPENED,
+        Moment.INCIDENT_JOINED,
+        Moment.VERIFICATION_SATISFIED,
         Moment.TECHNICAL_RAISED,
     }
 )
@@ -140,6 +172,11 @@ class PlanContext:
     # planning the message about it: the snapshot still holds the state the
     # call began with.
     broken_channels: frozenset[str] = frozenset()
+    # The technical channel's alarms (§5.5), so a notification set to show
+    # the zones' cameras can show the technical zones pending — seeing the
+    # kitchen when the smoke detector goes is worth as much as seeing it when
+    # the window does (§6.2.1, decision 96).
+    technical: Mapping[str, TechnicalAlarm] = field(default_factory=dict)
 
     @property
     def tz(self) -> tzinfo:
@@ -439,7 +476,13 @@ def skip_reason(
         return SKIP_WALK_TEST
     if action.kind.value in suppressed:
         return SKIP_SILENT
-    if action.id in already_started and moment in UNION_MOMENTS:
+    if (
+        action.id in already_started
+        and moment in UNION_MOMENTS
+        and not (
+            moment is Moment.INCIDENT_JOINED and action.kind.value in REPEATED_ON_JOIN
+        )
+    ):
         return SKIP_ALREADY_RUNNING
     if not evaluate(action, ctx.snapshot, ctx.now, ctx.tz):
         return SKIP_CONDITION
@@ -554,12 +597,78 @@ def _params(
         params["quiet"] = quiet
     if ctx.impaired:
         _drop_impaired(params, ctx)
-    if action.kind is ActionKind.NOTIFY and params.get("camera_entity_id"):
+    if action.kind is ActionKind.NOTIFY:
+        _images(action, params, ctx, moment)
+    if action.kind is ActionKind.NOTIFY and (
+        params.get("camera_entity_id") or params.get("cameras")
+    ):
         # A notification that has to write the picture to a file writes it
         # where every other camera file goes, and the choice is made here so
         # the executor is left with nothing to decide (INV-1).
         params.setdefault("directory", ctx.config.settings.camera_dir)
     return params
+
+
+def _images(
+    action: ProfileAction, params: dict[str, Any], ctx: PlanContext, moment: Moment
+) -> None:
+    """Which pictures this notification carries, named here (§6.2.1).
+
+    Decided in ``core`` and nowhere else (INV-1): the executor fetches the
+    pictures the intent names and chooses none of them, and the simulator's
+    trace lists the same cameras without taking a picture of anything.
+    ``fixed`` keeps the one camera the action names; anything else drops it,
+    so a camera left behind by an earlier choice can never be sent.
+    """
+    images = notify_images(action)
+    params["images"] = images.value
+    if images is not NotifyImages.FIXED:
+        params.pop("camera_entity_id", None)
+    if images is not NotifyImages.ZONE or moment not in ZONE_IMAGE_MOMENTS:
+        # At any other moment a `zone` action sends its text alone, and
+        # the profile editor says so.
+        return
+    cameras, omitted = alarm_cameras(ctx, moment)
+    if cameras:
+        params["cameras"] = list(cameras)
+    if omitted:
+        params["cameras_omitted"] = omitted
+
+
+def alarm_cameras(ctx: PlanContext, moment: Moment) -> tuple[tuple[str, ...], int]:
+    """The cameras of the zones behind this alarm, and how many did not fit.
+
+    Every zone that has joined the incident, in the order they joined and
+    then in the order each zone lists its cameras, each camera once
+    (decision 93): the intruder moves from the window to the hall, and a
+    picture of the way in alone shows where they were, not where they are.
+    For the technical channel, the technical zones still waiting for an
+    acknowledgement, in the order they were raised. At most four; the rest
+    are counted so the message can say how many were left out (decision 95).
+    """
+    if moment in TECHNICAL_MOMENTS:
+        zone_ids: tuple[str, ...] = tuple(
+            zone_id
+            for zone_id, alarm in sorted(
+                ctx.technical.items(), key=lambda item: item[1].since
+            )
+            if not alarm.acknowledged
+        )
+    elif ctx.incident is not None:
+        zone_ids = ctx.incident.zone_ids
+    else:
+        zone_ids = ()
+    cameras: list[str] = []
+    for zone_id in zone_ids:
+        zone = ctx.config.zone(zone_id)
+        if zone is None:
+            continue
+        for camera in zone.camera_entity_ids:
+            if camera not in cameras:
+                cameras.append(camera)
+    return tuple(cameras[:MAX_NOTIFY_CAMERAS]), max(
+        0, len(cameras) - MAX_NOTIFY_CAMERAS
+    )
 
 
 # Every key an action can put an entity in, because "do not act through

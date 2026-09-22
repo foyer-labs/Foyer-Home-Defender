@@ -532,7 +532,7 @@ def _batch(
     # Whether an action ran is read off the Decision, never recomputed: the
     # Decision is what the executor would have been handed.
     ran = {
-        i.action_id
+        i.action_id: i
         for i in decision.actions
         if i.profile_id == profile.id and i.moment is moment
     }
@@ -579,7 +579,7 @@ def _batch(
                 ran=did_run,
                 skipped=why,
                 conditions=conditions,
-                params=dict(action.params),
+                params={**dict(action.params), **_pictures(ran.get(action.id))},
             )
         )
     return PlannedBatch(
@@ -592,6 +592,22 @@ def _batch(
         group_id=next((o.group_id for o in group if o.group_id), None),
         actions=tuple(actions),
     )
+
+
+def _pictures(intent: ActionIntent | None) -> dict[str, Any]:
+    """Which cameras a notification that ran would have carried (§6.2.1).
+
+    Read off the intent the engine built, never worked out again here: the
+    trace lists them without taking a picture of anything, and it lists the
+    ones the house would have sent.
+    """
+    if intent is None:
+        return {}
+    return {
+        key: intent.params[key]
+        for key in ("cameras", "cameras_omitted")
+        if key in intent.params
+    }
 
 
 def _unanswered(occurrence: Occurrence) -> PlannedBatch:
@@ -698,6 +714,7 @@ def _report(
         areas=decision.state.areas,
         incident=decision.state.incident,
         active_zones=decision.state.active_zones,
+        technical=decision.state.technical,
     )
     # Grouped exactly as the engine grouped them, by response.answer_for.
     grouped: dict[tuple[Any, ...], tuple[Answer, list[Occurrence]]] = {}
@@ -851,6 +868,11 @@ def _action_dict(action: PlannedAction) -> dict[str, Any]:
         "quiet": list(action.params.get("quiet") or ()),
         "escalation": action.params.get("escalation"),
         "escalation_step": action.params.get("escalation_step"),
+        # The cameras this notification would have carried, one picture
+        # each, and how many did not fit (§6.2.1). Entity ids: the panel
+        # names them.
+        "cameras": list(action.params.get("cameras") or ()),
+        "cameras_omitted": int(action.params.get("cameras_omitted") or 0),
     }
 
 

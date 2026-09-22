@@ -50,6 +50,7 @@ from ..core.models import (
     Contributor,
     Detection,
     DeviceKind,
+    DeviceTransport,
     EntryMode,
     Escalation,
     EscalationKind,
@@ -196,8 +197,19 @@ from ..core.models import (
 # any other. Downgrading after an import and upgrading again therefore
 # forgets which zones were never checked. The zones are still off; what is
 # lost is the refusal to switch them on without confirming.
-STORAGE_VERSION = 7
-STORAGE_MINOR_VERSION = 4
+#
+# 8.1 is a major bump, and the reason is one field. The zone's cameras and the
+# notify action's ``images`` selector are additive: a 7.4 build reading them
+# would send the text of an alarm without its pictures, which is a
+# disappointment and not a hole. A keypad's ``transport`` is not additive in
+# that sense. A 7.4 build does not know it, so it would take an endpoint
+# keypad for an ordinary one and accept its name over the broker — exactly
+# the way round the token that decision 98 exists to close, reached by
+# nothing more than installing an older release. Refusing the file is the
+# only safe downgrade, as it was for decision 58. Both halves travel in the
+# one step so that there is one migration to read and one to test.
+STORAGE_VERSION = 8
+STORAGE_MINOR_VERSION = 1
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -459,6 +471,8 @@ def device_from_dict(d: dict[str, Any]) -> ArmingDevice:
         command=KeyCommand(d["command"]),
         scenario_id=d.get("scenario_id") or None,
         enabled=bool(d.get("enabled", True)),
+        transport=DeviceTransport(d.get("transport") or DeviceTransport.MQTT.value),
+        token_hash=d.get("token_hash") or None,
     )
 
 
@@ -474,6 +488,11 @@ def device_to_dict(d: ArmingDevice) -> dict[str, Any]:
         "command": d.command.value,
         "scenario_id": d.scenario_id,
         "enabled": d.enabled,
+        "transport": d.transport.value,
+        # A credential: the panel, a backup and the diagnostics all strip it
+        # (api/backup.py, core/dump.py). It is here because this is the
+        # document the installation keeps for itself.
+        "token_hash": d.token_hash,
     }
 
 
@@ -839,6 +858,7 @@ def zone_from_dict(z: dict[str, Any]) -> Zone:
         # Strictly: only a real `true` confirms, so a hand-edited "false" is
         # not read as the truthy string it is.
         trigger_confirmed=z.get("trigger_confirmed", True) is True,
+        camera_entity_ids=tuple(str(c) for c in z.get("camera_entity_ids") or ()),
     )
 
 
@@ -879,6 +899,7 @@ def zone_to_dict(z: Zone) -> dict[str, Any]:
         "silent": z.silent,
         "battery_entity_id": z.battery_entity_id,
         "trigger_confirmed": z.trigger_confirmed,
+        "camera_entity_ids": list(z.camera_entity_ids),
     }
 
 

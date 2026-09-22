@@ -70,12 +70,14 @@ from .models import (
     ChimeMode,
     ChimeSettings,
     DeviceKind,
+    DeviceTransport,
     EntryMode,
     EventTrigger,
     FoyerConfig,
     KeyCommand,
     LogCategory,
     Moment,
+    NotifyImages,
     NumericOperator,
     NumericTrigger,
     Permission,
@@ -447,6 +449,25 @@ def _rule_problems(config: FoyerConfig) -> list[Problem]:
     return problems
 
 
+def notify_images(action: ProfileAction) -> NotifyImages:
+    """Which pictures a notify action carries (§6.2.1, decision 92).
+
+    Read in one place, for the same reason ``notify_contacts`` is. An action
+    that does not say is read the way the 8.1 migration writes it — the
+    camera it names, or none — so nothing written before the selector
+    existed, or by hand without it, starts sending pictures on its own.
+    """
+    value = action.params.get("images")
+    if value is not None:
+        try:
+            return NotifyImages(str(value))
+        except ValueError:
+            return NotifyImages.NONE
+    if action.params.get("camera_entity_id"):
+        return NotifyImages.FIXED
+    return NotifyImages.NONE
+
+
 def notify_contacts(action: ProfileAction) -> tuple[dict, ...]:
     """The contacts a notify action names, in order (SPEC §6.2, §7.1).
 
@@ -634,6 +655,17 @@ def _device_problems(
 
         if not device.name.strip():
             add("name_required", "name")
+        if device.transport is DeviceTransport.HTTP and device.kind is not (
+            DeviceKind.KEYPAD
+        ):
+            # Keypads only (decision 99): a tag carries no code, so a tag's
+            # token would be the key to the house by itself, readable on the
+            # wire whenever the request is not encrypted.
+            add("tag_has_no_token", "transport")
+        if device.token_hash and device.transport is not DeviceTransport.HTTP:
+            # A token outside the endpoint authenticates nothing and would
+            # come back to life the day somebody switched the keypad over.
+            add("token_without_endpoint", "transport")
         if device.kind is DeviceKind.KEYPAD:
             if not (device.ref or "").strip():
                 add("ref_required", "ref")
@@ -838,6 +870,14 @@ def _params_problems(action: ProfileAction, add) -> list[Problem]:
         camera = params.get("camera_entity_id")
         if camera is not None and not str(camera).startswith("camera."):
             add("entity_domain", "camera_entity_id")
+        images = params.get("images")
+        if images is not None and str(images) not in {i.value for i in NotifyImages}:
+            add("unknown_images", "images")
+        elif notify_images(action) is NotifyImages.FIXED and not camera:
+            # "The one camera the action names" (§6.2.1): a fixed picture of
+            # nothing is a notification that says it has a picture and
+            # arrives without one.
+            add("camera_required", "camera_entity_id")
         attachment = params.get("attachment")
         if attachment is not None and str(attachment) not in NOTIFY_ATTACHMENTS:
             # Each transport reads its own key and discards the rest without a
@@ -1225,6 +1265,12 @@ def _zone_problems(
             # The zone's own entity is not its battery: reading it as one
             # would make every open door a flat cell.
             add("battery_is_zone_entity", "battery_entity_id")
+    if any(not str(c).startswith("camera.") for c in zone.camera_entity_ids):
+        add("entity_domain", "camera_entity_ids")
+    elif len(set(zone.camera_entity_ids)) != len(zone.camera_entity_ids):
+        # Listed twice, it would be sent twice — and each copy counts against
+        # the four a notification may carry (§6.2.1, decision 95).
+        add("duplicate_camera", "camera_entity_ids")
     return problems
 
 
