@@ -472,8 +472,18 @@ def device_from_dict(d: dict[str, Any]) -> ArmingDevice:
         scenario_id=d.get("scenario_id") or None,
         enabled=bool(d.get("enabled", True)),
         transport=DeviceTransport(d.get("transport") or DeviceTransport.MQTT.value),
-        token_hash=d.get("token_hash") or None,
+        # Only a hex string is a hash: anything else hand-edited into the
+        # file would make every request to the endpoint fail on comparison.
+        token_hash=_token_hash(d.get("token_hash")),
     )
+
+
+def _token_hash(value: Any) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    if not all(c in "0123456789abcdef" for c in value):
+        raise ConfigError("a device token hash must be hexadecimal")
+    return value
 
 
 def device_to_dict(d: ArmingDevice) -> dict[str, Any]:

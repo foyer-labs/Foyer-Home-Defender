@@ -190,3 +190,37 @@ def test_a_stream_opening_records_only_whether_it_was_encrypted():
     )
     assert decision.accepted and not decision.occurrences
     assert world.state.in_clear == frozenset({"hall"})
+
+
+def test_a_credential_replaced_by_another_still_leaves_a_row():
+    from custom_components.foyer.store.editing import config_diff
+
+    config = make_house()
+    moved = replace(
+        config,
+        health=replace(
+            config.health,
+            watchdog=replace(config.health.watchdog, url="https://b.example/y"),
+        ),
+    )
+    before = replace(
+        config,
+        health=replace(
+            config.health,
+            watchdog=replace(config.health.watchdog, url="https://a.example/x"),
+        ),
+    )
+    diff = config_diff(before, moved)
+    assert diff["health"]["watchdog.url"] == []
+    assert "example" not in str(diff)
+
+
+def test_a_null_params_document_still_migrates():
+    from custom_components.foyer.store.migrations import migrate
+
+    out = migrate(
+        (7, 4),
+        (8, 1),
+        {"profiles": [{"actions": [{"kind": "notify", "params": None}]}]},
+    )
+    assert out["profiles"][0]["actions"][0]["params"]["images"] == "none"

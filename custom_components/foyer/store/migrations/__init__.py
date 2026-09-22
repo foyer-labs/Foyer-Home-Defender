@@ -536,7 +536,9 @@ def _v7_4_to_v8_1(data: Document) -> Document:
         for action in profile.get("actions", []):
             if action.get("kind") != "notify":
                 continue
-            params = action.setdefault("params", {})
+            # `or {}`, as action_from_dict reads it: a hand-edited document
+            # with `"params": null` restored before this step existed.
+            params = action["params"] = action.get("params") or {}
             params.setdefault(
                 "images", "fixed" if params.get("camera_entity_id") else "none"
             )

@@ -696,6 +696,14 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
         was_block, now_block = before.get(block) or {}, after.get(block) or {}
         if was_block != now_block:
             changes[block] = _fields(was_block, now_block)
+    # The same for the other two credentials: one real value replaced by
+    # another redacts to the same "***" on both sides, and a watchdog pointed
+    # somewhere else — the one address that keeps a dead house looking alive —
+    # must not leave a row saying nothing changed.
+    if old.settings.ack_webhook_id != new.settings.ack_webhook_id:
+        changes.setdefault("settings", {})["ack_webhook_id"] = []
+    if old.health.watchdog.url != new.health.watchdog.url:
+        changes.setdefault("health", {})["watchdog.url"] = []
     return changes
 
 
