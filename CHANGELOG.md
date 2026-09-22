@@ -5,6 +5,95 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.13] — where it happened, and a keypad that proves which it is
+
+Two additions before the documentation (§6.2.1, §9.2.1): the alarm shows the
+cameras of the zones that raised it, and a keypad can speak to Foyer's own
+endpoint with a token instead of giving its name on a broker. **The stored
+configuration moves to schema 8.1, a major step**, and going back to beta.12
+afterwards is refused on purpose: an older build would not know that a keypad
+belongs to the endpoint, and would accept its name over MQTT — exactly the way
+round the token that this release closes. The reasoning is in
+`store/schema.py`, beside the others. Nothing anybody already receives
+changes: a notification that named a camera keeps it, every other keeps
+sending none, and every keypad stays on the broker until somebody moves it.
+
+### Added
+- **The zone's cameras** (page 3). A zone lists, in order, the cameras that
+  show it and the rooms around it. A notification can now say which pictures
+  it carries: none, always the same camera, or **the cameras of the zones
+  behind the alarm** — every zone that has joined the incident, in the order
+  they went, each camera once, at most four, and the message says how many
+  were left out. A new notification starts there.
+- **One notification per camera, after the text.** The text goes first with
+  its acknowledgement button, exactly as before, and it is the one channel
+  health is counted on; each camera follows as its own notification with its
+  picture and its name — a live link for the Companion app, a snapshot for
+  Telegram. A camera that does not answer costs its own picture and nothing
+  else. Only push and chat channels receive pictures: an SMS or a voice call
+  gets the text alone, not four more texts or four more calls. The pictures
+  never carry the channel's `tag`, under which the app would replace the text
+  and its button.
+- **Every notification repeats the cameras, fresh**: the first message, each
+  zone joining, each escalation step. **Only at an alarm** — a trigger, a zone
+  joining, a satisfied verification group, an escalation step, a technical
+  alarm with the cameras of the technical zones pending — and **never when an
+  entry delay starts**, because that is somebody coming home and a photograph
+  of every homecoming sent out of the house is what Foyer's first principle
+  exists to stop. The profile editor says at which of an action's moments it
+  sends its text alone, and the simulator lists which cameras each
+  notification would carry, without taking a picture of anything.
+- **The device endpoint** (page 8): `POST /api/foyer/device` and a
+  Server-Sent Events stream at `/api/foyer/device/state`, each keypad with a
+  token of its own. **The token authenticates the keypad; it does not encrypt
+  anything.** The code is still required and still the identity of whoever
+  typed it, the channel is `keypad`, the lockout counts per keypad as it
+  always has. The stream is the MQTT state message at the same detail level,
+  `minimal` by default, pushed the moment anything changes; the answer to a
+  command is the §9.1 result with that same message as its state, never the
+  panel's whole status. A keypad uses the broker or the endpoint, never both:
+  **an endpoint keypad's name over MQTT or in a service call is refused**, told
+  exactly what an unknown device is told, and recorded and notified as what it
+  was.
+- **The token** is 32 random bytes, shown once when it is generated, kept only
+  as a fingerprint, never in a backup, the diagnostics, a log row or the panel,
+  and never set by a restore. Generating one invalidates the old at once and
+  closes its streams; generating and revoking need `edit_config` and a code.
+- **A wrong or missing token** is answered 401 and nothing else, counted per
+  source address through the same lockout as a wrong code — an IPv6 host by
+  its /64 — and a locked address is refused, recorded and notified once. The
+  endpoint answers 404 in an installation where no keypad uses it.
+- **Plain HTTP is served, and said.** Foyer judges encryption as Home
+  Assistant does, including behind a reverse proxy it trusts. A keypad whose
+  last request arrived in the clear carries a warning on page 8 until one
+  arrives encrypted, across a restart, and every row it causes says so.
+
+### Changed
+- **Each zone joining an incident now sends its notification.** An action on
+  "a zone joined the incident" went out for the first zone to join and never
+  again: the rule that keeps a siren from restarting was swallowing messages
+  too. Sirens, lights and switches are still started once per incident; a
+  notification repeats for every zone that joins.
+- **A configuration save refuses to run while the previous one is being
+  applied**, and says so. Between a save and the reload it causes, a second
+  edit was built from the document the running system still held and could
+  write the first one's change back out — a revoked token restored by
+  renaming a zone a second later.
+
+### Fixed
+- **Replacing the watchdog URL or the acknowledgement webhook left no trace in
+  the log.** The configuration row now redacts all three credentials — those
+  two and a keypad's token — and still says each one changed. Before this
+  release the webhook id and the watchdog URL were written into the row in
+  full whenever they changed.
+- **The duress moment was offered in the profile editor under its raw key**,
+  in both languages.
+- **A device retrying every fifty seconds left one row in all** instead of one
+  a minute, because a suppressed report refreshed the timer that suppressed
+  it.
+- **Two notifications taking the same camera in the same second wrote one
+  file**, and one of the two pictures arrived empty.
+
 ## [0.1.0-beta.12] — the way in, and the way to help
 
 The third part of Phase 5 (§20.2, §20.3): a way in for a house that already
