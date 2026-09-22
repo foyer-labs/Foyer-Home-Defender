@@ -831,6 +831,10 @@
         "silent": {
           "term": "Zone silenziose",
           "text": "Una zona marcata silenziosa esegue la sua risposta senza i tipi di azione indicati nelle impostazioni."
+        },
+        "images": {
+          "term": "Immagini",
+          "text": "Una notifica può portare le telecamere delle zone che hanno dato l'allarme, una foto ciascuna dopo il testo. Solo in un allarme, mai quando qualcuno torna a casa."
         }
       }
     },
@@ -1454,7 +1458,8 @@
     "rf_interference_suspected": "Sospetta interferenza radio",
     "rf_interference_cleared": "Interferenza radio rientrata",
     "radio_coordinator_down": "Coordinatore radio irraggiungibile",
-    "radio_coordinator_up": "Coordinatore radio tornato"
+    "radio_coordinator_up": "Coordinatore radio tornato",
+    "duress": "Codice di coercizione usato"
   },
   "condition": {
     "add": "Aggiungi una condizione",
@@ -1516,7 +1521,7 @@
     "highest_channel": "Canale più prioritario",
     "escalation_hint": "Secondi dall'inizio dell'escalation. Con un tempo qui questa notifica diventa un passo: aspetta e si ferma appena qualcuno prende atto.",
     "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto.",
-    "images_text_alone": "Le immagini partono solo con un allarme: uno scatto, una zona che si aggiunge, un passo di escalation, un allarme tecnico. In {moments} questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
+    "images_text_alone": "Le immagini partono solo con un allarme: uno scatto, una zona che si aggiunge, un passo di escalation, un allarme tecnico. Per «{moments}» questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
     "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale \"altro\" riceve solo il testo, invece di un messaggio in più per ogni telecamera."
   },
   "camera_mode": {

@@ -147,6 +147,8 @@ export interface FoyerStatus {
   technical: StatusTechnical[];
   incident: StatusIncident | null;
   chime_enabled: boolean;
+  /** Endpoint keypads whose last request arrived unencrypted (§9.2.1). */
+  devices_in_clear?: string[];
   security: StatusSecurity;
   /** A walk test in progress (§11.3), or null. The panel and every card
    * layout read the banner from here: one payload, so the two can never
@@ -439,6 +441,9 @@ export interface ZoneConfig {
    * trigger (INV-5): it stays off until somebody confirms it. Set by the
    * backend, never by the page. */
   trigger_confirmed?: boolean;
+  /** The cameras that show this zone, in order (§6.2.1). A notification set
+   * to show the zone's cameras attaches these. */
+  camera_entity_ids: string[];
 }
 
 export interface GroupConfig {
@@ -565,6 +570,11 @@ export interface DeviceConfig {
   command: "arm" | "disarm" | "toggle";
   scenario_id: string | null;
   enabled: boolean;
+  /** A keypad only: the one path it may speak on (§9.2.1, decision 98). */
+  transport: "mqtt" | "http";
+  /** Whether a token exists. The token itself is shown once, on generation,
+   * and never again; its hash never reaches the panel. */
+  has_token?: boolean;
 }
 
 export interface SettingsConfig {
@@ -964,6 +974,10 @@ export interface TraceAction {
    * and which escalation step it was (§7.2). */
   recipients: { contact_id: string; channel_id: string; kind: string }[];
   quiet: string[];
+  /** The cameras this notification would have carried, one picture each,
+   * and how many did not fit (§6.2.1). Entity ids; nothing was fetched. */
+  cameras: string[];
+  cameras_omitted: number;
   escalation: string | null;
   escalation_step: number | null;
 }

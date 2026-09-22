@@ -831,6 +831,10 @@
         "silent": {
           "term": "Silent zones",
           "text": "A zone marked silent runs its response without the action kinds the settings name."
+        },
+        "images": {
+          "term": "Pictures",
+          "text": "A notification can carry the cameras of the zones behind the alarm, one picture each after the text. Only at an alarm, never when somebody comes home."
         }
       }
     },
@@ -1454,7 +1458,8 @@
     "rf_interference_suspected": "Radio interference suspected",
     "rf_interference_cleared": "Radio interference over",
     "radio_coordinator_down": "Radio coordinator unreachable",
-    "radio_coordinator_up": "Radio coordinator back"
+    "radio_coordinator_up": "Radio coordinator back",
+    "duress": "Duress code used"
   },
   "condition": {
     "add": "Add a condition",
@@ -1516,7 +1521,7 @@
     "highest_channel": "Highest priority channel",
     "escalation_hint": "Seconds from the start of the escalation. With a time here this notification becomes a step: it waits, and it stops the moment somebody acknowledges.",
     "escalation_moment_hint": "Only an alarm or a technical alarm can be escalated: they are the two that can be acknowledged.",
-    "images_text_alone": "Pictures go only with an alarm: a trigger, a zone joining it, an escalation step, a technical alarm. At {moments} this notification sends its text alone. Never at the start of an entry delay, which is somebody coming home.",
+    "images_text_alone": "Pictures go only with an alarm: a trigger, a zone joining it, an escalation step, a technical alarm. For “{moments}” this notification sends its text alone. Never at the start of an entry delay, which is somebody coming home.",
     "images_channels": "Only push and chat channels receive the pictures. An SMS, a voice call or an \"other\" channel receives the text alone, rather than one more message per camera."
   },
   "camera_mode": {

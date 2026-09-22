@@ -11,6 +11,11 @@
 // stolen tag arms and disarms without knowing any code. It is written where
 // somebody is deciding whether to keep a tag in their wallet, not in a
 // document they will not read.
+//
+// And, since §9.2.1, a third: a token authenticates a keypad and encrypts
+// nothing. A keypad whose requests arrive in the clear carries a warning here
+// for as long as that is true, because its token and the codes typed on it
+// can be read on the network.
 import { LitElement, css, html, nothing } from "lit";
 
 import { t, type Strings } from "../../shared/i18n";
@@ -33,6 +38,7 @@ const EMPTY: DeviceConfig = {
   command: "toggle",
   scenario_id: null,
   enabled: true,
+  transport: "mqtt",
 };
 
 /** The entity domains a tag or a remote can arrive on (§4.4, §9.3). */
@@ -46,6 +52,8 @@ class FoyerPageDevices extends LitElement {
     _busy: { state: true },
     _mqtt: { state: true },
     _mqttProblems: { state: true },
+    _token: { state: true },
+    _tokenProblems: { state: true },
   };
 
   ctx?: PanelContext;
@@ -54,10 +62,34 @@ class FoyerPageDevices extends LitElement {
   private _busy = false;
   private _mqtt?: MqttConfig;
   private _mqttProblems: Problem[] = [];
+  // A token just generated, shown once and then forgotten: leaving the
+  // editor, or opening another keypad, loses it for good (§9.2.1).
+  private _token?: { deviceId: string; value: string };
+  private _tokenProblems: Problem[] = [];
 
   private _edit(device?: DeviceConfig): void {
     this._draft = device ? structuredClone(device) : structuredClone(EMPTY);
     this._problems = [];
+    this._token = undefined;
+    this._tokenProblems = [];
+  }
+
+  private async _tokenAction(revoke: boolean): Promise<void> {
+    const id = this._draft?.id;
+    if (!this.ctx || !id) return;
+    this._busy = true;
+    try {
+      const result = await this.ctx.deviceToken(id, revoke);
+      this._tokenProblems = result.problems;
+      this._token =
+        result.success && result.token ? { deviceId: id, value: result.token } : undefined;
+      if (result.success) {
+        const stored = this.ctx.config?.devices.find((d) => d.id === id);
+        if (stored && this._draft) this._draft = { ...this._draft, has_token: !revoke };
+      }
+    } finally {
+      this._busy = false;
+    }
   }
 
   private _set<K extends keyof DeviceConfig>(key: K, value: DeviceConfig[K]): void {
@@ -176,7 +208,15 @@ class FoyerPageDevices extends LitElement {
     >
       <td><strong>${device.name}</strong></td>
       <td>${t(s, `device_kind.${device.kind}`)}</td>
-      <td class="mono">${device.kind === "keypad" ? device.ref : device.entity_id}</td>
+      <td class="mono">
+        ${device.kind === "keypad" ? device.ref : device.entity_id}
+        ${device.kind === "keypad"
+          ? html`<span class="pill idle">${t(s, `transport.${device.transport}`)}</span>`
+          : nothing}
+        ${this._inClear(device)
+          ? html`<span class="pill warn">${t(s, "devices.in_clear_pill")}</span>`
+          : nothing}
+      </td>
       <td>
         ${device.kind === "tag"
           ? html`<span class="pill ok">${owner?.name ?? "—"}</span>`
@@ -228,17 +268,45 @@ class FoyerPageDevices extends LitElement {
 
           ${draft.kind === "keypad"
             ? html`<div class="grid-form">
-                <label class="field">
-                  <span class="lbl">${t(s, "field.ref")}</span>
-                  <input
-                    .value=${draft.ref ?? ""}
-                    placeholder="keypad_hall"
-                    @input=${(e: Event) =>
-                      this._set("ref", (e.target as HTMLInputElement).value)}
-                  />
-                  <span class="hint">${t(s, "devices.ref_hint")}</span>
-                </label>
-              </div>`
+                  <label class="field">
+                    <span class="lbl">${t(s, "field.ref")}</span>
+                    <input
+                      .value=${draft.ref ?? ""}
+                      placeholder="keypad_hall"
+                      @input=${(e: Event) =>
+                        this._set("ref", (e.target as HTMLInputElement).value)}
+                    />
+                    <span class="hint"
+                      >${t(
+                        s,
+                        draft.transport === "http"
+                          ? "devices.ref_hint_http"
+                          : "devices.ref_hint",
+                      )}</span
+                    >
+                  </label>
+                  <label class="field">
+                    <span class="lbl">${t(s, "field.transport")}</span>
+                    <select
+                      @change=${(e: Event) =>
+                        this._set(
+                          "transport",
+                          (e.target as HTMLSelectElement).value as DeviceConfig["transport"],
+                        )}
+                    >
+                      ${(["mqtt", "http"] as const).map(
+                        (transport) => html`<option
+                          .value=${transport}
+                          ?selected=${transport === draft.transport}
+                        >
+                          ${t(s, `transport.${transport}`)}
+                        </option>`,
+                      )}
+                    </select>
+                    <span class="hint">${t(s, `devices.transport_hint_${draft.transport}`)}</span>
+                  </label>
+                </div>
+                ${draft.transport === "http" ? this._renderToken(s, draft) : nothing}`
             : html`
                 <div class="banner warn">
                   <strong>${t(s, "devices.stolen_tag")}</strong>
@@ -371,6 +439,84 @@ class FoyerPageDevices extends LitElement {
     `;
   }
 
+  private _inClear(device: DeviceConfig): boolean {
+    return (
+      device.kind === "keypad" &&
+      device.transport === "http" &&
+      !!device.id &&
+      (this.ctx?.status.devices_in_clear ?? []).includes(device.id)
+    );
+  }
+
+  // The endpoint keypad's token (§9.2.1): what it is for, the one moment it
+  // can be read, and — for as long as it is true — that it is being sent in
+  // the clear.
+  private _renderToken(s: Strings, draft: DeviceConfig) {
+    const stored = this.ctx?.config?.devices.find((d) => d.id === draft.id);
+    // A token belongs to a keypad saved on the endpoint: generating one for a
+    // keypad the backend still holds on the broker would be refused.
+    const ready = !!stored && stored.transport === "http";
+    const shown = this._token && this._token.deviceId === draft.id ? this._token : undefined;
+    return html`<div class="token">
+      ${this._inClear(draft)
+        ? html`<div class="banner warn" role="alert">
+            <strong>${t(s, "devices.in_clear")}</strong>
+            <span>${t(s, "devices.in_clear_hint")}</span>
+          </div>`
+        : nothing}
+      <p class="note">${t(s, "devices.token_note")}</p>
+      ${shown
+        ? html`<div class="once" role="status">
+            <span class="lbl">${t(s, "devices.token_once")}</span>
+            <code class="mono secret">${shown.value}</code>
+            <span class="hint">${t(s, "devices.token_once_hint")}</span>
+          </div>`
+        : html`<p class="hint">
+            ${!ready
+              ? t(s, "devices.token_save_first")
+              : draft.has_token
+                ? t(s, "devices.token_exists")
+                : t(s, "devices.token_none")}
+          </p>`}
+      ${ready
+        ? html`<div class="actions">
+            <button
+              class="btn"
+              ?disabled=${this._busy}
+              @click=${() => this._tokenAction(false)}
+            >
+              ${t(s, draft.has_token ? "devices.token_replace" : "devices.token_generate")}
+            </button>
+            ${draft.has_token
+              ? html`<button
+                  class="btn danger"
+                  ?disabled=${this._busy}
+                  @click=${() => this._tokenAction(true)}
+                >
+                  ${t(s, "devices.token_revoke")}
+                </button>`
+              : nothing}
+          </div>`
+        : nothing}
+      ${this._tokenProblems.length
+        ? html`<ul class="problems">
+            ${this._tokenProblems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+          </ul>`
+        : nothing}
+      <div class="endpoint-samples">
+        <div class="field">
+          <span class="lbl">${t(s, "devices.endpoint_request")}</span>
+          <pre class="sample">${ENDPOINT_REQUEST}</pre>
+        </div>
+        <div class="field">
+          <span class="lbl">${t(s, "devices.endpoint_stream")}</span>
+          <pre class="sample">${ENDPOINT_STREAM}</pre>
+          <span class="hint">${t(s, "devices.endpoint_stream_hint")}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
   private _renderMqtt(s: Strings) {
     const mqtt = this._mqttDraft();
     const set = <K extends keyof MqttConfig>(key: K, value: MqttConfig[K]) => {
@@ -428,6 +574,7 @@ class FoyerPageDevices extends LitElement {
                 )}
               </select>
               <span class="hint">${t(s, `devices.detail_hint_${mqtt.detail}`)}</span>
+              <span class="hint">${t(s, "devices.detail_shared_hint")}</span>
             </label>
             <label class="field">
               <span class="lbl">${t(s, "field.qos")}</span>
@@ -508,6 +655,42 @@ class FoyerPageDevices extends LitElement {
          stolen tag arms and disarms without knowing any code, and it is read
          while deciding whether to carry one. Plain text would not stop
          anybody. */
+      .token {
+        margin-top: 12px;
+      }
+      .endpoint-samples {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .endpoint-samples .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+      }
+      .endpoint-samples .lbl {
+        font-weight: 500;
+      }
+      .once {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 16px;
+        margin: 12px 0;
+        border-radius: 8px;
+        border: 1px solid var(--primary-color);
+        background: var(--secondary-background-color);
+      }
+      .once .lbl {
+        font-weight: 500;
+      }
+      .secret {
+        overflow-wrap: anywhere;
+        user-select: all;
+        font-size: 13px;
+      }
       .banner {
         display: flex;
         flex-direction: column;
@@ -528,6 +711,20 @@ const INBOUND = `{
   "code": "123456",
   "device_id": "keypad_hall"
 }`;
+
+// The two routes of §9.2.1, as a keypad's firmware would use them. The
+// token is a placeholder: the real one is shown once, above, and nowhere else.
+const ENDPOINT_REQUEST = `POST /api/foyer/device
+Authorization: Bearer <token>
+
+{ "action": "arm", "scenario": "Night", "code": "123456" }`;
+
+const ENDPOINT_STREAM = `GET /api/foyer/device/state
+Authorization: Bearer <token>
+
+data: {"master": "arming", "countdown": {"kind": "exit", "remaining": 30}, …}
+
+: keepalive`;
 
 const OUTBOUND: Record<MqttConfig["detail"], string> = {
   minimal: `{

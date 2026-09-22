@@ -739,6 +739,7 @@ class FoyerPageTest extends LitElement {
                     step: String(action.escalation_step ?? 0),
                     who: this._whoFor(action.recipients),
                   })}
+                  ${this._renderCameras(s, action)}
                 </div>`
               : html`<div class="yes">
                   ${t(s, "test.trace.ran", {
@@ -879,11 +880,27 @@ class FoyerPageTest extends LitElement {
     `;
   }
 
+  // Which cameras a notification would have carried (§6.2.1): named, and
+  // never fetched — the simulator takes a picture of nothing.
+  private _renderCameras(s: Strings, action: TraceAction) {
+    const cameras = action.cameras ?? [];
+    if (!cameras.length) return nothing;
+    const name = (id: string) =>
+      (this.ctx?.hass.states[id]?.attributes?.friendly_name as string | undefined) ?? id;
+    return html`<span class="muted">
+      ${t(s, "test.trace.cameras", { cameras: cameras.map(name).join(", ") })}
+      ${action.cameras_omitted
+        ? t(s, "test.trace.cameras_omitted", { count: String(action.cameras_omitted) })
+        : nothing}
+    </span>`;
+  }
+
   private _renderAction(s: Strings, action: TraceAction) {
     const name = action.name || t(s, `action_kind.${action.kind}`);
     if (action.ran) {
       return html`<div class="yes">
         ${t(s, "test.trace.ran", { action: name })}
+        ${this._renderCameras(s, action)}
         ${action.recipients.length
           ? html`<span class="muted">
               ${t(s, "test.trace.reached", { who: this._whoFor(action.recipients) })}

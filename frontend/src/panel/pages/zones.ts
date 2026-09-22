@@ -16,7 +16,7 @@ import type {
   ZoneProposal,
 } from "../../shared/types";
 import { optionalNumber, problemText, type PanelContext } from "../context";
-import { batteryTargets } from "../ha-targets";
+import { batteryTargets, entityTargets } from "../ha-targets";
 import { profileField } from "../profile-picker";
 
 const EVENT_DOMAINS = new Set(["event", "tag"]);
@@ -41,6 +41,7 @@ function blankZone(areaId: string): ZoneConfig {
     bypassable: true,
     supervision_timeout: null,
     battery_entity_id: null,
+    camera_entity_ids: [],
     enabled: true,
     key: null,
     chime: false,
@@ -806,6 +807,7 @@ class FoyerPageZones extends LitElement {
             <span class="hint">${t(s, "zones.battery_hint")}</span>
           </label>
         </div>
+        ${this._renderCameras(s, draft)}
         <div class="checks">
           ${intrusion ? check("always_on", "zones.always_on_hint") : nothing}
           ${intrusion ? check("bypassable", "zones.bypassable_hint") : nothing}
@@ -826,6 +828,80 @@ class FoyerPageZones extends LitElement {
           : nothing}
       </fieldset>
     `;
+  }
+
+  // The zone's cameras (§6.2.1): an ordered list, because a notification
+  // shows them in this order and at most four of them. Chosen here because
+  // the zone is what knows *where* — the kitchen window wants the kitchen and
+  // the room next door.
+  private _renderCameras(s: Strings, draft: ZoneConfig) {
+    const ctx = this.ctx!;
+    const chosen = draft.camera_entity_ids ?? [];
+    const cameras = entityTargets(ctx.hass, ["camera"]);
+    const name = (id: string) => cameras.find((c) => c.id === id)?.name ?? id;
+    const move = (index: number, by: number) => {
+      const next = [...chosen];
+      const [item] = next.splice(index, 1);
+      next.splice(index + by, 0, item);
+      this._set("camera_entity_ids", next);
+    };
+    return html`<div class="field cameras">
+      <span class="lbl">${t(s, "field.camera_entity_ids")}</span>
+      ${chosen.length
+        ? html`<ol class="camera-list" role="list">
+            ${chosen.map(
+              (id, index) => html`<li>
+                <span class="camera-rank">${index + 1}</span>
+                <span class="camera-name">${name(id)}</span>
+                <button
+                  class="btn sm"
+                  ?disabled=${index === 0}
+                  aria-label=${t(s, "zones.camera_up")}
+                  title=${t(s, "zones.camera_up")}
+                  @click=${() => move(index, -1)}
+                >
+                  ↑
+                </button>
+                <button
+                  class="btn sm"
+                  ?disabled=${index === chosen.length - 1}
+                  aria-label=${t(s, "zones.camera_down")}
+                  title=${t(s, "zones.camera_down")}
+                  @click=${() => move(index, 1)}
+                >
+                  ↓
+                </button>
+                <button
+                  class="btn sm"
+                  @click=${() =>
+                    this._set(
+                      "camera_entity_ids",
+                      chosen.filter((c) => c !== id),
+                    )}
+                >
+                  ${t(s, "zones.camera_remove")}
+                </button>
+              </li>`,
+            )}
+          </ol>`
+        : nothing}
+      <select
+        aria-label=${t(s, "zones.camera_add")}
+        @change=${(e: Event) => {
+          const select = e.target as HTMLSelectElement;
+          if (select.value) this._set("camera_entity_ids", [...chosen, select.value]);
+          select.value = "";
+        }}
+      >
+        <option value="" selected>${t(s, "zones.camera_add")}</option>
+        ${cameras
+          .filter((c) => !chosen.includes(c.id))
+          .map((c) => html`<option .value=${c.id}>${c.name}</option>`)}
+      </select>
+      <span class="hint"
+        >${chosen.length ? t(s, "zones.cameras_hint") : t(s, "zones.cameras_none_hint")}</span
+      >
+    </div>`;
   }
 
   // Cross-zone and trigger counting (§4.2): the same engine as the groups of
@@ -1035,6 +1111,36 @@ class FoyerPageZones extends LitElement {
     stateStyles,
     formStyles,
     css`
+      .cameras {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+        margin-top: 14px;
+        max-width: 480px;
+      }
+      .cameras > .lbl {
+        font-weight: 500;
+      }
+      .camera-list {
+        margin: 4px 0 8px;
+        padding: 0;
+        list-style: none;
+      }
+      .camera-rank {
+        min-width: 1.5em;
+        color: var(--secondary-text-color);
+        font-variant-numeric: tabular-nums;
+      }
+      .camera-list li {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 4px 0;
+      }
+      .camera-name {
+        flex: 1;
+      }
       .states {
         display: flex;
         flex-wrap: wrap;

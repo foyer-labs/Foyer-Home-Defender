@@ -244,6 +244,21 @@ def test_every_moment_has_a_notification():
         assert {"title", "message"} <= notifications["armed_area"].keys()
 
 
+def test_every_moment_the_profile_editor_offers_has_a_name():
+    """The editor builds `moment.<value>` at run time, so the key check above
+    cannot see it: `duress` was offered for months as the raw key."""
+    source = (FRONTEND_SRC / "panel" / "pages" / "profiles.ts").read_text(
+        encoding="utf-8"
+    )
+    block = source[source.index("const MOMENT_GROUPS") :]
+    block = block[: block.index("};")]
+    offered = set(re.findall(r'"([a-z_]+)"', block))
+    assert offered, "the list of moments was not found"
+    for language in LANGUAGES:
+        names = load(TRANSLATIONS / "panel", language)["moment"]
+        assert not offered - names.keys(), (language, offered - names.keys())
+
+
 def test_every_notification_the_seed_can_send_is_translated():
     config = seed_config(
         area_name="a",

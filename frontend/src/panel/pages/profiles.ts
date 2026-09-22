@@ -89,6 +89,32 @@ const MOMENT_GROUPS: Record<string, string[]> = {
 // reads `photo`, and neither complains about the other's.
 const ATTACHMENTS = ["companion", "telegram"];
 
+// Which pictures a notify action carries (§6.2.1): none, the one camera it
+// names, or the cameras of the zones behind the alarm.
+const IMAGES = ["zone", "fixed", "none"];
+
+// The moments at which `zone` attaches anything (§6.2.1, decision 96),
+// mirrored from core/response.ZONE_IMAGE_MOMENTS so the editor can say where
+// the text goes alone. An escalation step carries the moment that started it,
+// which is one of these. Never entry_started: that is somebody coming home.
+const ZONE_IMAGE_MOMENTS = [
+  "triggered",
+  "incident_opened",
+  "incident_joined",
+  "verification_satisfied",
+  "technical_raised",
+];
+
+/** The selector as the backend reads it: an action that does not say is
+ * read as the 8.1 migration wrote it. */
+function imagesOf(action: ActionConfig): string {
+  const value = (action.params as { images?: unknown }).images;
+  if (typeof value === "string" && IMAGES.includes(value)) return value;
+  return (action.params as { camera_entity_id?: unknown }).camera_entity_id
+    ? "fixed"
+    : "none";
+}
+
 // What an escalation step may be: it reaches a person (§7.2). A siren five
 // minutes out would outlive the cutoff of §5.3.
 const ESCALATABLE: ActionKind[] = ["notify", "persistent_notification"];
@@ -105,6 +131,10 @@ function blankAction(kind: ActionKind): ActionConfig {
   // Stated, not assumed: each transport reads its own key for an attached
   // picture and ignores the others in silence.
   if (kind === "notify") params.attachment = "companion";
+  // A new notification starts where the feature is useful (decision 92):
+  // the cameras of the zones behind the alarm. Existing ones keep what they
+  // had, which the migration wrote.
+  if (kind === "notify") params.images = "zone";
   return {
     kind,
     moments: [],
@@ -789,12 +819,13 @@ class FoyerPageProfiles extends LitElement {
         }
         parts.push(this._text(s, action, index, "title"));
         parts.push(this._text(s, action, index, "message", messageHint));
-        parts.push(
-          this._picker(s, action, index, "camera_entity_id", ["camera"], false),
-        );
+        parts.push(this._renderImages(s, action, index));
         // Only once there is a picture to attach: an empty choice above an
         // empty camera field is two questions where the user asked none.
-        if (action.params.camera_entity_id) {
+        if (
+          imagesOf(action) === "zone" ||
+          (imagesOf(action) === "fixed" && action.params.camera_entity_id)
+        ) {
           parts.push(
             this._select(s, action, index, "attachment", ATTACHMENTS, (v) =>
               t(s, `attachment.${v}`),
@@ -915,6 +946,49 @@ class FoyerPageProfiles extends LitElement {
       ["", ...[...tones].sort()],
       (v) => v || t(s, "profiles.default_tone"),
     );
+  }
+
+  // Which pictures a notification carries (§6.2.1, decision 92), and where
+  // a `zone` action sends its text alone — said here, beside the choice,
+  // because a picture that silently does not come is the failure decision 90
+  // was written against.
+  private _renderImages(s: Strings, action: ActionConfig, index: number) {
+    const images = imagesOf(action);
+    const textOnly = action.moments.filter((m) => !ZONE_IMAGE_MOMENTS.includes(m));
+    return html`<label class="field">
+        <span class="lbl">${t(s, "field.images")}</span>
+        <select
+          @change=${(e: Event) => {
+            const value = (e.target as HTMLSelectElement).value;
+            const params: Record<string, unknown> = { ...action.params, images: value };
+            // A camera left behind by an earlier choice is never sent, and
+            // is not kept either: the page shows what the action does.
+            if (value !== "fixed") delete params.camera_entity_id;
+            this._setAction(index, { params });
+          }}
+        >
+          ${IMAGES.map(
+            (value) =>
+              html`<option .value=${value} ?selected=${value === images}>
+                ${t(s, `images.${value}`)}
+              </option>`,
+          )}
+        </select>
+        <span class="hint">${t(s, `images.${images}_hint`)}</span>
+      </label>
+      ${images === "fixed"
+        ? this._picker(s, action, index, "camera_entity_id", ["camera"], false)
+        : nothing}
+      ${images === "zone" && textOnly.length
+        ? html`<span class="hint wide"
+            >${t(s, "profiles.images_text_alone", {
+              moments: textOnly.map((m) => t(s, `moment.${m}`)).join(", "),
+            })}</span
+          >`
+        : nothing}
+      ${images === "zone" && notifyContacts(action).length
+        ? html`<span class="hint wide">${t(s, "profiles.images_channels")}</span>`
+        : nothing}`;
   }
 
   private _select(

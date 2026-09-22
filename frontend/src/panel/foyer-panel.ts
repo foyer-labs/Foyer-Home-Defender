@@ -80,13 +80,22 @@ const HELP_ITEMS: Record<PageId, string[]> = {
     "hold",
     "always_on",
     "supervision",
+    "cameras",
     "verification",
   ],
   scenarios: ["areas", "reports_master", "switching", "exit_override", "siren"],
-  profiles: ["inheritance", "moments", "conditions", "severity", "silent"],
+  profiles: ["inheritance", "moments", "conditions", "images", "severity", "silent"],
   groups: ["threshold", "members", "suppress", "derived"],
   users: ["own_code", "policy", "identified", "duress", "lockout", "scope"],
-  devices: ["declared", "device_id", "identifies", "topics", "detail", "last_result"],
+  devices: [
+    "declared",
+    "device_id",
+    "identifies",
+    "topics",
+    "endpoint",
+    "detail",
+    "last_result",
+  ],
   contacts: ["order", "quiet", "linked", "step", "acknowledge", "webhook", "test"],
   rules: ["trigger", "guards", "grace", "suspension", "visitor", "disarming", "next"],
   test: ["trigger_column", "blocks", "battery", "nothing_runs", "clock", "skipped", "inherited"],
@@ -361,6 +370,10 @@ class FoyerPanel extends LitElement {
       // guess it (§7.2, part 1 decision 6).
       setAckWebhook: (enabled) =>
         this._edit("settings", { type: "foyer/ack_webhook", enabled }),
+      // Never sends a token, only asks for one: the backend generates it,
+      // shows it in this one answer, and keeps only its hash (§9.2.1).
+      deviceToken: (deviceId, revoke) =>
+        this._edit("device", { type: "foyer/device/token", device_id: deviceId, revoke }),
       // Automatic arming (§9.4). Cancelling carries a code only where an
       // installation has raised the policy for it; the backend decides.
       cancelAuto: (pendingId) =>

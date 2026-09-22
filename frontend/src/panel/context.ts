@@ -58,6 +58,10 @@ export interface PanelContext {
   /** Switch the DTMF acknowledgement webhook on or off (§7.2). The id is
    * the backend's to generate and this never sends one. */
   setAckWebhook(enabled: boolean): Promise<EditResult>;
+  /** Generate an endpoint keypad's token, or revoke it (§9.2.1). The token is
+   * the backend's to generate, and this answer is the only time it is ever
+   * shown: it is stored as a hash nothing can read back. */
+  deviceToken(deviceId: string, revoke: boolean): Promise<EditResult & { token?: string }>;
   /** Automatic arming (§9.4). Cancelling stops a countdown before it acts;
    * the switch is the global kill switch; a suspension holds rules back
    * until a date, for one occurrence, or for a named visitor window. */
