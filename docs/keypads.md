@@ -7,7 +7,8 @@ Three things are worth reading before you buy anything:
 
 - **Foyer does not talk to keypads. It offers a contract.** Keypad models churn
   every six months; the contract does not. Anything that can call a Home
-  Assistant service or publish to an MQTT broker can arm this house.
+  Assistant service, publish to an MQTT broker or make an HTTP request to
+  Foyer's own endpoint can arm this house.
 - **A device is declared before it may command anything.** Add it under
   *Arming devices* first. A device this installation does not carry is refused
   whatever code it brings, and the refusal is logged and shown. This is not
@@ -41,7 +42,7 @@ cheap channel that says *who*.
 
 DIY ESPHome keypads are a live community topic and are not maintained by this
 project in v1. They fit the contract like anything else: publish to the topic,
-or call the service.
+call the service, or talk to the [device endpoint](#the-device-endpoint).
 
 ---
 
@@ -177,6 +178,211 @@ them in response to your own command rather than as a standing fact.
 
 ---
 
+## The device endpoint
+
+An HTTP endpoint of Foyer's own, for a device that would rather not be a name
+on a broker: each device on it holds a **token of its own**. It is used by
+keypads, and by the displays, relays and modules described in the next
+section. Declare the device under *Arming devices*, choose the endpoint as its
+transport, save it, then generate its token.
+
+**The token authenticates the device; it does not encrypt anything.** Over
+plain HTTP the token and every code typed on the device cross the network as
+readable as over plain MQTT. If you want the codes kept private, in order of
+simplicity: serve Home Assistant over HTTPS (or behind a reverse proxy it
+trusts); use TLS with per-client credentials on the broker; or use ESPHome's
+native API, which is encrypted and can call `foyer.arm` and `foyer.disarm`
+already.
+
+- **The token names the device.** A request carries no `device_id`, and one it
+  carries anyway is ignored. The token is shown once, when it is generated;
+  Foyer keeps only a fingerprint of it and cannot show it again. Generating a
+  new one invalidates the old one at once and closes its open connections.
+  Generating and revoking ask for a code, as saving the device does.
+- **One transport per device.** A device on the endpoint is refused over MQTT
+  and in service calls, recorded and notified as an unknown device is —
+  otherwise whoever knows its name reaches the house without the token.
+- **A wrong or missing token** is answered `401`, with no detail, and counted
+  per source address: past the lockout thresholds that address is refused for
+  the lockout period, the refusal is recorded under `security`, and it is
+  notified once.
+- **Plain HTTP is accepted, and said.** A device whose last request arrived
+  unencrypted carries a permanent *Unencrypted* warning under *Arming devices*,
+  and every row of the log it causes records that the request was not
+  encrypted. Many home-made devices cannot do TLS at all; refusing them would
+  take the feature away from the people who asked for it.
+- **Tags are not allowed on it.** A tag carries no code, so on the endpoint the
+  token by itself would be the key to the house. Tags stay `tag.*` and
+  `event.*` entities.
+- Where no enabled device uses the endpoint, every route answers `404`, as if
+  it did not exist.
+
+## API devices: displays, relays and modules of your own
+
+Every device on the endpoint is an **API device**, and may do exactly what its
+**scopes** say — a touch display in the hall, a relay that lights an "armed"
+lamp, an ESP32 or Arduino module, and the keypads already there. The scopes
+are set per device under *Arming devices*, **every one off until you switch it
+on**, and the device never goes beyond them, whatever code is typed on it.
+
+| Scope | Kind | What it gives |
+|---|---|---|
+| `status` | read | the state message: armed or not, which scenario, countdowns, ready to arm, alarm |
+| `zones` | read | every zone with its state: open, closed, in fault, excluded |
+| `batteries` | read | battery levels and tamper, per zone and per device |
+| `health` | read | system health: mains, notification channels, watchdog, radios |
+| `log` | read | the log, a page at a time, newest first |
+| `arm` | act | arm, only the scenarios and areas chosen for the device (*Whole house* by default, as far as the code allows) |
+| `disarm` | act | disarm, only the areas chosen for the device |
+| `exclude` | act | *Exclude* a zone from the next arming, and *Include again* |
+| `acknowledge` | act | acknowledge an alarm or a technical alarm |
+
+A relay that only lights a lamp holds `status` and nothing else. A keypad
+declared on the endpoint before scopes existed carries `status`, `arm` and
+`disarm`.
+
+**Every action needs a code**, arming included, even where the house would arm
+without one from the panel or a service: the token crosses the network
+readable whenever the request is not encrypted, and must never be what arms or
+disarms the house. That applies to keypads on the endpoint too — they always
+ask for a code. The code is the identity, as on any keypad: the action is made
+in the name of whoever the code belongs to, within that person's permissions,
+never beyond the device's scopes even when that person could do more, and a
+wrong code counts towards the device's lockout.
+
+**Reading is free or after a code, per scope and per device.** A free scope is
+read with the token alone. A scope after a code is read only while the device
+is **unlocked**. By default `status` is free and everything else is after a
+code, because a display in the hall is read by whoever walks past it, and
+*the back window is open* is the sentence a burglar wants.
+
+**The unlock:**
+
+- starts with `{"action": "unlock", "code": "…"}`; a wrong code counts
+  towards the lockout like any other;
+- lasts as long as the device says — from 30 seconds to 10 minutes, two
+  minutes by default — counted from the last time the device was used;
+- ends at once with `{"action": "lock"}`, with every arming or disarming made
+  through the device, and with a Home Assistant restart;
+- shows only what the person whose code it was may see: the log after a code
+  needs that person's permission to view the log, and only then carries
+  names. A free `log` scope shows what happened and never who. Zones,
+  batteries and the log read after a code cover only the areas that person
+  may reach;
+- ends, too, when that person is disabled or past their validity window, and
+  when the device is disabled or given a new token;
+- leaves a line in the log under `security`: which device, whose code, for how
+  long.
+
+**Over plain HTTP, a device reads nothing beyond `status`** until you tick *I
+know these readings cross the network unencrypted* on that device. Until then
+a section answers `403 plain_http_not_confirmed`; over HTTPS the tick changes
+nothing. Ticking it leaves a line in the log.
+
+### How the data travels
+
+A microcontroller has little memory, so nothing large is pushed. The state
+arrives on a stream, so a lamp lights the moment the house arms; each section
+is a small request of its own, and the stream says when one has changed.
+
+```
+GET  /api/foyer/device/state      the stream (Server-Sent Events)
+POST /api/foyer/device            one action per request, JSON, at most 4 KB
+GET  /api/foyer/device/zones
+GET  /api/foyer/device/batteries
+GET  /api/foyer/device/health
+GET  /api/foyer/device/log?before=<cursor>&limit=<1–50>
+```
+
+Every request carries `Authorization: Bearer <token>`.
+
+On the stream, a device holding `status` receives the state message on
+connect and whenever it changes — the MQTT state message, at the same detail
+level (`minimal` by default), with this device's own `last_result` and
+`last_reason`. For each section it holds a scope for, it receives a one-line
+notice when that section changes; a device that does not show the section
+ignores it. A comment line every thirty seconds keeps the connection open
+through proxies.
+
+A relay that lights a lamp while the house is armed only listens:
+
+```
+GET /api/foyer/device/state
+Authorization: Bearer <token>
+
+data: {"master": "arming", "countdown": {"kind": "exit", "remaining": 30}, "ready_to_arm": true, "blocking_zones": 0, "fault": false, "last_result": null, "last_reason": null}
+
+data: {"master": "armed_away", "countdown": null, "ready_to_arm": true, "blocking_zones": 0, "fault": false, "last_result": null, "last_reason": null}
+
+event: changed
+data: zones
+
+: keepalive
+```
+
+A display that shows the zones after somebody types a code:
+
+```
+GET /api/foyer/device/zones
+→ 403 {"success": false, "reason": "unlock_required"}
+
+POST /api/foyer/device
+{"action": "unlock", "code": "123456"}
+→ 200 {"success": true, "reason": null, "until": "2026-09-23T10:02:00+00:00"}
+
+GET /api/foyer/device/zones
+→ 200 {"success": true, "reason": null, "zones": [
+        {"id": "z_kitchen_window", "name": "Kitchen window", "area_id": "ground",
+         "type": "instant", "enabled": true, "open": true, "fault": null, "excluded": false}, …]}
+```
+
+The actions are `status`, `arm` (with `scenario` or `area`), `disarm`
+(optionally with `areas`), `exclude` and `include` (with `zone`),
+`acknowledge` (with `target`: `incident` or `technical`), `unlock` and `lock`.
+Every action but `unlock` and `lock` answers with the structured result of the
+services, with `last_result` and `last_reason` as on MQTT; a refusal is still a
+`200`, and the answer is in `success` and `reason`. An action outside the
+device's scopes is refused with `scope_not_granted`, one without a code with
+`code_required`.
+
+A section the device may not read answers `403` with one of four reasons:
+
+- `scope_not_granted` — the device does not hold that scope;
+- `unlock_required` — the scope is after a code and the device is not
+  unlocked, or the person whose code unlocked it has since been disabled or
+  is past their validity dates;
+- `plain_http_not_confirmed` — the request arrived unencrypted and the tick
+  above is not set;
+- `not_permitted` — the log, after a code, and the code's owner may not read
+  the log.
+
+Switching scenario while another is armed disarms the areas the new one
+leaves out, so it needs the device's `disarm` scope for those areas as well
+as `arm`.
+
+The log is paged by an opaque cursor: send the `next` of one answer as
+`before` in the next request, at most fifty rows at a time.
+
+### The full contract
+
+The endpoint and its stream are described in
+[`docs/api/openapi.yaml`](api/openapi.yaml), and the MQTT contract in
+[`docs/api/asyncapi.yaml`](api/asyncapi.yaml), both at contract version **v1**.
+A change that would break a device written against v1 is a new version, and
+the changelog says so; a test compares both documents with the code on every
+change. The panel's own WebSocket commands are internal and are not part of
+the contract: a device must not rely on them.
+
+Home Assistant administrators also have an **API** page in the panel, which
+renders the same document with Swagger UI. Press *Authorize*, paste the token
+of a device declared under *Arming devices*, then *Try it out*. These are real
+requests to your house, made as that device: an arming with a real code arms
+it, a wrong code counts towards the lockout, and every action is in the log.
+The page is served only inside the panel, and fetches nothing from the
+internet.
+
+---
+
 ## The shipped adapters
 
 Three blueprints live under `blueprints/automation/foyer/`. **HACS installs the
@@ -243,10 +449,10 @@ a button that forces the arming past an open window.
    refusals at least two sounds: "not right" and "not now" are different
    problems, and a household that hears one sound for both will retype a code
    that was never the problem.
-5. Follow the panel entity's state (or the MQTT state topic) for anything the
-   device shows when nobody has touched it — the house can be armed from a
-   phone, and a keypad that only knows what it was told itself will be wrong
-   within a day.
+5. Follow the panel entity's state (or the MQTT state topic, or the endpoint's
+   state stream) for anything the device shows when nobody has touched it —
+   the house can be armed from a phone, and a keypad that only knows what it
+   was told itself will be wrong within a day.
 
 ---
 

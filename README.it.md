@@ -113,8 +113,9 @@ già intelligente.
   sbagliati ripetuti.
 - **Un tastierino accanto alla porta, un tag in tasca.** Tastierini Ring e Zigbee, tag
   NFC, badge RFID e telecomandi. Foyer non parla con i singoli modelli: espone
-  un contratto — i servizi `foyer.*` e MQTT nelle due direzioni, con topic
-  configurabili — e risponde in modo strutturato, così un tastierino può emettere
+  un contratto — i servizi `foyer.*`, MQTT nelle due direzioni con topic
+  configurabili, e un endpoint HTTP di Foyer con un token per ogni
+  dispositivo — e risponde in modo strutturato, così un tastierino può emettere
   due suoni diversi a «codice sbagliato» e a «non adesso, la finestra della
   cucina è aperta». Ogni riga del registro nomina la persona, il canale e il
   dispositivo.
@@ -486,9 +487,10 @@ documentazione tecnica.
 
 Foyer non parla con i singoli tastierini: espone un contratto. I modelli
 cambiano ogni sei mesi, il contratto no. Tutto ciò che sa chiamare un servizio
-di Home Assistant o pubblicare su un broker MQTT può inserire e disinserire questa
-casa. E qualunque strada prenda, il registro non scrive «disinserito»: scrive
-chi, da quale canale, con quale dispositivo.
+di Home Assistant, pubblicare su un broker MQTT o fare una richiesta HTTP
+all'endpoint di Foyer può inserire e disinserire questa casa. E qualunque
+strada prenda, il registro non scrive «disinserito»: scrive chi, da quale
+canale, con quale dispositivo.
 
 - **Un dispositivo va dichiarato prima di poter comandare qualcosa.** Lo
   aggiungi nella pagina *Dispositivi di inserimento*; un dispositivo che
@@ -512,6 +514,13 @@ chi, da quale canale, con quale dispositivo.
   broker spesso condiviso, e quello che contiene viene raccontato a chiunque si
   colleghi dopo — compreso «casa inserita, non c'è nessuno». Tre livelli, e
   alzarlo è una scelta che fai sapendo cosa costa.
+- **Sull'endpoint HTTP di Foyer**, per un dispositivo che non deve essere solo
+  un nome su un broker: ognuno ha un token suo, mostrato una volta sola. Il
+  token dice quale dispositivo sta chiedendo e non cifra niente, quindi in
+  HTTP semplice il token e i codici digitati sul dispositivo si leggono sulla
+  rete. Un dispositivo così viene servito lo stesso, ed è segnato *Non
+  cifrato* in *Dispositivi di inserimento* e in ogni riga del registro che
+  causa.
 - **Tag NFC, badge e telecomandi in modo nativo.** Un'entità `tag.*` o
   `event.*`, la persona a cui appartiene, e cosa fa una scansione: nessuna
   automazione da scrivere, e il registro nomina quella persona — che è tutto il
@@ -537,11 +546,25 @@ chi, da quale canale, con quale dispositivo.
   i blueprint fanno con Foyer funziona comunque: a essere sbagliato è solo
   quello che il tastierino ti mostra.
 
+**Dispositivi API.** Lo stesso endpoint serve un display touch nell'ingresso,
+un relè che accende una spia «inserito», o un modulo ESP32 o Arduino fatto da
+te. Ognuno legge e fa solo quello che è spuntato per lui, e ogni permesso
+parte spento. Lo stato dell'allarme può essere di lettura libera; zone, batterie,
+stato del sistema e registro, per impostazione predefinita, si leggono solo per
+poco tempo dopo che qualcuno ha digitato un codice valido sul dispositivo, e
+solo quello che quella persona può vedere. Ogni azione, inserire compreso e
+anche sui tastierini, richiede un codice digitato sul dispositivo: il token da
+solo non inserisce né disinserisce mai niente. Il contratto è scritto in
+[docs/api/openapi.yaml](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/api/openapi.yaml),
+versione v1, e un test in CI lo confronta con il codice; gli amministratori
+possono leggerlo e provarlo con il token di un dispositivo nella pagina *API*
+del pannello.
+
 Ogni blueprint si importa sul tuo Home Assistant con un pulsante, da
 [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md),
-che contiene anche il contratto completo — servizi, MQTT, cosa vale onestamente
-ogni tipo di hardware e come scrivere il proprio adattatore (in inglese, come
-tutta la documentazione tecnica).
+che contiene anche il contratto completo (servizi, MQTT, l'endpoint e i
+dispositivi API), cosa vale onestamente ogni tipo di hardware e come scrivere
+il proprio adattatore (in inglese, come tutta la documentazione tecnica).
 
 Un tastierino non deve mai essere l'unica via d'ingresso: le batterie si
 scaricano, le radio si disturbano, i broker si fermano. Tieni il pannello e la

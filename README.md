@@ -95,7 +95,8 @@ good result for the money, on a house that is already smart.
   scenario is the exception, behind *Just one area…*.
 - **A keypad by the door, a tag in your pocket.** Ring and Zigbee keypads, NFC
   tags, RFID badges and remotes arm and disarm the house through a documented
-  service contract and an optional MQTT contract in both directions. A device is
+  service contract, an optional MQTT contract in both directions, or Foyer's
+  own HTTP endpoint with a token per device. A device is
   declared before it may command anything, and the refusal it gets back is
   structured — *wrong code*, *locked out*, *blocked by the kitchen window* — so
   the hardware can say which, and the log names the person, the channel and the
@@ -439,7 +440,8 @@ what to do about it. It is information, not legal advice.
 
 Foyer does not talk to keypads. It offers a contract, because keypad models
 churn every six months and a contract does not. Anything that can call a Home
-Assistant service or publish to an MQTT broker can arm this house.
+Assistant service, publish to an MQTT broker or make an HTTP request to
+Foyer's own endpoint can arm this house.
 
 - **Natively:** NFC tags, RFID badges and remotes. Point Foyer at a `tag.*` or
   `event.*` entity, say whose it is and what a scan does. No automation in
@@ -467,6 +469,24 @@ Assistant service or publish to an MQTT broker can arm this house.
   The retained message says the *least* by default — a broker is often somebody
   else's machine, and "armed, nobody home" is told to whoever connects next.
   Three levels, and you raise it knowingly.
+- **Over Foyer's own HTTP endpoint**, for a device that should not be just a
+  name on a broker: each one holds a token of its own, shown once. The token
+  says which device is asking and encrypts nothing, so over plain HTTP it and
+  the codes typed on the device can be read on the network. Such a device is
+  still served, and marked *Unencrypted* under *Arming devices* and in every
+  log row it causes.
+
+**API devices.** The same endpoint serves a touch display in the hall, a relay
+that lights an "armed" lamp, or an ESP32 or Arduino module of your own. Each
+reads and does only what is ticked for it, every permission off to begin with.
+Reading the state of the alarm can be free; the zones, batteries, system health
+and log are read, by default, only for a short while after somebody types a
+valid code on the device, and only what that person may see. Every action,
+arming included and on keypads too, needs a code typed on the device: the token
+alone never arms or disarms anything. The contract is written down in
+[docs/api/openapi.yaml](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/api/openapi.yaml),
+as version v1, and a test in CI compares it with the code; administrators can
+read it and try it with a device's token on the panel's *API* page.
 
 **A device is declared before it may command anything.** An unknown device is
 refused whatever code it brings, and the refusal is logged and raised. This is
@@ -488,8 +508,8 @@ is only what the keypad shows you.
 
 Each one imports into your own Home Assistant with one button, in
 [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md) —
-which also holds the contract, the hardware comparison and how to write your
-own adapter.
+which also holds the contract (services, MQTT, the endpoint and API devices),
+the hardware comparison and how to write your own adapter.
 
 A keypad should never be your only way in: batteries die, radios jam, brokers
 stop. Keep the panel and the card.
