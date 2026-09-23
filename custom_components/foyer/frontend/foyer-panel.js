@@ -8269,7 +8269,7 @@ var un = 30, dn = {
 	during_exit: !1
 }, fn = class extends N {
 	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1, this._languages = [], this._alarmoDone = !1;
+		super(...e), this._problems = [], this._backupProblems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1, this._languages = [], this._alarmoDone = !1;
 	}
 	static {
 		this.properties = {
@@ -8277,6 +8277,7 @@ var un = 30, dn = {
 			_draft: { state: !0 },
 			_settings: { state: !0 },
 			_problems: { state: !0 },
+			_backupProblems: { state: !0 },
 			_busy: { state: !0 },
 			_saved: { state: !0 },
 			_restored: { state: !0 },
@@ -8287,7 +8288,7 @@ var un = 30, dn = {
 		};
 	}
 	connectedCallback() {
-		super.connectedCallback(), this.ctx?.hass.callWS({ type: "foyer/languages" }).then((e) => this._languages = e.languages).catch(() => this._languages = []);
+		super.connectedCallback(), this.ctx?.hass.callWS({ type: "foyer/languages" }).then((e) => this._languages = e.languages ?? []).catch(() => this._languages = []);
 	}
 	get _chime() {
 		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? dn);
@@ -8535,6 +8536,11 @@ var un = 30, dn = {
           </div>
           <p class="hint">${I(e, "settings.backup_hint")}</p>
           <p class="hint">${I(e, "settings.backup_version", { version: t })}</p>
+          ${this._backupProblems.length ? T`<div class="problems" role="alert">
+                <ul>
+                  ${this._backupProblems.map((t) => T`<li>${B(e, t)}</li>`)}
+                </ul>
+              </div>` : D}
           ${this._restored ? T`<div class="notice">${I(e, "settings.backup_restored")}</div>` : D}
         </div>
       </div>
@@ -8542,11 +8548,11 @@ var un = 30, dn = {
 	}
 	async _exportConfig() {
 		if (this.ctx) {
-			this._busy = !0;
+			this._busy = !0, this._backupProblems = [];
 			try {
 				let e = await this.ctx.exportConfig();
 				if (!e.success || !e.filename || !e.document) {
-					this._problems = e.problems?.length ? e.problems : [{
+					this._backupProblems = e.problems?.length ? e.problems : [{
 						code: e.reason ?? "request_failed",
 						kind: "code",
 						ref: null,
@@ -8556,7 +8562,7 @@ var un = 30, dn = {
 				}
 				We(e.filename, JSON.stringify(e.document, null, 2), "application/json");
 			} catch (e) {
-				this._problems = [{
+				this._backupProblems = [{
 					code: "request_failed",
 					kind: "config",
 					ref: null,
@@ -8574,9 +8580,9 @@ var un = 30, dn = {
 			this._busy = !0, this._restored = !1;
 			try {
 				let e = await n.text(), t = await this.ctx.importConfig(JSON.parse(e));
-				this._problems = t.problems, this._restored = t.success;
+				this._backupProblems = t.problems, this._restored = t.success;
 			} catch {
-				this._problems = [{
+				this._backupProblems = [{
 					code: "not_a_foyer_backup",
 					kind: "config",
 					ref: null,

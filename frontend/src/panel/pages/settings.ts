@@ -41,6 +41,7 @@ class FoyerPageSettings extends LitElement {
     _draft: { state: true },
     _settings: { state: true },
     _problems: { state: true },
+    _backupProblems: { state: true },
     _busy: { state: true },
     _saved: { state: true },
     _restored: { state: true },
@@ -54,6 +55,9 @@ class FoyerPageSettings extends LitElement {
   private _draft?: ChimeConfig;
   private _settings?: SettingsConfig;
   private _problems: Problem[] = [];
+  // The backup card's own: a refused download or restore is said beside the
+  // buttons that caused it, not in a card further down the page.
+  private _backupProblems: Problem[] = [];
   private _busy = false;
   private _saved = false;
   private _restored = false;
@@ -75,7 +79,7 @@ class FoyerPageSettings extends LitElement {
       .callWS<{ languages: { code: string; name: string }[] }>({
         type: "foyer/languages",
       })
-      .then((result) => (this._languages = result.languages))
+      .then((result) => (this._languages = result.languages ?? []))
       .catch(() => (this._languages = []));
   }
 
@@ -407,6 +411,13 @@ class FoyerPageSettings extends LitElement {
           </div>
           <p class="hint">${t(s, "settings.backup_hint")}</p>
           <p class="hint">${t(s, "settings.backup_version", { version })}</p>
+          ${this._backupProblems.length
+            ? html`<div class="problems" role="alert">
+                <ul>
+                  ${this._backupProblems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+                </ul>
+              </div>`
+            : nothing}
           ${this._restored
             ? html`<div class="notice">${t(s, "settings.backup_restored")}</div>`
             : nothing}
@@ -418,12 +429,13 @@ class FoyerPageSettings extends LitElement {
   private async _exportConfig(): Promise<void> {
     if (!this.ctx) return;
     this._busy = true;
+    this._backupProblems = [];
     try {
       const result = await this.ctx.exportConfig();
       if (!result.success || !result.filename || !result.document) {
         // Refused — no code given, or a wrong one: said on the page, never a
         // file with nothing in it.
-        this._problems = result.problems?.length
+        this._backupProblems = result.problems?.length
           ? result.problems
           : [{ code: result.reason ?? "request_failed", kind: "code", ref: null, field: null }];
         return;
@@ -435,7 +447,7 @@ class FoyerPageSettings extends LitElement {
       );
     } catch (err) {
       // Refused or dropped: said, rather than a button that did nothing.
-      this._problems = [
+      this._backupProblems = [
         {
           code: "request_failed",
           kind: "config",
@@ -459,12 +471,12 @@ class FoyerPageSettings extends LitElement {
     try {
       const text = await file.text();
       const result = await this.ctx.importConfig(JSON.parse(text));
-      this._problems = result.problems;
+      this._backupProblems = result.problems;
       this._restored = result.success;
     } catch {
       // A file that is not JSON at all never reaches the backend, and gets
       // the same answer the backend would give it.
-      this._problems = [
+      this._backupProblems = [
         { code: "not_a_foyer_backup", kind: "config", ref: null, field: null },
       ];
     } finally {
