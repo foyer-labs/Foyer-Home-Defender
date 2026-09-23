@@ -9,11 +9,12 @@
 // the log from "the panel disarmed at 03:14" into "Luca did"
 // about what protects the house.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../shared/i18n";
 import { formStyles } from "../shared/styles";
 import type { AreaConfig, Problem, Trigger, ZoneConfig, ZoneProposal } from "../shared/types";
-import { problemText, type PanelContext } from "./context";
+import { problemText, type PanelContext, whenNumber } from "./context";
 import { notifyTargets } from "./ha-targets";
 
 type Step = "area" | "zones" | "scenario" | "user" | "test";
@@ -73,7 +74,12 @@ class FoyerWizard extends LitElement {
     if (!this.ctx) return;
     this._busy = true;
     try {
-      await this.ctx.saveSettings({ wizard_done: true });
+      const result = await this.ctx.saveSettings({ wizard_done: true });
+      if (!result.success) {
+        // Said, rather than a wizard that stays with no explanation.
+        this._problems = result.problems;
+        return;
+      }
       this.dispatchEvent(new CustomEvent("wizard-done", { bubbles: true, composed: true }));
     } finally {
       this._busy = false;
@@ -168,9 +174,9 @@ class FoyerWizard extends LitElement {
             type="number"
             min="0"
             max="300"
-            .value=${String(area.default_exit_delay)}
+            .value=${live(String(area.default_exit_delay))}
             @change=${(e: Event) =>
-              save({ default_exit_delay: Number((e.target as HTMLInputElement).value) })}
+              whenNumber(e, (n) => save({ default_exit_delay: n }))}
           />
           <span class="hint">${t(s, "wizard.exit_hint")}</span>
         </label>
@@ -180,9 +186,9 @@ class FoyerWizard extends LitElement {
             type="number"
             min="0"
             max="300"
-            .value=${String(area.default_entry_delay)}
+            .value=${live(String(area.default_entry_delay))}
             @change=${(e: Event) =>
-              save({ default_entry_delay: Number((e.target as HTMLInputElement).value) })}
+              whenNumber(e, (n) => save({ default_entry_delay: n }))}
           />
           <span class="hint">${t(s, "wizard.entry_hint")}</span>
         </label>
@@ -233,10 +239,10 @@ class FoyerWizard extends LitElement {
           <select
             @change=${(e: Event) => this._pick((e.target as HTMLSelectElement).value)}
           >
-            <option value="" ?selected=${!this._pickedEntity}>${t(s, "wizard.pick_entity")}</option>
+            <option value="" .selected=${live(!this._pickedEntity)}>${t(s, "wizard.pick_entity")}</option>
             ${candidates.map(
               (entity) =>
-                html`<option .value=${entity.id} ?selected=${entity.id === this._pickedEntity}>
+                html`<option .value=${entity.id} .selected=${live(entity.id === this._pickedEntity)}>
                   ${entity.name}
                 </option>`,
             )}
@@ -257,7 +263,7 @@ class FoyerWizard extends LitElement {
               <label class="check">
                 <input
                   type="checkbox"
-                  .checked=${this._confirmed}
+                  .checked=${live(this._confirmed)}
                   @change=${(e: Event) =>
                     (this._confirmed = (e.target as HTMLInputElement).checked)}
                 />
@@ -282,10 +288,21 @@ class FoyerWizard extends LitElement {
     this._confirmed = false;
     this._proposal = undefined;
     if (!entityId || !this.ctx) return;
-    this._proposal = await this.ctx.hass.callWS<ZoneProposal>({
-      type: "foyer/zone/propose",
-      entity_id: entityId,
-    });
+    try {
+      const proposal = await this.ctx.hass.callWS<ZoneProposal>({
+        type: "foyer/zone/propose",
+        entity_id: entityId,
+      });
+      // Only for the entity still picked: a slow answer for an earlier pick
+      // would otherwise add that entity while the menu shows this one.
+      if (this._pickedEntity === entityId) this._proposal = proposal;
+    } catch {
+      if (this._pickedEntity === entityId) {
+        this._problems = [
+          { code: "propose_failed", kind: "zone", ref: null, field: "entity_id" },
+        ];
+      }
+    }
   }
 
   private async _addZone(): Promise<void> {
@@ -440,11 +457,6 @@ class FoyerWizard extends LitElement {
       <button class="btn primary" ?disabled=${this._busy || !ready} @click=${this._createUser}>
         ${t(s, "wizard.user_create")}
       </button>
-      ${this._problems.length
-        ? html`<ul class="problems">
-            ${this._problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
-          </ul>`
-        : nothing}
     `;
   }
 
@@ -464,10 +476,10 @@ class FoyerWizard extends LitElement {
               this._sent = false;
             }}
           >
-            <option value="" ?selected=${!this._notifyTarget}>${t(s, "wizard.pick_target")}</option>
+            <option value="" .selected=${live(!this._notifyTarget)}>${t(s, "wizard.pick_target")}</option>
             ${targets.map(
               (target) =>
-                html`<option .value=${target.id} ?selected=${target.id === this._notifyTarget}>
+                html`<option .value=${target.id} .selected=${live(target.id === this._notifyTarget)}>
                   ${target.name}
                 </option>`,
             )}

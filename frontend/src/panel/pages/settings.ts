@@ -2,6 +2,7 @@
 // the chime (§6.6), what the event log records and keeps (§10.2, §10.3), the
 // configuration backup, and the language of the messages Foyer sends out.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles } from "../../shared/styles";
@@ -15,7 +16,7 @@ import type {
   Problem,
   SettingsConfig,
 } from "../../shared/types";
-import { download, optionalNumber, problemText, type PanelContext } from "../context";
+import { download, optionalNumber, problemText, type PanelContext, whenNumber } from "../context";
 import { chimeTargets, entityTargets } from "../ha-targets";
 
 // What the switch starts at when somebody turns it on. Thirty days is the
@@ -173,11 +174,11 @@ class FoyerPageSettings extends LitElement {
         type="number"
         min=${range ? range[0] : 0}
         max=${range ? range[1] : 3600}
-        .value=${String(settings[key])}
-        @change=${(e: Event) => {
-          const value = Number((e.target as HTMLInputElement).value);
-          if (Number.isFinite(value)) void this._saveSettings({ [key]: value });
-        }}
+        .value=${live(String(settings[key]))}
+        @change=${(e: Event) =>
+          // Emptied is "not changed": Number("") is 0, which saved a delay of
+          // no seconds at all (second review).
+          whenNumber(e, (n) => void this._saveSettings({ [key]: n }))}
       />
       <span class="hint">${hint ?? t(s, "common.seconds_unit")}</span>
     </label>`;
@@ -236,7 +237,7 @@ class FoyerPageSettings extends LitElement {
                 <label class="check">
                   <input
                     type="checkbox"
-                    .checked=${on}
+                    .checked=${live(on)}
                     @change=${(e: Event) =>
                       change({
                         enabled: { [category]: (e.target as HTMLInputElement).checked },
@@ -251,13 +252,11 @@ class FoyerPageSettings extends LitElement {
                         type="number"
                         min=${min}
                         max=${max}
-                        .value=${String(log.retention_days[category] ?? 30)}
-                        @change=${(e: Event) => {
-                          const days = Number((e.target as HTMLInputElement).value);
-                          if (Number.isFinite(days)) {
-                            change({ retention_days: { [category]: days } });
-                          }
-                        }}
+                        .value=${live(String(log.retention_days[category] ?? 30))}
+                        @change=${(e: Event) =>
+                          whenNumber(e, (days) =>
+                            change({ retention_days: { [category]: days } }),
+                          )}
                       />
                       <span class="hint">${t(s, "settings.log_days")}</span>
                     </label>`
@@ -318,7 +317,7 @@ class FoyerPageSettings extends LitElement {
             <label class="check">
               <input
                 type="checkbox"
-                .checked=${on || this._confirmPseudonymise}
+                .checked=${live(on || this._confirmPseudonymise)}
                 @change=${(e: Event) => {
                   if ((e.target as HTMLInputElement).checked) {
                     this._confirmPseudonymise = true;
@@ -374,7 +373,7 @@ class FoyerPageSettings extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${log.delete_on_uninstall}
+              .checked=${live(log.delete_on_uninstall)}
               @change=${(e: Event) =>
                 change({ delete_on_uninstall: (e.target as HTMLInputElement).checked })}
             />
@@ -426,6 +425,17 @@ class FoyerPageSettings extends LitElement {
         JSON.stringify(result.document, null, 2),
         "application/json",
       );
+    } catch (err) {
+      // Refused or dropped: said, rather than a button that did nothing.
+      this._problems = [
+        {
+          code: "request_failed",
+          kind: "config",
+          ref: null,
+          field: null,
+          detail: String((err as { message?: string })?.message ?? err),
+        },
+      ];
     } finally {
       this._busy = false;
     }
@@ -619,7 +629,7 @@ class FoyerPageSettings extends LitElement {
                   language: (e.target as HTMLSelectElement).value || null,
                 })}
             >
-              <option value="" ?selected=${!settings.language}>
+              <option value="" .selected=${live(!settings.language)}>
                 ${t(s, "settings.language_system")}
               </option>
               ${settings.language &&
@@ -632,7 +642,7 @@ class FoyerPageSettings extends LitElement {
                 (language) =>
                   html`<option
                     .value=${language.code}
-                    ?selected=${language.code === settings.language}
+                    .selected=${live(language.code === settings.language)}
                   >
                     ${language.name}
                   </option>`,
@@ -668,10 +678,10 @@ class FoyerPageSettings extends LitElement {
               [key]: (e.target as HTMLSelectElement).value || null,
             })}
         >
-          <option value="" ?selected=${!settings[key]}>${t(s, "settings.none")}</option>
+          <option value="" .selected=${live(!settings[key])}>${t(s, "settings.none")}</option>
           ${profiles.map(
             (profile) =>
-              html`<option .value=${profile.id ?? ""} ?selected=${profile.id === settings[key]}>
+              html`<option .value=${profile.id ?? ""} .selected=${live(profile.id === settings[key])}>
                 ${profile.name}
               </option>`,
           )}
@@ -705,7 +715,7 @@ class FoyerPageSettings extends LitElement {
                 html`<label class="check">
                   <input
                     type="checkbox"
-                    .checked=${settings.silent_suppresses.includes(kind)}
+                    .checked=${live(settings.silent_suppresses.includes(kind))}
                     @change=${(e: Event) => {
                       const on = (e.target as HTMLInputElement).checked;
                       const next = on
@@ -768,7 +778,7 @@ class FoyerPageSettings extends LitElement {
               >
                 ${(["sound", "speech"] as const).map(
                   (mode) =>
-                    html`<option .value=${mode} ?selected=${mode === chime.mode}>
+                    html`<option .value=${mode} .selected=${live(mode === chime.mode)}>
                       ${t(s, `chime_mode.${mode}`)}
                     </option>`,
                 )}
@@ -782,12 +792,12 @@ class FoyerPageSettings extends LitElement {
                       @change=${(e: Event) =>
                         this._set("tts_entity", (e.target as HTMLSelectElement).value || null)}
                     >
-                      <option value="" ?selected=${!chime.tts_entity}>
+                      <option value="" .selected=${live(!chime.tts_entity)}>
                         ${t(s, "settings.pick_tts")}
                       </option>
                       ${tts.map(
                         (e) =>
-                          html`<option .value=${e.id} ?selected=${e.id === chime.tts_entity}>
+                          html`<option .value=${e.id} .selected=${live(e.id === chime.tts_entity)}>
                             ${e.name}
                           </option>`,
                       )}
@@ -829,7 +839,7 @@ class FoyerPageSettings extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${chime.during_exit}
+              .checked=${live(chime.during_exit)}
               @change=${(e: Event) =>
                 this._set("during_exit", (e.target as HTMLInputElement).checked)}
             />
@@ -881,7 +891,7 @@ class FoyerPageSettings extends LitElement {
       <label class="check">
         <input
           type="checkbox"
-          .checked=${Boolean(target)}
+          .checked=${live(Boolean(target))}
           @change=${(ev: Event) =>
             this._toggleTarget(entity.id, (ev.target as HTMLInputElement).checked)}
         />

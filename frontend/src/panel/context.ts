@@ -88,7 +88,7 @@ export interface PanelContext {
   /** The event log (§10): read, export exactly what the filters show, empty. */
   queryLog(query: LogQuery): Promise<LogPage>;
   exportLog(query: LogQuery, format: "csv" | "json"): Promise<LogExport>;
-  clearLog(): Promise<{ success: boolean; removed: number }>;
+  clearLog(): Promise<{ success: boolean; removed: number; reason?: string | null }>;
   /** Personal data in the log (§10.4). The preview says what an erasure would
    * touch before anybody presses the button; the export is one person's rows
    * for a subject access request; the erasure takes them out of the log and
@@ -157,6 +157,25 @@ export function problemText(s: Strings, problem: Problem): string {
 }
 
 /** "" becomes null: an empty number field means "inherit" or "off". */
+/** Enter or Space on a focused clickable row opens it, as a click does.
+ * Every list opened its editor on a mouse click only, so nobody using a
+ * keyboard could open an item at all (second review). */
+export function activateOnKey(e: KeyboardEvent): void {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  if (e.target !== e.currentTarget) return;
+  e.preventDefault();
+  (e.currentTarget as HTMLElement).click();
+}
+
+/** Apply a number the field holds, and nothing while it is empty. A field
+ * that wrote its default back the moment it was cleared turned "3" cleared
+ * and "5" typed into "15" — and a delay cleared into 0 seconds. Empty now
+ * means "not changed", and the draft keeps what it had. */
+export function whenNumber(e: Event, apply: (n: number) => void): void {
+  const n = optionalNumber((e.target as HTMLInputElement).value);
+  if (n !== null) apply(n);
+}
+
 export function optionalNumber(value: string): number | null {
   const trimmed = value.trim();
   if (trimmed === "") return null;

@@ -417,12 +417,16 @@ class FoyerPanel extends LitElement {
         hass.callWS({ type: "foyer/log/query", ...prune(query) }),
       exportLog: (query, format) =>
         hass.callWS({ type: "foyer/log/export", format, ...prune(query) }),
-      clearLog: async () => {
-        const result = await hass.callWS<{ success: boolean; removed: number }>({
-          type: "foyer/log/clear",
-        });
-        return result;
-      },
+      // Through the code prompt like every other configuration edit: sent
+      // without one, a policy that asks for it refused the clear, and the
+      // page said nothing (second review).
+      clearLog: () =>
+        this._coded((code) =>
+          hass.callWS<{ success: boolean; removed: number; reason?: string | null }>({
+            type: "foyer/log/clear",
+            ...withCode(code),
+          }),
+        ),
       previewPerson: (userId) =>
         hass.callWS({ type: "foyer/privacy/preview", user_id: userId }),
       exportPerson: (userId, format) =>
@@ -475,8 +479,20 @@ class FoyerPanel extends LitElement {
             ...withCode(code),
           }),
         ),
-      saveUser: (user, codes) =>
-        this._edit("user", { type: "foyer/user/save", user, ...codes }),
+      saveUser: async (user, codes) => {
+        const result = await this._edit("user", {
+          type: "foyer/user/save",
+          user,
+          ...codes,
+        });
+        // Whoever changed their own code has made the one this panel holds
+        // stale: sent again, it would be a wrong code and one step towards
+        // their own lockout (second review). Asked for afresh next time.
+        if (result.success && codes.new_code && user.ha_user_id === hass.user?.id) {
+          this._code = undefined;
+        }
+        return result;
+      },
       saveSecurity: (code_policy, security) =>
         this._edit("settings", {
           type: "foyer/config/security",

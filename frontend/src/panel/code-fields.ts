@@ -7,6 +7,7 @@
 // somebody setting "no code" on a scenario needs to know an area can still
 // ask for one.
 import { html, nothing, type TemplateResult } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../shared/i18n";
 
@@ -26,9 +27,9 @@ function field(
         onChange(chosen === "" ? null : chosen === "yes");
       }}
     >
-      <option value="" ?selected=${value === null}>${t(s, "code_policy.inherit")}</option>
-      <option value="yes" ?selected=${value === true}>${t(s, "code_policy.required")}</option>
-      <option value="no" ?selected=${value === false}>${t(s, "code_policy.not_required")}</option>
+      <option value="" .selected=${live(value === null)}>${t(s, "code_policy.inherit")}</option>
+      <option value="yes" .selected=${live(value === true)}>${t(s, "code_policy.required")}</option>
+      <option value="no" .selected=${live(value === false)}>${t(s, "code_policy.not_required")}</option>
     </select>
   </label>`;
 }

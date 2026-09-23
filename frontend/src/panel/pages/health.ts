@@ -9,6 +9,7 @@
 // panel working out for itself whether a radio is being jammed is a panel
 // that can disagree with the engine that decides it.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
@@ -19,7 +20,7 @@ import type {
   RadioCandidate,
   RadioConfig,
 } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import { problemText, type PanelContext, whenNumber } from "../context";
 
 /** A timestamp as the rest of the panel writes one. An absent one is a dash
  * rather than an empty cell: "nothing has happened yet" is an answer. */
@@ -156,18 +157,22 @@ class FoyerPageHealth extends LitElement {
     const ctx = this.ctx;
     if (!ctx?.config) return nothing;
     const s = ctx.strings;
-    if (this._error) {
+    // One failed poll no longer replaces the page — and an open editor with
+    // it — with the error: the last answer stays, and the error says it is
+    // not fresh (second review).
+    const status = this._status;
+    if (this._error && !status) {
       return html`<div class="card">
         <div class="card-bd"><div class="empty">${this._error}</div></div>
       </div>`;
     }
-    const status = this._status;
     if (!status) {
       return html`<div class="card">
         <div class="card-bd"><div class="empty">${t(s, "common.loading")}</div></div>
       </div>`;
     }
     return html`
+      ${this._error ? html`<div class="problems" role="alert">${this._error}</div>` : nothing}
       ${this._renderTiles(s, status)} ${this._renderChannels(s, status)}
       ${this._renderRadios(s, status)} ${this._renderFaults(s, status)}
       ${this._renderDiagnostics(s)}
@@ -474,7 +479,7 @@ class FoyerPageHealth extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.watchdog.enabled}
+              .checked=${live(draft.watchdog.enabled)}
               @change=${(e: Event) =>
                 this._setWatchdog("enabled", (e.target as HTMLInputElement).checked)}
             />
@@ -499,10 +504,7 @@ class FoyerPageHealth extends LitElement {
                 max=${maxInterval}
                 .value=${String(draft.watchdog.interval)}
                 @input=${(e: Event) =>
-                  this._setWatchdog(
-                    "interval",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 900,
-                  )}
+                  whenNumber(e, (n) => this._setWatchdog("interval", n))}
               />
               <span class="hint">${t(s, "health.interval_hint")}</span>
             </label>
@@ -514,10 +516,7 @@ class FoyerPageHealth extends LitElement {
                 max=${maxTimeout}
                 .value=${String(draft.watchdog.timeout)}
                 @input=${(e: Event) =>
-                  this._setWatchdog(
-                    "timeout",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 30,
-                  )}
+                  whenNumber(e, (n) => this._setWatchdog("timeout", n))}
               />
             </label>
             <label class="field">
@@ -528,10 +527,7 @@ class FoyerPageHealth extends LitElement {
                 max=${maxFailures}
                 .value=${String(draft.watchdog.failures)}
                 @input=${(e: Event) =>
-                  this._setWatchdog(
-                    "failures",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 3,
-                  )}
+                  whenNumber(e, (n) => this._setWatchdog("failures", n))}
               />
               <span class="hint">${t(s, "health.failures_hint")}</span>
             </label>
@@ -539,7 +535,7 @@ class FoyerPageHealth extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.watchdog.payload}
+              .checked=${live(draft.watchdog.payload)}
               @change=${(e: Event) =>
                 this._setWatchdog("payload", (e.target as HTMLInputElement).checked)}
             />
@@ -568,7 +564,7 @@ class FoyerPageHealth extends LitElement {
                 max=${maxZones}
                 .value=${String(draft.rf_zones)}
                 @input=${(e: Event) =>
-                  this._set("rf_zones", optionalNumber((e.target as HTMLInputElement).value) ?? 4)}
+                  whenNumber(e, (n) => this._set("rf_zones", n))}
               />
               <span class="hint">${t(s, "health.rf_zones_hint")}</span>
             </label>
@@ -580,7 +576,7 @@ class FoyerPageHealth extends LitElement {
                 max=${maxWindow}
                 .value=${String(draft.rf_window)}
                 @input=${(e: Event) =>
-                  this._set("rf_window", optionalNumber((e.target as HTMLInputElement).value) ?? 60)}
+                  whenNumber(e, (n) => this._set("rf_window", n))}
               />
             </label>
             <label class="field">
@@ -591,10 +587,7 @@ class FoyerPageHealth extends LitElement {
                 max=${maxConfirm}
                 .value=${String(draft.rf_confirm)}
                 @input=${(e: Event) =>
-                  this._set(
-                    "rf_confirm",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 60,
-                  )}
+                  whenNumber(e, (n) => this._set("rf_confirm", n))}
               />
               <span class="hint">${t(s, "health.rf_confirm_hint")}</span>
             </label>
@@ -643,11 +636,11 @@ class FoyerPageHealth extends LitElement {
               });
             }}
           >
-            <option .value=${""} ?selected=${!radio.entry_id}>—</option>
+            <option .value=${""} .selected=${live(!radio.entry_id)}>—</option>
             ${this._candidates.map(
               (candidate) => html`<option
                 .value=${candidate.entry_id}
-                ?selected=${candidate.entry_id === radio.entry_id}
+                .selected=${live(candidate.entry_id === radio.entry_id)}
               >
                 ${t(s, "health.candidate", {
                   title: candidate.title,
@@ -675,7 +668,7 @@ class FoyerPageHealth extends LitElement {
         <label class="check">
           <input
             type="checkbox"
-            .checked=${radio.enabled}
+            .checked=${live(radio.enabled)}
             @change=${(e: Event) =>
               this._setRadio(index, { enabled: (e.target as HTMLInputElement).checked })}
           />

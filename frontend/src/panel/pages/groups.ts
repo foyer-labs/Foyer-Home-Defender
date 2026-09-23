@@ -2,11 +2,12 @@
 // window. Cross-zone pairs set on a zone appear here as 2-of-2 groups, marked
 // "from zone field" and edited on the zone: one engine, two ways to configure.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { GroupConfig, Problem, ZoneConfig } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import { problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
 import { profileField } from "../profile-picker";
 
 interface Row {
@@ -28,6 +29,9 @@ class FoyerPageGroups extends LitElement {
   private _busy = false;
 
   private _edit(group?: GroupConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     const areaId = this.ctx?.config?.areas[0]?.id ?? "";
     this._draft = group
       ? structuredClone(group)
@@ -129,6 +133,8 @@ class FoyerPageGroups extends LitElement {
                   ${rows.map(
                     ({ group, derived }) => html`<tr
                       class=${derived ? "" : "clickable"}
+ tabindex=${derived ? "-1" : "0"}
+ @keydown=${activateOnKey}
                       aria-selected=${this._draft?.id === group.id ? "true" : "false"}
                       @click=${() => (derived ? undefined : this._edit(group))}
                     >
@@ -209,7 +215,7 @@ class FoyerPageGroups extends LitElement {
               >
                 ${(ctx.config?.areas ?? []).map(
                   (a) =>
-                    html`<option .value=${a.id ?? ""} ?selected=${a.id === draft.area_id}>
+                    html`<option .value=${a.id ?? ""} .selected=${live(a.id === draft.area_id)}>
                       ${a.name}
                     </option>`,
                 )}
@@ -224,7 +230,7 @@ class FoyerPageGroups extends LitElement {
                 max=${Math.max(2, draft.members.length)}
                 .value=${String(draft.n)}
                 @input=${(e: Event) =>
-                  this._set("n", optionalNumber((e.target as HTMLInputElement).value) ?? 2)}
+                  whenNumber(e, (n) => this._set("n", n))}
               />
               <span class="hint">
                 ${t(s, "groups.threshold", { n: draft.n, m: draft.members.length })}
@@ -238,10 +244,7 @@ class FoyerPageGroups extends LitElement {
                 max=${high}
                 .value=${String(draft.window_seconds)}
                 @input=${(e: Event) =>
-                  this._set(
-                    "window_seconds",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 60,
-                  )}
+                  whenNumber(e, (n) => this._set("window_seconds", n))}
               />
               <span class="hint">${t(s, "groups.window_hint")}</span>
             </label>
@@ -259,7 +262,7 @@ class FoyerPageGroups extends LitElement {
                   (zone) => html`<label class="check">
                     <input
                       type="checkbox"
-                      .checked=${draft.members.includes(zone.id ?? "")}
+                      .checked=${live(draft.members.includes(zone.id ?? ""))}
                       @change=${(e: Event) =>
                         toggle(zone.id ?? "", (e.target as HTMLInputElement).checked)}
                     />
@@ -277,7 +280,7 @@ class FoyerPageGroups extends LitElement {
           <label class="check suppress">
             <input
               type="checkbox"
-              .checked=${draft.suppress_members}
+              .checked=${live(draft.suppress_members)}
               @change=${(e: Event) =>
                 this._set("suppress_members", (e.target as HTMLInputElement).checked)}
             />

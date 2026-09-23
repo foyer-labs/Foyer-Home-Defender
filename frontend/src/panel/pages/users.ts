@@ -7,6 +7,7 @@
 // in the backend, which is the whole of INV-2 — a check in this file would be
 // decoration, since anyone with Home Assistant access can call the service.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
@@ -16,7 +17,7 @@ import type {
   SecurityConfig,
   UserConfig,
 } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import { problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
 
 interface Draft extends UserConfig {
   /** Typed here, sent once, never read back. */
@@ -59,6 +60,7 @@ class FoyerPageUsers extends LitElement {
     ctx: { attribute: false },
     _draft: { state: true },
     _problems: { state: true },
+    _policyProblems: { state: true },
     _busy: { state: true },
     _policy: { state: true },
   };
@@ -66,10 +68,14 @@ class FoyerPageUsers extends LitElement {
   ctx?: PanelContext;
   private _draft?: Draft;
   private _problems: Problem[] = [];
+  private _policyProblems: Problem[] = [];
   private _busy = false;
   private _policy?: { code_policy: CodePolicyConfig; security: SecurityConfig };
 
   private _edit(user?: UserConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     this._draft = user ? { ...structuredClone(user) } : structuredClone(EMPTY);
     this._problems = [];
   }
@@ -131,7 +137,10 @@ class FoyerPageUsers extends LitElement {
         this._policy.code_policy,
         this._policy.security,
       );
-      this._problems = result.problems;
+      // Shown in the policy card, where the save was made: under a person
+      // being edited, or nowhere at all when nobody was, a refused policy
+      // looked like a save that did nothing (second review).
+      this._policyProblems = result.problems;
       if (result.success) this._policy = undefined;
     } finally {
       this._busy = false;
@@ -192,6 +201,8 @@ class FoyerPageUsers extends LitElement {
         : user.allowed_area_ids.map((id) => areas.get(id) ?? id).join(", ");
     return html`<tr
       class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
       aria-selected=${this._draft?.id === user.id ? "true" : "false"}
       @click=${() => this._edit(user)}
     >
@@ -239,6 +250,7 @@ class FoyerPageUsers extends LitElement {
                 autocomplete="off"
                 maxlength=${length}
                 placeholder=${draft.has_code ? t(s, "users.code_unchanged") : t(s, "users.code_digits", { n: length })}
+                .value=${live(draft.new_code ?? "")}
                 @input=${(e: Event) =>
                   this._set("new_code", (e.target as HTMLInputElement).value)}
               />
@@ -254,6 +266,7 @@ class FoyerPageUsers extends LitElement {
                 placeholder=${draft.has_duress_code
                   ? t(s, "users.code_unchanged")
                   : t(s, "users.code_optional")}
+                .value=${live(draft.new_duress_code ?? "")}
                 @input=${(e: Event) =>
                   this._set("new_duress_code", (e.target as HTMLInputElement).value)}
               />
@@ -265,9 +278,9 @@ class FoyerPageUsers extends LitElement {
                 @change=${(e: Event) =>
                   this._set("ha_user_id", (e.target as HTMLSelectElement).value || null)}
               >
-                <option value="" ?selected=${!draft.ha_user_id}>${t(s, "users.not_linked")}</option>
+                <option value="" .selected=${live(!draft.ha_user_id)}>${t(s, "users.not_linked")}</option>
                 ${haUsers.map(
-                  (u) => html`<option .value=${u.id} ?selected=${u.id === draft.ha_user_id}>
+                  (u) => html`<option .value=${u.id} .selected=${live(u.id === draft.ha_user_id)}>
                     ${u.name}
                   </option>`,
                 )}
@@ -302,7 +315,7 @@ class FoyerPageUsers extends LitElement {
               (permission) => html`<label class="chip">
                 <input
                   type="checkbox"
-                  .checked=${draft.permissions.includes(permission)}
+                  .checked=${live(draft.permissions.includes(permission))}
                   @change=${(e: Event) =>
                     this._togglePermission(
                       permission,
@@ -337,7 +350,7 @@ class FoyerPageUsers extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.code_exempt_when_identified}
+              .checked=${live(draft.code_exempt_when_identified)}
               @change=${(e: Event) =>
                 this._set(
                   "code_exempt_when_identified",
@@ -353,7 +366,7 @@ class FoyerPageUsers extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.enabled}
+              .checked=${live(draft.enabled)}
               @change=${(e: Event) =>
                 this._set("enabled", (e.target as HTMLInputElement).checked)}
             />
@@ -404,7 +417,7 @@ class FoyerPageUsers extends LitElement {
       <label class="chip">
         <input
           type="checkbox"
-          .checked=${current === null}
+          .checked=${live(current === null)}
           @change=${(e: Event) =>
             this._set(key, (e.target as HTMLInputElement).checked ? null : [])}
         />
@@ -417,7 +430,7 @@ class FoyerPageUsers extends LitElement {
               (option) => html`<label class="chip">
                 <input
                   type="checkbox"
-                  .checked=${current.includes(option.id)}
+                  .checked=${live(current.includes(option.id))}
                   @change=${(e: Event) =>
                     toggle(option.id, (e.target as HTMLInputElement).checked)}
                 />
@@ -470,7 +483,8 @@ class FoyerPageUsers extends LitElement {
                     <td>
                       <input
                         type="checkbox"
-                        .checked=${Boolean(draft.code_policy[operation])}
+                        aria-label=${t(s, `operation.${operation}`)}
+                        .checked=${live(Boolean(draft.code_policy[operation]))}
                         @change=${(e: Event) =>
                           setPolicy(operation, (e.target as HTMLInputElement).checked)}
                       />
@@ -491,10 +505,7 @@ class FoyerPageUsers extends LitElement {
                 max=${highLength}
                 .value=${String(draft.security.code_length)}
                 @input=${(e: Event) =>
-                  setSecurity(
-                    "code_length",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 6,
-                  )}
+                  whenNumber(e, (n) => setSecurity("code_length", n))}
               />
               <span class="hint">${t(s, "users.code_length_hint")}</span>
             </label>
@@ -506,10 +517,7 @@ class FoyerPageUsers extends LitElement {
                 max=${highFailures}
                 .value=${String(draft.security.lockout_failures)}
                 @input=${(e: Event) =>
-                  setSecurity(
-                    "lockout_failures",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 5,
-                  )}
+                  whenNumber(e, (n) => setSecurity("lockout_failures", n))}
               />
             </label>
             <label class="field">
@@ -520,10 +528,7 @@ class FoyerPageUsers extends LitElement {
                 max=${highSeconds}
                 .value=${String(draft.security.lockout_window)}
                 @input=${(e: Event) =>
-                  setSecurity(
-                    "lockout_window",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 300,
-                  )}
+                  whenNumber(e, (n) => setSecurity("lockout_window", n))}
               />
             </label>
             <label class="field">
@@ -534,14 +539,16 @@ class FoyerPageUsers extends LitElement {
                 max=${highSeconds}
                 .value=${String(draft.security.lockout_duration)}
                 @input=${(e: Event) =>
-                  setSecurity(
-                    "lockout_duration",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 300,
-                  )}
+                  whenNumber(e, (n) => setSecurity("lockout_duration", n))}
               />
               <span class="hint">${t(s, "users.lockout_hint")}</span>
             </label>
           </div>
+          ${this._policyProblems.length
+            ? html`<ul class="problems">
+                ${this._policyProblems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+              </ul>`
+            : nothing}
         </div>
         <div class="card-ft">
           <button

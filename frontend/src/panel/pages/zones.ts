@@ -4,6 +4,7 @@
 // state, and must be confirmed against the real sensor before it can be
 // saved. The backend enforces the confirmation too; this page only asks.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
@@ -15,7 +16,7 @@ import type {
   ZoneConfig,
   ZoneProposal,
 } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import { optionalNumber, problemText, type PanelContext, activateOnKey } from "../context";
 import { batteryTargets, entityTargets } from "../ha-targets";
 import { profileField } from "../profile-picker";
 
@@ -89,6 +90,9 @@ class FoyerPageZones extends LitElement {
   // --- editing -------------------------------------------------------------------
 
   private _edit(zone?: ZoneConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     const areaId = this.ctx?.config?.areas[0]?.id ?? "";
     this._draft = zone ? structuredClone(zone) : blankZone(areaId);
     this._saved = zone;
@@ -121,6 +125,10 @@ class FoyerPageZones extends LitElement {
   private async _propose(entityId: string, apply: boolean): Promise<void> {
     const ctx = this.ctx;
     if (!ctx || !entityId) return;
+    // The editor this was asked for: an answer arriving after another zone
+    // was opened belongs to nobody, and written into that zone it replaced
+    // its entity and its trigger (second review).
+    const asked = this._draft;
     let proposal: ZoneProposal;
     try {
       proposal = await ctx.hass.callWS<ZoneProposal>({
@@ -131,11 +139,13 @@ class FoyerPageZones extends LitElement {
       // Refused, or the integration is mid-reload. Said out loud: unhandled,
       // picking an entity simply did nothing and the draft kept the old one
       // (found in review).
+      if (this._draft !== asked) return;
       this._problems = [
         { code: "propose_failed", kind: "zone", ref: null, field: "entity_id" },
       ];
       return;
     }
+    if (this._draft !== asked) return;
     this._proposal = proposal;
     if (!apply || !this._draft) return;
     // A proposal is a starting point, never a decision (INV-5).
@@ -238,6 +248,8 @@ class FoyerPageZones extends LitElement {
               ${ctx.config.zones.map(
                 (zone) => html`<tr
                   class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
                   aria-selected=${this._draft?.id === zone.id ? "true" : "false"}
                   @click=${() => this._edit(zone)}
                 >
@@ -368,11 +380,11 @@ class FoyerPageZones extends LitElement {
           <select
             @change=${(e: Event) => this._propose((e.target as HTMLSelectElement).value, true)}
           >
-            <option value="" ?selected=${!draft.entity_id}>${t(s, "zones.pick_entity")}</option>
+            <option value="" .selected=${live(!draft.entity_id)}>${t(s, "zones.pick_entity")}</option>
             ${candidates.map(
               (e) => html`<option
                 .value=${e.entity_id}
-                ?selected=${e.entity_id === draft.entity_id}
+                .selected=${live(e.entity_id === draft.entity_id)}
               >
                 ${t(s, used.has(e.entity_id) ? "zones.entity_used" : "zones.entity", {
                   name: String(e.attributes.friendly_name ?? e.entity_id),
@@ -421,10 +433,10 @@ class FoyerPageZones extends LitElement {
                     );
                   }}
                 >
-                  <option value="state" ?selected=${trigger.kind === "state"}>
+                  <option value="state" .selected=${live(trigger.kind === "state")}>
                     ${t(s, "zones.kind_state")}
                   </option>
-                  <option value="numeric" ?selected=${trigger.kind === "numeric"}>
+                  <option value="numeric" .selected=${live(trigger.kind === "numeric")}>
                     ${t(s, "zones.kind_numeric")}
                   </option>
                 </select>
@@ -438,7 +450,7 @@ class FoyerPageZones extends LitElement {
         <label class="check confirm">
           <input
             type="checkbox"
-            .checked=${this._confirmed || !this._confirmable()}
+            .checked=${live(this._confirmed || !this._confirmable())}
             ?disabled=${!this._confirmable()}
             @change=${(e: Event) => (this._confirmed = (e.target as HTMLInputElement).checked)}
           />
@@ -464,7 +476,7 @@ class FoyerPageZones extends LitElement {
           (state) => html`<label class="check">
             <input
               type="checkbox"
-              .checked=${states.includes(state)}
+              .checked=${live(states.includes(state))}
               @change=${(e: Event) => toggle(state, (e.target as HTMLInputElement).checked)}
             />
             <span class="mono">${state}</span>
@@ -508,7 +520,7 @@ class FoyerPageZones extends LitElement {
           >
             ${(["gt", "lt", "eq"] as const).map(
               (op) =>
-                html`<option .value=${op} ?selected=${op === trigger.operator}>
+                html`<option .value=${op} .selected=${live(op === trigger.operator)}>
                   ${t(s, `operator.${op}`)}
                 </option>`,
             )}
@@ -566,10 +578,10 @@ class FoyerPageZones extends LitElement {
               event_type: (e.target as HTMLSelectElement).value || null,
             })}
         >
-          <option value="" ?selected=${!eventType}>${t(s, "zones.pick_event")}</option>
+          <option value="" .selected=${live(!eventType)}>${t(s, "zones.pick_event")}</option>
           ${(this._proposal?.options ?? []).map(
             (type) =>
-              html`<option .value=${type} ?selected=${type === eventType}>${type}</option>`,
+              html`<option .value=${type} .selected=${live(type === eventType)}>${type}</option>`,
           )}
         </select>
         <span class="hint">${t(s, "zones.event_hint")}</span>
@@ -586,7 +598,7 @@ class FoyerPageZones extends LitElement {
       <label class="check">
         <input
           type="checkbox"
-          .checked=${Boolean(draft[key])}
+          .checked=${live(Boolean(draft[key]))}
           @change=${(e: Event) => {
             const on = (e.target as HTMLInputElement).checked;
             this._set(key, on as never);
@@ -620,7 +632,7 @@ class FoyerPageZones extends LitElement {
               ${(meta?.zone_types ?? []).map(
                 (zt) => html`<option
                   .value=${zt.type}
-                  ?selected=${zt.type === draft.type}
+                  .selected=${live(zt.type === draft.type)}
                   ?disabled=${!zt.available}
                 >
                   ${t(s, zt.available ? `zone_type.${zt.type}` : "zones.type_unavailable", {
@@ -638,7 +650,7 @@ class FoyerPageZones extends LitElement {
             >
               ${(ctx.config?.areas ?? []).map(
                 (a) =>
-                  html`<option .value=${a.id ?? ""} ?selected=${a.id === draft.area_id}>
+                  html`<option .value=${a.id ?? ""} .selected=${live(a.id === draft.area_id)}>
                     ${a.name}
                   </option>`,
               )}
@@ -662,12 +674,18 @@ class FoyerPageZones extends LitElement {
                       : null,
                   // The technical channel is live whatever the areas do (§5.5).
                   ...(channel === "technical" ? { always_on: true, entry_mode: "instant" } : {}),
+                  // A key commands and never alarms, so it is never always on;
+                  // and only a follower follows. Both fields are hidden once
+                  // the channel changes, and kept they were refused by the
+                  // backend on a field nobody could see (second review).
+                  ...(channel === "key" ? { always_on: false } : {}),
+                  ...(channel !== "intrusion" ? { follows: [] } : {}),
                 });
               }}
             >
               ${(["intrusion", "key", "technical"] as const).map(
                 (channel) =>
-                  html`<option .value=${channel} ?selected=${channel === draft.channel}>
+                  html`<option .value=${channel} .selected=${live(channel === draft.channel)}>
                     ${t(s, `channel.${channel}`)}
                   </option>`,
               )}
@@ -688,7 +706,7 @@ class FoyerPageZones extends LitElement {
                   >
                     ${(["instant", "delayed", "follower"] as const).map(
                       (mode) =>
-                        html`<option .value=${mode} ?selected=${mode === draft.entry_mode}>
+                        html`<option .value=${mode} .selected=${live(mode === draft.entry_mode)}>
                           ${t(s, `entry_mode.${mode}`)}
                         </option>`,
                     )}
@@ -721,7 +739,7 @@ class FoyerPageZones extends LitElement {
                   >
                     ${(["intrusion", "tamper", "panic"] as const).map(
                       (kind) =>
-                        html`<option .value=${kind} ?selected=${kind === draft.alarm_kind}>
+                        html`<option .value=${kind} .selected=${live(kind === draft.alarm_kind)}>
                           ${t(s, `alarm_kind.${kind}`)}
                         </option>`,
                     )}
@@ -739,7 +757,7 @@ class FoyerPageZones extends LitElement {
                   >
                     ${(["block", "auto_bypass", "arm_after_closing", "ignore"] as const).map(
                       (policy) =>
-                        html`<option .value=${policy} ?selected=${policy === draft.arm_policy}>
+                        html`<option .value=${policy} .selected=${live(policy === draft.arm_policy)}>
                           ${t(s, `arm_policy.${policy}`)}
                         </option>`,
                     )}
@@ -792,13 +810,13 @@ class FoyerPageZones extends LitElement {
                   (e.target as HTMLSelectElement).value || null,
                 )}
             >
-              <option value="" ?selected=${!draft.battery_entity_id}>
+              <option value="" .selected=${live(!draft.battery_entity_id)}>
                 ${t(s, "zones.no_battery")}
               </option>
               ${batteryTargets(ctx.hass).map(
                 (target) => html`<option
                   .value=${target.id}
-                  ?selected=${target.id === draft.battery_entity_id}
+                  .selected=${live(target.id === draft.battery_entity_id)}
                 >
                   ${target.name}
                 </option>`,
@@ -943,11 +961,11 @@ class FoyerPageZones extends LitElement {
                   @change=${(e: Event) =>
                     this._set("cross_zone_id", (e.target as HTMLSelectElement).value || null)}
                 >
-                  <option value="" ?selected=${!draft.cross_zone_id}>
+                  <option value="" .selected=${live(!draft.cross_zone_id)}>
                     ${t(s, "zones.no_cross_zone")}
                   </option>
                   ${partners.map(
-                    (z) => html`<option .value=${z.id ?? ""} ?selected=${z.id === draft.cross_zone_id}>
+                    (z) => html`<option .value=${z.id ?? ""} .selected=${live(z.id === draft.cross_zone_id)}>
                       ${t(s, "zones.entity", {
                         name: z.name,
                         entity: areas.get(z.area_id) ?? z.area_id,
@@ -1019,7 +1037,7 @@ class FoyerPageZones extends LitElement {
               (zone) => html`<label class="check">
                 <input
                   type="checkbox"
-                  .checked=${draft.follows.includes(zone.id ?? "")}
+                  .checked=${live(draft.follows.includes(zone.id ?? ""))}
                   @change=${(e: Event) =>
                     toggle(zone.id ?? "", (e.target as HTMLInputElement).checked)}
                 />
@@ -1059,7 +1077,7 @@ class FoyerPageZones extends LitElement {
             >
               ${(["arm", "disarm", "toggle"] as const).map(
                 (cmd) =>
-                  html`<option .value=${cmd} ?selected=${cmd === key.on_activate}>
+                  html`<option .value=${cmd} .selected=${live(cmd === key.on_activate)}>
                     ${t(s, `key_command.${cmd}`)}
                   </option>`,
               )}
@@ -1073,12 +1091,12 @@ class FoyerPageZones extends LitElement {
                   @change=${(e: Event) =>
                     update({ scenario_id: (e.target as HTMLSelectElement).value || null })}
                 >
-                  <option value="" ?selected=${!key.scenario_id}>
+                  <option value="" .selected=${live(!key.scenario_id)}>
                     ${t(s, "zones.pick_scenario")}
                   </option>
                   ${scenarios.map(
                     (sc) =>
-                      html`<option .value=${sc.id ?? ""} ?selected=${sc.id === key.scenario_id}>
+                      html`<option .value=${sc.id ?? ""} .selected=${live(sc.id === key.scenario_id)}>
                         ${sc.name}
                       </option>`,
                   )}
@@ -1095,7 +1113,7 @@ class FoyerPageZones extends LitElement {
             >
               ${(["none", "disarm"] as const).map(
                 (cmd) =>
-                  html`<option .value=${cmd} ?selected=${cmd === key.on_deactivate}>
+                  html`<option .value=${cmd} .selected=${live(cmd === key.on_deactivate)}>
                     ${t(s, `key_release.${cmd}`)}
                   </option>`,
               )}
@@ -1155,7 +1173,7 @@ class FoyerPageZones extends LitElement {
       }
       .checks {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
         gap: 0 16px;
         margin-top: 12px;
       }

@@ -4,6 +4,18 @@
 // so both format the same countdown; a second copy of this would be a banner
 // that disagreed with itself between a dashboard and the panel.
 
+/** Formatting options that put a time in the house's own time zone. The
+ * backend reads a filter or a simulated start in that zone; shown in the
+ * browser's, a log filtered from 22:00 listed rows starting at 23:00 for
+ * somebody looking in from abroad (second review). */
+export function inHouseZone(
+  hass: { config?: { time_zone?: string } } | undefined,
+  options: Intl.DateTimeFormatOptions = {},
+): Intl.DateTimeFormatOptions {
+  const timeZone = hass?.config?.time_zone;
+  return timeZone ? { ...options, timeZone } : options;
+}
+
 /** m:ss, for a countdown measured in minutes rather than in seconds. */
 export function mmss(seconds: number): string {
   const whole = Math.max(0, Math.round(seconds));

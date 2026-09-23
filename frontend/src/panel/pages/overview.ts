@@ -101,7 +101,16 @@ class FoyerPageOverview extends LitElement {
     if (!ctx) return;
     this._busy = true;
     try {
-      for (const zone of zones) await ctx.bypass(zone.id, true);
+      // Every answer read: a zone that may not be excluded, or a code prompt
+      // somebody cancelled, left the warning gone as if it had worked while
+      // the zones stayed armed (second review).
+      for (const zone of zones) {
+        const result = await ctx.bypass(zone.id, true);
+        if (!result.success) {
+          this._feedback = { ok: false, text: reasonText(ctx.strings, result) };
+          return;
+        }
+      }
       this._feedback = undefined;
     } catch (err) {
       this._feedback = { ok: false, text: String((err as Error)?.message ?? err) };
@@ -125,6 +134,17 @@ class FoyerPageOverview extends LitElement {
     // countdown re-renders every second: reloading on "ctx changed" would ask
     // the log a question a second. Ask only when something actually happened.
     if (!changed.has("ctx") || !this.ctx) return;
+    if (
+      this._feedback &&
+      !this._feedback.ok &&
+      this._feedback.retry &&
+      this.ctx.status.areas.every((a) => a.ready)
+    ) {
+      // The refusal was about a zone that is closed now: the box offering to
+      // force the arming stayed, pointing at a problem that had gone
+      // (second review).
+      this._feedback = undefined;
+    }
     const signature = this._signature();
     if (signature === this._signature_) return;
     this._signature_ = signature;
@@ -332,7 +352,7 @@ class FoyerPageOverview extends LitElement {
         <div class="card-hd">
           <h2>${t(s, "overview.master")}</h2>
           <span class="state ${master.state}">${t(s, `state.${master.state}`)}</span>
-          ${master.mode ? html`<span class="mono">${master.mode}</span>` : nothing}
+          ${master.mode ? html`<span>${t(s, `ha_state.${master.mode}`)}</span>` : nothing}
         </div>
         <div class="card-bd">
           <div class="label">${t(s, "overview.scenario")}</div>

@@ -5,6 +5,7 @@
 // (core/response.py): area → scenario → global default, with a zone's own
 // profile read only for its own alarm.
 import { html, nothing, type TemplateResult } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../shared/i18n";
 import type { FoyerConfig } from "../shared/types";
@@ -43,9 +44,9 @@ export function profileField(
   return html`<label class="field">
     <span class="lbl">${t(s, "field.response_profile_id")}</span>
     <select @change=${(e: Event) => onChange((e.target as HTMLSelectElement).value || null)}>
-      <option value="" ?selected=${!value}>${t(s, "profiles.inherit")}</option>
+      <option value="" .selected=${live(!value)}>${t(s, "profiles.inherit")}</option>
       ${profiles.map(
-        (profile) => html`<option .value=${profile.id ?? ""} ?selected=${profile.id === value}>
+        (profile) => html`<option .value=${profile.id ?? ""} .selected=${live(profile.id === value)}>
           ${profile.name}
         </option>`,
       )}
@@ -66,7 +67,9 @@ export function effectiveHint(
     return html`<p class="hint">${t(s, "profiles.inherited_none")}</p>`;
   }
   return html`<p class="hint">
-    ${t(s, "profiles.effective", { profile: name })} —
-    ${t(s, `profiles.inherited_from_${source}`)}
+    ${t(s, "profiles.effective_from", {
+      profile: name,
+      from: t(s, `profiles.inherited_from_${source}`),
+    })}
   </p>`;
 }

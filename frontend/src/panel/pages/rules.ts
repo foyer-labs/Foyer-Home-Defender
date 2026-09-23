@@ -9,6 +9,7 @@
 // areas a rule may disarm shows the perimeter ones as never — the engine is
 // what enforces it, and this only says so.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
@@ -21,7 +22,7 @@ import type {
   SuspensionConfig,
 } from "../../shared/types";
 import { entityTargets } from "../ha-targets";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import { optionalNumber, problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -95,6 +96,9 @@ class FoyerPageRules extends LitElement {
   }
 
   private _edit(rule?: RuleConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     this._draft = rule ? structuredClone(rule) : emptyRule();
     this._problems = [];
   }
@@ -107,9 +111,15 @@ class FoyerPageRules extends LitElement {
     key: K,
     value: RuleConfig["trigger"][K],
   ): void {
-    if (this._draft) {
-      this._set("trigger", { ...this._draft.trigger, [key]: value });
+    if (!this._draft) return;
+    const trigger = { ...this._draft.trigger, [key]: value };
+    if (key === "kind" && value !== this._draft.trigger.kind) {
+      // The entities belong to the kind that chose them: kept, a sensor
+      // picked for an `entity` trigger stayed hidden in an `absence` one,
+      // which the backend refuses and nobody could untick (second review).
+      trigger.entity_ids = [];
     }
+    this._set("trigger", trigger);
   }
 
   /** §9.4's defaults: 120 s before an arming, 0 before a disarming. The
@@ -175,6 +185,12 @@ class FoyerPageRules extends LitElement {
       if (!result.success) {
         this._error = t(this.ctx!.strings, `reason.${result.reason ?? "unknown"}`);
       }
+    } catch (err) {
+      // A connection that dropped mid-request must say so: a Cancel that
+      // silently did nothing lets the countdown run out (second review).
+      this._error = t(this.ctx!.strings, "problem.request_failed", {
+        detail: String((err as { message?: string })?.message ?? err),
+      });
     } finally {
       this._busy = false;
     }
@@ -372,6 +388,8 @@ class FoyerPageRules extends LitElement {
                   ${rules.map(
                     (rule) => html`<tr
                       class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
                       aria-selected=${this._draft?.id === rule.id ? "true" : "false"}
                       @click=${() => this._edit(rule)}
                     >
@@ -440,7 +458,7 @@ class FoyerPageRules extends LitElement {
               >
                 ${(ctx.meta?.rule_triggers ?? []).map(
                   (kind) =>
-                    html`<option .value=${kind} ?selected=${kind === trigger.kind}>
+                    html`<option .value=${kind} .selected=${live(kind === trigger.kind)}>
                       ${t(s, `rules.trigger_kind_${kind}`)}
                     </option>`,
                 )}
@@ -466,10 +484,7 @@ class FoyerPageRules extends LitElement {
                     .value=${String(trigger.minutes)}
                     ?disabled=${trigger.kind === "presence"}
                     @input=${(e: Event) =>
-                      this._setTrigger(
-                        "minutes",
-                        optionalNumber((e.target as HTMLInputElement).value) ?? 0,
-                      )}
+                      whenNumber(e, (n) => this._setTrigger("minutes", n))}
                   />
                 </label>`}
           </div>
@@ -484,7 +499,7 @@ class FoyerPageRules extends LitElement {
                         return html`<label class="chip">
                           <input
                             type="checkbox"
-                            .checked=${on}
+                            .checked=${live(on)}
                             @change=${(e: Event) =>
                               this._setTrigger(
                                 "entity_ids",
@@ -540,7 +555,7 @@ class FoyerPageRules extends LitElement {
               >
                 ${(ctx.meta?.rule_actions ?? []).map(
                   (kind) =>
-                    html`<option .value=${kind} ?selected=${kind === draft.action}>
+                    html`<option .value=${kind} .selected=${live(kind === draft.action)}>
                       ${t(s, `rules.action_kind_${kind}`)}
                     </option>`,
                 )}
@@ -554,12 +569,12 @@ class FoyerPageRules extends LitElement {
                     @change=${(e: Event) =>
                       this._set("scenario_id", (e.target as HTMLSelectElement).value || null)}
                   >
-                    <option value="" ?selected=${!draft.scenario_id}>
+                    <option value="" .selected=${live(!draft.scenario_id)}>
                       ${t(s, "rules.choose_scenario")}
                     </option>
                     ${(ctx.config?.scenarios ?? []).map(
                       (sc) =>
-                        html`<option .value=${sc.id ?? ""} ?selected=${sc.id === draft.scenario_id}>
+                        html`<option .value=${sc.id ?? ""} .selected=${live(sc.id === draft.scenario_id)}>
                           ${sc.name}
                         </option>`,
                     )}
@@ -600,7 +615,7 @@ class FoyerPageRules extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.guards.only_when_disarmed}
+              .checked=${live(draft.guards.only_when_disarmed)}
               @change=${(e: Event) =>
                 this._setGuard("only_when_disarmed", (e.target as HTMLInputElement).checked)}
             />
@@ -609,7 +624,7 @@ class FoyerPageRules extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.guards.only_when_ready}
+              .checked=${live(draft.guards.only_when_ready)}
               @change=${(e: Event) =>
                 this._setGuard("only_when_ready", (e.target as HTMLInputElement).checked)}
             />
@@ -646,10 +661,7 @@ class FoyerPageRules extends LitElement {
                 max=${maxGrace}
                 .value=${String(draft.grace_seconds)}
                 @input=${(e: Event) =>
-                  this._set(
-                    "grace_seconds",
-                    optionalNumber((e.target as HTMLInputElement).value) ?? 0,
-                  )}
+                  whenNumber(e, (n) => this._set("grace_seconds", n))}
               />
               <span class="hint">${t(s, "rules.grace_hint")}</span>
             </label>
@@ -662,7 +674,7 @@ class FoyerPageRules extends LitElement {
                 return html`<label class="chip">
                   <input
                     type="checkbox"
-                    .checked=${on}
+                    .checked=${live(on)}
                     @change=${(e: Event) =>
                       this._set(
                         "notify_contact_ids",
@@ -680,7 +692,7 @@ class FoyerPageRules extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.enabled}
+              .checked=${live(draft.enabled)}
               @change=${(e: Event) =>
                 this._set("enabled", (e.target as HTMLInputElement).checked)}
             />
@@ -719,7 +731,7 @@ class FoyerPageRules extends LitElement {
         return html`<label class="chip">
           <input
             type="checkbox"
-            .checked=${on}
+            .checked=${live(on)}
             @change=${(e: Event) =>
               set(
                 (e.target as HTMLInputElement).checked
@@ -745,7 +757,7 @@ class FoyerPageRules extends LitElement {
           return html`<label class=${area.is_perimeter ? "chip never" : "chip"}>
             <input
               type="checkbox"
-              .checked=${on}
+              .checked=${live(on)}
               ?disabled=${area.is_perimeter}
               @change=${(e: Event) =>
                 this._set(
@@ -863,14 +875,14 @@ class FoyerPageRules extends LitElement {
                     reduced_scenario_id: (e.target as HTMLSelectElement).value || null,
                   })}
               >
-                <option value="" ?selected=${!draft.reduced_scenario_id}>
+                <option value="" .selected=${live(!draft.reduced_scenario_id)}>
                   ${t(s, "rules.instead_nothing")}
                 </option>
                 ${(ctx.config?.scenarios ?? []).map(
                   (sc) =>
                     html`<option
                       .value=${sc.id ?? ""}
-                      ?selected=${sc.id === draft.reduced_scenario_id}
+                      .selected=${live(sc.id === draft.reduced_scenario_id)}
                     >
                       ${sc.name}
                     </option>`,
@@ -918,15 +930,24 @@ class FoyerPageRules extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${allowed}
+              .checked=${live(allowed)}
               ?disabled=${this._busy || !ctx.isAdmin}
               @change=${async (e: Event) => {
                 const enabled = (e.target as HTMLInputElement).checked;
                 this._busy = true;
+                this._error = undefined;
                 try {
-                  await ctx.saveSettings({ allow_auto_disarm: enabled });
+                  const result = await ctx.saveSettings({ allow_auto_disarm: enabled });
+                  // Refused or abandoned, the box goes back to what is stored
+                  // (live() above) and says why: left as ticked, it showed
+                  // automatic disarming off while it was still allowed.
+                  if (!result.success) {
+                    this._error = result.problems.map((p) => problemText(s, p)).join(" ")
+                      || t(s, "reason.code_required");
+                  }
                 } finally {
                   this._busy = false;
+                  this.requestUpdate();
                 }
               }}
             />

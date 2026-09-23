@@ -1,11 +1,12 @@
 // Page 4 — Scenarios (SPEC §4.6, §15.1): named presets over areas, each
 // reporting one fixed Home Assistant mode on the master panel.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { Problem, ScenarioConfig } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import { optionalNumber, problemText, type PanelContext, activateOnKey } from "../context";
 import { profileField } from "../profile-picker";
 
 const NEW_SCENARIO: ScenarioConfig = {
@@ -35,6 +36,9 @@ class FoyerPageScenarios extends LitElement {
   private _busy = false;
 
   private _edit(scenario?: ScenarioConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     this._draft = scenario ? structuredClone(scenario) : { ...NEW_SCENARIO, areas: [] };
     this._problems = [];
   }
@@ -96,6 +100,8 @@ class FoyerPageScenarios extends LitElement {
               ${ctx.config.scenarios.map(
                 (sc) => html`<tr
                   class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
                   aria-selected=${this._draft?.id === sc.id ? "true" : "false"}
                   @click=${() => this._edit(sc)}
                 >
@@ -109,7 +115,7 @@ class FoyerPageScenarios extends LitElement {
                     ${sc.areas.map((a) => html`<span class="tag">${areas.get(a) ?? a}</span>`)}
                   </td>
                   <td>
-                    <span class="mono">${sc.ha_master_state}</span>
+                    <span>${t(s, `ha_state.${sc.ha_master_state}`)}</span>
                     ${modes.filter((m) => m === sc.ha_master_state).length > 1
                       ? html`<div class="hint">${t(s, "scenarios.shared_mode")}</div>`
                       : nothing}
@@ -164,7 +170,7 @@ class FoyerPageScenarios extends LitElement {
               >
                 ${(meta?.ha_states ?? []).map(
                   (mode) =>
-                    html`<option .value=${mode} ?selected=${mode === draft.ha_master_state}>
+                    html`<option .value=${mode} .selected=${live(mode === draft.ha_master_state)}>
                       ${t(s, `ha_state.${mode}`)}
                     </option>`,
                 )}
@@ -217,7 +223,7 @@ class FoyerPageScenarios extends LitElement {
               (area) => html`<label class="check">
                 <input
                   type="checkbox"
-                  .checked=${draft.areas.includes(area.id ?? "")}
+                  .checked=${live(draft.areas.includes(area.id ?? ""))}
                   @change=${(e: Event) =>
                     toggleArea(area.id ?? "", (e.target as HTMLInputElement).checked)}
                 />

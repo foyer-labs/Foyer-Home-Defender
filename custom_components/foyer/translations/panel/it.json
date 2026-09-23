@@ -14,7 +14,9 @@
     "no": "No",
     "seconds_unit": "Secondi",
     "ok": "OK",
-    "edit": "Modifica"
+    "edit": "Modifica",
+    "move_up": "Sposta su",
+    "move_down": "Sposta giù"
   },
   "nav": {
     "overview": "Panoramica",
@@ -1462,7 +1464,14 @@
     "rf_interference_cleared": "Interferenza radio rientrata",
     "radio_coordinator_down": "Coordinatore radio irraggiungibile",
     "radio_coordinator_up": "Coordinatore radio tornato",
-    "duress": "Codice di coercizione usato"
+    "duress": "Codice di coercizione usato",
+    "action_tested": "Azione provata",
+    "auto_pending": "Regola automatica in conto alla rovescia",
+    "auto_cancelled": "Regola automatica annullata",
+    "auto_blocked": "La regola automatica non ha agito",
+    "auto_suspension_set": "Regole automatiche sospese",
+    "auto_suspension_cleared": "Sospensione finita",
+    "auto_arming_switched": "Regole automatiche attivate o disattivate"
   },
   "condition": {
     "add": "Aggiungi una condizione",
@@ -1525,7 +1534,13 @@
     "escalation_hint": "Secondi dall'inizio dell'escalation. Con un tempo qui questa notifica diventa un passo: aspetta e si ferma appena qualcuno prende atto.",
     "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto.",
     "images_text_alone": "Le immagini partono solo con un allarme: l'allarme stesso, una zona che vi si aggiunge, un passo di escalation, un allarme tecnico. Per «{moments}» questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
-    "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale \"altro\" riceve solo il testo, invece di un messaggio in più per ogni telecamera."
+    "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale \"altro\" riceve solo il testo, invece di un messaggio in più per ogni telecamera.",
+    "effective_from": "Profilo efficace: {profile} — {from}",
+    "flash_none": "Nessun lampeggio",
+    "flash_short": "Lampeggio breve",
+    "flash_long": "Lampeggio lungo",
+    "test_after_save": "Salva il profilo per provare questa azione così com'è adesso: la prova esegue quella salvata.",
+    "json_invalid": "Questo non è JSON valido, quindi non è stato tenuto. Correggilo e lascia di nuovo il campo."
   },
   "camera_mode": {
     "snapshot": "Scatto",
@@ -1603,7 +1618,10 @@
     "auto_suspension_set": "Inserimento automatico sospeso",
     "auto_suspension_cleared": "Sospensione revocata",
     "action_test": "Azione provata",
-    "simulation_run": "Simulazione eseguita"
+    "simulation_run": "Simulazione eseguita",
+    "config_refused": "Modifica di configurazione rifiutata",
+    "config_new_token": "Token del tastierino generato",
+    "config_revoke_token": "Token del tastierino revocato"
   },
   "log": {
     "filters": "Filtri",
@@ -1833,7 +1851,14 @@
     "radio": "Radio",
     "devices": "Dispositivo di inserimento",
     "contacts": "Contatto",
-    "rules": "Regola"
+    "rules": "Regola",
+    "users": "Persone",
+    "removed": "Righe rimosse",
+    "rows": "Righe",
+    "pseudonymised": "Righe pseudonimizzate",
+    "from": "Da",
+    "to": "A",
+    "reason": "Motivo"
   },
   "detail": {
     "skip_exit_delay": "Inserito senza ritardo d'uscita",
@@ -2022,7 +2047,8 @@
     "endpoint_stream": "Il flusso di stato",
     "endpoint_stream_hint": "Lo stesso messaggio di MQTT, allo stesso livello di dettaglio, nel momento in cui cambia qualcosa; una riga di commento ogni trenta secondi tiene aperta la connessione attraverso i proxy.",
     "detail_shared_hint": "Lo stesso livello vale per il flusso di stato dell'endpoint dei dispositivi e per le sue risposte.",
-    "token_dropped": "Salvarlo su MQTT revoca il suo token. Tornato sull'endpoint, ne servirà uno nuovo."
+    "token_dropped": "Salvarlo su MQTT revoca il suo token. Tornato sull'endpoint, ne servirà uno nuovo.",
+    "token_confirm": "Il tastierino smette subito di funzionare con il token attuale, e ogni sua connessione aperta viene chiusa."
   },
   "attachment": {
     "companion": "App Companion — immagine dal vivo, nessun file",
@@ -2288,7 +2314,8 @@
     "webhook_warning_hint": "I webhook di Home Assistant sono aperti a chi ne conosce l'indirizzo: chiunque lo abbia, o lo intercetti, può fermare l'escalation mentre sta andando dal vicino. Attivalo solo se serve a un provider vocale e non darlo a nient'altro.",
     "webhook_hint": "Il provider vocale fa una POST su questo percorso quando il tasto viene premuto. Disattivandolo l'indirizzo viene dimenticato: riattivandolo ne viene dato uno nuovo.",
     "no_quiet_hours": "Sempre raggiungibile",
-    "actionable_entity": "Questa è un'entità notify: porta un messaggio e un titolo e nient'altro, quindi al telefono non arrivano né il pulsante né i dati aggiuntivi. Usa il servizio notify che ci sta dietro se da questo canale si deve poter prendere atto."
+    "actionable_entity": "Questa è un'entità notify: porta un messaggio e un titolo e nient'altro, quindi al telefono non arrivano né il pulsante né i dati aggiuntivi. Usa il servizio notify che ci sta dietro se da questo canale si deve poter prendere atto.",
+    "step_offset": "+{n} s"
   },
   "rules": {
     "title": "Regole",

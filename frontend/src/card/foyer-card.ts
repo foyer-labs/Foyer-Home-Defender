@@ -14,6 +14,7 @@
 // call the service directly. What it does know is how many digits to collect,
 // which the backend tells it, because a keypad has to know when to stop.
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { loadStrings, t, type Strings } from "../shared/i18n";
 import { stateStyles } from "../shared/styles";
@@ -405,9 +406,9 @@ class FoyerCard extends LitElement {
                     if (id) void this._run({ type: "foyer/arm", scenario_id: id });
                   }}
                 >
-                  <option value="" ?selected=${!active}>${t(s, "card.pick_scenario")}</option>
+                  <option value="" .selected=${live(!active)}>${t(s, "card.pick_scenario")}</option>
                   ${status.scenarios.map(
-                    (sc) => html`<option .value=${sc.id} ?selected=${sc.id === active?.id}>
+                    (sc) => html`<option .value=${sc.id} .selected=${live(sc.id === active?.id)}>
                       ${sc.name}
                     </option>`,
                   )}
@@ -1239,7 +1240,7 @@ class FoyerCardEditor extends LitElement {
             @change=${(e: Event) => this._emit({ entity: (e.target as HTMLSelectElement).value })}
           >
             ${panels.map(
-              (id) => html`<option .value=${id} ?selected=${id === this._config.entity}>
+              (id) => html`<option .value=${id} .selected=${live(id === this._config.entity)}>
                 ${id === MASTER
                   ? t(s, "card.editor_master")
                   : String(this.hass!.states[id]?.attributes.friendly_name ?? id)}
@@ -1256,7 +1257,7 @@ class FoyerCardEditor extends LitElement {
             ${(["full", "compact", "badge", "keypad"] as Layout[]).map(
               (layout) => html`<option
                 .value=${layout}
-                ?selected=${layout === (this._config.layout ?? "full")}
+                .selected=${live(layout === (this._config.layout ?? "full"))}
               >
                 ${t(s, `card.layout_${layout}`)}
               </option>`,

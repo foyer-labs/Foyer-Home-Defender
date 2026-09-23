@@ -28,6 +28,9 @@ export interface HomeAssistant {
    * entity, so a picker that reads only `states` would never find it. */
   services?: Record<string, Record<string, HassService>>;
   themes?: { darkMode?: boolean };
+  /** The house's own time zone. The backend reads a date the panel sends
+   * without one in this zone, so the panel shows times in it too. */
+  config?: { time_zone?: string };
   user?: { id: string; name: string; is_admin: boolean };
   connection: HassConnection;
   callWS<T>(message: Record<string, unknown>): Promise<T>;

@@ -18,6 +18,7 @@
 // and the sentence saying why is next to the switch rather than in a document
 // nobody opens (INV-6).
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
@@ -31,7 +32,7 @@ import type {
 } from "../../shared/types";
 import { notifyTargets } from "../ha-targets";
 import { testReason } from "./test";
-import { problemText, type PanelContext } from "../context";
+import { problemText, type PanelContext, activateOnKey } from "../context";
 
 const EMPTY: ContactConfig = {
   name: "",
@@ -95,6 +96,7 @@ class FoyerPageContacts extends LitElement {
     _problems: { state: true },
     _busy: { state: true },
     _tested: { state: true },
+    _webhookProblems: { state: true },
     _health: { state: true },
   };
 
@@ -104,6 +106,7 @@ class FoyerPageContacts extends LitElement {
   private _busy = false;
   /** The result of the last channel test, by channel id: what §11.4 is for. */
   private _tested: Record<string, { ok: boolean; error?: string | null }> = {};
+  private _webhookProblems: Problem[] = [];
   /** Which channels are broken right now (§12.2). The health page owns the
    * detail; here it is one word beside the channel, because this is the page
    * somebody is on when they are thinking about who gets told. */
@@ -129,6 +132,9 @@ class FoyerPageContacts extends LitElement {
   }
 
   private _edit(contact?: ContactConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     this._draft = contact
       ? structuredClone(contact)
       : { ...structuredClone(EMPTY), channels: [structuredClone(NEW_CHANNEL)] };
@@ -148,6 +154,23 @@ class FoyerPageContacts extends LitElement {
       i === index ? { ...channel, ...changes } : channel,
     );
     this._draft = { ...this._draft, channels };
+    // A result about the channel as it was is not a result about this one.
+    const id = this._draft.channels[index]?.id;
+    if (id && id in this._tested) {
+      const { [id]: _stale, ...rest } = this._tested;
+      this._tested = rest;
+    }
+  }
+
+  /** Whether this channel differs from the one stored. The test sends the
+   * stored channel — the backend reads it by id — so testing an edit before
+   * saving it would report on the old service as if it were the new one
+   * (second review). */
+  private _unsaved(contact: ContactConfig, channel: ContactChannelConfig): boolean {
+    const stored = this.ctx?.config?.contacts
+      .find((c) => c.id === contact.id)
+      ?.channels.find((c) => c.id === channel.id);
+    return !stored || JSON.stringify(stored) !== JSON.stringify(channel);
   }
 
   private _move(index: number, by: number): void {
@@ -216,6 +239,14 @@ class FoyerPageContacts extends LitElement {
             result.error ?? testReason(this.ctx.strings, result.reason ?? null),
         },
       };
+    } catch (err) {
+      this._tested = {
+        ...this._tested,
+        [channel.id]: {
+          ok: false,
+          error: String((err as { message?: string })?.message ?? err),
+        },
+      };
     } finally {
       this._busy = false;
     }
@@ -234,10 +265,15 @@ class FoyerPageContacts extends LitElement {
   private async _toggleWebhook(enabled: boolean): Promise<void> {
     if (!this.ctx) return;
     this._busy = true;
+    this._webhookProblems = [];
     try {
-      await this.ctx.setAckWebhook(enabled);
+      const result = await this.ctx.setAckWebhook(enabled);
+      // Refused or abandoned, the box goes back to what is stored (live())
+      // and says why, rather than showing a webhook that is not there.
+      if (!result.success) this._webhookProblems = result.problems;
     } finally {
       this._busy = false;
+      this.requestUpdate();
     }
   }
 
@@ -285,6 +321,8 @@ class FoyerPageContacts extends LitElement {
     const owner = users.find((u) => u.id === contact.linked_user_id);
     return html`<tr
       class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
       aria-selected=${this._draft?.id === contact.id ? "true" : "false"}
       @click=${() => this._edit(contact)}
     >
@@ -346,11 +384,11 @@ class FoyerPageContacts extends LitElement {
                     (e.target as HTMLSelectElement).value || null,
                   )}
               >
-                <option value="" ?selected=${!draft.linked_user_id}>—</option>
+                <option value="" .selected=${live(!draft.linked_user_id)}>—</option>
                 ${users.map(
                   (u) => html`<option
                     .value=${u.id ?? ""}
-                    ?selected=${u.id === draft.linked_user_id}
+                    .selected=${live(u.id === draft.linked_user_id)}
                   >
                     ${u.name}
                   </option>`,
@@ -403,7 +441,7 @@ class FoyerPageContacts extends LitElement {
                 ${(["info", "warning", "alarm"] as const).map(
                   (severity) => html`<option
                     .value=${severity}
-                    ?selected=${severity === draft.quiet_min_severity}
+                    .selected=${live(severity === draft.quiet_min_severity)}
                   >
                     ${t(s, `severity.${severity}`)}
                   </option>`,
@@ -459,8 +497,22 @@ class FoyerPageContacts extends LitElement {
         <div class="channel-hd">
           <span class="rank">${index + 1}</span>
           <div class="channel-tools">
-            <button class="btn sm" @click=${() => this._move(index, -1)}>↑</button>
-            <button class="btn sm" @click=${() => this._move(index, 1)}>↓</button>
+            <button
+              class="btn sm"
+              aria-label=${t(s, "common.move_up")}
+              title=${t(s, "common.move_up")}
+              @click=${() => this._move(index, -1)}
+            >
+              ↑
+            </button>
+            <button
+              class="btn sm"
+              aria-label=${t(s, "common.move_down")}
+              title=${t(s, "common.move_down")}
+              @click=${() => this._move(index, 1)}
+            >
+              ↓
+            </button>
             <button class="btn sm danger" @click=${() => this._removeChannel(index)}>
               ${t(s, "common.delete")}
             </button>
@@ -476,7 +528,7 @@ class FoyerPageContacts extends LitElement {
                 })}
             >
               ${kinds.map(
-                (kind) => html`<option .value=${kind} ?selected=${kind === channel.kind}>
+                (kind) => html`<option .value=${kind} .selected=${live(kind === channel.kind)}>
                   ${t(s, `channel_kind.${kind}`)}
                 </option>`,
               )}
@@ -490,11 +542,11 @@ class FoyerPageContacts extends LitElement {
                   service: (e.target as HTMLSelectElement).value,
                 })}
             >
-              <option value="" ?selected=${!channel.service}>—</option>
+              <option value="" .selected=${live(!channel.service)}>—</option>
               ${options.map(
                 (target) => html`<option
                   .value=${target.id}
-                  ?selected=${target.id === channel.service}
+                  .selected=${live(target.id === channel.service)}
                 >
                   ${target.name}
                 </option>`,
@@ -516,7 +568,7 @@ class FoyerPageContacts extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${channel.actionable}
+              .checked=${live(channel.actionable)}
               @change=${(e: Event) =>
                 this._setChannel(index, {
                   actionable: (e.target as HTMLInputElement).checked,
@@ -536,12 +588,12 @@ class FoyerPageContacts extends LitElement {
         <div class="channel-ft">
           <button
             class="btn sm"
-            ?disabled=${this._busy || !draft.id || !channel.id}
+            ?disabled=${this._busy || !draft.id || !channel.id || this._unsaved(draft, channel)}
             @click=${() => this._test(draft, channel)}
           >
             ${t(s, "contacts.test")}
           </button>
-          ${draft.id && channel.id
+          ${draft.id && channel.id && !this._unsaved(draft, channel)
             ? nothing
             : html`<span class="hint">${t(s, "contacts.test_after_save")}</span>`}
           ${tested
@@ -576,7 +628,11 @@ class FoyerPageContacts extends LitElement {
                   ${found.map(
                     ({ action, index }) => html`
                       <div class="step">
-                        <span class="mono at">+${action.escalation_offset}s</span>
+                        <span class="mono at"
+                          >${t(s, "contacts.step_offset", {
+                            n: String(action.escalation_offset),
+                          })}</span
+                        >
                         <div>
                           <div class="who">
                             ${contactsOf(action)
@@ -638,13 +694,18 @@ class FoyerPageContacts extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${webhookId !== null}
+              .checked=${live(webhookId !== null)}
               ?disabled=${this._busy}
               @change=${(e: Event) =>
                 this._toggleWebhook((e.target as HTMLInputElement).checked)}
             />
             <span class="lbl">${t(s, "contacts.webhook_enable")}</span>
           </label>
+          ${this._webhookProblems.length
+            ? html`<ul class="problems">
+                ${this._webhookProblems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+              </ul>`
+            : nothing}
           ${webhookId
             ? html`<p class="sample">/api/webhook/${webhookId}</p>
                 <p class="note">${t(s, "contacts.webhook_hint")}</p>`

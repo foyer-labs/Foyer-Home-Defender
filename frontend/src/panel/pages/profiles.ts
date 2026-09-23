@@ -3,6 +3,7 @@
 // unit of response; a zone's own profile is read only for its own alarm,
 // which is what makes a verification group's graduated response work (§4.8).
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
@@ -14,7 +15,7 @@ import type {
   ProfileConfig,
   Problem,
 } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext } from "../context";
+import { optionalNumber, problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
 import {
   domainServices,
   entityTargets,
@@ -166,6 +167,7 @@ class FoyerPageProfiles extends LitElement {
     _draft: { state: true },
     _open: { state: true },
     _filters: { state: true },
+    _jsonErrors: { state: true },
     _problems: { state: true },
     _busy: { state: true },
     _tested: { state: true },
@@ -178,6 +180,7 @@ class FoyerPageProfiles extends LitElement {
   // One search box per entity picker, so a house with sixty switches is
   // usable: keyed by "<action index>:<parameter>".
   private _filters: Record<string, string> = {};
+  private _jsonErrors: Record<number, boolean> = {};
   private _problems: Problem[] = [];
   private _busy = false;
   // What the last real action test did, per action, and which action is
@@ -186,9 +189,18 @@ class FoyerPageProfiles extends LitElement {
   private _confirming?: string;
 
   private _edit(profile?: ProfileConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     this._draft = profile ? structuredClone(profile) : { name: "", severity: 1, actions: [] };
     this._open = -1;
     this._problems = [];
+    // Kept by action index, so they belonged to the profile they were typed
+    // in: carried over, profile B's first action opened filtered by profile
+    // A's search (second review).
+    this._filters = {};
+    this._confirming = undefined;
+    this._jsonErrors = {};
   }
 
   private _set<K extends keyof ProfileConfig>(key: K, value: ProfileConfig[K]): void {
@@ -224,6 +236,9 @@ class FoyerPageProfiles extends LitElement {
     const actions = this._draft.actions.filter((_, i) => i !== index);
     this._draft = { ...this._draft, actions };
     this._open = -1;
+    // Keyed by index: after a removal they would sit on the wrong action.
+    this._filters = {};
+    this._jsonErrors = {};
   }
 
   private _moveAction(index: number, by: number): void {
@@ -234,6 +249,8 @@ class FoyerPageProfiles extends LitElement {
     [actions[index], actions[target]] = [actions[target], actions[index]];
     this._draft = { ...this._draft, actions };
     this._open = target;
+    this._filters = {};
+    this._jsonErrors = {};
   }
 
   private async _save(): Promise<void> {
@@ -291,6 +308,8 @@ class FoyerPageProfiles extends LitElement {
                       (profile) =>
                         html`<tr
                           class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
                           aria-selected=${this._draft?.id === profile.id ? "true" : "false"}
                           @click=${() => this._edit(profile)}
                         >
@@ -363,7 +382,7 @@ class FoyerPageProfiles extends LitElement {
                 max=${bounds[1]}
                 .value=${String(draft.severity)}
                 @input=${(e: Event) =>
-                  this._set("severity", optionalNumber((e.target as HTMLInputElement).value) ?? 1)}
+                  whenNumber(e, (n) => this._set("severity", n))}
               />
               <span class="hint">${t(s, "profiles.severity_hint")}</span>
             </label>
@@ -450,7 +469,7 @@ class FoyerPageProfiles extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${ref !== undefined}
+              .checked=${live(ref !== undefined)}
               @change=${(e: Event) =>
                 update(
                   (e.target as HTMLInputElement).checked
@@ -474,13 +493,13 @@ class FoyerPageProfiles extends LitElement {
                     ),
                   )}
               >
-                <option value="" ?selected=${!ref.channel_id}>
+                <option value="" .selected=${live(!ref.channel_id)}>
                   ${t(s, "profiles.highest_channel")}
                 </option>
                 ${contact.channels.map(
                   (channel) => html`<option
                     .value=${channel.id ?? ""}
-                    ?selected=${channel.id === ref.channel_id}
+                    .selected=${live(channel.id === ref.channel_id)}
                   >
                     ${t(s, `channel_kind.${channel.kind}`)} · ${channel.service}
                   </option>`,
@@ -546,8 +565,22 @@ class FoyerPageProfiles extends LitElement {
                 ${this._renderEscalation(s, action, index)}
                 ${this._renderConditions(s, action, index)}
                 <div class="actions">
-                  <button class="btn" @click=${() => this._moveAction(index, -1)}>&uarr;</button>
-                  <button class="btn" @click=${() => this._moveAction(index, 1)}>&darr;</button>
+                  <button
+                    class="btn"
+                    aria-label=${t(s, "common.move_up")}
+                    title=${t(s, "common.move_up")}
+                    @click=${() => this._moveAction(index, -1)}
+                  >
+                    &uarr;
+                  </button>
+                  <button
+                    class="btn"
+                    aria-label=${t(s, "common.move_down")}
+                    title=${t(s, "common.move_down")}
+                    @click=${() => this._moveAction(index, 1)}
+                  >
+                    &darr;
+                  </button>
                   ${this._renderTestButton(s, action)}
                   <button class="btn danger" @click=${() => this._removeAction(index)}>
                     ${t(s, "profiles.delete_action")}
@@ -575,6 +608,16 @@ class FoyerPageProfiles extends LitElement {
    */
   private _renderTestButton(s: Strings, action: ActionConfig) {
     if (action.kind === "delay" || !action.id || !this._draft?.id) return nothing;
+    const stored = this.ctx?.config?.profiles
+      .find((p) => p.id === this._draft?.id)
+      ?.actions.find((a) => a.id === action.id);
+    if (!stored || JSON.stringify(stored) !== JSON.stringify(action)) {
+      // The backend tests the stored action, by its id. With edits not yet
+      // saved it would test the previous version and report on it as if it
+      // were this one — which is what the comment above promised could not
+      // happen (second review).
+      return html`<span class="hint">${t(s, "profiles.test_after_save")}</span>`;
+    }
     const key = action.id;
     const last = this._tested[key];
     if (this._confirming === key) {
@@ -620,6 +663,14 @@ class FoyerPageProfiles extends LitElement {
           error: result.error ?? result.reason ?? undefined,
         },
       };
+    } catch (err) {
+      this._tested = {
+        ...this._tested,
+        [action.id]: {
+          ok: false,
+          error: String((err as { message?: string })?.message ?? err),
+        },
+      };
     } finally {
       this._busy = false;
     }
@@ -640,7 +691,9 @@ class FoyerPageProfiles extends LitElement {
   /** One line saying what the action actually does, for the collapsed row. */
   private _summary(s: Strings, action: ActionConfig): string {
     const params = action.params as Record<string, string | number | string[]>;
-    if (action.kind === "delay") return `${params.seconds ?? 0} s`;
+    if (action.kind === "delay") {
+      return t(this.ctx!.strings, "common.seconds", { n: String(params.seconds ?? 0) });
+    }
     if (action.kind === "call_service") return `${params.domain ?? ""}.${params.service ?? ""}`;
     if (action.kind === "notify") return String(params.service ?? "");
     if (action.kind === "persistent_notification") {
@@ -735,7 +788,7 @@ class FoyerPageProfiles extends LitElement {
         >
           <option value=""></option>
           ${options.map(
-            (o) => html`<option .value=${o.id} ?selected=${selected.has(o.id)}>${o.name}</option>`,
+            (o) => html`<option .value=${o.id} .selected=${live(selected.has(o.id))}>${o.name}</option>`,
           )}
         </select>
       </label>`;
@@ -772,7 +825,7 @@ class FoyerPageProfiles extends LitElement {
           (o) => html`<label class="check">
             <input
               type="checkbox"
-              .checked=${selected.has(o.id)}
+              .checked=${live(selected.has(o.id))}
               @change=${(e: Event) => {
                 const on = (e.target as HTMLInputElement).checked;
                 const next = new Set(selected);
@@ -855,7 +908,11 @@ class FoyerPageProfiles extends LitElement {
         break;
       case "light":
         parts.push(this._number(s, action, index, "brightness"));
-        parts.push(this._select(s, action, index, "flash", ["", "short", "long"], (v) => v || "—"));
+        parts.push(
+          this._select(s, action, index, "flash", ["", "short", "long"], (v) =>
+            t(s, `profiles.flash_${v || "none"}`),
+          ),
+        );
         break;
       case "camera":
         parts.push(
@@ -969,7 +1026,7 @@ class FoyerPageProfiles extends LitElement {
         >
           ${IMAGES.map(
             (value) =>
-              html`<option .value=${value} ?selected=${value === images}>
+              html`<option .value=${value} .selected=${live(value === images)}>
                 ${t(s, `images.${value}`)}
               </option>`,
           )}
@@ -1007,7 +1064,7 @@ class FoyerPageProfiles extends LitElement {
       >
         ${options.map(
           (option) =>
-            html`<option .value=${option} ?selected=${action.params[key] === option}>
+            html`<option .value=${option} .selected=${live(action.params[key] === option)}>
               ${label(option)}
             </option>`,
         )}
@@ -1025,11 +1082,18 @@ class FoyerPageProfiles extends LitElement {
           const text = (e.target as HTMLTextAreaElement).value.trim();
           try {
             this._setParam(index, "data", text ? JSON.parse(text) : null);
+            this._jsonErrors = { ...this._jsonErrors, [index]: false };
           } catch {
-            this._setParam(index, "data", text);
+            // Not stored as a string, which the next render showed quoted
+            // and escaped: the text stays in the box, and the box says it
+            // cannot be read (second review).
+            this._jsonErrors = { ...this._jsonErrors, [index]: true };
           }
         }}
       ></textarea>
+      ${this._jsonErrors[index]
+        ? html`<span class="hint bad" role="alert">${t(s, "profiles.json_invalid")}</span>`
+        : nothing}
       <span class="hint">${t(s, "profiles.call_service_hint")}</span>
     </label>`;
   }
@@ -1051,7 +1115,7 @@ class FoyerPageProfiles extends LitElement {
                   html`<label class="check">
                     <input
                       type="checkbox"
-                      .checked=${action.moments.includes(moment)}
+                      .checked=${live(action.moments.includes(moment))}
                       @change=${(e: Event) => {
                         const on = (e.target as HTMLInputElement).checked;
                         const next = on
@@ -1132,7 +1196,7 @@ class FoyerPageProfiles extends LitElement {
               >
                 ${(["all", "any"] as const).map(
                   (mode) =>
-                    html`<option .value=${mode} ?selected=${action.condition_mode === mode}>
+                    html`<option .value=${mode} .selected=${live(action.condition_mode === mode)}>
                       ${t(s, `condition.${mode}`)}
                     </option>`,
                 )}
@@ -1198,7 +1262,7 @@ class FoyerPageProfiles extends LitElement {
                 >
                   ${(["is", "is_not"] as const).map(
                     (op) =>
-                      html`<option .value=${op} ?selected=${condition.operator === op}>
+                      html`<option .value=${op} .selected=${live(condition.operator === op)}>
                         ${t(s, `condition.${op}`)}
                       </option>`,
                   )}
@@ -1220,6 +1284,9 @@ class FoyerPageProfiles extends LitElement {
     formStyles,
     stateStyles,
     css`
+      .hint.bad {
+        color: var(--error-color, #d32f2f);
+      }
       .contact-row {
         display: flex;
         align-items: center;
@@ -1300,7 +1367,7 @@ class FoyerPageProfiles extends LitElement {
         max-height: 200px;
         overflow: auto;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
         gap: 2px 16px;
         margin-top: 6px;
       }

@@ -26,12 +26,29 @@ function sorted(targets: Target[]): Target[] {
 }
 
 /** Every entity in one of `domains`. */
+// Lists already built from this `states` object. Home Assistant replaces the
+// object when anything changes, so identity is freshness: an editor that
+// re-rendered every second during a countdown, and on every keystroke,
+// sorted every entity in the house each time (second review).
+const built = new WeakMap<object, Map<string, Target[]>>();
+
 export function entityTargets(hass: HomeAssistant, domains: string[]): Target[] {
-  return sorted(
-    Object.values(hass.states)
-      .filter((e) => domains.includes(e.entity_id.split(".")[0]))
-      .map((e) => ({ id: e.entity_id, name: friendly(hass, e.entity_id) })),
-  );
+  let lists = built.get(hass.states);
+  if (!lists) {
+    lists = new Map();
+    built.set(hass.states, lists);
+  }
+  const key = domains.join(",");
+  let list = lists.get(key);
+  if (!list) {
+    list = sorted(
+      Object.values(hass.states)
+        .filter((e) => domains.includes(e.entity_id.split(".")[0]))
+        .map((e) => ({ id: e.entity_id, name: friendly(hass, e.entity_id) })),
+    );
+    lists.set(key, list);
+  }
+  return list;
 }
 
 /** Every way to send a notification: `notify` entities and `notify` services. */

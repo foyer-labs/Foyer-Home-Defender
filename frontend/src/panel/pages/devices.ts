@@ -17,6 +17,7 @@
 // for as long as that is true, because its token and the codes typed on it
 // can be read on the network.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
@@ -26,7 +27,7 @@ import type {
   Problem,
   SettingsConfig,
 } from "../../shared/types";
-import { problemText, type PanelContext } from "../context";
+import { problemText, type PanelContext, activateOnKey } from "../context";
 
 const EMPTY: DeviceConfig = {
   name: "",
@@ -54,6 +55,7 @@ class FoyerPageDevices extends LitElement {
     _mqttProblems: { state: true },
     _token: { state: true },
     _tokenProblems: { state: true },
+    _confirmToken: { state: true },
   };
 
   ctx?: PanelContext;
@@ -66,16 +68,22 @@ class FoyerPageDevices extends LitElement {
   // editor, or opening another keypad, loses it for good (§9.2.1).
   private _token?: { deviceId: string; value: string };
   private _tokenProblems: Problem[] = [];
+  private _confirmToken?: "replace" | "revoke";
 
   private _edit(device?: DeviceConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     this._draft = device ? structuredClone(device) : structuredClone(EMPTY);
     this._problems = [];
     this._token = undefined;
     this._tokenProblems = [];
+    this._confirmToken = undefined;
   }
 
   private async _tokenAction(revoke: boolean): Promise<void> {
     const id = this._draft?.id;
+    this._confirmToken = undefined;
     if (!this.ctx || !id) return;
     this._busy = true;
     try {
@@ -125,7 +133,12 @@ class FoyerPageDevices extends LitElement {
     try {
       const result = await this.ctx.save("device", this._draft);
       this._problems = result.problems;
-      if (result.success) this._draft = undefined;
+      if (result.success) {
+        this._draft = undefined;
+        // The token was shown for the editor it was generated in, and that
+        // editor is closed: it goes from memory too.
+        this._token = undefined;
+      }
     } finally {
       this._busy = false;
     }
@@ -208,6 +221,8 @@ class FoyerPageDevices extends LitElement {
     const owner = (ctx.config?.users ?? []).find((u) => u.id === device.user_id);
     return html`<tr
       class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
       aria-selected=${this._draft?.id === device.id ? "true" : "false"}
       @click=${() => this._edit(device)}
     >
@@ -235,9 +250,7 @@ class FoyerPageDevices extends LitElement {
     const ctx = this.ctx!;
     const users = ctx.config?.users ?? [];
     const scenarios = ctx.config?.scenarios ?? [];
-    const entities = Object.keys(ctx.hass.states)
-      .filter((id) => TOKEN_DOMAINS.some((domain) => id.startsWith(domain)))
-      .sort();
+    const entities = this._tagEntities(ctx.hass.states);
     return html`
       <div class="card">
         <div class="card-hd">
@@ -262,7 +275,7 @@ class FoyerPageDevices extends LitElement {
                   )}
               >
                 ${(["keypad", "tag"] as const).map(
-                  (kind) => html`<option .value=${kind} ?selected=${kind === draft.kind}>
+                  (kind) => html`<option .value=${kind} .selected=${live(kind === draft.kind)}>
                     ${t(s, `device_kind.${kind}`)}
                   </option>`,
                 )}
@@ -302,7 +315,7 @@ class FoyerPageDevices extends LitElement {
                       ${(["mqtt", "http"] as const).map(
                         (transport) => html`<option
                           .value=${transport}
-                          ?selected=${transport === draft.transport}
+                          .selected=${live(transport === draft.transport)}
                         >
                           ${t(s, `transport.${transport}`)}
                         </option>`,
@@ -317,6 +330,9 @@ class FoyerPageDevices extends LitElement {
                 </div>
                 ${draft.transport === "http" ? this._renderToken(s, draft) : nothing}`
             : html`
+                ${this.ctx?.config?.devices.find((d) => d.id === draft.id)?.has_token
+                  ? html`<p class="hint warn-text">${t(s, "devices.token_dropped")}</p>`
+                  : nothing}
                 <div class="banner warn">
                   <strong>${t(s, "devices.stolen_tag")}</strong>
                   <span>${t(s, "devices.stolen_tag_hint")}</span>
@@ -331,9 +347,9 @@ class FoyerPageDevices extends LitElement {
                           (e.target as HTMLSelectElement).value || null,
                         )}
                     >
-                      <option value="" ?selected=${!draft.entity_id}>—</option>
+                      <option value="" .selected=${live(!draft.entity_id)}>—</option>
                       ${entities.map(
-                        (id) => html`<option .value=${id} ?selected=${id === draft.entity_id}>
+                        (id) => html`<option .value=${id} .selected=${live(id === draft.entity_id)}>
                           ${id}
                         </option>`,
                       )}
@@ -358,9 +374,9 @@ class FoyerPageDevices extends LitElement {
                       @change=${(e: Event) =>
                         this._set("user_id", (e.target as HTMLSelectElement).value || null)}
                     >
-                      <option value="" ?selected=${!draft.user_id}>—</option>
+                      <option value="" .selected=${live(!draft.user_id)}>—</option>
                       ${users.map(
-                        (u) => html`<option .value=${u.id ?? ""} ?selected=${u.id === draft.user_id}>
+                        (u) => html`<option .value=${u.id ?? ""} .selected=${live(u.id === draft.user_id)}>
                           ${u.name}
                         </option>`,
                       )}
@@ -379,7 +395,7 @@ class FoyerPageDevices extends LitElement {
                       ${(["toggle", "arm", "disarm"] as const).map(
                         (command) => html`<option
                           .value=${command}
-                          ?selected=${command === draft.command}
+                          .selected=${live(command === draft.command)}
                         >
                           ${t(s, `key_command.${command}`)}
                         </option>`,
@@ -397,11 +413,11 @@ class FoyerPageDevices extends LitElement {
                               (e.target as HTMLSelectElement).value || null,
                             )}
                         >
-                          <option value="" ?selected=${!draft.scenario_id}>—</option>
+                          <option value="" .selected=${live(!draft.scenario_id)}>—</option>
                           ${scenarios.map(
                             (sc) => html`<option
                               .value=${sc.id ?? ""}
-                              ?selected=${sc.id === draft.scenario_id}
+                              .selected=${live(sc.id === draft.scenario_id)}
                             >
                               ${sc.name}
                             </option>`,
@@ -415,7 +431,7 @@ class FoyerPageDevices extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.enabled}
+              .checked=${live(draft.enabled)}
               @change=${(e: Event) =>
                 this._set("enabled", (e.target as HTMLInputElement).checked)}
             />
@@ -432,7 +448,13 @@ class FoyerPageDevices extends LitElement {
             : nothing}
         </div>
         <div class="card-ft">
-          <button class="btn" @click=${() => (this._draft = undefined)}>
+          <button
+            class="btn"
+            @click=${() => {
+              this._draft = undefined;
+              this._token = undefined;
+            }}
+          >
             ${t(s, "common.cancel")}
           </button>
           ${draft.id
@@ -446,6 +468,23 @@ class FoyerPageDevices extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  // Worked out when Home Assistant's states change, not on every render:
+  // the page re-renders every second while any countdown runs, and this
+  // sorted every entity in the house each time (second review).
+  private _tagCache?: { states: object; ids: string[] };
+
+  private _tagEntities(states: Record<string, unknown>): string[] {
+    if (this._tagCache?.states !== states) {
+      this._tagCache = {
+        states,
+        ids: Object.keys(states)
+          .filter((id) => TOKEN_DOMAINS.some((domain) => id.startsWith(domain)))
+          .sort(),
+      };
+    }
+    return this._tagCache.ids;
   }
 
   private _inClear(device: DeviceConfig): boolean {
@@ -489,22 +528,42 @@ class FoyerPageDevices extends LitElement {
           </p>`}
       ${ready
         ? html`<div class="actions">
-            <button
-              class="btn"
-              ?disabled=${this._busy}
-              @click=${() => this._tokenAction(false)}
-            >
-              ${t(s, draft.has_token ? "devices.token_replace" : "devices.token_generate")}
-            </button>
-            ${draft.has_token
-              ? html`<button
-                  class="btn danger"
-                  ?disabled=${this._busy}
-                  @click=${() => this._tokenAction(true)}
-                >
-                  ${t(s, "devices.token_revoke")}
-                </button>`
-              : nothing}
+            ${this._confirmToken
+              ? html`<span class="hint">${t(s, "devices.token_confirm")}</span>
+                  <button
+                    class="btn danger"
+                    ?disabled=${this._busy}
+                    @click=${() => this._tokenAction(this._confirmToken === "revoke")}
+                  >
+                    ${t(s, this._confirmToken === "revoke"
+                      ? "devices.token_revoke"
+                      : "devices.token_replace")}
+                  </button>
+                  <button class="btn" @click=${() => (this._confirmToken = undefined)}>
+                    ${t(s, "common.cancel")}
+                  </button>`
+              : html`<button
+                    class="btn"
+                    ?disabled=${this._busy}
+                    @click=${() =>
+                      // A keypad that has a token stops working the moment
+                      // it is replaced or revoked: asked first (second
+                      // review). The first token has nothing to break.
+                      draft.has_token
+                        ? (this._confirmToken = "replace")
+                        : this._tokenAction(false)}
+                  >
+                    ${t(s, draft.has_token ? "devices.token_replace" : "devices.token_generate")}
+                  </button>
+                  ${draft.has_token
+                    ? html`<button
+                        class="btn danger"
+                        ?disabled=${this._busy}
+                        @click=${() => (this._confirmToken = "revoke")}
+                      >
+                        ${t(s, "devices.token_revoke")}
+                      </button>`
+                    : nothing}`}
           </div>`
         : nothing}
       ${this._tokenProblems.length
@@ -541,7 +600,7 @@ class FoyerPageDevices extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${mqtt.enabled}
+              .checked=${live(mqtt.enabled)}
               @change=${(e: Event) =>
                 set("enabled", (e.target as HTMLInputElement).checked)}
             />
@@ -577,7 +636,7 @@ class FoyerPageDevices extends LitElement {
                   set("detail", (e.target as HTMLSelectElement).value as MqttConfig["detail"])}
               >
                 ${(["minimal", "standard", "full"] as const).map(
-                  (level) => html`<option .value=${level} ?selected=${level === mqtt.detail}>
+                  (level) => html`<option .value=${level} .selected=${live(level === mqtt.detail)}>
                     ${t(s, `mqtt_detail.${level}`)}
                   </option>`,
                 )}
@@ -592,7 +651,7 @@ class FoyerPageDevices extends LitElement {
                   set("qos", Number((e.target as HTMLSelectElement).value))}
               >
                 ${[0, 1, 2].map(
-                  (level) => html`<option .value=${String(level)} ?selected=${level === mqtt.qos}>
+                  (level) => html`<option .value=${String(level)} .selected=${live(level === mqtt.qos)}>
                     ${level}
                   </option>`,
                 )}
@@ -602,7 +661,7 @@ class FoyerPageDevices extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${mqtt.retain}
+              .checked=${live(mqtt.retain)}
               @change=${(e: Event) => set("retain", (e.target as HTMLInputElement).checked)}
             />
             <span>

@@ -5,11 +5,13 @@
 // here, never written by the backend, so the log reads in the language of
 // whoever is looking at it.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
+import { inHouseZone } from "../../shared/time";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { LogQuery, LogRow, PersonCounts } from "../../shared/types";
-import { download, type PanelContext } from "../context";
+import { download, type PanelContext, activateOnKey } from "../context";
 
 const PAGE_SIZE = 50;
 
@@ -111,7 +113,11 @@ class FoyerPageLog extends LitElement {
     this._confirmClear = false;
     this._busy = true;
     try {
-      await this.ctx.clearLog();
+      const result = await this.ctx.clearLog();
+      if (!result.success) {
+        this._error = t(this.ctx.strings, `reason.${result.reason ?? "unknown"}`);
+        return;
+      }
       this._offset = 0;
       await this._load();
     } catch (err) {
@@ -130,7 +136,10 @@ class FoyerPageLog extends LitElement {
     this._erased = undefined;
     if (!userId || !this.ctx) return;
     try {
-      this._counts = await this.ctx.previewPerson(userId);
+      const counts = await this.ctx.previewPerson(userId);
+      // Only for the person still chosen: picking quickly showed the
+      // previous one's counts under the new name (second review).
+      if (this._person === userId) this._counts = counts;
     } catch (err) {
       this._error = String((err as { message?: string })?.message ?? err);
     }
@@ -206,7 +215,7 @@ class FoyerPageLog extends LitElement {
                 <option value="">${t(s, "log.person_none")}</option>
                 ${users.map(
                   (user) =>
-                    html`<option .value=${user.id!} ?selected=${user.id === this._person}>
+                    html`<option .value=${user.id!} .selected=${live(user.id === this._person)}>
                       ${user.name}
                     </option>`,
                 )}
@@ -250,7 +259,7 @@ class FoyerPageLog extends LitElement {
                 <label class="check">
                   <input
                     type="checkbox"
-                    .checked=${this._keepPseudonym}
+                    .checked=${live(this._keepPseudonym)}
                     @change=${(e: Event) =>
                       (this._keepPseudonym = (e.target as HTMLInputElement).checked)}
                   />
@@ -345,7 +354,7 @@ class FoyerPageLog extends LitElement {
                 <option value="">${t(s, "log.all")}</option>
                 ${ctx.status.areas.map(
                   (area) =>
-                    html`<option .value=${area.id} ?selected=${area.id === this._filters.area_id}>
+                    html`<option .value=${area.id} .selected=${live(area.id === this._filters.area_id)}>
                       ${area.name}
                     </option>`,
                 )}
@@ -360,7 +369,7 @@ class FoyerPageLog extends LitElement {
                 <option value="">${t(s, "log.all")}</option>
                 ${ctx.status.zones.map(
                   (zone) =>
-                    html`<option .value=${zone.id} ?selected=${zone.id === this._filters.zone_id}>
+                    html`<option .value=${zone.id} .selected=${live(zone.id === this._filters.zone_id)}>
                       ${zone.name}
                     </option>`,
                 )}
@@ -375,7 +384,7 @@ class FoyerPageLog extends LitElement {
                 <option value="">${t(s, "log.all")}</option>
                 ${severities.map(
                   (level) =>
-                    html`<option .value=${level} ?selected=${level === this._filters.severity}>
+                    html`<option .value=${level} .selected=${live(level === this._filters.severity)}>
                       ${t(s, `severity.${level}`)}
                     </option>`,
                 )}
@@ -390,7 +399,7 @@ class FoyerPageLog extends LitElement {
                 <option value="">${t(s, "log.all")}</option>
                 ${outcomes.map(
                   (outcome) =>
-                    html`<option .value=${outcome} ?selected=${outcome === this._filters.outcome}>
+                    html`<option .value=${outcome} .selected=${live(outcome === this._filters.outcome)}>
                       ${t(s, `outcome.${outcome}`)}
                     </option>`,
                 )}
@@ -533,9 +542,11 @@ class FoyerPageLog extends LitElement {
     const open = this._open === row.id;
     const where = [area?.name, zone?.name].filter(Boolean).join(" · ");
     return html`
-      <tr class="clickable" aria-selected=${open ? "true" : "false"} @click=${() =>
+      <tr class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey} aria-selected=${open ? "true" : "false"} @click=${() =>
         (this._open = open ? undefined : row.id)}>
-        <td class="mono">${new Date(row.ts).toLocaleString(ctx.hass.language)}</td>
+        <td class="mono">${new Date(row.ts).toLocaleString(ctx.hass.language, inHouseZone(ctx.hass))}</td>
         <td>
           <span class="state ${severityClass(row.severity)}">
             ${eventLabel(s, row.event_type)}
@@ -599,13 +610,18 @@ class FoyerPageLog extends LitElement {
   private _summary(s: Strings, row: LogRow): string {
     const ctx = this.ctx!;
     const detail = row.detail ?? {};
-    if (typeof detail.reason === "string") {
+    if (typeof detail.reason === "string" && detail.reason) {
       const zones = Array.isArray(detail.blocking_zones)
         ? detail.blocking_zones
             .map((id) => ctx.status.zones.find((z) => z.id === id)?.name ?? String(id))
             .join(", ")
         : "";
-      return t(s, `reason.${detail.reason}`, { zones });
+      const key = `reason.${detail.reason}`;
+      const said = t(s, key, { zones });
+      // An automatic rule's rows carry why the rule did not act, which is
+      // its own vocabulary (§9.4) and has its own words on page 12: without
+      // them the log showed "reason.motion" (second review).
+      return said === key ? t(s, `rules.block_${detail.reason}`) : said;
     }
     if (typeof detail.error === "string") return detail.error;
     if (row.event_type === "zone_state") {
@@ -624,8 +640,11 @@ class FoyerPageLog extends LitElement {
       detail.down_since !== ""
     ) {
       return t(s, "log.gap", {
-        from: new Date(detail.down_since).toLocaleString(ctx.hass.language),
-        to: new Date(String(detail.up_at)).toLocaleString(ctx.hass.language),
+        from: new Date(detail.down_since).toLocaleString(ctx.hass.language, inHouseZone(ctx.hass)),
+        to: new Date(String(detail.up_at)).toLocaleString(
+          ctx.hass.language,
+          inHouseZone(ctx.hass),
+        ),
       });
     }
     if (typeof detail.kind === "string" && row.category === "action") {
@@ -654,6 +673,10 @@ class FoyerPageLog extends LitElement {
     const lines: string[] = [];
     for (const [kind, entry] of Object.entries(changes as Record<string, unknown>)) {
       const label = t(s, `config_kind.${kind}`);
+      if (kind === "reason" && typeof entry === "string") {
+        lines.push(`${label}: ${t(s, `reason.${entry}`)}`);
+        continue;
+      }
       if (typeof entry !== "object" || entry === null) {
         lines.push(`${label}: ${this._value(s, entry)}`);
         continue;

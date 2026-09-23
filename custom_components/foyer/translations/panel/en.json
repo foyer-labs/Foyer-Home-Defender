@@ -14,7 +14,9 @@
     "no": "No",
     "seconds_unit": "Seconds",
     "ok": "OK",
-    "edit": "Edit"
+    "edit": "Edit",
+    "move_up": "Move up",
+    "move_down": "Move down"
   },
   "nav": {
     "overview": "Overview",
@@ -1462,7 +1464,14 @@
     "rf_interference_cleared": "Radio interference over",
     "radio_coordinator_down": "Radio coordinator unreachable",
     "radio_coordinator_up": "Radio coordinator back",
-    "duress": "Duress code used"
+    "duress": "Duress code used",
+    "action_tested": "Action tested",
+    "auto_pending": "Automatic rule counting down",
+    "auto_cancelled": "Automatic rule cancelled",
+    "auto_blocked": "Automatic rule did not act",
+    "auto_suspension_set": "Automatic rules suspended",
+    "auto_suspension_cleared": "Suspension over",
+    "auto_arming_switched": "Automatic rules switched"
   },
   "condition": {
     "add": "Add a condition",
@@ -1525,7 +1534,13 @@
     "escalation_hint": "Seconds from the start of the escalation. With a time here this notification becomes a step: it waits, and it stops the moment somebody acknowledges.",
     "escalation_moment_hint": "Only an alarm or a technical alarm can be escalated: they are the two that can be acknowledged.",
     "images_text_alone": "Pictures go only with an alarm: a trigger, a zone joining it, an escalation step, a technical alarm. For “{moments}” this notification sends its text alone. Never at the start of an entry delay, which is somebody coming home.",
-    "images_channels": "Only push and chat channels receive the pictures. An SMS, a voice call or an \"other\" channel receives the text alone, rather than one more message per camera."
+    "images_channels": "Only push and chat channels receive the pictures. An SMS, a voice call or an \"other\" channel receives the text alone, rather than one more message per camera.",
+    "effective_from": "Effective profile: {profile} — {from}",
+    "flash_none": "No flash",
+    "flash_short": "Short flash",
+    "flash_long": "Long flash",
+    "test_after_save": "Save the profile to test this action as it is now: the test runs the saved one.",
+    "json_invalid": "This is not valid JSON, so it was not kept. Correct it and leave the box again."
   },
   "camera_mode": {
     "snapshot": "Snapshot",
@@ -1603,7 +1618,10 @@
     "auto_suspension_set": "Automatic arming suspended",
     "auto_suspension_cleared": "Suspension lifted",
     "action_test": "Action tested",
-    "simulation_run": "Simulation run"
+    "simulation_run": "Simulation run",
+    "config_refused": "Configuration change refused",
+    "config_new_token": "Keypad token generated",
+    "config_revoke_token": "Keypad token revoked"
   },
   "log": {
     "filters": "Filters",
@@ -1833,7 +1851,14 @@
     "radio": "Radio",
     "devices": "Arming device",
     "contacts": "Contact",
-    "rules": "Rule"
+    "rules": "Rule",
+    "users": "People",
+    "removed": "Rows removed",
+    "rows": "Rows",
+    "pseudonymised": "Rows pseudonymised",
+    "from": "From",
+    "to": "To",
+    "reason": "Why"
   },
   "detail": {
     "skip_exit_delay": "Armed with no exit delay",
@@ -2022,7 +2047,8 @@
     "endpoint_stream": "The state stream",
     "endpoint_stream_hint": "The same message as MQTT's, at the same detail level, the moment anything changes; a comment line every thirty seconds keeps the connection open through proxies.",
     "detail_shared_hint": "The same level applies to the device endpoint's state stream and to its answers.",
-    "token_dropped": "Saving it on MQTT revokes its token. Back on the endpoint it will need a new one."
+    "token_dropped": "Saving it on MQTT revokes its token. Back on the endpoint it will need a new one.",
+    "token_confirm": "The keypad stops working with its current token at once, and every connection it has open is closed."
   },
   "attachment": {
     "companion": "Companion app — live picture, no file",
@@ -2288,7 +2314,8 @@
     "webhook_warning_hint": "Home Assistant webhooks are open to whoever holds the address: anybody who has it, or intercepts it, can stop the escalation on its way to your neighbour. Switch it on only if a voice provider needs it, and give the address to nothing else.",
     "webhook_hint": "Post to this path from the voice provider when the key is pressed. Switching this off forgets the address: switching it on again gives out a new one.",
     "no_quiet_hours": "Always reachable",
-    "actionable_entity": "This is a notify entity: it carries a message and a title and nothing else, so no button, no target and no extra data reach the phone. Use the notify service behind it if this channel should be able to acknowledge."
+    "actionable_entity": "This is a notify entity: it carries a message and a title and nothing else, so no button, no target and no extra data reach the phone. Use the notify service behind it if this channel should be able to acknowledge.",
+    "step_offset": "+{n} s"
   },
   "rules": {
     "title": "Rules",

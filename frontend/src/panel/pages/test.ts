@@ -14,8 +14,10 @@
 // `walk_test` and `test_actions`, each with a code — and both say plainly what
 // they are about to do.
 import { LitElement, css, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
+import { inHouseZone } from "../../shared/time";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type {
   Diagnostics,
@@ -86,13 +88,16 @@ function conditionEntities(ctx: PanelContext): string[] {
 
 /** The language is the Home Assistant user's, not the browser's (found in
  * review): every other page on this panel follows the first. */
-function hhmm(iso: string, language?: string): string {
+function hhmm(
+  iso: string,
+  language?: string,
+  hass?: { config?: { time_zone?: string } },
+): string {
   const date = new Date(iso);
-  return date.toLocaleTimeString(language, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  return date.toLocaleTimeString(
+    language,
+    inHouseZone(hass, { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+  );
 }
 
 class FoyerPageTest extends LitElement {
@@ -103,6 +108,7 @@ class FoyerPageTest extends LitElement {
     _simulation: { state: true },
     _busy: { state: true },
     _error: { state: true },
+    _notice: { state: true },
     _scenario: { state: true },
     _start: { state: true },
     _overrides: { state: true },
@@ -120,6 +126,7 @@ class FoyerPageTest extends LitElement {
   private _simulation?: Simulation;
   private _busy = false;
   private _error?: string;
+  private _notice?: string;
   private _scenario = "";
   private _start = "";
   private _overrides: Override[] = [];
@@ -160,13 +167,18 @@ class FoyerPageTest extends LitElement {
     this._codeWanted = false;
     const query: SimulationQuery = {
       scenario_id: this._scenario || null,
-      start: this._start ? new Date(this._start).toISOString() : null,
+      // As typed, without a zone: the backend reads it in the house's time
+      // zone, which is the one the trace is shown in.
+      start: this._start || null,
       zones: this._overrides.filter((o) => o.zone_id && o.state),
       entities: this._entities,
       code: this._code || undefined,
     };
     try {
       this._simulation = await this.ctx.simulate(query);
+      // Used, and not kept: a code that proved what it had to stays out of
+      // memory for the rest of the visit (second review).
+      this._code = "";
     } catch (err) {
       // A wrong code fails the command outright, before the run starts, so
       // it never reaches the trace. It is still the same question the trace
@@ -174,6 +186,8 @@ class FoyerPageTest extends LitElement {
       const code = (err as { code?: string })?.code;
       this._codeWanted = code === "bad_code" || code === "code_required";
       this._simulation = undefined;
+      // A wrong code is not offered back for another try.
+      if (code === "bad_code") this._code = "";
       this._error = this._codeWanted
         ? undefined
         : String((err as { message?: string })?.message ?? err);
@@ -193,7 +207,11 @@ class FoyerPageTest extends LitElement {
             <button
               role="tab"
               aria-selected=${tab === this._tab ? "true" : "false"}
-              @click=${() => (this._tab = tab)}
+              @click=${() => {
+                this._tab = tab;
+                // An answer belongs to the tab that asked for it.
+                this._error = undefined;
+              }}
             >
               ${t(s, `test.tab.${tab}`)}
             </button>
@@ -202,6 +220,9 @@ class FoyerPageTest extends LitElement {
       </nav>
       ${this._error
         ? html`<div class="problems" role="alert">${this._error}</div>`
+        : nothing}
+      ${this._notice && this._tab === "walktest"
+        ? html`<div class="notice" role="status">${this._notice}</div>`
         : nothing}
       ${this._tab === "diagnostics"
         ? this._renderDiagnostics(s)
@@ -291,7 +312,7 @@ class FoyerPageTest extends LitElement {
               </span>`}
         </td>
         <td class="mono">
-          ${zone.last_changed ? hhmm(zone.last_changed, this.ctx?.hass.language) : "—"}
+          ${zone.last_changed ? hhmm(zone.last_changed, this.ctx?.hass.language, this.ctx?.hass) : "—"}
         </td>
         <td>
           ${!zone.enabled
@@ -365,7 +386,7 @@ class FoyerPageTest extends LitElement {
                       <td class="mono">${device.entity_id ?? "—"}</td>
                       <td class="mono">${device.state ?? "—"}</td>
                       <td class="mono">
-                        ${device.last_changed ? hhmm(device.last_changed, this.ctx?.hass.language) : "—"}
+                        ${device.last_changed ? hhmm(device.last_changed, this.ctx?.hass.language, this.ctx?.hass) : "—"}
                       </td>
                       <td>
                         ${!device.enabled
@@ -418,7 +439,7 @@ class FoyerPageTest extends LitElement {
                   ${ctx.status.scenarios.map(
                     (scenario) => html`<option
                       .value=${scenario.id}
-                      ?selected=${scenario.id === this._scenario}
+                      .selected=${live(scenario.id === this._scenario)}
                     >
                       ${scenario.name}
                     </option>`,
@@ -453,6 +474,8 @@ class FoyerPageTest extends LitElement {
                   this._entities = {};
                   this._simulation = undefined;
                   this._start = "";
+                  this._code = "";
+                  this._codeWanted = false;
                 }}
               >
                 ${t(s, "test.simulator.reset")}
@@ -475,6 +498,7 @@ class FoyerPageTest extends LitElement {
           (override, index) => html`
             <div class="override">
               <select
+                aria-label=${t(s, "test.simulator.pick_zone")}
                 @change=${(e: Event) =>
                   this._setOverride(index, {
                     zone_id: (e.target as HTMLSelectElement).value,
@@ -487,7 +511,7 @@ class FoyerPageTest extends LitElement {
                 ${ctx.status.zones.map(
                   (zone) => html`<option
                     .value=${zone.id}
-                    ?selected=${zone.id === override.zone_id}
+                    .selected=${live(zone.id === override.zone_id)}
                   >
                     ${zone.name}
                   </option>`,
@@ -495,6 +519,7 @@ class FoyerPageTest extends LitElement {
               </select>
               <input
                 class="state-input"
+                aria-label=${t(s, "test.simulator.state")}
                 .value=${override.state}
                 list="foyer-sim-states-${index}"
                 placeholder=${t(s, "test.simulator.state")}
@@ -514,6 +539,7 @@ class FoyerPageTest extends LitElement {
                 min="0"
                 .value=${String(override.at)}
                 title=${t(s, "test.simulator.at")}
+                aria-label=${t(s, "test.simulator.at")}
                 @change=${(e: Event) =>
                   this._setOverride(index, {
                     at: Number((e.target as HTMLInputElement).value) || 0,
@@ -654,7 +680,8 @@ class FoyerPageTest extends LitElement {
           type="password"
           inputmode="numeric"
           autocomplete="off"
-          .value=${this._code}
+          aria-label=${t(s, "test.simulator.premise_code")}
+          .value=${live(this._code)}
           @change=${(e: Event) => (this._code = (e.target as HTMLInputElement).value)}
         />
         <div class="actions">
@@ -677,7 +704,7 @@ class FoyerPageTest extends LitElement {
       : "";
     return html`
       <li class="step">
-        <div class="when mono">${hhmm(step.at, this.ctx?.hass.language)}</div>
+        <div class="when mono">${hhmm(step.at, this.ctx?.hass.language, this.ctx?.hass)}</div>
         <div class="what">
           ${step.kind === "zone"
             ? html`<div>
@@ -723,7 +750,7 @@ class FoyerPageTest extends LitElement {
                   ? html`<span class="muted">
                       ${t(s, "test.trace.timer", {
                         kind: t(s, `test.timer.${change.timer_kind}`),
-                        at: hhmm(change.timer_due, this.ctx?.hass.language),
+                        at: hhmm(change.timer_due, this.ctx?.hass.language, this.ctx?.hass),
                       })}
                     </span>`
                   : nothing}
@@ -752,7 +779,7 @@ class FoyerPageTest extends LitElement {
             .filter((item) => this._firstMention(item))
             .map(
               (item) => html`<div class="wait">
-                ${t(s, `test.trace.later.${item.kind}`, { at: hhmm(item.at, this.ctx?.hass.language) })}
+                ${t(s, `test.trace.later.${item.kind}`, { at: hhmm(item.at, this.ctx?.hass.language, this.ctx?.hass) })}
               </div>`,
             )}
           ${step.scheduled
@@ -1028,7 +1055,7 @@ class FoyerPageTest extends LitElement {
               ${t(s, detection ? "walk.detected" : "walk.never")}
             </span>
           </td>
-          <td class="mono">${detection ? hhmm(detection.first) : "—"}</td>
+          <td class="mono">${detection ? hhmm(detection.first, this.ctx?.hass.language, this.ctx?.hass) : "—"}</td>
           <td class="mono">${detection ? detection.count : 0}</td>
           <td>
             ${zone?.fault
@@ -1045,7 +1072,7 @@ class FoyerPageTest extends LitElement {
           <span class="hint">
             ${t(s, "walk.started_by", {
               who: walk.user_name ?? t(s, "walk.somebody"),
-              at: hhmm(walk.started_at),
+              at: hhmm(walk.started_at, this.ctx?.hass.language, this.ctx?.hass),
             })}
           </span>
         </div>
@@ -1091,6 +1118,7 @@ class FoyerPageTest extends LitElement {
     if (!ctx) return;
     this._busy = true;
     this._error = undefined;
+    this._notice = undefined;
     try {
       const minutes = Number(this._walkDuration) || 0;
       const result = await ctx.walkTest(true, {
@@ -1101,11 +1129,14 @@ class FoyerPageTest extends LitElement {
       } else if (result.blocking_zones.length) {
         // Not a refusal: the test is running, and those areas are not in it
         // (part 2 decision 7). Said plainly, because a zone that was never
-        // armed cannot have detected anything.
-        this._error = t(ctx.strings, "walk.partly_armed", {
+        // armed cannot have detected anything — as a note, not as the red
+        // alert a refusal is (second review).
+        this._notice = t(ctx.strings, "walk.partly_armed", {
           zones: result.blocking_zones.map((z) => z.name).join(", "),
         });
       }
+    } catch (err) {
+      this._error = String((err as { message?: string })?.message ?? err);
     } finally {
       this._busy = false;
     }
@@ -1259,6 +1290,8 @@ class FoyerPageTest extends LitElement {
           detail,
         });
       }
+    } catch (err) {
+      this._error = String((err as { message?: string })?.message ?? err);
     } finally {
       this._busy = false;
     }

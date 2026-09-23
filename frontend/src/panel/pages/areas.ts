@@ -1,12 +1,13 @@
 // Page 2 — Areas (SPEC §4.5, §15.1). The backend validates every save; this
 // page only collects the fields and shows what the backend said.
 import { LitElement, html, nothing } from "lit";
+import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { AreaConfig, Problem } from "../../shared/types";
 import { codeFields } from "../code-fields";
-import { problemText, type PanelContext } from "../context";
+import { problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
 import { effectiveHint, profileField } from "../profile-picker";
 
 const NEW_AREA: AreaConfig = {
@@ -34,6 +35,9 @@ class FoyerPageAreas extends LitElement {
   private _busy = false;
 
   private _edit(area?: AreaConfig): void {
+    // Not while a save or a delete is on its way: its answer would land in
+    // this editor, closing it or showing the other item's problems here.
+    if (this._busy) return;
     this._draft = area ? { ...area } : { ...NEW_AREA };
     this._problems = [];
   }
@@ -97,6 +101,8 @@ class FoyerPageAreas extends LitElement {
                 const state = live.get(area.id ?? "") ?? "disarmed";
                 return html`<tr
                   class="clickable"
+ tabindex="0"
+ @keydown=${activateOnKey}
                   aria-selected=${this._draft?.id === area.id ? "true" : "false"}
                   @click=${() => this._edit(area)}
                 >
@@ -105,7 +111,7 @@ class FoyerPageAreas extends LitElement {
                   <td>${zoneCount(area.id)}</td>
                   <td>${t(s, "common.seconds", { n: area.default_entry_delay })}</td>
                   <td>${t(s, "common.seconds", { n: area.default_exit_delay })}</td>
-                  <td class="mono">${area.ha_state_when_armed}</td>
+                  <td>${t(s, `ha_state.${area.ha_state_when_armed}`)}</td>
                 </tr>`;
               })}
             </tbody>
@@ -142,7 +148,7 @@ class FoyerPageAreas extends LitElement {
               >
                 ${(meta?.ha_states ?? []).map(
                   (mode) =>
-                    html`<option .value=${mode} ?selected=${mode === draft.ha_state_when_armed}>
+                    html`<option .value=${mode} .selected=${live(mode === draft.ha_state_when_armed)}>
                       ${t(s, `ha_state.${mode}`)}
                     </option>`,
                 )}
@@ -157,7 +163,7 @@ class FoyerPageAreas extends LitElement {
                 max=${maxEntry}
                 .value=${String(draft.default_entry_delay)}
                 @input=${(e: Event) =>
-                  this._set("default_entry_delay", Number((e.target as HTMLInputElement).value))}
+                  whenNumber(e, (n) => this._set("default_entry_delay", n))}
               />
               <span class="hint">${t(s, "areas.entry_hint")}</span>
             </label>
@@ -169,7 +175,7 @@ class FoyerPageAreas extends LitElement {
                 max=${maxExit}
                 .value=${String(draft.default_exit_delay)}
                 @input=${(e: Event) =>
-                  this._set("default_exit_delay", Number((e.target as HTMLInputElement).value))}
+                  whenNumber(e, (n) => this._set("default_exit_delay", n))}
               />
               <span class="hint">${t(s, "areas.exit_hint")}</span>
             </label>
@@ -186,7 +192,7 @@ class FoyerPageAreas extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${draft.is_perimeter}
+              .checked=${live(draft.is_perimeter)}
               @change=${(e: Event) =>
                 this._set("is_perimeter", (e.target as HTMLInputElement).checked)}
             />
