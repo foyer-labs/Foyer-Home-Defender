@@ -992,13 +992,18 @@ change nothing; one whose own Foyer user was disabled, or has run past its
 validity window, could not undo it. The integration's **Configure** step in
 Home Assistant — open to administrators only — recovers access: it asks for
 which Home Assistant account (Home Assistant does not tell an integration who
-opened the step, and choosing another administrator buys nothing INV-6 does
-not already give) and for a new code. The Foyer user linked to that account
+opened the step; only administrators' accounts are offered, and choosing
+another administrator buys nothing INV-6 does not already give — anybody
+else is given a way in from the Users page, with the permissions that takes)
+and for a new code. The Foyer user linked to that account
 is enabled, its validity window is removed and the code is set; an account
 with no linked user gets a new one, with every permission. The code follows
 §8.1's uniqueness rule. It is never quiet: a `security` row, a Home Assistant
 notification, and a message to every enabled contact, each naming the
-account.
+account — said once the change has been written, because a recovery
+announced and then not saved would tell the household about a code that does
+not exist. One that could not be written leaves its row, marked failed, and
+nothing else.
 
 **Channels that identify the user:** Home Assistant UI with `ha_user_id` linked,
 a per-user NFC tag, a per-user RFID badge. **Channels that do not:** a shared
@@ -1747,8 +1752,9 @@ configured forty zones will do it twice. The exported document carries its
 schema version: a restore migrates an older one through the same steps a real
 upgrade uses, refuses one written by a newer major version rather than reading
 it half-way, and then goes through validation and the armed-area guard like
-any other edit. A restore that adds, removes or changes a person or a tag
-needs `manage_users` as well as `edit_config`, as the Alarmo importer's
+any other edit. A restore that adds, removes or changes a person, a tag, or
+the person a key switch acts as needs `manage_users` as well as
+`edit_config`, as the Alarmo importer's
 does: otherwise `edit_config` was a way to hand oneself every permission, or
 somebody else's key (decision 111).
 
@@ -2233,5 +2239,5 @@ document should make one of them on purpose.
 | 107 | Arming is refused while a walk test runs | The test arms every area and its end disarms them all; an arming accepted in between was undone without a word |
 | 108 | `alarm_cleared` is raised when a disarm clears an area's alarm memory | §6.1 named it and nothing raised it; an alarm is often over long before anybody clears it, and "the lamp that says something happened" needs the second moment, not the first |
 | 109 | An administrator recovers access from the integration's Configure step, loudly | Decision 101 left an administrator with no code no way in; INV-6 says they can do anything anyway, so the recovery exists — and is logged, notified in Home Assistant and sent to every contact, so it is never the quiet way round a code |
-| 110 | The recovery enables the account's linked user, removes its validity window and sets its code, or creates the user with every permission | An administrator whose own user was disabled could not undo it; Home Assistant does not say who opened the step, so it asks for the account |
-| 111 | A restore that touches people or tags needs `manage_users` | `edit_config` alone let a backup file grant any permission, or give somebody's tag to somebody else; the Alarmo importer already asked for it |
+| 110 | The recovery enables the account's linked user, removes its validity window and sets its code, or creates the user with every permission; only administrators' accounts are offered | An administrator whose own user was disabled could not undo it; Home Assistant does not say who opened the step, so it asks for the account — and a way in for anybody else is the Users page's, with its permissions |
+| 111 | A restore that touches people, tags or a key switch's person needs `manage_users` | `edit_config` alone let a backup file grant any permission, or give somebody's tag to somebody else; the Alarmo importer already asked for it |
