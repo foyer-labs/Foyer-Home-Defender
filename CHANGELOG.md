@@ -5,6 +5,103 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.21] — the third review
+
+A full review of the code, engine to card, looking for bugs. Everything it
+found that could be fixed without a decision on behaviour is fixed here; what
+needs one is left for a later release. No schema change.
+
+### Changed — read these before you update
+- **Changing which entity a zone watches asks you to confirm the trigger
+  again** (INV-5). The same trigger on another entity is one nobody has read
+  against that entity's states: a lock's `locked`/`unlocked` never matches
+  `on`, and the alarm would never fire.
+- **Linking a contact to a different person needs `manage_users`**, like
+  handing over a tag: an acknowledgement from that contact counts as that
+  person.
+- **The `action` category joins the seven-day preset.** Its rows say who
+  acknowledged an alarm, so they name people like the other four.
+- **A channel you switch off keeps its fault.** Switched back on, it shows
+  the fault it was in rather than a channel nothing is known about.
+- **New installations' default profile also announces a second zone joining
+  an alarm** (`incident_joined`). An existing installation is not changed;
+  add the moment to your profile if you want the whole story.
+- **The stored configuration and state are now written private and atomic**,
+  as Home Assistant writes its own credentials: the files hold code hashes
+  and the keypad token's hash, and a power cut mid-write must leave the
+  previous version whole.
+- **The Zones page works for a person holding `edit_config`** who is not a
+  Home Assistant administrator. Picking an entity was refused for them, so
+  they could open the page and never add a zone.
+
+### Fixed — the engine
+- A verification group spanning an armed and a disarmed area, with member
+  suppression on, was held for ever: the member in the disarmed area could
+  never count. The PIR watching the armed area now acts on its own, as it
+  does when the other member is excluded or in fault.
+- Alarm memory was wiped without a disarm when the siren cutoff resumed an
+  arming that then failed on an open zone. It now stays until somebody
+  disarms, as §5.2 says.
+- A walk test armed an area still holding alarm memory, then read that
+  memory as "in alarm" when it ended and left the house armed with somebody
+  inside. Such an area is left alone; its zones are still walked.
+- Disarming an area armed on its own while a scenario ran was judged by that
+  scenario's rules — refused to a person allowed the area but not the
+  scenario. The scenario now has a say only over the areas it armed.
+- Once the siren's own duration had run out, a later zone joining the same
+  incident did not sound it again: the incident still counted it as running.
+- A notification naming a channel the person has since switched off went to
+  nobody. It now goes over their next enabled channel.
+- A refused request that merely claimed a name (`user_id` with no code) is
+  logged with the same `attributed: claimed` note as an accepted one.
+- The simulator's trace explained an action skipped for a jammed radio, a
+  walk test or a broken channel as skipped for no reason.
+
+### Fixed — around the engine
+- The executor is started before the state is saved, so a slow disk never
+  stands between a decision and its sirens.
+- Rows queued while Home Assistant reloaded the integration — the row
+  recording the configuration save itself, most often — could be dropped
+  when the log closed. The log is now closed last, after every listener, and
+  a write in flight finishes.
+- A setup that failed while starting a transport left the system running
+  behind it. It is stopped before the error is raised.
+- An acknowledgement button pressed on a stale notification, with the house
+  quiet, wrote a refusal in the alarm log. It is ignored, as the DTMF webhook
+  already did.
+- A backup taken with the watchdog on could not be restored on an
+  installation with no watchdog URL yet; the watchdog is restored off, and
+  comes back when its URL is entered. A backup whose `config` is not a map,
+  or whose lists are not lists, is refused instead of raising.
+- A code colliding with somebody else's during admin recovery counts as a
+  wrong code, so the recovery form is not an oracle over other people's
+  codes.
+- A configuration command carrying no code no longer wakes the engine with
+  an empty attempt.
+- A service refused by validation raised "?" as its reason; it now names the
+  first problem.
+- The names in a CSV export are exported as text: a zone named
+  `=HYPERLINK(...)` is not a formula.
+
+### Fixed — the panel and the card
+- A second command asking for a code while a prompt was open took the prompt
+  over and left the first command waiting for ever, with its page busy. The
+  first is now answered "cancelled", and the page behind the prompt is inert
+  so the keyboard cannot reach it.
+- A settings change the backend refused, or whose prompt you cancelled,
+  stayed on screen and was sent again with the next unrelated save; the
+  refusal appeared under the wrong cards. The stored value comes back, and
+  the message sits under the card you changed. Emptying the pseudonymisation
+  days no longer saves zero.
+- Settings and broker saves merged over the configuration as this panel last
+  read it, writing another administrator's change back out. They are merged
+  over the configuration as it is now.
+- The master card showed an *Arm* button with no scenarios configured, which
+  sent a request with no target.
+- The automatic-disarming switch on the Rules page was disabled for a person
+  holding `edit_config` although the backend accepted them.
+- A panel whose subscription was refused retried on every state change.
+
 ## [0.1.0-beta.20] — when everybody leaves and a window is open
 
 An automatic rule that met an open window used to fail quietly: the house
