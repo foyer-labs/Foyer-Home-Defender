@@ -37,6 +37,32 @@
       "single_instance_allowed": "Foyer Home Defender è già configurato."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Recupera l'accesso a Foyer",
+        "description": "Per un amministratore senza codice in una casa dove altri ce l'hanno, o il cui utente Foyer è stato disattivato. L'utente Foyer dell'account viene riattivato, la sua finestra di validità tolta e il codice sostituito; un account che non ne ha riceve un nuovo utente con tutti i permessi.\n\n**Non è mai silenzioso.** Viene scritto nel registro, mostrato come notifica di Home Assistant e mandato a tutti i contatti, con il nome dell'account. Se non intendevi farlo, chiudi la finestra.",
+        "data": {
+          "account": "Account di Home Assistant",
+          "code": "Nuovo codice"
+        },
+        "data_description": {
+          "account": "Home Assistant non dice a Foyer chi ha aperto questa finestra: scegli l'account da recuperare.",
+          "code": "Esattamente {length} cifre, non già di qualcun altro."
+        }
+      }
+    },
+    "error": {
+      "unknown_account": "Quell'account non esiste o non può accedere.",
+      "invalid_code": "Il codice deve avere solo cifre, della lunghezza impostata in Foyer.",
+      "code_in_use": "Quel codice non è disponibile. Scegline un altro.",
+      "invalid": "Foyer non è riuscito a salvare questa persona. Apri la pagina Utenti per vedere perché.",
+      "reloading": "Foyer sta salvando un'altra modifica. Riprova tra un momento."
+    },
+    "abort": {
+      "not_loaded": "Foyer non è in funzione. Riprova quando si è avviato."
+    }
+  },
   "selector": {
     "trigger_state": {
       "options": {

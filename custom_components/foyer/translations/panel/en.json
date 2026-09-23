@@ -1330,6 +1330,10 @@
     "alarm_cleared": {
       "title": "Foyer: alarm memory cleared",
       "message": "The alarm memory of {area} has been cleared."
+    },
+    "access_recovered": {
+      "title": "Foyer: access recovered",
+      "message": "An administrator used Home Assistant to recover access to Foyer for the account {account}, and set a new code for it. If nobody in the house did this, check who has administrator access to Home Assistant."
     }
   },
   "chime_mode": {
@@ -1485,7 +1489,8 @@
     "auto_suspension_cleared": "Suspension over",
     "auto_arming_switched": "Automatic rules switched",
     "alarm_ended": "Alarm over",
-    "alarm_cleared": "Alarm memory cleared"
+    "alarm_cleared": "Alarm memory cleared",
+    "access_recovered": "Access recovered"
   },
   "condition": {
     "add": "Add a condition",
@@ -1636,7 +1641,8 @@
     "config_refused": "Configuration change refused",
     "config_new_token": "Keypad token generated",
     "config_revoke_token": "Keypad token revoked",
-    "tokens_rejected": "Keypad tokens refused"
+    "tokens_rejected": "Keypad tokens refused",
+    "access_recovered": "Access recovered by an administrator"
   },
   "log": {
     "filters": "Filters",
@@ -1925,7 +1931,9 @@
     "contact_id": "Contact",
     "over_contact_id": "Announced to",
     "addresses": "Addresses",
-    "since": "Since"
+    "since": "Since",
+    "account": "Account",
+    "created": "New person"
   },
   "code": {
     "title": "Code",

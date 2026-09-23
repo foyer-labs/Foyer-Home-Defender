@@ -1,18 +1,31 @@
-"""Config flow: name the area and scenario, pick the zone, confirm its trigger."""
+"""Config flow: name the area and scenario, pick the zone, confirm its trigger.
+
+And the Configure step, which is one thing only: an administrator recovering
+access (SPEC §8.2, decisions 109, 110). Everything else is the panel's.
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
     TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 import voluptuous as vol
 
@@ -26,10 +39,17 @@ from .const import (
 from .core.proposals import SUPPORTED_DOMAINS, invalid_trigger_states, propose_trigger
 
 CONF_CONFIRM = "confirm_trigger"
+CONF_ACCOUNT = "account"
+CONF_CODE = "code"
 
 
 class FoyerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        return FoyerRecoveryFlow()
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
@@ -106,6 +126,63 @@ class FoyerConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={
                 "entity": state.name if state else entity_id,
                 "current_state": state.state if state else "unavailable",
+            },
+            errors=errors,
+        )
+
+
+class FoyerRecoveryFlow(OptionsFlow):
+    """Recover access for an administrator's account, loudly (§8.2).
+
+    Home Assistant opens this step to administrators only and does not say
+    which one: the step asks for the account. What it does is said in the
+    log, in a Home Assistant notification and to every enabled contact
+    before it is written (api/recovery).
+    """
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        from .api.recovery import async_accounts, async_recover
+        from .runtime.system import FoyerSystem
+
+        system = self.hass.data.get(DOMAIN)
+        if not isinstance(system, FoyerSystem) or system.superseded:
+            return self.async_abort(reason="not_loaded")
+        accounts = await async_accounts(self.hass)
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            error = await async_recover(
+                self.hass,
+                system,
+                user_input[CONF_ACCOUNT],
+                str(user_input.get(CONF_CODE) or "").strip(),
+            )
+            if error is None:
+                # Nothing of its own to store: the recovery is in the
+                # configuration Foyer keeps, and the entry keeps its options.
+                return self.async_create_entry(data=dict(self.config_entry.options))
+            errors["base"] = error
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_ACCOUNT): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value=value, label=label)
+                                for value, label in accounts.items()
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(CONF_CODE): TextSelector(
+                        TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                    ),
+                }
+            ),
+            description_placeholders={
+                "length": str(system.config.settings.security.code_length)
             },
             errors=errors,
         )

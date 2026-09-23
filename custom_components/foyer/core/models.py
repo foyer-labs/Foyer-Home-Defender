@@ -358,6 +358,11 @@ class Moment(StrEnum):
     # ended (decision 108): the lamp that says "something happened while you
     # were out" goes off here, not at the cutoff hours earlier.
     ALARM_CLEARED = "alarm_cleared"
+    # An administrator recovered access from the integration's Configure step
+    # (§8.2, decision 109). Not a profile moment and never offered as one:
+    # it is announced to every contact directly, because a way round a code
+    # that a profile could be configured not to answer would be a quiet one.
+    ACCESS_RECOVERED = "access_recovered"
     ZONE_FAULT = "zone_fault"
     HA_RESTARTED = "ha_restarted"
     TECHNICAL_RAISED = "technical_raised"

@@ -111,6 +111,7 @@ CATEGORY: dict[Moment, LogCategory] = {
     Moment.SIREN_CUTOFF: LogCategory.ALARM,
     Moment.ALARM_ENDED: LogCategory.ALARM,
     Moment.ALARM_CLEARED: LogCategory.ALARM,
+    Moment.ACCESS_RECOVERED: LogCategory.SECURITY,
     Moment.INCIDENT_OPENED: LogCategory.ALARM,
     Moment.INCIDENT_JOINED: LogCategory.ALARM,
     Moment.INCIDENT_ACKNOWLEDGED: LogCategory.ALARM,
@@ -181,6 +182,8 @@ SEVERITY: dict[Moment, LogSeverity] = {
     Moment.SIREN_CUTOFF: LogSeverity.WARNING,
     Moment.ALARM_ENDED: LogSeverity.INFO,
     Moment.ALARM_CLEARED: LogSeverity.INFO,
+    # Loud: it goes through quiet hours as an alarm does (decision 109).
+    Moment.ACCESS_RECOVERED: LogSeverity.ALARM,
     Moment.INCIDENT_OPENED: LogSeverity.ALARM,
     Moment.INCIDENT_JOINED: LogSeverity.ALARM,
     Moment.INCIDENT_ACKNOWLEDGED: LogSeverity.INFO,

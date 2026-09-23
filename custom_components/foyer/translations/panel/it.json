@@ -1330,6 +1330,10 @@
     "alarm_cleared": {
       "title": "Foyer: memoria d'allarme azzerata",
       "message": "La memoria d'allarme di {area} è stata azzerata."
+    },
+    "access_recovered": {
+      "title": "Foyer: accesso recuperato",
+      "message": "Un amministratore ha usato Home Assistant per recuperare l'accesso a Foyer per l'account {account} e gli ha impostato un nuovo codice. Se nessuno in casa l'ha fatto, controlla chi ha accesso da amministratore a Home Assistant."
     }
   },
   "chime_mode": {
@@ -1485,7 +1489,8 @@
     "auto_suspension_cleared": "Sospensione finita",
     "auto_arming_switched": "Regole automatiche attivate o disattivate",
     "alarm_ended": "Fine dell'allarme",
-    "alarm_cleared": "Memoria d'allarme azzerata"
+    "alarm_cleared": "Memoria d'allarme azzerata",
+    "access_recovered": "Accesso recuperato"
   },
   "condition": {
     "add": "Aggiungi una condizione",
@@ -1636,7 +1641,8 @@
     "config_refused": "Modifica di configurazione rifiutata",
     "config_new_token": "Token del tastierino generato",
     "config_revoke_token": "Token del tastierino revocato",
-    "tokens_rejected": "Token di tastiera rifiutati"
+    "tokens_rejected": "Token di tastiera rifiutati",
+    "access_recovered": "Accesso recuperato da un amministratore"
   },
   "log": {
     "filters": "Filtri",
@@ -1925,7 +1931,9 @@
     "contact_id": "Contatto",
     "over_contact_id": "Annunciato a",
     "addresses": "Indirizzi",
-    "since": "Dal"
+    "since": "Dal",
+    "account": "Account",
+    "created": "Persona nuova"
   },
   "code": {
     "title": "Codice",

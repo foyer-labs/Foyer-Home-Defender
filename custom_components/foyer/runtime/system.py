@@ -43,8 +43,15 @@ from ..core.engine import (
     next_wakeup,
     walk_test_zones,
 )
-from ..core.journal import LogRow, action_row, rows_for, test_action_row
+from ..core.journal import (
+    LogRow,
+    action_row,
+    rows_for,
+    security_row,
+    test_action_row,
+)
 from ..core.models import (
+    ActionIntent,
     ActionKind,
     Actor,
     Area,
@@ -55,6 +62,7 @@ from ..core.models import (
     FoyerConfig,
     HealthReport,
     LogCategory,
+    Moment,
     Operation,
     Outcome,
     Reason,
@@ -73,6 +81,7 @@ from ..core.response import (
     PlanContext,
     contact_test_intent,
     notify_test_intent,
+    recipients_for,
     test_intent,
 )
 from ..core.simulate import (
@@ -1252,6 +1261,79 @@ class FoyerSystem:
             radios=snapshot.radios,
         )
         return simulation_dict(simulation, self.config)
+
+    async def async_access_recovered(
+        self,
+        *,
+        account: str,
+        user_id: str | None,
+        user_name: str | None,
+        created: bool,
+    ) -> None:
+        """Say, everywhere, that an administrator recovered access (§8.2).
+
+        A `security` row, a Home Assistant notification, and a message to
+        every enabled contact over their first channel, through quiet hours
+        like an alarm: the recovery is the one way round a code, and it must
+        never be the quiet one (decision 109).
+        """
+        from . import notices
+
+        now = dt_util.utcnow()
+        self.async_record(
+            (
+                security_row(
+                    now,
+                    event_type=Moment.ACCESS_RECOVERED.value,
+                    channel="ha_config",
+                    user_id=user_id,
+                    user_name=user_name,
+                    outcome=Outcome.OK.value,
+                    detail={"account": account, "created": str(created).lower()},
+                ),
+            )
+        )
+        strings = await self.hass.async_add_executor_job(
+            i18n.load_strings, self.language
+        )
+        notices.async_create(
+            self.hass,
+            i18n.translate(
+                strings, "notification.access_recovered.message", account=account
+            ),
+            title=i18n.translate(strings, "notification.access_recovered.title"),
+            notification_id="foyer_access_recovered",
+        )
+        refs = [
+            {"contact_id": c.id, "channel_id": None}
+            for c in self.config.contacts
+            if c.enabled
+        ]
+        recipients, quiet = recipients_for(
+            self.config,
+            refs,
+            now,
+            dt_util.get_default_time_zone(),
+            Moment.ACCESS_RECOVERED,
+        )
+        if not recipients:
+            return
+        decision = Decision(
+            at=now,
+            accepted=True,
+            state=self.state,
+            actions=(
+                ActionIntent(
+                    action_id="access_recovered",
+                    kind=ActionKind.NOTIFY.value,
+                    moment=Moment.ACCESS_RECOVERED,
+                    placeholders={"account": account},
+                    params={"recipients": recipients, "quiet": quiet},
+                ),
+            ),
+        )
+        results = await self._executor.async_run(decision)
+        self.async_record(_action_rows(decision, results))
 
     async def async_test_action(
         self,

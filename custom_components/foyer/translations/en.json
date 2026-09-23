@@ -37,6 +37,32 @@
       "single_instance_allowed": "Foyer Home Defender is already set up."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Recover access to Foyer",
+        "description": "For an administrator who holds no code in a house where others do, or whose own Foyer user was disabled. The account's Foyer user is enabled, its validity window removed and its code replaced; an account with none gets a new user with every permission.\n\n**This is never quiet.** It is written in the log, shown as a Home Assistant notification and sent to every contact, naming the account. If you did not mean to do this, close the window.",
+        "data": {
+          "account": "Home Assistant account",
+          "code": "New code"
+        },
+        "data_description": {
+          "account": "Home Assistant does not tell Foyer who opened this window, so choose the account to recover.",
+          "code": "Exactly {length} digits, not already somebody else's."
+        }
+      }
+    },
+    "error": {
+      "unknown_account": "That account does not exist or cannot sign in.",
+      "invalid_code": "The code must be digits only, of the length set in Foyer.",
+      "code_in_use": "That code is not available. Choose another.",
+      "invalid": "Foyer could not save this person. Open the Users page to see why.",
+      "reloading": "Foyer is saving another change. Try again in a moment."
+    },
+    "abort": {
+      "not_loaded": "Foyer is not running. Try again once it has started."
+    }
+  },
   "selector": {
     "trigger_state": {
       "options": {

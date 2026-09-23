@@ -3012,6 +3012,7 @@ var xt = {
 		"triggered",
 		"siren_cutoff",
 		"alarm_ended",
+		"alarm_cleared",
 		"incident_opened",
 		"incident_joined",
 		"incident_acknowledged",

@@ -176,7 +176,7 @@ FUTURE_MOMENTS: tuple[Moment, ...] = ()
 
 # Moments nothing can answer, so nothing is offered them (see _meta).
 UNANSWERABLE_MOMENTS: frozenset[Moment] = frozenset(
-    {Moment.ACTION_TESTED, Moment.ESCALATION_SKIPPED}
+    {Moment.ACTION_TESTED, Moment.ESCALATION_SKIPPED, Moment.ACCESS_RECOVERED}
 )
 
 
