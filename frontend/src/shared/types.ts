@@ -47,6 +47,10 @@ export interface HomeAssistant {
     target?: Record<string, unknown>,
   ): Promise<unknown>;
   localize(key: string, values?: Record<string, unknown>): string;
+  /** A state in the Home Assistant user's own words ("Open" for a door's
+   * `on`). Present since Home Assistant 2023.9; optional so an older one, or
+   * a harness, falls back to the raw state. */
+  formatEntityState?(stateObj: HassEntity, state?: string): string;
   loadBackendTranslation(category: string, integration?: string): Promise<unknown>;
 }
 
@@ -202,6 +206,17 @@ export interface CommandResult {
    * (Phase 3 part 1 decision 2). Excluding one is an ordinary bypass. */
   low_battery_zones: { id: string; name: string }[];
   state: FoyerStatus;
+  /** On a `code_required` refusal: the explicit setting that asked for the
+   * code, so the prompt can name it (SPEC §8.2, "the UI names the area that
+   * is asking"). Absent from an older backend, and absent on every other
+   * refusal. */
+  code_required_by?: CodeRequiredBy | null;
+}
+
+export interface CodeRequiredBy {
+  kind: "area" | "scenario" | "policy";
+  id: string | null;
+  name: string | null;
 }
 
 // --- configuration: foyer/config (store/schema.py) --------------------------------
@@ -868,6 +883,8 @@ export interface EditResult {
   success: boolean;
   id?: string;
   problems: Problem[];
+  reason?: string | null;
+  code_required_by?: CodeRequiredBy | null;
 }
 
 /** One sentence of the Alarmo importer's report (§20.2): a stable code the

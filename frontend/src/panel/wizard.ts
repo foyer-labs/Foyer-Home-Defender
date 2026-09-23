@@ -13,9 +13,16 @@ import { live } from "lit/directives/live.js";
 
 import { t, type Strings } from "../shared/i18n";
 import { formStyles } from "../shared/styles";
-import type { AreaConfig, Problem, Trigger, ZoneConfig, ZoneProposal } from "../shared/types";
+import type {
+  AreaConfig,
+  PageId,
+  Problem,
+  Trigger,
+  ZoneConfig,
+  ZoneProposal,
+} from "../shared/types";
 import { problemText, type PanelContext, whenNumber } from "./context";
-import { notifyTargets } from "./ha-targets";
+import { notifyTargets, stateLabel } from "./ha-targets";
 
 type Step = "area" | "zones" | "scenario" | "user" | "test";
 
@@ -37,12 +44,17 @@ class FoyerWizard extends LitElement {
     _sent: { state: true },
     _userName: { state: true },
     _userCode: { state: true },
+    _userRepeat: { state: true },
+    _zoneType: { state: true },
   };
 
   ctx?: PanelContext;
   private _step: Step = "area";
   private _userName = "";
   private _userCode = "";
+  private _userRepeat = "";
+  /** Instant or delayed, for a zone the proposal made one of the two. */
+  private _zoneType = "";
   private _busy = false;
   private _problems: Problem[] = [];
   private _proposal?: ZoneProposal;
@@ -129,9 +141,11 @@ class FoyerWizard extends LitElement {
             ? html`<button class="btn primary" ?disabled=${this._busy} @click=${this._finish}>
                 ${t(s, "wizard.done")}
               </button>`
-            : html`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
-                ${t(s, "wizard.next")}
-              </button>`}
+            : this._step === "user" && !this.ctx?.config?.users.length
+              ? this._renderUserAction(s)
+              : html`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
+                  ${t(s, "wizard.next")}
+                </button>`}
         </div>
       </section>
     `;
@@ -249,17 +263,68 @@ class FoyerWizard extends LitElement {
           </select>
         </label>
       </div>
-      ${proposal
-        ? html`
+      ${proposal ? this._renderProposal(s, proposal) : nothing}
+    `;
+  }
+
+  /** What Foyer proposes for the entity picked, and the confirmation INV-5
+   * asks for. Everything is read live: the point of the check is that
+   * somebody opens the door and watches the sentence change, so a state
+   * read once when the entity was picked proved nothing (UX review). The
+   * state is in the Home Assistant user's own words, with the raw value
+   * beside it, because the raw value is what the trigger stores.
+   *
+   * A sensor that reports a number is not added from here: its trigger is
+   * a threshold, and the wizard would have saved "above 0" that nobody had
+   * seen (INV-5). The Zones page has the fields for it. */
+  private _renderProposal(s: Strings, proposal: ZoneProposal) {
+    const ctx = this.ctx!;
+    const entity = ctx.hass.states[proposal.entity_id];
+    const name = String(entity?.attributes.friendly_name ?? proposal.name);
+    if (proposal.trigger_kind === "numeric") {
+      return html`<div class="proposal">
+        <p>${t(s, "wizard.numeric_elsewhere")}</p>
+        <button class="btn" @click=${() => ctx.navigate("zones")}>
+          ${t(s, "wizard.go_zones")}
+        </button>
+      </div>`;
+    }
+    const now = entity?.state ?? proposal.state ?? "unavailable";
+    const label = (state: string) => stateLabel(ctx.hass, proposal.entity_id, state);
+    const choosable = !proposal.zone_type || ["instant", "delayed"].includes(proposal.zone_type);
+    const type = this._zoneType || proposal.zone_type || "instant";
+    return html`
             <div class="proposal">
               <p>
                 ${t(s, "wizard.proposed", {
-                  entity: proposal.entity_id,
-                  state: proposal.state ?? "",
-                  type: t(s, `zone_type.${proposal.zone_type ?? "instant"}`),
-                  states: proposal.proposed.join(", "),
+                  name,
+                  state: label(now),
+                  states: proposal.proposed.map(label).join(", "),
                 })}
               </p>
+              ${choosable
+                ? html`<div class="grid-form">
+                    <label class="field">
+                      <span class="lbl">${t(s, "field.type")}</span>
+                      <select
+                        @change=${(e: Event) =>
+                          (this._zoneType = (e.target as HTMLSelectElement).value)}
+                      >
+                        ${["instant", "delayed"].map(
+                          (option) => html`<option
+                            .value=${option}
+                            .selected=${live(option === type)}
+                          >
+                            ${t(s, `zone_type.${option}`)}
+                          </option>`,
+                        )}
+                      </select>
+                      <span class="hint">${t(s, "wizard.type_hint")}</span>
+                    </label>
+                  </div>`
+                : html`<p class="hint">
+                    ${t(s, "wizard.type_fixed", { type: t(s, `zone_type.${type}`) })}
+                  </p>`}
               <label class="check">
                 <input
                   type="checkbox"
@@ -278,8 +343,6 @@ class FoyerWizard extends LitElement {
                 ${t(s, "wizard.add")}
               </button>
             </div>
-          `
-        : nothing}
     `;
   }
 
@@ -287,6 +350,7 @@ class FoyerWizard extends LitElement {
     this._pickedEntity = entityId;
     this._confirmed = false;
     this._proposal = undefined;
+    this._zoneType = "";
     if (!entityId || !this.ctx) return;
     try {
       const proposal = await this.ctx.hass.callWS<ZoneProposal>({
@@ -309,7 +373,8 @@ class FoyerWizard extends LitElement {
     const ctx = this.ctx;
     const proposal = this._proposal;
     const area = this._area;
-    if (!ctx || !proposal || !area) return;
+    // A number is never saved from here: see _renderProposal.
+    if (!ctx || !proposal || !area || proposal.trigger_kind === "numeric") return;
     const trigger: Trigger =
       proposal.trigger_kind === "event"
         ? {
@@ -318,15 +383,13 @@ class FoyerWizard extends LitElement {
               ? (proposal.proposed[0] ?? null)
               : null,
           }
-        : proposal.trigger_kind === "numeric"
-          ? { kind: "numeric", operator: "gt", value: 0, hysteresis: 0, attribute: null }
-          : { kind: "state", states: [...proposal.proposed] };
+        : { kind: "state", states: [...proposal.proposed] };
     const zone: Partial<ZoneConfig> = {
       name: proposal.name,
       entity_id: proposal.entity_id,
       area_id: area.id!,
       trigger,
-      type: proposal.zone_type ?? "instant",
+      type: this._zoneType || proposal.zone_type || "instant",
     };
     this._busy = true;
     try {
@@ -336,6 +399,7 @@ class FoyerWizard extends LitElement {
         this._proposal = undefined;
         this._pickedEntity = "";
         this._confirmed = false;
+        this._zoneType = "";
       }
     } finally {
       this._busy = false;
@@ -382,9 +446,31 @@ class FoyerWizard extends LitElement {
 
   // --- step 4: the first person, and their code (§8.1) ----------------------------
 
+  /** The one button of the user step, and what it says is what it does
+   * (UX review): with a name or a code typed, it creates the person and
+   * moves on; with both empty, it skips. "Continue" beside a separate
+   * "Create user" threw away a name and a code typed into the form. */
+  private _renderUserAction(s: Strings) {
+    const typed = this._userName.trim() !== "" || this._userCode !== "";
+    return typed
+      ? html`<button class="btn primary" ?disabled=${this._busy} @click=${this._createUser}>
+          ${t(s, "wizard.user_create_next")}
+        </button>`
+      : html`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
+          ${t(s, "wizard.skip")}
+        </button>`;
+  }
+
   private async _createUser(): Promise<void> {
     const ctx = this.ctx;
     if (!ctx) return;
+    // Typed once, a code with a slip in it is a code nobody knows. Only the
+    // two fields are compared here; whether the code is acceptable is the
+    // backend's to say (INV-2).
+    if (this._userCode !== this._userRepeat) {
+      this._problems = [{ code: "code_mismatch", kind: "user", ref: null, field: null }];
+      return;
+    }
     this._busy = true;
     try {
       const result = await ctx.saveUser(
@@ -403,11 +489,12 @@ class FoyerWizard extends LitElement {
           code_exempt_when_identified: false,
           enabled: true,
         },
-        { new_code: this._userCode },
+        this._userCode ? { new_code: this._userCode } : {},
       );
       this._problems = result.problems;
       if (result.success) {
         this._userCode = "";
+        this._userRepeat = "";
         this._next();
       }
     } finally {
@@ -426,8 +513,6 @@ class FoyerWizard extends LitElement {
         </div>
       `;
     }
-    const ready =
-      this._userName.trim().length > 0 && this._userCode.length === length;
     return html`
       <p>${t(s, "wizard.user_text")}</p>
       <div class="grid-form">
@@ -450,13 +535,22 @@ class FoyerWizard extends LitElement {
             @input=${(e: Event) =>
               (this._userCode = (e.target as HTMLInputElement).value)}
           />
-          <span class="hint">${t(s, "users.code_hint", { n: length })}</span>
+          <span class="hint">${t(s, "users.code_hint_new", { n: length })}</span>
+        </label>
+        <label class="field">
+          <span class="lbl">${t(s, "users.code_repeat")}</span>
+          <input
+            type="password"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength=${length}
+            .value=${this._userRepeat}
+            @input=${(e: Event) =>
+              (this._userRepeat = (e.target as HTMLInputElement).value)}
+          />
         </label>
       </div>
       <p class="hint">${t(s, "wizard.user_hint")}</p>
-      <button class="btn primary" ?disabled=${this._busy || !ready} @click=${this._createUser}>
-        ${t(s, "wizard.user_create")}
-      </button>
     `;
   }
 
@@ -495,7 +589,47 @@ class FoyerWizard extends LitElement {
       </button>
       ${this._sent ? html`<div class="notice">${t(s, "wizard.test_sent")}</div>` : nothing}
       <p class="hint">${t(s, "wizard.test_hint")}</p>
+      <div class="actions">
+        <button class="btn" @click=${() => ctx.navigate("contacts")}>
+          ${t(s, "wizard.go_contacts")}
+        </button>
+      </div>
+      ${this._renderLeft(s)}
     `;
+  }
+
+  /** Before "Finish": what the five steps did not cover, each with the page
+   * that covers it. Finishing the wizard is not finishing the setup, and a
+   * wizard that ends on "done" with two zones and no contact says the
+   * opposite (UX review). */
+  private _renderLeft(s: Strings) {
+    const ctx = this.ctx!;
+    const config = ctx.config!;
+    const left: { key: string; page: PageId; params?: Record<string, number> }[] = [];
+    if (config.zones.length < WANTED_ZONES) {
+      left.push({
+        key: "wizard.left.zones",
+        page: "zones",
+        params: { have: config.zones.length, want: WANTED_ZONES },
+      });
+    }
+    if (!config.users.some((u) => u.has_code)) left.push({ key: "wizard.left.users", page: "users" });
+    if (!(config.contacts ?? []).length) left.push({ key: "wizard.left.contacts", page: "contacts" });
+    return html`<div class="left">
+      <h3>${t(s, "wizard.left.title")}</h3>
+      ${left.length
+        ? html`<ul>
+            ${left.map(
+              (item) => html`<li>
+                <span>${t(s, item.key, item.params)}</span>
+                <button class="btn sm" @click=${() => ctx.navigate(item.page)}>
+                  ${t(s, `nav.${item.page}`)}
+                </button>
+              </li>`,
+            )}
+          </ul>`
+        : html`<p class="hint">${t(s, "wizard.left.none")}</p>`}
+    </div>`;
   }
 
   /** Prove a notification arrives — through the real action test (§11.4).
@@ -633,6 +767,31 @@ class FoyerWizard extends LitElement {
       }
       .spacer {
         flex: 1;
+      }
+      .left {
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid var(--divider-color);
+      }
+      .left h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .left ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 13.5px;
+      }
+      .left li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
       }
     `,
   ];

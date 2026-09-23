@@ -5,7 +5,13 @@ import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
-import type { CommandResult, LogRow, StatusArea, StatusZone } from "../../shared/types";
+import type {
+  CommandResult,
+  LogRow,
+  StatusArea,
+  StatusScenario,
+  StatusZone,
+} from "../../shared/types";
 import { reasonText, remaining, type PanelContext } from "../context";
 
 /** The name of an event, the same way the log page finds it: the log's own
@@ -37,10 +43,16 @@ class FoyerPageOverview extends LitElement {
     _busy: { state: true },
     _feedback: { state: true },
     _recent: { state: true },
+    _perArea: { state: true },
   };
 
   ctx?: PanelContext;
   private _busy = false;
+  /** Whether the per-area Arm buttons are showing. Arming one area outside
+   * any scenario is the exception (§4.6.1), and a button on every tile made
+   * it look like the way to arm the house (UX review). Disarm stays on the
+   * tiles whatever this says: that one is never hidden. */
+  private _perArea = false;
   private _feedback?: Feedback;
   private _recent: LogRow[] = [];
   private _signature_?: string;
@@ -55,7 +67,10 @@ class FoyerPageOverview extends LitElement {
     this._feedback = undefined;
     try {
       const result = await command();
-      if (result.success) {
+      if (result.reason === "cancelled") {
+        // Given up at the code prompt: not a failure, and not dressed as one.
+        this._feedback = { ok: true, text: t(ctx.strings, "reason.cancelled") };
+      } else if (result.success) {
         const bypassed = result.bypassed_zones.map((z) => z.name).join(", ");
         const low = result.low_battery_zones;
         this._feedback = low.length
@@ -72,7 +87,7 @@ class FoyerPageOverview extends LitElement {
       } else {
         this._feedback = {
           ok: false,
-          text: reasonText(ctx.strings, result),
+          text: reasonText(ctx.strings, result, ctx.hass.language),
           retry: retry && FORCEABLE.has(result.reason ?? "") ? retry : undefined,
         };
       }
@@ -107,7 +122,10 @@ class FoyerPageOverview extends LitElement {
       for (const zone of zones) {
         const result = await ctx.bypass(zone.id, true);
         if (!result.success) {
-          this._feedback = { ok: false, text: reasonText(ctx.strings, result) };
+          this._feedback = {
+            ok: result.reason === "cancelled",
+            text: reasonText(ctx.strings, result, ctx.hass.language),
+          };
           return;
         }
       }
@@ -343,6 +361,12 @@ class FoyerPageOverview extends LitElement {
     `;
   }
 
+  /** Arming, where it can be found (UX review): one real button per
+   * scenario, each saying what it arms and whether it could arm right now.
+   * The readiness line is read from the live status — the same zones the
+   * engine would name — and decides nothing: pressing a button that says
+   * "not ready" still sends the command, and the refusal is the engine's
+   * (INV-2). */
   private _renderMaster(s: Strings) {
     const status = this.ctx!.status;
     const master = status.master;
@@ -356,24 +380,11 @@ class FoyerPageOverview extends LitElement {
         </div>
         <div class="card-bd">
           <div class="label">${t(s, "overview.scenario")}</div>
-          <div class="chips">
-            ${status.scenarios.length
-              ? status.scenarios.map(
-                  (scenario) => html`
-                    <button
-                      class="chip"
-                      aria-pressed=${scenario.id === status.active_scenario_id
-                        ? "true"
-                        : "false"}
-                      ?disabled=${this._busy}
-                      @click=${() => this._arm({ scenario_id: scenario.id })}
-                    >
-                      ${scenario.name}
-                    </button>
-                  `,
-                )
-              : html`<span class="muted">${t(s, "overview.no_scenarios")}</span>`}
-          </div>
+          ${status.scenarios.length
+            ? html`<div class="scenarios">
+                ${status.scenarios.map((scenario) => this._renderScenario(s, scenario))}
+              </div>`
+            : html`<div class="muted">${t(s, "overview.no_scenarios")}</div>`}
           <div class="hint">${t(s, "overview.scenario_hint")}</div>
           <div class="actions">
             <button
@@ -383,10 +394,53 @@ class FoyerPageOverview extends LitElement {
             >
               ${t(s, "overview.disarm_all")}
             </button>
+            <button
+              class="link"
+              aria-expanded=${this._perArea ? "true" : "false"}
+              @click=${() => (this._perArea = !this._perArea)}
+            >
+              ${t(s, this._perArea ? "overview.one_area_hide" : "overview.one_area")}
+            </button>
           </div>
         </div>
       </div>
     `;
+  }
+
+  private _renderScenario(s: Strings, scenario: StatusScenario) {
+    const status = this.ctx!.status;
+    const active = scenario.id === status.active_scenario_id;
+    const areas = status.areas.filter((a) => scenario.areas.includes(a.id));
+    const ready = areas.every((a) => a.ready);
+    const blocking = [
+      ...new Set(areas.flatMap((a) => [...a.blocking.open, ...a.blocking.fault])),
+    ];
+    return html`<div class="scenario">
+      <button
+        class="btn ${active ? "" : "primary"}"
+        aria-pressed=${active ? "true" : "false"}
+        ?disabled=${this._busy}
+        @click=${() => this._arm({ scenario_id: scenario.id })}
+      >
+        ${scenario.require_code.arm
+          ? html`<ha-icon
+              icon="mdi:lock-outline"
+              title=${t(s, "overview.code_needed")}
+              aria-label=${t(s, "overview.code_needed")}
+            ></ha-icon>`
+          : nothing}
+        ${t(s, "overview.arm_scenario", { name: scenario.name })}
+      </button>
+      ${active
+        ? html`<span class="state armed">${t(s, "scenarios.active")}</span>`
+        : ready
+          ? html`<span class="ready ok">${t(s, "overview.ready")}</span>`
+          : html`<span class="ready not">
+              ${blocking.length
+                ? t(s, "overview.not_ready_zones", { zones: this._zoneNames(blocking) })
+                : t(s, "overview.not_ready_plain")}
+            </span>`}
+    </div>`;
   }
 
   private _renderFeedback(s: Strings) {
@@ -451,7 +505,7 @@ class FoyerPageOverview extends LitElement {
                 : t(s, "overview.on_its_own")}
           </div>
           <div class="actions">
-            ${area.state === "disarmed"
+            ${area.state === "disarmed" && this._perArea
               ? html`<button
                   class="btn"
                   ?disabled=${this._busy}
@@ -487,7 +541,7 @@ class FoyerPageOverview extends LitElement {
         <div class="card-hd"><h2>${t(s, "overview.not_ready")}</h2></div>
         ${rows.length
           ? html`<div class="table-wrap">
-              <table>
+              <table class="stack">
                 <thead>
                   <tr>
                     <th>${t(s, "overview.zone")}</th>
@@ -500,10 +554,12 @@ class FoyerPageOverview extends LitElement {
                 <tbody>
                   ${rows.map(
                     (zone) => html`<tr>
-                      <td>${zone.name}</td>
-                      <td>${areas.get(zone.area_id) ?? ""}</td>
-                      <td>${this._zoneStatus(s, zone)}</td>
-                      <td class="mono">${zone.state ?? "—"}</td>
+                      <td class="lead">${zone.name}</td>
+                      <td data-label=${t(s, "overview.area")}>${areas.get(zone.area_id) ?? ""}</td>
+                      <td data-label=${t(s, "overview.status")}>${this._zoneStatus(s, zone)}</td>
+                      <td data-label=${t(s, "overview.entity_state")}>
+                        <span class="mono">${zone.state ?? "—"}</span>
+                      </td>
                       <td>${this._renderBypass(s, zone)}</td>
                     </tr>`,
                   )}
@@ -752,6 +808,75 @@ class FoyerPageOverview extends LitElement {
       ul.plain {
         margin: 8px 0 0;
         padding-left: 18px;
+      }
+      .scenarios {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .scenario {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+      }
+      .scenario .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .scenario ha-icon {
+        --mdc-icon-size: 18px;
+      }
+      .ready {
+        font-size: 13px;
+      }
+      .ready.ok {
+        color: var(--success-color, #2e9e4f);
+      }
+      .ready.not {
+        color: var(--warning-color, #c77700);
+      }
+      .actions .link {
+        font: inherit;
+        font-size: 13.5px;
+        border: 0;
+        background: transparent;
+        color: var(--primary-color);
+        cursor: pointer;
+        padding: 8px 4px;
+        text-decoration: underline;
+      }
+      /* The not-ready table on a phone: one card per zone instead of a table
+         that scrolls sideways past the one button that matters (UX review). */
+      @media (max-width: 600px) {
+        table.stack thead {
+          display: none;
+        }
+        table.stack,
+        table.stack tbody,
+        table.stack tr,
+        table.stack td {
+          display: block;
+        }
+        table.stack tr {
+          padding: 10px 16px;
+          border-bottom: 1px solid var(--divider-color);
+        }
+        table.stack td {
+          border: 0;
+          padding: 3px 0;
+        }
+        table.stack td.lead {
+          font-weight: 500;
+          font-size: 15px;
+        }
+        table.stack td[data-label]::before {
+          content: attr(data-label) ": ";
+          color: var(--secondary-text-color);
+          font-size: 12.5px;
+        }
       }
     `,
   ];

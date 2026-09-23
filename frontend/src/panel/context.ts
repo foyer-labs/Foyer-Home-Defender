@@ -1,6 +1,8 @@
 // What every panel page receives from the shell. Pages never talk to Home
 // Assistant except through these functions, so there is one place that knows
 // the WebSocket commands.
+import type { LitElement } from "lit";
+
 import { t, type Strings } from "../shared/i18n";
 import type {
   ChimeConfig,
@@ -153,10 +155,49 @@ export function remaining(ctx: PanelContext, due: string): number {
   return Math.max(0, Math.round((Date.parse(due) - ctx.now()) / 1000));
 }
 
-/** The translated reason for a refused command, naming the zones (§5.4). */
-export function reasonText(s: Strings, result: CommandResult): string {
-  const zones = result.blocking_zones.map((z) => z.name).join(", ");
+/** The translated reason for a refused command, naming the zones (§5.4).
+ * A lockout says until when, when the status that came back knows (§8.4):
+ * "blocked for now" left somebody pressing the button every minute. */
+export function reasonText(s: Strings, result: CommandResult, language?: string): string {
+  const until = result.state?.security?.locked_until;
+  if (result.reason === "locked_out" && until) return lockoutText(s, language, until);
+  const zones = (result.blocking_zones ?? []).map((z) => z.name).join(", ");
   return t(s, `reason.${result.reason ?? "unknown"}`, { zones });
+}
+
+/** "Codes from this account are blocked until 21:40" (§8.4). The lockout is
+ * per Home Assistant account (decision 103), and the sentence says so: the
+ * household's other phones are not locked out. */
+export function lockoutText(s: Strings, language: string | undefined, until: string): string {
+  const time = new Date(until).toLocaleTimeString(language, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return t(s, "code.locked_until", { time });
+}
+
+/** Bring a page's editor into view and put the cursor in its first field.
+ * The editor opens below the list, and on a phone below the fold: a tap on
+ * a row seemed to do nothing at all (UX review). Call after the editor has
+ * been asked to render. */
+export async function revealEditor(page: LitElement): Promise<void> {
+  await page.updateComplete;
+  const editor = page.renderRoot.querySelector<HTMLElement>(".editor");
+  if (!editor) return;
+  editor.scrollIntoView({ behavior: "smooth", block: "start" });
+  editor
+    .querySelector<HTMLElement>("input:not([type=checkbox]):not([disabled]), select, textarea")
+    ?.focus({ preventScroll: true });
+}
+
+/** Bring a refused save's problems into view. The list renders beside the
+ * Save button, which on a long editor is a screen away from where the eye
+ * is — a refusal nobody sees reads as a save that worked. */
+export async function revealProblems(page: LitElement): Promise<void> {
+  await page.updateComplete;
+  page.renderRoot
+    .querySelector<HTMLElement>(".editor .problems, .editor .problem")
+    ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 export function problemText(s: Strings, problem: Problem): string {

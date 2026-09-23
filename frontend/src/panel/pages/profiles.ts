@@ -15,7 +15,16 @@ import type {
   ProfileConfig,
   Problem,
 } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
+import {
+  optionalNumber,
+  problemText,
+  type PanelContext,
+  whenNumber,
+  activateOnKey,
+  revealEditor,
+  revealProblems,
+} from "../context";
+import "../delete-button";
 import {
   domainServices,
   entityTargets,
@@ -203,6 +212,7 @@ class FoyerPageProfiles extends LitElement {
     this._filters = {};
     this._confirming = undefined;
     this._jsonErrors = {};
+    void revealEditor(this);
   }
 
   private _set<K extends keyof ProfileConfig>(key: K, value: ProfileConfig[K]): void {
@@ -268,6 +278,7 @@ class FoyerPageProfiles extends LitElement {
     try {
       const result = await this.ctx.save("profile", this._draft);
       this._problems = result.problems;
+      if (!result.success) void revealProblems(this);
       if (result.success) this._draft = undefined;
     } finally {
       this._busy = false;
@@ -370,7 +381,7 @@ class FoyerPageProfiles extends LitElement {
   private _renderEditor(s: Strings, draft: ProfileConfig) {
     const bounds = this.ctx?.meta?.bounds.severity ?? [1, 10];
     return html`
-      <div class="card">
+      <div class="card editor">
         <div class="card-hd">
           <h2>${draft.id ? draft.name : t(s, "profiles.new")}</h2>
         </div>
@@ -440,9 +451,12 @@ class FoyerPageProfiles extends LitElement {
             </button>
             ${
               draft.id
-                ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
-                    ${t(s, "common.delete")}
-                  </button>`
+                ? html`<foyer-delete-button
+                .strings=${s}
+                .name=${draft.name}
+                ?disabled=${this._busy}
+                @confirm=${this._delete}
+              ></foyer-delete-button>`
                 : nothing
             }
           </div>

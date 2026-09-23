@@ -11,6 +11,7 @@ import { formStyles, stateStyles } from "../shared/styles";
 import { mmss, secondsUntil } from "../shared/time";
 import type {
   AlarmoPreview,
+  CodeRequiredBy,
   CommandResult,
   TestActionResult,
   ConfigBackup,
@@ -23,7 +24,7 @@ import type {
   Problem,
   RadioCandidate,
 } from "../shared/types";
-import type { PanelContext } from "./context";
+import { lockoutText, type PanelContext } from "./context";
 import "./pages/overview";
 import "./pages/areas";
 import "./pages/zones";
@@ -40,32 +41,23 @@ import "./pages/settings";
 import "./pages/health";
 import "./wizard";
 
-// In the order of SPEC §15.1: 1–5, then 13, 10 and 11.
-const PAGES: PageId[] = [
-  "overview",
-  "areas",
-  "zones",
-  "scenarios",
-  "profiles",
-  "groups",
-  "users",
-  "devices",
-  "contacts",
-  "rules",
-  "test",
-  "log",
-  "health",
-  "settings",
-];
+// Fourteen tabs in one row read as one undifferentiated list (UX review).
+// So they come in two groups: what a household opens every week, then the
+// setup pages, in the order somebody setting up would visit them — areas
+// before the zones that live in them, people before the contacts that
+// reach them. The numbering of SPEC §15.1 is the spec's, not the screen's.
+// The setup group is also exactly what is hidden from whoever may not
+// configure (§8.3).
+const DAILY_PAGES: PageId[] = ["overview", "log", "test", "health"];
 const CONFIG_PAGES: PageId[] = [
   "areas",
   "zones",
   "scenarios",
+  "users",
+  "contacts",
   "profiles",
   "groups",
-  "users",
   "devices",
-  "contacts",
   "rules",
   "settings",
 ];
@@ -131,6 +123,30 @@ const HELP_DOCS: Partial<Record<PageId, string>> = {
   health: "system-health.md",
 };
 
+/** How long a code typed into the panel is remembered with nothing using it.
+ * Long enough to save three edits in a row without typing it three times;
+ * short enough that a tablet left on the wall does not keep it (UX review,
+ * decided by the product owner). */
+const CODE_IDLE_MS = 2 * 60 * 1000;
+
+/** What the code prompt says it is for (SPEC §8.2): a translation key and
+ * the values that fill it. */
+interface CodePurpose {
+  key: string;
+  params?: Record<string, string>;
+}
+
+/** A command abandoned at the code prompt. Nothing was sent with a code and
+ * nothing changed, and the page says exactly that — "a code is required"
+ * read like a failure somebody had to fix (UX review). */
+function cancelled<T>(result: T): T {
+  const out = { ...result, reason: "cancelled" } as T & { problems?: Problem[] };
+  if (Array.isArray((result as { problems?: unknown }).problems)) {
+    out.problems = [{ code: "cancelled", kind: "code", ref: null, field: null }];
+  }
+  return out;
+}
+
 /** The code, when there is one. An absent key means "nothing typed", which is
  * not the same as an empty string: one is a request without a code, the other
  * is a wrong code. */
@@ -180,11 +196,21 @@ class FoyerPanel extends LitElement {
   private _page: PageId = "overview";
   private _prefs: Prefs = {};
   private _tick = 0;
-  // The code of whoever is using the panel, held in memory for this visit
-  // only — never stored, never put in a URL. It is re-sent with each command
-  // that needs one, because the backend verifies every single time (INV-2).
+  // The code of whoever is using the panel, held in memory only — never
+  // stored, never put in a URL. It is re-sent with each command that needs
+  // one, because the backend verifies every single time (INV-2). It is
+  // forgotten after two idle minutes, after every arm and disarm, and when
+  // the panel is left: a remembered code is a code the next person at the
+  // tablet did not have to know.
   private _code?: string;
-  private _asking?: { resolve: (code?: string) => void; retry: boolean };
+  private _codeTimer?: number;
+  private _asking?: {
+    resolve: (code?: string) => void;
+    retry: boolean;
+    purpose?: CodePurpose;
+    requiredBy: CodeRequiredBy | null;
+  };
+  private _focusCode = false;
   private _haUsers?: { id: string; name: string }[];
   private _offset = 0; // server clock minus browser clock, in ms
   private _language?: string;
@@ -211,6 +237,11 @@ class FoyerPanel extends LitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this._forgetCode();
+    // A prompt still open answers "cancelled": the command waiting on it
+    // must not hang on a page nobody is looking at any more.
+    this._asking?.resolve(undefined);
+    this._asking = undefined;
     this._unsubscribe?.then((unsub) => unsub()).catch(() => undefined);
     this._unsubscribe = undefined;
     window.clearInterval(this._timer);
@@ -242,9 +273,14 @@ class FoyerPanel extends LitElement {
   }
 
   /** Ask for a code and resolve once it is typed, or once the user gives up. */
-  private _askForCode(retry: boolean): Promise<string | undefined> {
+  private _askForCode(
+    retry: boolean,
+    purpose: CodePurpose | undefined,
+    requiredBy: CodeRequiredBy | null,
+  ): Promise<string | undefined> {
     return new Promise((resolve) => {
-      this._asking = { resolve, retry };
+      this._asking = { resolve, retry, purpose, requiredBy };
+      this._focusCode = true;
       this.requestUpdate();
     });
   }
@@ -252,27 +288,83 @@ class FoyerPanel extends LitElement {
   private _answerCode(code?: string): void {
     const asking = this._asking;
     this._asking = undefined;
-    this._code = code;
     this.requestUpdate();
     asking?.resolve(code);
+  }
+
+  /** Keep a code that has just worked, for two idle minutes. */
+  private _rememberCode(code: string): void {
+    this._code = code;
+    window.clearTimeout(this._codeTimer);
+    this._codeTimer = window.setTimeout(() => this._forgetCode(), CODE_IDLE_MS);
+  }
+
+  private _forgetCode(): void {
+    this._code = undefined;
+    window.clearTimeout(this._codeTimer);
+    this._codeTimer = undefined;
   }
 
   /** Run a command, and ask for a code if the backend says one is needed.
    *
    * The panel never decides whether a code is required: it sends the command,
-   * and the refusal that comes back is what opens the keypad (INV-2). */
-  private async _coded<T extends { success: boolean; reason?: string | null }>(
-    run: (code?: string) => Promise<T>,
-  ): Promise<T> {
-    let result = await run(this._code);
+   * and the refusal that comes back is what opens the keypad (INV-2). A code
+   * is remembered only once it has worked; one that was refused, or that ran
+   * into a lockout, is forgotten on the spot — resent, it was one more step
+   * towards the lockout of whoever holds this account (UX review). */
+  private async _coded<
+    T extends {
+      success: boolean;
+      reason?: string | null;
+      code_required_by?: CodeRequiredBy | null;
+    },
+  >(run: (code?: string) => Promise<T>, purpose?: CodePurpose): Promise<T> {
+    let code = this._code;
+    let typed = false;
+    let requiredBy: CodeRequiredBy | null = null;
+    let result = await run(code);
     for (let attempt = 0; attempt < 3; attempt++) {
-      if (result.success) return result;
-      if (result.reason !== "code_required" && result.reason !== "bad_code") return result;
-      const code = await this._askForCode(result.reason === "bad_code");
-      if (code === undefined) return result;
+      if (result.success) break;
+      if (result.reason !== "code_required" && result.reason !== "bad_code") break;
+      // A remembered code the backend has stopped accepting is not offered
+      // again; and "wrong code" is said only of one somebody has just typed.
+      if (result.reason === "bad_code") this._forgetCode();
+      requiredBy = result.code_required_by ?? requiredBy;
+      const answer = await this._askForCode(
+        typed && result.reason === "bad_code",
+        purpose,
+        requiredBy,
+      );
+      if (answer === undefined) return cancelled(result);
+      code = answer;
+      typed = true;
       result = await run(code);
     }
+    if (result.success && code) this._rememberCode(code);
+    if (result.reason === "bad_code" || result.reason === "locked_out") this._forgetCode();
     return result;
+  }
+
+  /** The name of what an arming is about, for the prompt. */
+  private _armPurpose(target: Record<string, unknown>): CodePurpose {
+    const status = this._status;
+    const name =
+      status?.scenarios.find((sc) => sc.id === target.scenario_id)?.name ??
+      status?.areas.find((a) => a.id === target.area_id)?.name ??
+      "";
+    return { key: "code.purpose.arm", params: { target: name } };
+  }
+
+  private _disarmPurpose(areaIds?: string[]): CodePurpose {
+    if (!areaIds) return { key: "code.purpose.disarm_all" };
+    const names = areaIds.map(
+      (id) => this._status?.areas.find((a) => a.id === id)?.name ?? id,
+    );
+    return { key: "code.purpose.disarm", params: { target: names.join(", ") } };
+  }
+
+  private _zoneName(zoneId: string): string {
+    return this._status?.zones.find((z) => z.id === zoneId)?.name ?? zoneId;
   }
 
   private _start(): void {
@@ -337,18 +429,24 @@ class FoyerPanel extends LitElement {
       haUsers: this._haUsers,
       now: () => Date.now() + this._offset,
       navigate: (page) => (this._page = page),
+      // Arming and disarming forget the code whatever the answer: the one
+      // moment somebody walks away from the tablet is right after either.
       arm: (target) =>
-        this._coded((code) =>
-          hass.callWS<CommandResult>({ type: "foyer/arm", ...target, ...withCode(code) }),
-        ),
+        this._coded(
+          (code) =>
+            hass.callWS<CommandResult>({ type: "foyer/arm", ...target, ...withCode(code) }),
+          this._armPurpose(target),
+        ).finally(() => this._forgetCode()),
       disarm: (areaIds) =>
-        this._coded((code) =>
-          hass.callWS<CommandResult>({
-            type: "foyer/disarm",
-            ...(areaIds ? { area_ids: areaIds } : {}),
-            ...withCode(code),
-          }),
-        ),
+        this._coded(
+          (code) =>
+            hass.callWS<CommandResult>({
+              type: "foyer/disarm",
+              ...(areaIds ? { area_ids: areaIds } : {}),
+              ...withCode(code),
+            }),
+          this._disarmPurpose(areaIds),
+        ).finally(() => this._forgetCode()),
       acknowledge: (target) =>
         this._coded((code) =>
           hass.callWS<CommandResult>({
@@ -484,14 +582,19 @@ class FoyerPanel extends LitElement {
           labels,
         }) as Promise<AlarmoPreview>,
       bypass: (zoneId, bypass, seconds) =>
-        this._coded((code) =>
-          hass.callWS<CommandResult>({
-            type: "foyer/bypass",
-            zone_id: zoneId,
-            bypass,
-            ...(seconds ? { seconds } : {}),
-            ...withCode(code),
-          }),
+        this._coded(
+          (code) =>
+            hass.callWS<CommandResult>({
+              type: "foyer/bypass",
+              zone_id: zoneId,
+              bypass,
+              ...(seconds ? { seconds } : {}),
+              ...withCode(code),
+            }),
+          {
+            key: bypass ? "code.purpose.bypass" : "code.purpose.unbypass",
+            params: { zone: this._zoneName(zoneId) },
+          },
         ),
       saveUser: async (user, codes) => {
         const result = await this._edit("user", {
@@ -503,7 +606,7 @@ class FoyerPanel extends LitElement {
         // stale: sent again, it would be a wrong code and one step towards
         // their own lockout (second review). Asked for afresh next time.
         if (result.success && codes.new_code && user.ha_user_id === hass.user?.id) {
-          this._code = undefined;
+          this._forgetCode();
         }
         return result;
       },
@@ -533,8 +636,9 @@ class FoyerPanel extends LitElement {
     try {
       // Editing the configuration needs a code too (§8.2), and the backend is
       // what says so: this asks only when it has refused for that reason.
-      result = await this._coded((code) =>
-        this.hass!.callWS<EditResult>({ ...message, ...withCode(code) }),
+      result = await this._coded(
+        (code) => this.hass!.callWS<EditResult>({ ...message, ...withCode(code) }),
+        { key: "code.purpose.config" },
       );
     } catch (err) {
       const detail = String((err as { message?: string })?.message ?? err);
@@ -565,7 +669,10 @@ class FoyerPanel extends LitElement {
 
   private _helpOpen(page: PageId): boolean {
     // Expanded on first visit, then whatever this Home Assistant user chose.
-    return this._prefs.help?.[page] ?? true;
+    // Except the Overview, which starts collapsed: it is the page opened
+    // every day, and the explanation stood between it and the arming
+    // buttons (UX review, decided by the product owner).
+    return this._prefs.help?.[page] ?? page !== "overview";
   }
 
   private _savePrefs(prefs: Prefs): void {
@@ -650,7 +757,13 @@ class FoyerPanel extends LitElement {
     await this._context()?.walkTest(false);
   }
 
+  /** The prompt names what the code is for and, when the backend says,
+   * which setting asked for it (SPEC §8.2: "the UI names the area that is
+   * asking"). A tap on the scrim does nothing: a code half typed on a phone
+   * was lost to a thumb that missed the keyboard (UX review). Escape and
+   * Cancel are the ways out. */
   private _renderCodeDialog(s: Strings) {
+    const asking = this._asking!;
     const length = this._status?.security.code_length ?? 6;
     const submit = (event: Event) => {
       event.preventDefault();
@@ -659,18 +772,40 @@ class FoyerPanel extends LitElement {
       ) as HTMLInputElement;
       this._answerCode(input.value);
     };
+    const by = asking.requiredBy;
+    const lock = this._lockoutText(s);
     return html`
-      <div class="scrim" @click=${() => this._answerCode(undefined)}></div>
-      <form class="code-dialog" @submit=${submit} @click=${(e: Event) => e.stopPropagation()}>
-        <h2>${t(s, "code.title")}</h2>
-        <p>${this._asking?.retry ? t(s, "code.wrong") : t(s, "code.prompt", { n: length })}</p>
+      <div class="scrim"></div>
+      <form
+        class="code-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="code-title"
+        aria-describedby="code-prompt"
+        @submit=${submit}
+        @keydown=${(e: KeyboardEvent) => {
+          if (e.key !== "Escape") return;
+          e.preventDefault();
+          this._answerCode(undefined);
+        }}
+      >
+        <h2 id="code-title">
+          ${asking.purpose
+            ? t(s, asking.purpose.key, asking.purpose.params)
+            : t(s, "code.title")}
+        </h2>
+        ${by?.name ? html`<p class="by">${t(s, "code.required_by", { name: by.name })}</p>` : nothing}
+        <p id="code-prompt" class=${asking.retry ? "wrong" : ""}>
+          ${asking.retry ? t(s, "code.wrong", { n: length }) : t(s, "code.prompt", { n: length })}
+        </p>
+        ${lock ? html`<p class="wrong">${lock}</p>` : nothing}
         <input
           name="code"
           type="password"
           inputmode="numeric"
           autocomplete="off"
+          aria-labelledby="code-title"
           maxlength=${length}
-          autofocus
         />
         <div class="row">
           <button type="button" class="btn" @click=${() => this._answerCode(undefined)}>
@@ -682,24 +817,42 @@ class FoyerPanel extends LitElement {
     `;
   }
 
+  override updated(): void {
+    // Into the code field as soon as the prompt opens: the whole point of
+    // the prompt is that field, and `autofocus` does not reach into a
+    // shadow root.
+    if (!this._focusCode || !this._asking) return;
+    this._focusCode = false;
+    this.renderRoot.querySelector<HTMLInputElement>(".code-dialog input")?.focus();
+  }
+
+  /** "Blocked until 21:40", while the backend says this account is locked
+   * out (§8.4); null otherwise. Read from the live status, so it goes away
+   * on its own. */
+  private _lockoutText(s: Strings): string | null {
+    const until = this._status?.security.locked_until;
+    if (!until || Date.parse(until) <= Date.now() + this._offset) return null;
+    return lockoutText(s, this.hass?.language, until);
+  }
+
   private _renderTabs(s: Strings) {
-    const pages = this._canConfigure
-      ? PAGES
-      : PAGES.filter((p) => !CONFIG_PAGES.includes(p));
-    if (pages.length < 2) return nothing;
+    const tab = (page: PageId) => html`
+      <button
+        role="tab"
+        aria-selected=${page === this._page ? "true" : "false"}
+        @click=${() => (this._page = page)}
+      >
+        ${t(s, `nav.${page}`)}
+      </button>
+    `;
+    if (!this._canConfigure) {
+      return html`<nav class="tabs" role="tablist">${DAILY_PAGES.map(tab)}</nav>`;
+    }
     return html`
       <nav class="tabs" role="tablist">
-        ${pages.map(
-          (page) => html`
-            <button
-              role="tab"
-              aria-selected=${page === this._page ? "true" : "false"}
-              @click=${() => (this._page = page)}
-            >
-              ${t(s, `nav.${page}`)}
-            </button>
-          `,
-        )}
+        ${DAILY_PAGES.map(tab)}
+        <span class="tab-group" role="presentation">${t(s, "nav.group_setup")}</span>
+        ${CONFIG_PAGES.map(tab)}
       </nav>
     `;
   }
@@ -718,7 +871,9 @@ class FoyerPanel extends LitElement {
             @wizard-done=${() => void this._loadConfig()}
           ></foyer-wizard>`
         : nothing;
+    const lock = this._lockoutText(s);
     return html`
+      ${lock ? html`<div class="lockout" role="alert">${lock}</div>` : nothing}
       ${wizard} ${this._prefs.help_hidden ? nothing : this._renderHelp(s, page)}
       ${this._renderPage(page, ctx)}
     `;
@@ -849,6 +1004,22 @@ class FoyerPanel extends LitElement {
         color: var(--secondary-text-color);
         font-size: 14px;
       }
+      .code-dialog p.by {
+        color: var(--primary-text-color);
+      }
+      .code-dialog p.wrong,
+      .lockout {
+        color: var(--error-color, #d32f2f);
+      }
+      .lockout {
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        border-left: 3px solid var(--error-color, #d32f2f);
+        background: var(--card-background-color);
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+      }
       .code-dialog input {
         font-size: 24px;
         letter-spacing: 8px;
@@ -962,6 +1133,23 @@ class FoyerPanel extends LitElement {
       .tabs button[aria-selected="true"] {
         color: var(--primary-color);
         border-bottom-color: var(--primary-color);
+      }
+      /* Where the setup pages begin: a rule and a small caption, so the row
+         reads as two groups instead of fourteen equal tabs. */
+      .tab-group {
+        display: flex;
+        align-items: center;
+        margin-left: 10px;
+        padding-left: 14px;
+        border-left: 1px solid var(--divider-color);
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--secondary-text-color);
+        white-space: nowrap;
+        align-self: center;
+        height: 20px;
       }
       main {
         max-width: 1100px;

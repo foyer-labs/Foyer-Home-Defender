@@ -6,7 +6,16 @@ import { live } from "lit/directives/live.js";
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { Problem, ScenarioConfig } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext, activateOnKey } from "../context";
+import {
+  optionalNumber,
+  problemText,
+  type PanelContext,
+  activateOnKey,
+  revealEditor,
+  revealProblems,
+} from "../context";
+import "../delete-button";
+import { codeFields } from "../code-fields";
 import { profileField } from "../profile-picker";
 
 const NEW_SCENARIO: ScenarioConfig = {
@@ -41,6 +50,7 @@ class FoyerPageScenarios extends LitElement {
     if (this._busy) return;
     this._draft = scenario ? structuredClone(scenario) : { ...NEW_SCENARIO, areas: [] };
     this._problems = [];
+    void revealEditor(this);
   }
 
   private _set<K extends keyof ScenarioConfig>(key: K, value: ScenarioConfig[K]): void {
@@ -53,6 +63,7 @@ class FoyerPageScenarios extends LitElement {
     try {
       const result = await this.ctx.save("scenario", this._draft);
       this._problems = result.problems;
+      if (!result.success) void revealProblems(this);
       if (result.success) this._draft = undefined;
     } finally {
       this._busy = false;
@@ -149,7 +160,7 @@ class FoyerPageScenarios extends LitElement {
         on ? [...draft.areas, id] : draft.areas.filter((a) => a !== id),
       );
     return html`
-      <div class="card">
+      <div class="card editor">
         <div class="card-hd">
           <h2>${draft.id ? draft.name : t(s, "scenarios.new")}</h2>
         </div>
@@ -216,6 +227,12 @@ class FoyerPageScenarios extends LitElement {
             ${profileField(this.ctx!, draft.response_profile_id, (value) =>
               this._set("response_profile_id", value),
             )}
+            ${codeFields(
+              s,
+              draft,
+              (key, value) => this._set(key, value),
+              ctx.status.security.enforced,
+            )}
           </div>
           <fieldset>
             <legend>${t(s, "field.areas")}</legend>
@@ -232,6 +249,7 @@ class FoyerPageScenarios extends LitElement {
             )}
             <p class="hint">${t(s, "scenarios.areas_hint")}</p>
           </fieldset>
+          ${this._renderAllowedUsers(s, draft)}
           ${this._problems.length
             ? html`<div class="problems" role="alert">
                 <ul>
@@ -247,13 +265,67 @@ class FoyerPageScenarios extends LitElement {
               ${t(s, "common.cancel")}
             </button>
             ${draft.id
-              ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
-                  ${t(s, "common.delete")}
-                </button>`
+              ? html`<foyer-delete-button
+                .strings=${s}
+                .name=${draft.name}
+                ?disabled=${this._busy}
+                @confirm=${this._delete}
+              ></foyer-delete-button>`
               : nothing}
           </div>
         </div>
       </div>
+    `;
+  }
+
+  /** Who may use the scenario (SPEC §4.6). The model has carried the list
+   * since Phase 1 and no page could set it (UX review). Changing it needs
+   * manage_users as well as edit_config (decision 112): the backend
+   * refuses, and the hint says so beforehand, so the refusal is not a
+   * surprise. Switching from "everyone" to a list starts from every person
+   * rather than from nobody — an empty list saved by accident would lock
+   * the whole household out of the scenario. */
+  private _renderAllowedUsers(s: Strings, draft: ScenarioConfig) {
+    const users = this.ctx?.config?.users ?? [];
+    const chosen = draft.allowed_user_ids;
+    const toggle = (id: string, on: boolean) => {
+      const next = new Set(chosen ?? []);
+      if (on) next.add(id);
+      else next.delete(id);
+      this._set("allowed_user_ids", [...next]);
+    };
+    return html`
+      <fieldset>
+        <legend>${t(s, "field.allowed_user_ids")}</legend>
+        <label class="check">
+          <input
+            type="checkbox"
+            .checked=${live(chosen === null)}
+            @change=${(e: Event) =>
+              this._set(
+                "allowed_user_ids",
+                (e.target as HTMLInputElement).checked
+                  ? null
+                  : users.map((u) => u.id ?? "").filter(Boolean),
+              )}
+          />
+          <span>${t(s, "scenarios.everyone")}</span>
+        </label>
+        ${chosen === null
+          ? nothing
+          : users.map(
+              (user) => html`<label class="check">
+                <input
+                  type="checkbox"
+                  .checked=${live(chosen.includes(user.id ?? ""))}
+                  @change=${(e: Event) =>
+                    toggle(user.id ?? "", (e.target as HTMLInputElement).checked)}
+                />
+                <span>${user.name}</span>
+              </label>`,
+            )}
+        <p class="hint">${t(s, "scenarios.allowed_users_hint")}</p>
+      </fieldset>
     `;
   }
 

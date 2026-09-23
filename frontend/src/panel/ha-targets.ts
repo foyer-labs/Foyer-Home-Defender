@@ -94,3 +94,22 @@ export function serviceDomains(hass: HomeAssistant): string[] {
 export function domainServices(hass: HomeAssistant, domain: string): string[] {
   return Object.keys(hass.services?.[domain] ?? {}).sort();
 }
+
+/** A state as the Home Assistant user reads it, with the raw value beside
+ * it when the two differ: "Open (on)". A door sensor's `on` means open and a
+ * moisture sensor's `on` means wet, and a trigger confirmed against "on"
+ * alone is confirmed against a word nobody sees anywhere else in Home
+ * Assistant (UX review; INV-5 is only as good as what the person reads).
+ * The raw value stays, because it is what the trigger actually stores. */
+export function stateLabel(hass: HomeAssistant, entityId: string, state: string): string {
+  const entity = hass.states[entityId];
+  let label = state;
+  if (entity && hass.formatEntityState) {
+    try {
+      label = hass.formatEntityState(entity, state);
+    } catch {
+      label = state;
+    }
+  }
+  return label && label !== state ? `${label} (${state})` : state;
+}

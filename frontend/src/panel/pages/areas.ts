@@ -7,7 +7,15 @@ import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { AreaConfig, Problem } from "../../shared/types";
 import { codeFields } from "../code-fields";
-import { problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
+import {
+  problemText,
+  type PanelContext,
+  whenNumber,
+  activateOnKey,
+  revealEditor,
+  revealProblems,
+} from "../context";
+import "../delete-button";
 import { effectiveHint, profileField } from "../profile-picker";
 
 const NEW_AREA: AreaConfig = {
@@ -40,6 +48,7 @@ class FoyerPageAreas extends LitElement {
     if (this._busy) return;
     this._draft = area ? { ...area } : { ...NEW_AREA };
     this._problems = [];
+    void revealEditor(this);
   }
 
   private _set<K extends keyof AreaConfig>(key: K, value: AreaConfig[K]): void {
@@ -52,6 +61,7 @@ class FoyerPageAreas extends LitElement {
     try {
       const result = await this.ctx.save("area", this._draft);
       this._problems = result.problems;
+      if (!result.success) void revealProblems(this);
       if (result.success) this._draft = undefined;
     } finally {
       this._busy = false;
@@ -127,7 +137,7 @@ class FoyerPageAreas extends LitElement {
     const [minDelay, maxExit] = meta?.bounds.exit_delay ?? [0, 300];
     const maxEntry = meta?.bounds.entry_delay?.[1] ?? 300;
     return html`
-      <div class="card">
+      <div class="card editor">
         <div class="card-hd">
           <h2>${draft.id ? draft.name : t(s, "areas.new")}</h2>
         </div>
@@ -217,9 +227,12 @@ class FoyerPageAreas extends LitElement {
               ${t(s, "common.cancel")}
             </button>
             ${draft.id
-              ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
-                  ${t(s, "common.delete")}
-                </button>`
+              ? html`<foyer-delete-button
+                .strings=${s}
+                .name=${draft.name}
+                ?disabled=${this._busy}
+                @confirm=${this._delete}
+              ></foyer-delete-button>`
               : nothing}
           </div>
         </div>

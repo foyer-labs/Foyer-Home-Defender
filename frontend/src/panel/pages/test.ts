@@ -1136,7 +1136,7 @@ class FoyerPageTest extends LitElement {
         duration: minutes > 0 ? minutes * 60 : undefined,
       });
       if (!result.success) {
-        this._error = reasonText(ctx.strings, result);
+        this._error = reasonText(ctx.strings, result, ctx.hass.language);
       } else if (result.blocking_zones.length) {
         // Not a refusal: the test is running, and those areas are not in it
         // (part 2 decision 7). Said plainly, because a zone that was never

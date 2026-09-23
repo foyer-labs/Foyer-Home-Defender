@@ -17,12 +17,24 @@ import type {
   SecurityConfig,
   UserConfig,
 } from "../../shared/types";
-import { problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
+import {
+  problemText,
+  type PanelContext,
+  whenNumber,
+  activateOnKey,
+  revealEditor,
+  revealProblems,
+} from "../context";
+import "../delete-button";
 
 interface Draft extends UserConfig {
   /** Typed here, sent once, never read back. */
   new_code?: string | null;
   new_duress_code?: string | null;
+  /** The new code typed a second time. Compared with the first here and
+   * never sent: whether the code itself is acceptable is the backend's to
+   * say (INV-2); whether the two fields agree is only about the typing. */
+  repeat_code?: string;
 }
 
 const EMPTY: Draft = {
@@ -78,6 +90,7 @@ class FoyerPageUsers extends LitElement {
     if (this._busy) return;
     this._draft = user ? { ...structuredClone(user) } : structuredClone(EMPTY);
     this._problems = [];
+    void revealEditor(this);
   }
 
   private _set<K extends keyof Draft>(key: K, value: Draft[K]): void {
@@ -95,12 +108,18 @@ class FoyerPageUsers extends LitElement {
     if (!this.ctx || !this._draft) return;
     this._busy = true;
     try {
-      const { new_code, new_duress_code, ...user } = this._draft;
+      const { new_code, new_duress_code, repeat_code, ...user } = this._draft;
+      if (new_code && new_code !== (repeat_code ?? "")) {
+        this._problems = [{ code: "code_mismatch", kind: "user", ref: null, field: null }];
+        void revealProblems(this);
+        return;
+      }
       const result = await this.ctx.saveUser(user, {
         ...(new_code !== undefined ? { new_code } : {}),
         ...(new_duress_code !== undefined ? { new_duress_code } : {}),
       });
       this._problems = result.problems;
+      if (!result.success) void revealProblems(this);
       if (result.success) this._draft = undefined;
     } finally {
       this._busy = false;
@@ -229,7 +248,7 @@ class FoyerPageUsers extends LitElement {
     const permissions = ctx.meta?.permissions ?? [];
     const haUsers = ctx.hass.user?.is_admin ? (ctx.haUsers ?? []) : [];
     return html`
-      <div class="card">
+      <div class="card editor">
         <div class="card-hd">
           <h2>${draft.id ? draft.name : t(s, "users.new")}</h2>
         </div>
@@ -254,8 +273,24 @@ class FoyerPageUsers extends LitElement {
                 @input=${(e: Event) =>
                   this._set("new_code", (e.target as HTMLInputElement).value)}
               />
-              <span class="hint">${t(s, "users.code_hint", { n: length })}</span>
+              <span class="hint">
+                ${t(s, draft.id ? "users.code_hint" : "users.code_hint_new", { n: length })}
+              </span>
             </label>
+            ${draft.new_code
+              ? html`<label class="field">
+                  <span class="lbl">${t(s, "users.code_repeat")}</span>
+                  <input
+                    type="password"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    maxlength=${length}
+                    .value=${live(draft.repeat_code ?? "")}
+                    @input=${(e: Event) =>
+                      this._set("repeat_code", (e.target as HTMLInputElement).value)}
+                  />
+                </label>`
+              : nothing}
             <label class="field">
               <span class="lbl">${t(s, "users.duress")}</span>
               <input
@@ -387,9 +422,13 @@ class FoyerPageUsers extends LitElement {
             ${t(s, "common.cancel")}
           </button>
           ${draft.id
-            ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
-                ${t(s, "common.delete")}
-              </button>`
+            ? html`<foyer-delete-button
+                .strings=${s}
+                .name=${draft.name}
+                .message=${"users.confirm_delete"}
+                ?disabled=${this._busy}
+                @confirm=${this._delete}
+              ></foyer-delete-button>`
             : nothing}
           <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
             ${t(s, "common.save")}

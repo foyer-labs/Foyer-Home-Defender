@@ -7,7 +7,15 @@ import { live } from "lit/directives/live.js";
 import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { GroupConfig, Problem, ZoneConfig } from "../../shared/types";
-import { problemText, type PanelContext, whenNumber, activateOnKey } from "../context";
+import {
+  problemText,
+  type PanelContext,
+  whenNumber,
+  activateOnKey,
+  revealEditor,
+  revealProblems,
+} from "../context";
+import "../delete-button";
 import { profileField } from "../profile-picker";
 
 interface Row {
@@ -45,6 +53,7 @@ class FoyerPageGroups extends LitElement {
           response_profile_id: null,
         };
     this._problems = [];
+    void revealEditor(this);
   }
 
   private _set<K extends keyof GroupConfig>(key: K, value: GroupConfig[K]): void {
@@ -57,6 +66,7 @@ class FoyerPageGroups extends LitElement {
     try {
       const result = await this.ctx.save("group", this._draft);
       this._problems = result.problems;
+      if (!result.success) void revealProblems(this);
       if (result.success) this._draft = undefined;
     } finally {
       this._busy = false;
@@ -195,7 +205,7 @@ class FoyerPageGroups extends LitElement {
         on ? [...new Set([...draft.members, id])] : draft.members.filter((m) => m !== id),
       );
     return html`
-      <div class="card">
+      <div class="card editor">
         <div class="card-hd">
           <h2>${draft.id ? draft.name : t(s, "groups.new")}</h2>
         </div>
@@ -304,9 +314,12 @@ class FoyerPageGroups extends LitElement {
               ${t(s, "common.cancel")}
             </button>
             ${draft.id
-              ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
-                  ${t(s, "common.delete")}
-                </button>`
+              ? html`<foyer-delete-button
+                .strings=${s}
+                .name=${draft.name}
+                ?disabled=${this._busy}
+                @confirm=${this._delete}
+              ></foyer-delete-button>`
               : nothing}
           </div>
         </div>

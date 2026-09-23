@@ -27,7 +27,14 @@ import type {
   Problem,
   SettingsConfig,
 } from "../../shared/types";
-import { problemText, type PanelContext, activateOnKey } from "../context";
+import {
+  problemText,
+  type PanelContext,
+  activateOnKey,
+  revealEditor,
+  revealProblems,
+} from "../context";
+import "../delete-button";
 
 const EMPTY: DeviceConfig = {
   name: "",
@@ -79,6 +86,7 @@ class FoyerPageDevices extends LitElement {
     this._token = undefined;
     this._tokenProblems = [];
     this._confirmToken = undefined;
+    void revealEditor(this);
   }
 
   private async _tokenAction(revoke: boolean): Promise<void> {
@@ -133,6 +141,7 @@ class FoyerPageDevices extends LitElement {
     try {
       const result = await this.ctx.save("device", this._draft);
       this._problems = result.problems;
+      if (!result.success) void revealProblems(this);
       if (result.success) {
         this._draft = undefined;
         // The token was shown for the editor it was generated in, and that
@@ -252,7 +261,7 @@ class FoyerPageDevices extends LitElement {
     const scenarios = ctx.config?.scenarios ?? [];
     const entities = this._tagEntities(ctx.hass.states);
     return html`
-      <div class="card">
+      <div class="card editor">
         <div class="card-hd">
           <h2>${draft.id ? draft.name : t(s, "devices.new")}</h2>
         </div>
@@ -458,9 +467,12 @@ class FoyerPageDevices extends LitElement {
             ${t(s, "common.cancel")}
           </button>
           ${draft.id
-            ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
-                ${t(s, "common.delete")}
-              </button>`
+            ? html`<foyer-delete-button
+                .strings=${s}
+                .name=${draft.name}
+                ?disabled=${this._busy}
+                @confirm=${this._delete}
+              ></foyer-delete-button>`
             : nothing}
           <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
             ${t(s, "common.save")}

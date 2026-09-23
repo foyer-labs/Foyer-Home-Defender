@@ -16,8 +16,16 @@ import type {
   ZoneConfig,
   ZoneProposal,
 } from "../../shared/types";
-import { optionalNumber, problemText, type PanelContext, activateOnKey } from "../context";
-import { batteryTargets, entityTargets } from "../ha-targets";
+import {
+  optionalNumber,
+  problemText,
+  type PanelContext,
+  activateOnKey,
+  revealEditor,
+  revealProblems,
+} from "../context";
+import "../delete-button";
+import { batteryTargets, entityTargets, stateLabel } from "../ha-targets";
 import { profileField } from "../profile-picker";
 
 const EVENT_DOMAINS = new Set(["event", "tag"]);
@@ -100,6 +108,7 @@ class FoyerPageZones extends LitElement {
     this._confirmed = false;
     this._problems = [];
     if (zone) this._propose(zone.entity_id, false);
+    void revealEditor(this);
   }
 
   private _set<K extends keyof ZoneConfig>(key: K, value: ZoneConfig[K]): void {
@@ -197,6 +206,7 @@ class FoyerPageZones extends LitElement {
     try {
       const result = await this.ctx.save("zone", this._draft, this._confirmed);
       this._problems = result.problems;
+      if (!result.success) void revealProblems(this);
       if (result.success) this._draft = undefined;
     } finally {
       this._busy = false;
@@ -293,7 +303,7 @@ class FoyerPageZones extends LitElement {
   private _renderEditor(s: Strings, draft: ZoneConfig) {
     const ctx = this.ctx!;
     return html`
-      <div class="card">
+      <div class="card editor">
         <div class="card-hd">
           <h2>${draft.id ? draft.name : t(s, "zones.new")}</h2>
         </div>
@@ -333,9 +343,12 @@ class FoyerPageZones extends LitElement {
               ${t(s, "common.cancel")}
             </button>
             ${draft.id
-              ? html`<button class="btn danger" ?disabled=${this._busy} @click=${this._delete}>
-                  ${t(s, "common.delete")}
-                </button>`
+              ? html`<foyer-delete-button
+                .strings=${s}
+                .name=${draft.name}
+                ?disabled=${this._busy}
+                @confirm=${this._delete}
+              ></foyer-delete-button>`
               : nothing}
           </div>
           ${this._needsConfirmation() && !this._confirmed && draft.entity_id
@@ -411,7 +424,7 @@ class FoyerPageZones extends LitElement {
         <p class="hint">
           ${t(s, "zones.trigger_intro", {
             entity: String(entity?.attributes.friendly_name ?? draft.entity_id),
-            state: current,
+            state: stateLabel(ctx.hass, draft.entity_id, current),
           })}
           ${this._proposal?.device_class
             ? t(s, "zones.device_class", { device_class: this._proposal.device_class })
@@ -444,7 +457,7 @@ class FoyerPageZones extends LitElement {
               ${trigger.kind === "numeric"
                 ? this._renderNumericTrigger(s, trigger)
                 : trigger.kind === "state"
-                  ? this._renderStateTrigger(s, trigger.states, current)
+                  ? this._renderStateTrigger(s, draft.entity_id, trigger.states, current)
                   : nothing}
             `}
         <label class="check confirm">
@@ -463,7 +476,16 @@ class FoyerPageZones extends LitElement {
     `;
   }
 
-  private _renderStateTrigger(s: Strings, states: string[], current: string) {
+  /** Each state in the Home Assistant user's words with the raw value
+   * beside it, as the wizard shows them: the checkbox stores the raw value,
+   * and the person ticking it reads "Open", not "on" (UX review). */
+  private _renderStateTrigger(
+    s: Strings,
+    entityId: string,
+    states: string[],
+    current: string,
+  ) {
+    const hass = this.ctx!.hass;
     const options = new Set<string>([...(this._proposal?.options ?? []), ...states]);
     if (!FAULT_STATES.has(current)) options.add(current);
     const toggle = (state: string, on: boolean) => {
@@ -479,7 +501,7 @@ class FoyerPageZones extends LitElement {
               .checked=${live(states.includes(state))}
               @change=${(e: Event) => toggle(state, (e.target as HTMLInputElement).checked)}
             />
-            <span class="mono">${state}</span>
+            <span>${stateLabel(hass, entityId, state)}</span>
             ${state === current ? html`<span class="tag">${t(s, "zones.now")}</span>` : nothing}
           </label>`,
         )}
