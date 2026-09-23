@@ -672,6 +672,12 @@ moment for "switch the light off when the alarm is over", which an area's
 profile can answer; the acknowledgement of the incident belongs to no area
 and cannot serve (decision 105).
 
+`alarm_cleared` belongs to one area too, and is raised when a disarm clears
+that area's alarm memory — whether the siren is still sounding or its cutoff
+ran hours ago. It is not `alarm_ended`: the alarm can be over long before
+anybody comes home and clears it. It is the moment for "switch off the lamp
+that says an alarm happened while you were out" (decision 108).
+
 ### 6.2 Action catalogue
 
 | Action | Parameters |
@@ -979,6 +985,20 @@ Two rules the resolution needs that the arrows above do not carry:
 when the policy asks for one (decision 101). Being an administrator is not
 an identification: the unlocked wall tablet INV-6 names is almost always
 signed in as one. What the administrator keeps is §8.4's: never locked out.
+
+**And a way back in that cannot go unnoticed** (decisions 109, 110). An
+administrator who holds no code, in a house where others do, could otherwise
+change nothing; one whose own Foyer user was disabled, or has run past its
+validity window, could not undo it. The integration's **Configure** step in
+Home Assistant — open to administrators only — recovers access: it asks for
+which Home Assistant account (Home Assistant does not tell an integration who
+opened the step, and choosing another administrator buys nothing INV-6 does
+not already give) and for a new code. The Foyer user linked to that account
+is enabled, its validity window is removed and the code is set; an account
+with no linked user gets a new one, with every permission. The code follows
+§8.1's uniqueness rule. It is never quiet: a `security` row, a Home Assistant
+notification, and a message to every enabled contact, each naming the
+account.
 
 **Channels that identify the user:** Home Assistant UI with `ha_user_id` linked,
 a per-user NFC tag, a per-user RFID badge. **Channels that do not:** a shared
@@ -1727,7 +1747,10 @@ configured forty zones will do it twice. The exported document carries its
 schema version: a restore migrates an older one through the same steps a real
 upgrade uses, refuses one written by a newer major version rather than reading
 it half-way, and then goes through validation and the armed-area guard like
-any other edit.
+any other edit. A restore that adds, removes or changes a person or a tag
+needs `manage_users` as well as `edit_config`, as the Alarmo importer's
+does: otherwise `edit_config` was a way to hand oneself every permission, or
+somebody else's key (decision 111).
 
 **The language setting is not the panel's.** The panel follows each Home
 Assistant user's own language, so a second selector for it would be a bug
@@ -2208,3 +2231,7 @@ document should make one of them on purpose.
 | 105 | `alarm_ended` is a per-area moment: siren cutoff or a disarm with alarm memory, never an ordinary disarm | "Switch it off when the alarm is over" needs a moment an area's profile hears; the incident's acknowledgement belongs to no area, and `disarmed` fires every evening |
 | 106 | A refused service raises when the caller does not ask for its response | An automation that does not read the result took a wrong code for success and carried on as if the house were disarmed |
 | 107 | Arming is refused while a walk test runs | The test arms every area and its end disarms them all; an arming accepted in between was undone without a word |
+| 108 | `alarm_cleared` is raised when a disarm clears an area's alarm memory | §6.1 named it and nothing raised it; an alarm is often over long before anybody clears it, and "the lamp that says something happened" needs the second moment, not the first |
+| 109 | An administrator recovers access from the integration's Configure step, loudly | Decision 101 left an administrator with no code no way in; INV-6 says they can do anything anyway, so the recovery exists — and is logged, notified in Home Assistant and sent to every contact, so it is never the quiet way round a code |
+| 110 | The recovery enables the account's linked user, removes its validity window and sets its code, or creates the user with every permission | An administrator whose own user was disabled could not undo it; Home Assistant does not say who opened the step, so it asks for the account |
+| 111 | A restore that touches people or tags needs `manage_users` | `edit_config` alone let a backup file grant any permission, or give somebody's tag to somebody else; the Alarmo importer already asked for it |
