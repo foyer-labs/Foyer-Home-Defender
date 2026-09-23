@@ -662,6 +662,13 @@ def set_device_token(
 # still says each one changed.
 _REDACTED = "***"
 
+# Kinds whose row says which field changed and nothing more (review
+# follow-up). A contact's channels carry the notify service, which is named
+# after somebody's phone, and a rule's trigger carries the people it watches:
+# before-and-after values there would put in a row, unswept, what the
+# privacy sweeps of §10.4 take out of every other one.
+_FIELDS_ONLY = frozenset({"contacts", "rules"})
+
 
 def _without_credentials(document: dict[str, Any]) -> dict[str, Any]:
     for device in document.get("devices", []):
@@ -781,6 +788,10 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
             for i in was.keys() & now.keys()
             if was[i] != now[i]
         }
+        if kind in _FIELDS_ONLY:
+            edited = {
+                name: {key: [] for key in fields} for name, fields in edited.items()
+            }
         for i, keys in secrets_changed.get(kind, {}).items():
             if i in was and i in now:
                 for key in keys:

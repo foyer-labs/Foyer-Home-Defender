@@ -162,3 +162,43 @@ async def test_a_full_overflow_counter_never_refuses_the_right_token(
 
     response = await _post(http, token, {"action": "status"})
     assert response.status == 200
+
+
+async def test_tokens_refused_on_the_locked_shared_counter_leave_one_row_a_minute(
+    hass,
+    endpoint,  # noqa: F811 - the fixture imported above
+    freezer,
+):
+    """Review follow-up: once the shared counter locked, a flood of guesses
+    from rotating addresses was answered without a trace. It is tallied in
+    memory and written as one `security` row a minute."""
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    from custom_components.foyer.core.models import Lockout
+
+    from .test_part12 import _post
+
+    http, _token, _device_id, _client = endpoint
+    system = hass.data[DOMAIN]
+    until = dt_util.utcnow() + timedelta(hours=1)
+    locks = {f"http:198.51.100.{i}": Lockout(until=None) for i in range(64)}
+    locks["http:*"] = Lockout(until=until)
+    system.state = replace(system.state, lockouts={**system.state.lockouts, **locks})
+
+    for _ in range(3):
+        response = await _post(http, "wrong", {"action": "status"})
+        assert response.status == 401
+
+    async def summaries():
+        await hass.data[DOMAIN].log.async_flush()
+        rows = (await hass.data[DOMAIN].log.async_query(limit=1000))["rows"]
+        return [r for r in rows if r["event_type"] == "tokens_rejected"]
+
+    assert await summaries() == []
+    await _advance(hass, freezer, 61)
+    (row,) = await summaries()
+    assert row["category"] == "security"
+    assert row["detail"]["count"] == "3"
+    assert row["detail"]["addresses"] == "1"

@@ -34,6 +34,7 @@ wrong credential, and is answered 401 with no detail.
 from __future__ import annotations
 
 import asyncio
+from functools import partial
 from http import HTTPStatus
 import ipaddress
 import json
@@ -47,11 +48,13 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
+from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 from .. import i18n
 from ..const import DOMAIN
 from ..core import authz
+from ..core.journal import security_row
 from ..core.models import (
     Actor,
     ArmingDevice,
@@ -62,6 +65,7 @@ from ..core.models import (
     DeviceTransport,
     Moment,
     MqttDetail,
+    Outcome,
     Reason,
 )
 from ..runtime import notices
@@ -118,6 +122,19 @@ STREAM_ORPHAN_SECONDS = 60
 # requests from one address cannot all pass the lockout check before the
 # first of them has been counted.
 _BAD_TOKEN_LOCK = f"{DOMAIN}_bad_token_lock"
+
+# The shared counter, once it is locked, stops counting through the engine:
+# every request would otherwise be answered without a trace, and a flood of
+# guesses from rotating addresses is exactly what somebody reading the log
+# needs to see. It is tallied here instead, in memory, and written as one
+# `security` row a minute — how many, from how many addresses — rather than
+# a row per request (review follow-up).
+_OVERFLOW_TALLY = f"{DOMAIN}_overflow_tally"
+OVERFLOW_SUMMARY_SECONDS = 60
+# Addresses remembered for the count, at most. Past it the number is a floor,
+# and says so; a set that grew with every address would be the unbounded
+# state the shared counter exists to prevent.
+MAX_TALLIED_ADDRESSES = 1024
 
 
 def _system(hass: HomeAssistant) -> FoyerSystem | None:
@@ -241,10 +258,14 @@ async def _async_bad_token(
     """
     lock = hass.data.setdefault(_BAD_TOKEN_LOCK, asyncio.Lock())
     async with lock:
-        address = _counted_as(system, _address(request))
+        source = _address(request)
+        address = _counted_as(system, source)
         if authz.address_locked_until(system.state.lockouts, address, dt_util.utcnow()):
             # Locked while this request waited its turn: answered, not
-            # counted again.
+            # counted again — except on the shared counter, where it is
+            # tallied for the minute's summary row.
+            if address == OVERFLOW_ADDRESS:
+                _tally(hass, source)
             return
         decision = await system.async_handle(
             CodeAttempt(
@@ -268,6 +289,71 @@ async def _async_bad_token(
         # to: a guesser rotating addresses must not be able to bury the
         # notifications that matter under a pile of these.
         notification_id="foyer_token_lockout",
+    )
+
+
+def _tally(hass: HomeAssistant, source: str) -> None:
+    """Count one token refused on the locked shared counter."""
+    tally = hass.data.get(_OVERFLOW_TALLY)
+    if tally is None:
+        tally = hass.data[_OVERFLOW_TALLY] = {
+            "count": 0,
+            "addresses": set(),
+            "since": dt_util.utcnow(),
+            "cancel": None,
+        }
+    tally["count"] += 1
+    if len(tally["addresses"]) < MAX_TALLIED_ADDRESSES:
+        tally["addresses"].add(source)
+    _arm_summary(hass)
+
+
+def _arm_summary(hass: HomeAssistant) -> None:
+    """Write the minute's row when its minute is up, once."""
+    tally = hass.data.get(_OVERFLOW_TALLY)
+    if tally is None or tally["cancel"] is not None:
+        return
+    elapsed = (dt_util.utcnow() - tally["since"]).total_seconds()
+    tally["cancel"] = async_call_later(
+        hass,
+        max(0.0, OVERFLOW_SUMMARY_SECONDS - elapsed),
+        partial(_summarise, hass),
+    )
+
+
+@callback
+def _summarise(hass: HomeAssistant, _now: Any) -> None:
+    tally = hass.data.get(_OVERFLOW_TALLY)
+    if tally is None:
+        return
+    tally["cancel"] = None
+    system = _system(hass)
+    if system is None or system.superseded or system.stopped:
+        # Between two systems — a reload — or one whose log is closing: kept
+        # for the next one, which arms this again when it starts.
+        return
+    del hass.data[_OVERFLOW_TALLY]
+    addresses = tally["addresses"]
+    system.async_record(
+        (
+            security_row(
+                dt_util.utcnow(),
+                event_type="tokens_rejected",
+                channel="keypad",
+                # `blocked`, the outcome the log's filter and words know:
+                # the reason is the row's event type.
+                outcome=Outcome.BLOCKED.value,
+                detail={
+                    "count": str(tally["count"]),
+                    "addresses": (
+                        f"{len(addresses)}+"
+                        if len(addresses) >= MAX_TALLIED_ADDRESSES
+                        else str(len(addresses))
+                    ),
+                    "since": tally["since"].isoformat(),
+                },
+            ),
+        )
     )
 
 
@@ -489,6 +575,7 @@ def async_start(hass: HomeAssistant, system: FoyerSystem) -> Any:
         async_dispatcher_send(hass, SIGNAL)
 
     remove = system.async_add_listener(changed)
+    _arm_summary(hass)
     # A system that has just replaced another — a reload, which is what a
     # token being generated or revoked causes — may have closed a stream.
     async_dispatcher_send(hass, SIGNAL)
@@ -497,6 +584,12 @@ def async_start(hass: HomeAssistant, system: FoyerSystem) -> Any:
     def stop() -> None:
         if remove is not None:
             remove()
+        tally = hass.data.get(_OVERFLOW_TALLY)
+        if tally is not None and tally["cancel"] is not None:
+            # The minute's row waits for the next system rather than being
+            # written into a log that is closing; that system arms it again.
+            tally["cancel"]()
+            tally["cancel"] = None
         async_dispatcher_send(hass, SIGNAL)
 
     return stop

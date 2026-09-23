@@ -291,7 +291,11 @@ async def test_ws_status(hass, loaded, hass_ws_client):
     assert status["areas"][0]["state"] == "disarmed"
     assert status["areas"][0]["entity_id"] == PANEL_ENTITY
     assert status["areas"][0]["ready"] is True
-    assert status["master"] == {"state": "disarmed", "mode": None}
+    assert status["master"] == {
+        "state": "disarmed",
+        "mode": None,
+        "entity_id": "alarm_control_panel.foyer_master",
+    }
     zone = status["zones"][0]
     assert (zone["name"], zone["state"], zone["fault"], zone["open"]) == (
         "Front door",

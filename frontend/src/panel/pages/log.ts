@@ -627,6 +627,12 @@ class FoyerPageLog extends LitElement {
     if (row.event_type === "zone_state") {
       return `${detail.from ?? "?"} → ${detail.to ?? "?"}`;
     }
+    if (row.event_type === "tokens_rejected") {
+      return t(s, "log.tokens_rejected", {
+        count: String(detail.count ?? "?"),
+        addresses: String(detail.addresses ?? "?"),
+      });
+    }
     if (row.event_type === "reloaded") {
       return t(s, "log.gap_short", { seconds: String(detail.gap_seconds ?? "") });
     }

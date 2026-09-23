@@ -233,6 +233,7 @@ class FoyerSystem:
         # faults are not announced yet (see SystemSnapshot.settling).
         self.settling = not hass.is_running
         self.area_entity_ids: dict[str, str] = {}
+        self.master_entity_id: str | None = None
         # The configuration reloads the entry on every change, so the language
         # Foyer speaks is read once, here, and never looked up mid-alarm.
         self._executor = Executor(hass, config.settings.language)
@@ -1172,6 +1173,11 @@ class FoyerSystem:
         """Tell subscribers something visible changed (e.g. a zone state)."""
         self._notify()
 
+    @property
+    def stopped(self) -> bool:
+        """Stopping, or stopped: its log is closing or closed."""
+        return self._stopped
+
     @callback
     def async_notify_soon(self) -> None:
         """One notify on the next turn of the loop, however many ask for it."""
@@ -1522,7 +1528,11 @@ class FoyerSystem:
             # able to show and stop: two minutes is not long enough to go and
             # find the right page.
             "auto": self.auto_status(),
-            "master": {"state": master.value, "mode": mode},
+            "master": {
+                "state": master.value,
+                "mode": mode,
+                "entity_id": self.master_entity_id,
+            },
             "areas": areas,
             "scenarios": [
                 {

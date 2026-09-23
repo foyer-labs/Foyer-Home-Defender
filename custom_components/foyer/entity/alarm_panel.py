@@ -194,6 +194,17 @@ class FoyerMasterPanel(_Panel):
                 features |= _ARM_FEATURES.get(mode, AlarmControlPanelEntityFeature(0))
         self._attr_supported_features = features
 
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        # Whatever the household renamed it to: the card recognises the
+        # master by this, not by the id it was created with.
+        self._system.master_entity_id = self.entity_id
+        self._system.async_notify_soon()
+
+    async def async_will_remove_from_hass(self) -> None:
+        self._system.master_entity_id = None
+        self._system.async_notify_soon()
+
     @property
     def alarm_state(self) -> AlarmControlPanelState:
         state, mode = self._system.master()
