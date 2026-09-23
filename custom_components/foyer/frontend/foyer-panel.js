@@ -1742,8 +1742,13 @@ var at = class extends M {
         ${P(e, "common.delete")}
       </button>`;
 	}
+	willUpdate(e) {
+		e.has("name") && e.get("name") !== void 0 && (this._asking = !1);
+	}
 	updated(e) {
-		e.has("_asking") && this._asking && this.renderRoot.querySelector(".ask .btn:not(.danger)")?.focus();
+		if (!e.has("_asking")) return;
+		let t = this._asking ? ".ask .btn:not(.danger)" : ".btn.danger";
+		this.renderRoot.querySelector(t)?.focus();
 	}
 	static {
 		this.styles = [I, o`
@@ -3216,13 +3221,15 @@ var wt = {
           />
           <span>${P(e, "scenarios.everyone")}</span>
         </label>
-        ${r === null ? E : n.map((e) => w`<label class="check">
+        ${r === null ? E : n.map((t) => w`<label class="check">
                 <input
                   type="checkbox"
-                  .checked=${W(r.includes(e.id ?? ""))}
-                  @change=${(t) => i(e.id ?? "", t.target.checked)}
+                  .checked=${W(r.includes(t.id ?? ""))}
+                  ?disabled=${r.length === 1 && r.includes(t.id ?? "")}
+                  title=${r.length === 1 ? P(e, "scenarios.last_user") : ""}
+                  @change=${(e) => i(t.id ?? "", e.target.checked)}
                 />
-                <span>${e.name}</span>
+                <span>${t.name}</span>
               </label>`)}
         <p class="hint">${P(e, "scenarios.allowed_users_hint")}</p>
       </fieldset>
@@ -10019,8 +10026,8 @@ var X = [
 	}
 	_renderProposal(e, t) {
 		let n = this.ctx, r = n.hass.states[t.entity_id], i = String(r?.attributes.friendly_name ?? t.name);
-		if (t.trigger_kind === "numeric") return w`<div class="proposal">
-        <p>${P(e, "wizard.numeric_elsewhere")}</p>
+		if (t.trigger_kind === "numeric" || !t.proposed.length) return w`<div class="proposal">
+        <p>${P(e, `wizard.${t.trigger_kind === "numeric" ? "numeric_elsewhere" : "no_proposal_elsewhere"}`)}</p>
         <button class="btn" @click=${() => n.navigate("zones")}>
           ${P(e, "wizard.go_zones")}
         </button>
@@ -10090,7 +10097,7 @@ var X = [
 	}
 	async _addZone() {
 		let e = this.ctx, t = this._proposal, n = this._area;
-		if (!e || !t || !n || t.trigger_kind === "numeric") return;
+		if (!e || !t || !n || t.trigger_kind === "numeric" || !t.proposed.length) return;
 		let r = t.trigger_kind === "event" ? {
 			kind: "event",
 			event_type: t.entity_id.startsWith("event.") ? t.proposed[0] ?? null : null
@@ -10625,7 +10632,7 @@ var kn = class extends M {
 	}
 	connectedCallback() {
 		super.connectedCallback(), this.hass && this._start(), this._timer = window.setInterval(() => {
-			(this._status?.areas.some((e) => e.timer) || this._status?.walk_test || this._status?.auto?.pending?.length) && (this._tick += 1);
+			(this._status?.areas.some((e) => e.timer) || this._status?.walk_test || this._status?.auto?.pending?.length || this._status?.security?.locked_until) && (this._tick += 1);
 		}, 1e3);
 	}
 	disconnectedCallback() {
@@ -10669,14 +10676,14 @@ var kn = class extends M {
 			if (o === void 0) return On(a);
 			n = o, r = !0, a = await e(n);
 		}
-		return a.success && n && this._rememberCode(n), (a.reason === "bad_code" || a.reason === "locked_out") && this._forgetCode(), a;
+		return a.success && n && this.isConnected && this._rememberCode(n), (a.reason === "bad_code" || a.reason === "locked_out") && this._forgetCode(), a;
 	}
 	_armPurpose(e) {
-		let t = this._status;
-		return {
+		let t = this._status, n = t?.scenarios.find((t) => t.id === e.scenario_id)?.name ?? t?.areas.find((t) => t.id === e.area_id)?.name;
+		return n ? {
 			key: "code.purpose.arm",
-			params: { target: t?.scenarios.find((t) => t.id === e.scenario_id)?.name ?? t?.areas.find((t) => t.id === e.area_id)?.name ?? "" }
-		};
+			params: { target: n }
+		} : { key: "code.purpose.arm_plain" };
 	}
 	_disarmPurpose(e) {
 		return e ? {

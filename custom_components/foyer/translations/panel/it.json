@@ -601,7 +601,8 @@
     "siren_hint": "Al massimo 900 s. Vuoto: l'impostazione globale.",
     "areas_hint": "Solo queste vengono inserite. Passando a un altro scenario si disinseriscono le aree che non elenca.",
     "everyone": "Chiunque abbia il permesso",
-    "allowed_users_hint": "Solo le persone spuntate possono usare questo scenario. Cambiare questo elenco richiede anche il permesso «Gestire utenti e codici»."
+    "allowed_users_hint": "Solo le persone spuntate possono usare questo scenario. Cambiare questo elenco richiede anche il permesso «Gestire utenti e codici».",
+    "last_user": "Almeno una persona deve poterlo usare. Per lasciarlo a tutti, spunta la casella qui sopra."
   },
   "card": {
     "arm": "Inserisci",
@@ -1903,7 +1904,8 @@
       "users": "Nessuno ha ancora un codice, quindi il codice non viene mai richiesto.",
       "contacts": "Ancora nessun contatto: nessuno da raggiungere quando nessuno prende atto di un allarme.",
       "none": "Niente di evidente da fare. Tutto il resto è nelle pagine qui sopra."
-    }
+    },
+    "no_proposal_elsewhere": "Per questo tipo di entità Foyer non ha stati da proporre: configurala nella pagina Zone, dove scegli cosa significa."
   },
   "config_kind": {
     "areas": "Area",
@@ -1994,7 +1996,8 @@
       "disarm_all": "Codice per disinserire tutta la casa",
       "config": "Codice per salvare la modifica",
       "bypass": "Codice per escludere {zone}",
-      "unbypass": "Codice per includere di nuovo {zone}"
+      "unbypass": "Codice per includere di nuovo {zone}",
+      "arm_plain": "Codice per inserire"
     },
     "required_by": "Lo chiede {name}.",
     "locked_until": "Troppi codici errati. I codici da questo account sono bloccati fino alle {time}."

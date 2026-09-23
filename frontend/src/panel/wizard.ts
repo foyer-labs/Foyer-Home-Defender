@@ -281,9 +281,9 @@ class FoyerWizard extends LitElement {
     const ctx = this.ctx!;
     const entity = ctx.hass.states[proposal.entity_id];
     const name = String(entity?.attributes.friendly_name ?? proposal.name);
-    if (proposal.trigger_kind === "numeric") {
+    if (proposal.trigger_kind === "numeric" || !proposal.proposed.length) {
       return html`<div class="proposal">
-        <p>${t(s, "wizard.numeric_elsewhere")}</p>
+        <p>${t(s, `wizard.${proposal.trigger_kind === "numeric" ? "numeric_elsewhere" : "no_proposal_elsewhere"}`)}</p>
         <button class="btn" @click=${() => ctx.navigate("zones")}>
           ${t(s, "wizard.go_zones")}
         </button>
@@ -373,8 +373,17 @@ class FoyerWizard extends LitElement {
     const ctx = this.ctx;
     const proposal = this._proposal;
     const area = this._area;
-    // A number is never saved from here: see _renderProposal.
-    if (!ctx || !proposal || !area || proposal.trigger_kind === "numeric") return;
+    // A number, or a trigger with no state to confirm, is never saved from
+    // here: see _renderProposal (INV-5).
+    if (
+      !ctx ||
+      !proposal ||
+      !area ||
+      proposal.trigger_kind === "numeric" ||
+      !proposal.proposed.length
+    ) {
+      return;
+    }
     const trigger: Trigger =
       proposal.trigger_kind === "event"
         ? {

@@ -53,12 +53,20 @@ class FoyerDeleteButton extends LitElement {
     </div>`;
   }
 
+  override willUpdate(changed: Map<string, unknown>): void {
+    // Another item opened in the same editor reuses this element: a question
+    // asked about the first must never become one about the second, deleted
+    // with the click that was meant for the first (review).
+    if (changed.has("name") && changed.get("name") !== undefined) this._asking = false;
+  }
+
   override updated(changed: Map<string, unknown>): void {
+    if (!changed.has("_asking")) return;
     // Straight onto the question's own Cancel, so a stray Enter or a second
-    // tap in the same place does not delete.
-    if (changed.has("_asking") && this._asking) {
-      this.renderRoot.querySelector<HTMLButtonElement>(".ask .btn:not(.danger)")?.focus();
-    }
+    // tap in the same place does not delete — and back onto Delete once it
+    // is answered, so the keyboard is not left on the page's body.
+    const target = this._asking ? ".ask .btn:not(.danger)" : ".btn.danger";
+    this.renderRoot.querySelector<HTMLButtonElement>(target)?.focus();
   }
 
   static override styles = [

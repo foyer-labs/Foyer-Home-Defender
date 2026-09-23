@@ -228,7 +228,9 @@ class FoyerPanel extends LitElement {
         // An automatic rule's grace countdown is neither an area timer nor a
         // walk test, and it is the one number on the screen somebody is
         // watching while they decide whether to press Cancel (§9.4).
-        this._status?.auto?.pending?.length
+        this._status?.auto?.pending?.length ||
+        // A lockout's banner has to go when the lockout does.
+        this._status?.security?.locked_until
       ) {
         this._tick += 1;
       }
@@ -340,7 +342,10 @@ class FoyerPanel extends LitElement {
       typed = true;
       result = await run(code);
     }
-    if (result.success && code) this._rememberCode(code);
+    // Not on a panel that was closed while the answer travelled: decision
+    // 114 forgets the code on leaving, and a late success must not bring it
+    // back.
+    if (result.success && code && this.isConnected) this._rememberCode(code);
     if (result.reason === "bad_code" || result.reason === "locked_out") this._forgetCode();
     return result;
   }
@@ -350,9 +355,10 @@ class FoyerPanel extends LitElement {
     const status = this._status;
     const name =
       status?.scenarios.find((sc) => sc.id === target.scenario_id)?.name ??
-      status?.areas.find((a) => a.id === target.area_id)?.name ??
-      "";
-    return { key: "code.purpose.arm", params: { target: name } };
+      status?.areas.find((a) => a.id === target.area_id)?.name;
+    return name
+      ? { key: "code.purpose.arm", params: { target: name } }
+      : { key: "code.purpose.arm_plain" };
   }
 
   private _disarmPurpose(areaIds?: string[]): CodePurpose {

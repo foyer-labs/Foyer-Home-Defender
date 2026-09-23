@@ -601,7 +601,8 @@
     "siren_hint": "At most 900 s. Empty: the global setting.",
     "areas_hint": "Only these are armed. Switching to another scenario disarms the areas it does not list.",
     "everyone": "Everyone with permission",
-    "allowed_users_hint": "Only the people ticked may use this scenario. Changing this list also needs the “Manage users and codes” permission."
+    "allowed_users_hint": "Only the people ticked may use this scenario. Changing this list also needs the “Manage users and codes” permission.",
+    "last_user": "At least one person must be able to use it. To let everyone, tick the box above."
   },
   "card": {
     "arm": "Arm",
@@ -1903,7 +1904,8 @@
       "users": "Nobody holds a code yet, so nothing asks for one.",
       "contacts": "No contacts yet: nobody to reach when nobody acknowledges an alarm.",
       "none": "Nothing obvious left. Everything else is on the pages above."
-    }
+    },
+    "no_proposal_elsewhere": "Foyer has no state to propose for this kind of entity: set it up on the Zones page, where you choose what it means."
   },
   "config_kind": {
     "areas": "Area",
@@ -1994,7 +1996,8 @@
       "disarm_all": "Code to disarm the whole house",
       "config": "Code to save this change",
       "bypass": "Code to exclude {zone}",
-      "unbypass": "Code to include {zone} again"
+      "unbypass": "Code to include {zone} again",
+      "arm_plain": "Code to arm"
     },
     "required_by": "{name} asks for a code.",
     "locked_until": "Too many wrong codes. Codes from this account are blocked until {time}."

@@ -318,6 +318,8 @@ class FoyerPageScenarios extends LitElement {
                 <input
                   type="checkbox"
                   .checked=${live(chosen.includes(user.id ?? ""))}
+                  ?disabled=${chosen.length === 1 && chosen.includes(user.id ?? "")}
+                  title=${chosen.length === 1 ? t(s, "scenarios.last_user") : ""}
                   @change=${(e: Event) =>
                     toggle(user.id ?? "", (e.target as HTMLInputElement).checked)}
                 />
