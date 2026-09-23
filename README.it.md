@@ -217,9 +217,12 @@ già intelligente.
   dall'area, poi dallo scenario, poi dal profilo predefinito. Dopo un allarme
   ci sono due momenti: *Fine dell'allarme*, quando scade il tempo massimo di
   sirena o l'area viene disinserita durante l'allarme, e *Memoria d'allarme
-  azzerata*, quando un disinserimento azzera la memoria, anche ore dopo —
-  quello giusto per spegnere la lampada che dice che è successo qualcosa
-  mentre eri fuori.
+  azzerata*, quando un disinserimento o il successivo inserimento di
+  quell'area azzera la memoria, anche ore dopo — quello giusto per spegnere
+  la lampada che dice che è successo qualcosa mentre eri fuori. Inserire di
+  nuovo non è prendere atto dell'allarme: un incidente di cui nessuno ha
+  preso atto resta aperto, e la sua escalation continua, finché qualcuno non
+  ne prende atto o non disinserisce.
 - **L'immagine insieme all'allarme**, e sei tu a dire per quale app. All'app
   Companion arriva un collegamento alla telecamera dal vivo attraverso il proxy
   autenticato di Home Assistant, senza scrivere nessun file; a Telegram arriva

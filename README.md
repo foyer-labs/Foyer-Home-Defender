@@ -198,8 +198,11 @@ good result for the money, on a house that is already smart.
   with up to two conditions, inherited area, then scenario, then default.
   Two moments come after an alarm: *Alarm over*, when the siren cutoff runs
   or the area is disarmed during the alarm, and *Alarm memory cleared*, when
-  a disarm clears the memory, even hours later — the one for switching off
-  the lamp that says something happened while you were out.
+  a disarm or the next arming of that area clears the memory, even hours
+  later — the one for switching off the lamp that says something happened
+  while you were out. Arming again is not taking note of the alarm: an
+  incident nobody has acknowledged stays open, and its escalation carries
+  on, until somebody acknowledges it or disarms.
 - **A picture with the alarm**, and you say which app it is for. The Companion
   app gets a link to the live camera through Home Assistant's authenticated
   proxy, with no file written; Telegram gets a still, because its server does

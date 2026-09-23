@@ -474,7 +474,7 @@
   },
   "overview": {
     "no_codes_warning": "Nessuno ha ancora un codice, quindi il sistema non ne chiede: chiunque abbia accesso a Home Assistant può disinserire. Crea un utente con un codice nella pagina Utenti per chiudere questa falla.",
-    "memory_banner": "Memoria d'allarme in {area}: {zones}. Disinserisci l'area per azzerarla.",
+    "memory_banner": "Memoria d'allarme in {area}: {zones}. Si azzera quando l'area viene disinserita o inserita di nuovo.",
     "bypassed": "Inserita. Escluse: {zones}.",
     "master": "Tutta la casa",
     "scenario": "Scenario",
@@ -500,10 +500,10 @@
     "incident_zones": "Zone: {zones}",
     "incident_open": "Nessuna presa d'atto",
     "incident_acknowledged": "Preso atto — si chiude quando ogni area è disinserita o di nuovo inserita",
-    "incident_hint": "Un incidente raccoglie tutte le zone di un allarme. Anche il disinserimento ne prende atto.",
+    "incident_hint": "Un incidente raccoglie tutte le zone di un allarme. Anche il disinserimento ne prende atto; l'inserimento no.",
     "recent": "Eventi recenti",
     "full_log": "Registro completo",
-    "memory_banner_plain": "Memoria d'allarme in {area}. Disinserisci l'area per azzerarla.",
+    "memory_banner_plain": "Memoria d'allarme in {area}. Si azzera quando l'area viene disinserita o inserita di nuovo.",
     "low_battery": "Inserita, ma queste zone hanno la batteria scarica: {zones}. Escludile da questo inserimento, o cambia le batterie.",
     "exclude_low_battery": "Escludi queste zone",
     "arm_scenario": "Inserisci «{name}»",
@@ -700,7 +700,7 @@
         },
         "memory": {
           "term": "Memoria d'allarme",
-          "text": "Mostra quali zone hanno dato l'allarme. Resta dopo che le sirene si fermano, finché qualcuno non disinserisce."
+          "text": "Mostra quali zone hanno dato l'allarme. Resta dopo che le sirene si fermano, finché l'area non viene disinserita o inserita di nuovo."
         },
         "technical": {
           "term": "Allarme tecnico",

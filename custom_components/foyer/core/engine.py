@@ -962,7 +962,9 @@ class _Run:
     def siren_cutoff(self, area_id: str) -> None:
         """Sounders stop; the area goes back to where it was (decision 3).
 
-        Alarm memory stays until a disarm, whatever the area returns to.
+        Alarm memory stays until a disarm or the next arming, whatever the
+        area returns to. Resuming an interrupted arming is not arming again,
+        and clears nothing (decision 141).
         """
         rt = self.areas[area_id]
         self.occur(
@@ -1266,8 +1268,11 @@ class _Run:
             # Nor an area still holding alarm memory: armed by the test, its
             # memory read as "in alarm" when the test ended, and the house
             # came out of a walk test armed with somebody inside (third
-            # review). Its zones are still detected — a detection is recorded
-            # whatever the area is doing — and a disarm clears the memory.
+            # review). Nor is the test the arming that clears it: it arms
+            # for a walk, not a watch, and its own `alarm_cleared` would be
+            # held back with every other action (§11.3, decision 141). Its
+            # zones are still detected — a detection is recorded whatever
+            # the area is doing — and a disarm or a real arming clears it.
             if rt.state is not AreaState.DISARMED or rt.memory:
                 continue
             outcome, _ = self.check_arming((area_id,), False)
@@ -2863,6 +2868,14 @@ class _Run:
         to_bypass: list[Zone],
         skip_exit_delay: bool = False,
     ) -> None:
+        """Take accepted areas out of `disarmed` (§5.2).
+
+        Everything that can refuse has already answered: a refused arming
+        never gets here, and leaves any alarm memory where it was. So does
+        the cutoff resuming an interrupted arming, which is not a new one.
+        The walk test arms through here too, and never an area holding
+        memory (§11.3, decision 141): it skips them before it gets here.
+        """
         channel = self.channel
         if force:
             self.occur(
@@ -2876,6 +2889,22 @@ class _Run:
         for area_id in area_ids:
             area = self.config.area(area_id)
             assert area is not None
+            rt = self.areas[area_id]
+            if rt.memory:
+                # An arming starts a new watch, and a memory carried into it
+                # would describe an earlier night on a house armed since
+                # (§5.2, decision 140) — whoever armed, a rule included. Said
+                # as a disarm says it, before the `armed` row an arming with
+                # no exit delay writes below. It acknowledges nothing: arming
+                # asks no code by default, so the incident and its escalation
+                # go on until somebody acknowledges or disarms (§5.6).
+                self.occur(
+                    Moment.ALARM_CLEARED,
+                    area_id=area_id,
+                    scenario_id=scenario.id if scenario else None,
+                    zone_ids=rt.causes,
+                    channel=channel,
+                )
             delay = 0 if skip_exit_delay else self.config.exit_delay(area, scenario)
             self.set_area(
                 area_id,
@@ -2889,6 +2918,7 @@ class _Run:
                 claimed=self.actor.claimed,
                 locked_address=self.actor.locked_address,
                 skipped_exit=skip_exit_delay,
+                memory=False,
                 causes=(),
                 rule_id=self.rule_detail.get("rule_id"),
                 rule_name=self.rule_detail.get("rule"),
@@ -3009,10 +3039,12 @@ class _Run:
         )
         self.clear_area(area_id)
         if rt.memory:
-            # §5.2: alarm memory stays until a disarm. An arming the cutoff
-            # resumed and that then failed on an open zone is not one —
-            # nobody disarmed, and the card must still say an alarm happened
-            # (third review).
+            # §5.2: alarm memory stays until a disarm or a new arming. An
+            # arming the cutoff resumed and that then failed on an open zone
+            # is neither — nobody disarmed, and the card must still say an
+            # alarm happened (third review). A memory older than this arming
+            # is not here to restore: its acceptance cleared it, and a
+            # failed arming does not bring it back (decision 140).
             self.areas[area_id] = replace(
                 self.areas[area_id], memory=True, causes=rt.causes
             )
@@ -3041,10 +3073,12 @@ class _Run:
     ) -> _Outcome:
         """Arm a scenario, or switch to it while armed (decisions 7 and 9).
 
-        Areas of the new scenario not yet armed go through their exit delay;
-        areas already armed stay armed and now belong to it; areas armed by the
-        previous scenario and absent from this one are disarmed. Areas armed on
-        their own, outside any scenario, are left exactly as they are.
+        Areas of the new scenario not yet armed go through their exit delay
+        and start clean; areas already armed stay armed and now belong to it,
+        keeping any alarm memory, because nothing armed them again (§4.6.1,
+        decision 141); areas armed by the previous scenario and absent from
+        this one are disarmed. Areas armed on their own, outside any
+        scenario, are left exactly as they are.
 
         ``keep_armed`` names areas this switch may not disarm — the perimeter,
         when an automatic rule is doing the switching (§9.4 point 3, part 2

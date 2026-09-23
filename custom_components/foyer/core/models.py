@@ -354,9 +354,10 @@ class Moment(StrEnum):
     # moment for "switch the light off when the alarm is over", which the
     # incident's acknowledgement — belonging to no area — cannot serve.
     ALARM_ENDED = "alarm_ended"
-    # A disarm cleared an area's alarm memory, whenever the alarm itself
-    # ended (decision 108): the lamp that says "something happened while you
-    # were out" goes off here, not at the cutoff hours earlier.
+    # A disarm, or the next accepted arming, cleared an area's alarm memory,
+    # whenever the alarm itself ended (decisions 108, 140): the lamp that
+    # says "something happened while you were out" goes off here, not at the
+    # cutoff hours earlier. Never an acknowledgement of the incident.
     ALARM_CLEARED = "alarm_cleared"
     # An administrator recovered access from the integration's Configure step
     # (§8.2, decision 109). Not a profile moment and never offered as one:
@@ -1888,6 +1889,8 @@ class AreaRuntime:
     was armed on its own from its panel. ``resume`` and ``resume_timer`` record
     where the area goes back to at siren cutoff: the state it was in before it
     triggered, so a 24h zone firing on a disarmed house never arms it.
+    ``memory`` says an alarm happened here, with ``causes`` naming its
+    zones, and lasts until the area is disarmed or armed again (§5.2).
     """
 
     state: AreaState = AreaState.DISARMED

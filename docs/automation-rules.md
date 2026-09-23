@@ -355,6 +355,13 @@ What the log records:
   Disarming an area the incident touched acknowledges the incident and stops
   the escalation (§7.2) — a person may do that, and an inference from a phone
   walking through the door may not.
+- **A rule's arming clears alarm memory, and acknowledges nothing.** Like any
+  arming (§5.2), it clears the memory of the areas it takes out of disarmed,
+  and the *Alarm memory cleared* row carries the rule's name. An incident
+  nobody has acknowledged stays open and its escalation carries on: a rule
+  has seen nothing. An area that stays armed through a rule's scenario
+  switch — the perimeter it may not disarm included — keeps its memory,
+  because nothing armed it again.
 - **An arming the house refused is not retried on a timer.** If a window was
   open — or a zone in fault, or an open zone the rule could not exclude — the
   rule tries again when the areas it wants are ready, and not before. Anything else it was refused for waits like a rule that has had its

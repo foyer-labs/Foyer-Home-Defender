@@ -260,7 +260,7 @@ the wrong wall look identical there, so walk the ones you expected to trip
 again before you conclude anything. A zone in fault is marked as such in the
 same row, because it could not have reacted.
 
-Four things worth knowing before you start one:
+Five things worth knowing before you start one:
 
 - **24h, tamper, technical and panic zones stay fully live**, alarm included.
   A walk test never silences a smoke detector. They are also left out of the
@@ -278,6 +278,10 @@ Four things worth knowing before you start one:
   kept it out. Those zones were never armed, so they cannot have detected
   anything: close the window and run it again rather than reading the row as
   a dead sensor.
+- **So does an area still holding alarm memory.** The test arms for a walk,
+  not for a watch, so it is not the arming that clears the memory, and the
+  area keeps it after the test. Its zones are still recorded when they
+  detect you. Disarm the area first if you want it walked armed.
 
 ### Action test — press the button before the night you need it
 

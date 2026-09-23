@@ -56,7 +56,7 @@ def test_with_both_areas_armed_the_group_is_still_a_group():
     assert world.area("ground").state is AreaState.ARMED
 
 
-# --- §5.2: alarm memory stays until a disarm ---
+# --- §5.2: alarm memory stays until a disarm or a new arming ---
 
 
 def test_an_arming_the_cutoff_resumed_and_that_then_failed_keeps_the_memory():
