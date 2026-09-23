@@ -899,6 +899,33 @@ come a chiunque altro, dove la politica lo chiede.
 </details>
 
 <details>
+<summary>Posso inserire dalle card di Home Assistant, o a voce?</summary>
+
+Sì, e risponde Foyer, come ovunque. Che cosa chiede prima Home Assistant
+dipende da una sola cosa che Foyer gli dice: che per inserire serve un codice.
+Lo dice solo finché la tua politica chiede un codice per inserire e nessuno ha
+attivato l'esenzione qui sopra, perché Home Assistant rifiuterebbe chiunque non
+ne digiti uno, anche la persona esentata. Finché lo dice, la finestra a
+comparsa di Home Assistant e i pulsanti di inserimento di una card *Riquadro*
+chiedono il codice da sé. Appena qualcuno è esentato smettono di chiederlo:
+quella persona inserisce senza codice, e chiunque altro viene rifiutato da
+Foyer, con una riga nel registro e un messaggio che dice dove digitare il
+codice — la card *Pannello degli Allarmi* di Home Assistant, che mostra il
+campo del codice dovunque un codice possa essere chiesto, la card di Foyer, o
+il pannello.
+
+Gli assistenti vocali leggono la stessa risposta. Ad Alexa un pannello viene
+offerto solo finché inserirlo non chiede un codice; Alexa non ne manda
+nessuno, e non aspetta la risposta di Foyer, quindi un rifiuto si vede solo
+nello stato del pannello e nel registro. Google Assistant chiede il suo PIN
+prima di inserire solo finché serve un codice, e in ogni caso manda il PIN
+salvato nella propria configurazione: se è il codice Foyer di qualcuno,
+l'inserimento è a suo nome; se non lo è, è un codice sbagliato, e conta per il
+blocco.
+
+</details>
+
+<details>
 <summary>Sono l'amministratore e non ho un codice</summary>
 
 In una casa dove altri ne hanno uno, o se il tuo utente Foyer è stato

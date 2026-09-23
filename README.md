@@ -834,6 +834,30 @@ one.
 </details>
 
 <details>
+<summary>Can I arm from Home Assistant's own cards, or by voice?</summary>
+
+Yes, and Foyer answers, as it does everywhere else. What Home Assistant asks
+for first depends on one thing Foyer tells it: that arming needs a code. That
+is said only while your policy asks for a code to arm and nobody has the
+exemption above switched on, because Home Assistant would refuse everybody who
+typed none, the exempt person included. While it is said, Home Assistant's
+pop-up dialog and a tile's arm buttons ask for the code themselves. Once
+somebody is exempt they stop asking: that person arms with no code, and
+anybody else is refused by Foyer, with a row in the log and a message saying
+where a code can be typed — Home Assistant's *Alarm panel* card, which shows
+a code field wherever a code may be asked, Foyer's card, or the panel.
+
+Voice assistants read the same answer. Alexa is offered a panel only while
+arming it needs no code, sends none, and does not wait for Foyer's answer, so
+a refusal shows only in the panel's state and in the log. Google Assistant
+asks for its PIN before arming only while a code is needed, and sends the PIN
+stored in its own configuration either way: if that is somebody's Foyer code,
+the arming is in their name; if it is not, it is a wrong code, and counts
+towards the lockout.
+
+</details>
+
+<details>
 <summary>I am the administrator and I have no code</summary>
 
 In a house where others hold one, or when your own Foyer user was disabled or
