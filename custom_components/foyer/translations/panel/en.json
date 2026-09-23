@@ -47,7 +47,7 @@
     "exit": "Exit delay: {seconds} s",
     "hold": "Waiting for a zone to close: {seconds} s left",
     "entry": "Disarm within {seconds} s",
-    "siren": "Siren: {seconds} s"
+    "siren": "Sirens: {seconds} s"
   },
   "zone_status": {
     "closed": "Ready",
@@ -211,7 +211,7 @@
     "user_holds_a_tag": "This person owns a tag or a remote. Change the device first.",
     "unknown_attachment": "This attachment is not one Foyer knows how to send.",
     "unsupported_battery_domain": "A battery must be a sensor reporting a percentage, or a battery binary sensor where “on” means low.",
-    "battery_is_zone_entity": "That is the zone’s own entity, not its battery.",
+    "battery_is_zone_entity": "That is the zone's own entity, not its battery.",
     "battery_out_of_range": "{field}: between 1 and 100 per cent.",
     "walk_test_out_of_range": "The walk test timeout must be between 1 and 60 minutes. It cannot be switched off.",
     "contact_in_use": "An action still notifies this contact. Edit the profile first.",
@@ -465,7 +465,7 @@
     "scenario_hint": "Choosing a scenario arms its areas. Chosen while another is armed, it takes its place: areas not in the new one are disarmed.",
     "disarm_all": "Disarm everything",
     "force_arm": "Arm without these zones",
-    "force_arm_hint": "They stay unguarded until you disarm; recorded as a forced arming.",
+    "force_arm_hint": "They are not watched until you disarm; recorded as a forced arming.",
     "area": "Area",
     "memory": "Alarm memory",
     "by_scenario": "Armed by scenario {scenario}",
@@ -627,7 +627,7 @@
     "code_clear": "Clear",
     "code_confirm": "Confirm",
     "code_entered": "Code entered",
-    "code_show": "Enter the code",
+    "code_show": "Type the code",
     "code_hide": "Hide the keypad",
     "low_battery": "Low battery: {zones}",
     "auto_badge_arm": "arming in {seconds} s",
@@ -638,7 +638,7 @@
     "technical_badge": "Technical alarm",
     "incident_badge": "Alarm",
     "code_for_arm": "Code to arm {target}",
-    "code_for_force": "Code to arm {target} anyway",
+    "code_for_force": "Code to arm {target} without these zones",
     "code_for_disarm": "Code to disarm {target}",
     "code_for_bypass": "Code to exclude {target}",
     "code_for_walk": "Code to end the walk test",
@@ -646,7 +646,7 @@
     "code_for_ack_technical": "Code to acknowledge the technical alarm",
     "code_for_ack_incident": "Code to acknowledge the alarm",
     "confirm_arm": "Arm {target}",
-    "confirm_force": "Arm {target} anyway",
+    "confirm_force": "Arm {target} without these zones",
     "confirm_disarm": "Disarm {target}",
     "confirm_bypass": "Exclude {target}",
     "code_retype": "Type the code again for this action",
@@ -655,7 +655,7 @@
     "layout_hint_full": "Areas, scenarios, countdown and what stops arming.",
     "layout_hint_compact": "One row: state, one action and the scenario.",
     "layout_hint_badge": "State only, for a dashboard of your own. Nothing to press.",
-    "layout_hint_keypad": "PIN pad for a wall tablet."
+    "layout_hint_keypad": "Keypad for a wall tablet."
   },
   "help": {
     "toggle": "About this section",
@@ -1036,7 +1036,7 @@
         },
         "quiet": {
           "term": "Quiet hours",
-          "text": "Only what is serious enough reaches this contact inside the window. It never suppresses an alarm to the whole household."
+          "text": "Only what is serious enough reaches this contact inside the window. It never suppresses an alarm for the rest of the household."
         },
         "linked": {
           "term": "Linked user",
@@ -1281,7 +1281,7 @@
       "message": "Rule “{rule}” will disarm. Cancel to stop it."
     },
     "auto_pending_switch": {
-      "title": "Foyer: changing scenario in {seconds} s",
+      "title": "Foyer: switching scenario in {seconds} s",
       "message": "Rule “{rule}” will switch to {scenario}. Cancel to stop it."
     },
     "auto_cancelled": {
@@ -2108,7 +2108,7 @@
     "topic_hint": "Leave empty for the default, foyer/<install id>/command. People run more than one site against one broker.",
     "detail_hint_minimal": "What a keypad needs and nothing else: no scenario name, no area names, no list of open windows.",
     "detail_hint_standard": "Adds the active scenario and the state of each area, by name.",
-    "detail_hint_full": "The contract as written, open zones by name included. Remember what retained means on a shared broker.",
+    "detail_hint_full": "The contract as written, open zones by name included. Remember what “retained” means on a shared broker.",
     "retain_hint": "Retained, so a keypad that reboots knows the state without asking, and so does anyone else who connects to the broker afterwards.",
     "inbound": "Inbound: device to Foyer",
     "outbound": "Outbound: Foyer to device",
@@ -2372,7 +2372,7 @@
     "actionable": "Can carry an acknowledge button",
     "actionable_hint": "The Companion app can; an SMS cannot. A transport throws away a key it does not know without a word, so this is declared rather than guessed.",
     "quiet_hours": "Quiet hours",
-    "quiet_hint": "Inside this window only what is serious enough reaches this contact. It never silences the alarm for the whole household.",
+    "quiet_hint": "Inside this window only what is serious enough reaches this contact. It never silences the alarm for the rest of the household.",
     "quiet_min_severity": "Minimum severity to get through",
     "quiet_severity_hint": "On the log's own scale. Left at alarm, a break-in gets through at four in the morning and a successful arming does not.",
     "linked_hint": "Lets an acknowledgement from this person's phone be attributed to them in the log.",

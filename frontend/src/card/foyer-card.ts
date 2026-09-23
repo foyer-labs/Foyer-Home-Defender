@@ -380,7 +380,15 @@ class FoyerCard extends LitElement {
     if (!this.hass) return;
     this._busy = true;
     this._feedback = undefined;
-    const banner = BANNER_COMMANDS.has(String(command.type)) && command !== this._pending;
+    // Whose digits these are. While the pad waits for a command they are
+    // that command's, and any other button sends without them; with nothing
+    // waiting, a banner's button never takes them (decision 114). The same
+    // command pressed again from its own button is still the same command.
+    const waiting = this._pending;
+    const same = waiting !== undefined && JSON.stringify(waiting) === JSON.stringify(command);
+    const banner = waiting
+      ? !same
+      : BANNER_COMMANDS.has(String(command.type));
     const typed = banner ? "" : this._code;
     if (!banner) this._forget();
     try {
@@ -794,10 +802,14 @@ class FoyerCard extends LitElement {
   /** An entry countdown or an alarm, anywhere in the house. The scenario
    * buttons step aside for it: the one thing to do then is disarm, and a row
    * of "Arm …" buttons beside it is a row of wrong answers. */
+  /** An entry delay or an alarm running where this card looks: the whole
+   * house for the master, its own area otherwise — an alarm in the garage
+   * must not take the hall keypad's buttons away. */
   private get _alarmRunning(): boolean {
-    return Boolean(
-      this._status?.areas.some((a) => a.state === "entry" || a.state === "triggered"),
-    );
+    const running = (a: StatusArea) => a.state === "entry" || a.state === "triggered";
+    const area = this._area;
+    if (area && !this._isMaster) return running(area);
+    return Boolean(this._status?.areas.some(running));
   }
 
   /** One button per scenario, each saying that it arms — a bare "Away"
@@ -1123,7 +1135,12 @@ class FoyerCard extends LitElement {
           <button
             class="key word"
             ?disabled=${this._busy || !this._code}
-            @click=${() => this._forget()}
+            @click=${() => {
+              // The digits only: what they are for stays, so correcting a
+              // mistyped one does not drop the command waiting for them.
+              this._code = "";
+              this._touch();
+            }}
           >
             ${t(s, "card.code_clear")}
           </button>

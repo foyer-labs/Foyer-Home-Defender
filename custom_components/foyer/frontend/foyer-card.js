@@ -1031,28 +1031,28 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	async _run(e) {
 		if (!this.hass) return;
 		this._busy = !0, this._feedback = void 0;
-		let t = Fe.has(String(e.type)) && e !== this._pending, n = t ? "" : this._code;
-		t || this._forget();
+		let t = this._pending, n = t !== void 0 && JSON.stringify(t) === JSON.stringify(e), r = t ? !n : Fe.has(String(e.type)), i = r ? "" : this._code;
+		r || this._forget();
 		try {
-			let r = await this.hass.callWS({
+			let t = await this.hass.callWS({
 				...e,
-				...n ? { code: n } : {}
+				...i ? { code: i } : {}
 			});
-			if (!this.isConnected || (t || (this._pending = void 0), r.success && !this._pending && (this._padOpen = !1), r.success && r.low_battery_zones.length && (this._feedback = {
-				text: Z(this._strings, "card.low_battery", { zones: r.low_battery_zones.map((e) => e.name).join(", ") }),
+			if (!this.isConnected || (r || (this._pending = void 0), t.success && !this._pending && (this._padOpen = !1), t.success && t.low_battery_zones.length && (this._feedback = {
+				text: Z(this._strings, "card.low_battery", { zones: t.low_battery_zones.map((e) => e.name).join(", ") }),
 				warning: !0
-			}), !r.success && r.reason === "nothing_to_cancel" && e.type === "foyer/auto/cancel")) return;
-			if (!r.success) {
-				if (Ne.has(r.reason ?? "")) {
-					if (t && (this._retype = !!this._code, this._code = ""), this._padOpen = !0, this._pending = e, this._touch(), r.reason === "code_required") return;
+			}), !t.success && t.reason === "nothing_to_cancel" && e.type === "foyer/auto/cancel")) return;
+			if (!t.success) {
+				if (Ne.has(t.reason ?? "")) {
+					if (r && (this._retype = !!this._code, this._code = ""), this._padOpen = !0, this._pending = e, this._touch(), t.reason === "code_required") return;
 					this._feedback = {
-						text: Z(this._strings, `reason.${r.reason}`),
+						text: Z(this._strings, `reason.${t.reason}`),
 						pad: !0,
-						reason: r.reason ?? void 0
+						reason: t.reason ?? void 0
 					};
 					return;
 				}
-				if (r.reason === "locked_out") {
+				if (t.reason === "locked_out") {
 					this._code = "", this._padOpen = !0, this._feedback = {
 						text: Z(this._strings, "reason.locked_out"),
 						pad: !0,
@@ -1061,8 +1061,8 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 					return;
 				}
 				this._feedback = {
-					text: Z(this._strings, `reason.${r.reason ?? "unknown"}`, { zones: r.blocking_zones.map((e) => e.name).join(", ") }),
-					retry: e.type === "foyer/arm" && !e.force && Me.has(r.reason ?? "") ? {
+					text: Z(this._strings, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => e.name).join(", ") }),
+					retry: e.type === "foyer/arm" && !e.force && Me.has(t.reason ?? "") ? {
 						...e,
 						force: !0
 					} : void 0
@@ -1272,7 +1272,8 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
     `;
 	}
 	get _alarmRunning() {
-		return !!this._status?.areas.some((e) => e.state === "entry" || e.state === "triggered");
+		let e = (e) => e.state === "entry" || e.state === "triggered", t = this._area;
+		return t && !this._isMaster ? e(t) : !!this._status?.areas.some(e);
 	}
 	_scenarioButtons(e, t) {
 		return (this._status?.scenarios ?? []).map((n) => {
@@ -1495,7 +1496,9 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
           <button
             class="key word"
             ?disabled=${this._busy || !this._code}
-            @click=${() => this._forget()}
+            @click=${() => {
+			this._code = "", this._touch();
+		}}
           >
             ${Z(e, "card.code_clear")}
           </button>

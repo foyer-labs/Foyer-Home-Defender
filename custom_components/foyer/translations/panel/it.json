@@ -75,9 +75,9 @@
     "ambiguous_mode": "Più scenari sono associati a questa modalità di inserimento. Scegli direttamente lo scenario.",
     "alarm_in_progress": "C'è un allarme in corso. Disinserisci prima di cambiare scenario.",
     "code_required": "Serve un codice.",
-    "zone_fault": "Non inserito — non rispondono: {zones}. Controlla batteria e segnale, oppure inserisci senza.",
-    "zone_open": "Non inserito — ancora aperte: {zones}. Chiudile e riprova, oppure inserisci senza.",
-    "zone_not_bypassable": "Impossibile forzare: queste zone non possono essere escluse: {zones}.",
+    "zone_fault": "Inserimento non riuscito — non rispondono: {zones}. Controlla batteria e segnale, oppure inserisci senza.",
+    "zone_open": "Inserimento non riuscito — ancora aperte: {zones}. Chiudile e riprova, oppure inserisci senza.",
+    "zone_not_bypassable": "Impossibile forzare l'inserimento: queste zone non possono essere escluse: {zones}.",
     "arm_hold_expired": "Inserimento non riuscito: zona ancora aperta: {zones}.",
     "unknown": "La richiesta è stata rifiutata. Ricarica la pagina e riprova.",
     "nothing_to_acknowledge": "Non c'è nulla di cui prendere atto.",
@@ -613,7 +613,7 @@
     "incident": "Allarme: {zones}",
     "scenario": "Scenario",
     "pick_scenario": "Inserisci uno scenario…",
-    "not_ready": "Non pronto all'inserimento",
+    "not_ready": "Non pronto per l'inserimento",
     "zone_in": "{zone} — {areas}",
     "editor_entity": "Pannello da mostrare",
     "editor_master": "Tutta la casa",
@@ -638,7 +638,7 @@
     "technical_badge": "Allarme tecnico",
     "incident_badge": "Allarme",
     "code_for_arm": "Codice per inserire {target}",
-    "code_for_force": "Codice per inserire comunque {target}",
+    "code_for_force": "Codice per inserire {target} senza queste zone",
     "code_for_disarm": "Codice per disinserire {target}",
     "code_for_bypass": "Codice per escludere {target}",
     "code_for_walk": "Codice per chiudere il walk test",
@@ -646,7 +646,7 @@
     "code_for_ack_technical": "Codice per prendere atto dell'allarme tecnico",
     "code_for_ack_incident": "Codice per prendere atto dell'allarme",
     "confirm_arm": "Inserisci {target}",
-    "confirm_force": "Inserisci comunque {target}",
+    "confirm_force": "Inserisci {target} senza queste zone",
     "confirm_disarm": "Disinserisci {target}",
     "confirm_bypass": "Escludi {target}",
     "code_retype": "Digita di nuovo il codice per questa azione",
@@ -798,7 +798,7 @@
         },
         "suppress": {
           "term": "Membri sotto la soglia",
-          "text": "Disattivato di default: ogni membro allarma comunque da solo. Attivato: nulla finché il gruppo non è soddisfatto."
+          "text": "Disattivato di base: ogni membro allarma comunque da solo. Attivato: nulla finché il gruppo non è soddisfatto."
         },
         "derived": {
           "term": "Dal campo zona",
@@ -892,7 +892,7 @@
         },
         "zone_disarmed": {
           "term": "Attività delle zone a impianto disinserito",
-          "text": "Disattivata di default: un solo sensore di movimento produce migliaia di righe al giorno e seppellisce tutto ciò che conta. Attivala mentre cerchi un problema, e disattivala dopo."
+          "text": "Disattivata di base: un solo sensore di movimento produce migliaia di righe al giorno e seppellisce tutto ciò che conta. Attivala mentre cerchi un problema, e disattivala dopo."
         },
         "incident": {
           "term": "Incidente",
@@ -990,7 +990,7 @@
         },
         "battery": {
           "term": "Batteria",
-          "text": "Una batteria scarica avvisa e non blocca mai: un sensore porta al 15 % funziona ancora. Un'entità batteria che non si riesce a leggere è invece un guasto, e quella blocca."
+          "text": "Una batteria scarica avvisa e non blocca mai: un sensore della porta al 15 % funziona ancora. Un'entità batteria che non si riesce a leggere è invece un guasto, e quella blocca."
         },
         "nothing_runs": {
           "term": "Non viene eseguito nulla",
@@ -1036,7 +1036,7 @@
         },
         "quiet": {
           "term": "Ore di silenzio",
-          "text": "Dentro la finestra raggiunge il contatto solo ciò che è abbastanza grave. Non zittisce mai l'allarme per tutta la casa."
+          "text": "Dentro la finestra raggiunge il contatto solo ciò che è abbastanza grave. Non zittisce mai l'allarme per gli altri in casa."
         },
         "linked": {
           "term": "Utente collegato",
@@ -1836,7 +1836,7 @@
       "person_unnamed": "Una persona senza nome nel file non è stata importata.",
       "person_exists": "{person} è già un utente Foyer, ed è rimasto esattamente com'era.",
       "override_code": "In Alarmo {person} aveva un codice di forzatura, che inseriva anche con sensori aperti. In Foyer è il permesso di inserimento forzato, ed è stato dato.",
-      "person_scope_empty": "{person} era limitato ad aree che non sono state importate, quindi per ora non può usarne nessuna; allarga il permesso nella pagina Utenti.",
+      "person_scope_empty": "L'accesso di {person} era limitato ad aree che non sono state importate, quindi per ora non ne può usare nessuna; allargalo nella pagina Utenti.",
       "automation_disabled": "L'automazione «{automation}» era disattivata in Alarmo, e non è stata importata.",
       "automation_notification": "La notifica «{automation}» non è stata importata. Una notifica che arriva dove non dovrebbe è peggio di una che imposti di nuovo: in Foyer le notifiche vanno ai contatti, nella pagina Contatti.",
       "automation_trigger": "«{automation}» parte da qualcosa per cui i profili di risposta di Foyer non hanno un momento, e non è stata importata.",
@@ -1873,8 +1873,8 @@
     "zones_text": "Zone mappate: {have} su {want}",
     "add_zone": "Aggiungi una zona",
     "pick_entity": "Scegli un'entità…",
-    "proposed": "{name} adesso è {state}. Foyer la considererà in allarme quando è: {states}.",
-    "confirm_trigger": "L'ho provato: aprendola o facendola scattare, lo stato qui sopra diventa quello indicato.",
+    "proposed": "{name} adesso è {state}. Foyer segnalerà un allarme quando è: {states}.",
+    "confirm_trigger": "L'ho provato: aprendo o facendo scattare il sensore, lo stato qui sopra diventa quello indicato.",
     "confirm_hint": "È l'unica cosa che Foyer non può indovinare da solo. I contatti normalmente chiusi e normalmente aperti si comportano al contrario, e un errore qui produce un allarme che non suona mai — cosa che scopriresti nel momento peggiore possibile.",
     "add": "Aggiungi la zona",
     "scenario_text": "Uno scenario è un preset con un nome che inserisce un insieme di aree scelto. Uno che inserisce tutto basta per iniziare; quelli parziali vengono dopo.",
@@ -2372,7 +2372,7 @@
     "actionable": "Può portare un pulsante di presa d'atto",
     "actionable_hint": "L'app Companion sì, un SMS no. Un trasporto scarta senza dire niente una chiave che non conosce, quindi qui si dichiara invece di indovinare.",
     "quiet_hours": "Ore di silenzio",
-    "quiet_hint": "Dentro questa finestra raggiunge il contatto solo ciò che è abbastanza grave. Non zittisce mai l'allarme per tutta la casa.",
+    "quiet_hint": "Dentro questa finestra raggiunge il contatto solo ciò che è abbastanza grave. Non zittisce mai l'allarme per gli altri in casa.",
     "quiet_min_severity": "Gravità minima per passare",
     "quiet_severity_hint": "Sulla scala del registro. Lasciato su allarme, un'effrazione passa alle quattro del mattino e un inserimento riuscito no.",
     "linked_hint": "Permette di attribuire nel registro a questa persona una presa d'atto arrivata dal suo telefono.",
@@ -2481,7 +2481,7 @@
     "add_visitor": "Aggiungi finestra",
     "skip_next": "Salta la prossima",
     "disarming": "Disinserimento automatico",
-    "disarming_warning": "La presenza è dedotta da un telefono. Un telefono rubato disinserisce la casa, una deriva GPS di 200 metri disinserisce la casa, un MAC clonato sulla rete di casa disinserisce la casa. È l'attacco più banale contro un allarme fai-da-te, ed è la ragione per cui questa funzione è disattivata di default.",
+    "disarming_warning": "La presenza è dedotta da un telefono. Un telefono rubato disinserisce la casa, una deriva GPS di 200 metri disinserisce la casa, un MAC clonato sulla rete di casa disinserisce la casa. È l'attacco più banale contro un allarme fai-da-te, ed è la ragione per cui questa funzione è disattivata di base.",
     "allow_disarm": "Permetti alle regole di disinserire",
     "allow_disarm_hint": "Vale anche per un cambio di scenario che lascerebbe disinserita un'area inserita.",
     "areas_a_rule_may_disarm": "Aree che una regola può disinserire",
@@ -2535,7 +2535,7 @@
     "interval_hint": "Secondi fra un ping e l'altro. Più corto significa che fuori casa ci si accorge prima dell'arresto di Home Assistant.",
     "failures_hint": "Quanti ping consecutivi devono fallire prima che Foyer lo dica qui.",
     "payload": "Includi lo stato della casa nel ping",
-    "payload_hint": "Disattivato di default.",
+    "payload_hint": "Disattivato di base.",
     "payload_warning": "Un ping che dice «inserito, non c'è nessuno» racconta a chi gestisce quel servizio esattamente quando la tua casa è vuota. Anche se attivato, Foyer manda solo quante aree sono inserite: mai quale scenario, quali aree o quali zone sono aperte.",
     "channels": "Canali di notifica",
     "channels_ok": "{n} in ordine",
