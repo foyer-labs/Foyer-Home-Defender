@@ -1444,14 +1444,19 @@ anything nobody chose, and it does not stay quiet either:
   open; it will arm by itself when you close it", then "armed now —
   Bathroom window was closed" when it does; or "armed, excluding Bathroom
   window" when the rule excludes open zones. The words follow what actually
-  happened, never what was planned.
+  happened, never what was planned. A rule triggered by an instant — a time,
+  an arrival — has one turn: refused, it says it will not try again until
+  its next time, and does not (decision 127). An arming the rule started
+  that fails when its exit delay ends is told as well.
 - **Excluding open zones is the rule's own opt-in** (decision 126), off by
   default and warned about when switched on: it is a forced arming nobody
   typed a code for. It excludes only zones that are open **and** bypassable;
   a zone that may not be bypassed, or one in fault or unavailable (INV-4: a
   fault is never "all quiet"), still refuses the arming. What it excludes
   stays excluded until the house is disarmed, as a forced arming's does, and
-  the log records a `forced_arm` with the rule's name.
+  the log records a `forced_arm` with the rule's name. It covers what is open
+  when the rule arms and nothing after: a zone that opens during the exit
+  delay fails the arming as it always does.
 
 #### The asymmetry between arming and disarming
 
@@ -2418,3 +2423,4 @@ document should make one of them on purpose.
 | 124 | A rule's contacts are told the outcome of its arming — not armed and why, armed later, or armed excluding zones — through quiet hours | The household had left; a rule that could not arm told nobody who was not looking at Home Assistant |
 | 125 | The countdown names the open zones and says what will happen to them | "It will arm in two minutes" was a promise the open window was about to break, sent to the only people who could still shut it |
 | 126 | A rule may arm excluding open zones — opt-in, bypassable zones only, never a fault | Some households want the house armed with the window open; a forced arming nobody chose must be the rule's owner's deliberate choice, and a silent sensor is never excluded by it |
+| 127 | A rule triggered by an instant is not retried when the zone that refused it closes, and its message says so | Its one turn has gone; arming the house at noon for "23:00 yesterday" is a surprise, and a message promising a retry that never comes is worse |
