@@ -1791,7 +1791,7 @@
       "group_not_imported": "The group “{group}” ({n} of {members} within {seconds} s) was not made: a group needs its members switched on, and every zone brought in starts switched off. Make it on page 13 once they are confirmed.",
       "setting_not_imported": "Alarmo's setting “{setting}” was not brought across; Foyer's own settings were left as they are.",
       "unknown_field": "The file has a field this importer does not know: {field}. It was written by a newer Alarmo than the one this was checked against, and whatever that field does was not brought across.",
-      "automation_untriggered": "“{automation}” ran when an alarm ended. It now runs at the siren cutoff and when the alarm is acknowledged, a disarm included — not at every ordinary disarm.",
+      "automation_untriggered": "“{automation}” ran when an alarm ended. It now runs at the siren cutoff and at every disarm, ordinary ones included: check that is what you want.",
       "scenario_overrides": "“{scenario}” has its own exit delay or siren time, and it now applies to the imported areas too, whatever Alarmo had. Check it on page 4."
     }
   },

@@ -549,7 +549,12 @@ def variables(ctx: PlanContext, group: Sequence[Occurrence]) -> dict[str, str]:
         "scenario": _names([o.scenario_id for o in group], scenarios),
         # Who asked, as the engine established it (§8): the person on
         # the occurrence, which is empty for a door opening or a timer.
-        "user": _names([o.user_name for o in group], {}),
+        # Not a name a request merely claimed (decision 88): the log marks
+        # those, and a message has no room for the mark.
+        "user": _names(
+            [o.user_name for o in group if o.detail.get("attributed") != "claimed"],
+            {},
+        ),
         "channel": _names([o.channel for o in group], {}),
         "time": local.strftime("%H:%M"),
         "date": local.strftime("%Y-%m-%d"),

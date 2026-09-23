@@ -254,11 +254,13 @@ async def async_report_unknown_device(
     # to what a minute of reports can need.
     for stale in [k for k, at in seen.items() if now - at >= _REPORT_EVERY]:
         del seen[stale]
-    if len(seen) >= _MAX_REPORTED:
+    busy = sum(1 for k in seen if k.startswith(f"{channel}:"))
+    if busy >= _MAX_REPORTED and not wrong_transport:
         # A sender rotating invented names would otherwise write a row and a
         # notification for each (second review). Past this many distinct
-        # names in a minute the rest are not recorded one by one: whoever is
-        # doing that has already left enough rows to be seen.
+        # names in a minute on this channel the rest are not recorded one by
+        # one — except the name of a keypad that speaks only with its token,
+        # which is never lost in the noise somebody made first.
         return
     seen[key] = now
     system.async_record(
@@ -286,7 +288,7 @@ async def async_report_unknown_device(
         # One per channel, replaced by the next: keyed by the name the sender
         # chose, a sender inventing names could add notifications without
         # end. The rows keep every name the log has room for.
-        notification_id=f"foyer_device_{channel}",
+        notification_id=f"foyer_device_{channel}_{key}",
     )
 
 

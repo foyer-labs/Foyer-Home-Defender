@@ -385,3 +385,21 @@ def test_a_smoke_sounder_ignores_the_night_scenarios_shorter_siren():
     decision = world.set(SMOKE, "on")
     sent = next(i for i in decision.actions if i.action_id == "siren")
     assert sent.params["duration"] == 180
+
+
+def test_a_detector_switched_back_on_while_detecting_is_an_alarm():
+    """Only a key zone re-enabled is a baseline; a tamper switch or a smoke
+    detector re-enabled while it detects must alarm (second review)."""
+    config = make_house()
+    world = World(config)
+    world.config = replace(
+        world.config,
+        zones=tuple(
+            replace(z, enabled=False) if z.id == "tamper" else z
+            for z in world.config.zones
+        ),
+    )
+    world.set("binary_sensor.siren_tamper", "on")
+    world.config = config
+    world.advance(1)
+    assert world.area("ground").state is AreaState.TRIGGERED

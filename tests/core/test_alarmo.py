@@ -554,12 +554,10 @@ def test_a_switch_off_on_untriggered_ends_with_the_alarm():
         if a.kind is ActionKind.SWITCH
     )
     assert action.params["state"] == "off"
-    # The two moments that end an alarm, and not every ordinary disarm
-    # (second review): a relay meant to drop when the alarm ends must not
-    # drop every evening.
-    assert action.moments == frozenset(
-        {Moment.SIREN_CUTOFF, Moment.INCIDENT_ACKNOWLEDGED}
-    )
+    # The siren cutoff and the disarm — an area's profile does not answer
+    # Foyer's own acknowledgement — and the report says it runs at every
+    # disarm (second review).
+    assert action.moments == frozenset({Moment.SIREN_CUTOFF, Moment.DISARMED})
     assert "automation_untriggered" in [line.code for line in result.lines]
 
 

@@ -315,7 +315,8 @@ class Executor:
         # never the intrusion one (§5.5), so a button on a smoke alarm must
         # not close an incident.
         kind = "technical" if intent.moment is Moment.TECHNICAL_RAISED else "incident"
-        for recipient in recipients:
+
+        async def reach(recipient: Mapping[str, Any]) -> None:
             key = f"{recipient.get('contact_id')}:{recipient.get('channel_id')}"
             try:
                 await self._async_reach(recipient, dict(data), kind)
@@ -329,6 +330,12 @@ class Executor:
                 errors.append(f"{recipient.get('contact_name')}: {err}")
             else:
                 sends[key] = True
+
+        # Everybody at once. Each send now waits for its transport's answer,
+        # and one after the other a gateway that hangs would have made the
+        # next person twenty seconds late, and the one after forty (second
+        # review).
+        await asyncio.gather(*(reach(r) for r in recipients))
         if cameras:
             # After the text, whatever happened to it: the pictures are for
             # whoever the text was for, and a channel that refused the text

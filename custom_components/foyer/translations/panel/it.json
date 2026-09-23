@@ -1791,7 +1791,7 @@
       "group_not_imported": "Il gruppo «{group}» ({n} su {members} entro {seconds} s) non è stato creato: un gruppo ha bisogno dei suoi membri attivi, e ogni zona importata parte spenta. Crealo a pagina 13 quando saranno confermate.",
       "setting_not_imported": "L'impostazione di Alarmo «{setting}» non è stata importata; le impostazioni di Foyer sono rimaste come erano.",
       "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. È stato scritto da un Alarmo più recente di quello su cui è stato verificato, e quello che fa quel campo non è stato importato.",
-      "automation_untriggered": "«{automation}» partiva alla fine di un allarme. Ora parte al termine della sirena e quando l'allarme viene preso in carico, disinserimento compreso — non a ogni disinserimento normale.",
+      "automation_untriggered": "«{automation}» partiva alla fine di un allarme. Ora parte al termine della sirena e a ogni disinserimento, anche quelli normali: controlla che sia quello che vuoi.",
       "scenario_overrides": "«{scenario}» ha un proprio ritardo di uscita o durata della sirena, e ora vale anche per le aree importate, qualunque cosa avesse Alarmo. Controllalo nella pagina 4."
     }
   },

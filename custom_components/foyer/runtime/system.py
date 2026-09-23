@@ -336,14 +336,17 @@ class FoyerSystem:
             if (unsub := getattr(self, name)) is not None:
                 unsub()
                 setattr(self, name, None)
-        if self._unsub_wakeup:
-            self._unsub_wakeup()
-            self._unsub_wakeup = None
         # The last save, and only then the flag that refuses every later one:
         # set first, it made this save return at once, and the restart gap
         # after a reload was measured from a stale `alive_at` (second review).
         await self._async_save()
         self._stopped = True
+        # After the save: a zone that changed while it was writing ran a
+        # decision, and that decision may have set a wake-up nothing else
+        # would ever cancel.
+        if self._unsub_wakeup:
+            self._unsub_wakeup()
+            self._unsub_wakeup = None
 
     @callback
     def _on_registry_updated(self, _event: HassEvent) -> None:
@@ -640,10 +643,22 @@ class FoyerSystem:
             )
         except Exception:
             _LOGGER.exception("Foyer could not record a decision in its log")
+        if decision.actions:
+            # Run beside the caller, not inside it. A notification now waits
+            # for its transport's answer, and a keypad, a service call or
+            # the panel must not wait for that answer to learn that its
+            # disarm was accepted; nor may a caller that is cancelled — an
+            # automation restarted, a script stopped — cancel a notification
+            # half-sent and lose its log row and its retry (second review).
+            self.hass.async_create_task(
+                self._async_execute(decision), f"foyer actions {decision.at}"
+            )
+        return decision
+
+    async def _async_execute(self, decision: Decision) -> None:
         results = await self._executor.async_run(decision)
         self.async_record(_action_rows(decision, results))
         await self._async_report_sends(results)
-        return decision
 
     async def _async_report_sends(self, results: list[ActionResult]) -> None:
         """Tell the engine how each notification channel actually did (§12.2).
@@ -1527,16 +1542,22 @@ class FoyerSystem:
             # The endpoint keypads whose last request arrived unencrypted
             # (§9.2.1), for page 8's permanent warning.
             "devices_in_clear": sorted(self.state.in_clear),
-            "security": self.security_status(me, now),
+            "security": self.security_status(me, now, getattr(ha_user, "id", None)),
         }
 
-    def security_status(self, me: User | None, now: datetime) -> dict[str, Any]:
+    def security_status(
+        self, me: User | None, now: datetime, ha_user_id: str | None = None
+    ) -> dict[str, Any]:
         """What the panel and the card need to know about codes (§8.2, §8.4).
 
         No code, no hash and no name of anybody else: who is connected already
         knows who they are, and everything here is about them.
         """
-        locked = self.state.lockouts.get(f"{CHANNEL_HA_UI}:")
+        # The counter of the account asking: the panel's failures count per
+        # Home Assistant account (second review, decision 1).
+        locked = self.state.lockouts.get(
+            f"{CHANNEL_HA_UI}:@{ha_user_id}" if ha_user_id else f"{CHANNEL_HA_UI}:"
+        )
         return {
             # False while nobody holds a code: the panel says so plainly,
             # because "anyone who can reach Home Assistant can disarm" is a

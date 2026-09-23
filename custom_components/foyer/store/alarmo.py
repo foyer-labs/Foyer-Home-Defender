@@ -708,16 +708,17 @@ def read(document: Any) -> Alarmo:
 # `arming` has no moment of its own in Foyer (an exit delay starting is not a
 # moment a profile answers), and `untriggered` — leaving `triggered`, by a
 # disarm or by the siren time running out — is the two moments that end an
-# alarm: the siren cutoff, and the acknowledgement a disarm of that area is.
-# Not `disarmed`: that is every ordinary disarm too, and a switch meant to go
-# off when an alarm ends would go off every evening (second review). A switch
+# alarm: the siren cutoff, and the disarm. Foyer's own acknowledgement is not
+# answered by an area's profile, which is where an imported action lives, so
+# the disarm it is: that includes every ordinary disarm, and the report says
+# so rather than leaving a relay that never drops (second review). A switch
 # turned off at either is what Alarmo users write to pair with the one they
-# turned on, and the report says how it was read.
+# turned on.
 _MOMENTS: Mapping[str, frozenset[Moment]] = {
     "armed": frozenset({Moment.ARMED}),
     "disarmed": frozenset({Moment.DISARMED}),
     "triggered": frozenset({Moment.TRIGGERED}),
-    "untriggered": frozenset({Moment.SIREN_CUTOFF, Moment.INCIDENT_ACKNOWLEDGED}),
+    "untriggered": frozenset({Moment.SIREN_CUTOFF, Moment.DISARMED}),
     "arm_failure": frozenset({Moment.ARM_FAILED}),
     "pending": frozenset({Moment.ENTRY_STARTED}),
 }

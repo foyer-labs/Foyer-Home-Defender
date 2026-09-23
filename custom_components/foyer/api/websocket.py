@@ -1444,6 +1444,9 @@ async def ws_user_save(
         if field == "new_duress_code" and ordinary:
             continue
         if await hass.async_add_executor_job(codes.matches, code, stored):
+            # This person's other code: counted like a collision, or it
+            # could be probed without limit by whoever edits them.
+            collided = True
             problems.append(Problem("code_in_use", "user", item.get("id"), field))
     if collided:
         # A code that is somebody else's is spent like a wrong code (second

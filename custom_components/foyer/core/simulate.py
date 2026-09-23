@@ -900,8 +900,11 @@ def inputs(request: SimulationRequest) -> dict[str, Any]:
         # again (found in review). The code itself is never here — only
         # whether one was given and what it proved.
         "timezone": str(request.timezone),
+        # Whether a person and a code were behind the rehearsal, not who:
+        # an id in the detail is not rewritten by the privacy sweeps, and
+        # would link a pseudonymised row back to its person.
         "actor": {
-            "user_id": request.actor.user_id,
+            "named": request.actor.user_id is not None,
             "channel": request.actor.channel,
             "code": request.actor.code.value,
         },

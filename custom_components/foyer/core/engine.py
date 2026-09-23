@@ -871,7 +871,13 @@ class _Run:
     def can_satisfy(self, group: Verification) -> bool:
         """Whether enough members are left able to count towards the group."""
         able = [
-            m for m in group.members if m not in self.bypassed and m not in self.faults
+            m
+            for m in group.members
+            if m not in self.bypassed
+            and (zone := self.config.zone(m)) is not None
+            # Unable only when its own entity cannot report: a supervision
+            # or battery fault leaves a detector that still counts.
+            and not is_unavailable(self.entity(zone))
         ]
         return len(able) >= group.n
 
@@ -1014,11 +1020,14 @@ class _Run:
         previous = self.refresh_active()
         for zone in self.config.zones:
             if not zone.enabled:
-                # Forgotten while it is off, so that switching it back on is
-                # a baseline like saving it new (§4.7): a key zone re-enabled
-                # with its switch on must not disarm the house (found in
-                # review).
-                self.seen.discard(zone.id)
+                # A key zone is forgotten while it is off, so that switching
+                # it back on is a baseline like saving it new (§4.7): one
+                # re-enabled with its switch on must not disarm the house.
+                # Only a key: a smoke detector or a tamper switch re-enabled
+                # while it is detecting is an alarm, and a baseline would
+                # have swallowed it (second review).
+                if zone.channel is Channel.KEY:
+                    self.seen.discard(zone.id)
                 continue
             if zone.id not in self.seen:
                 if has_baseline(zone, self.entity(zone)):
