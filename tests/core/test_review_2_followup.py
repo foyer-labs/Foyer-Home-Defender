@@ -417,3 +417,17 @@ def test_giving_a_key_switch_to_somebody_else_touches_people():
     moved = replace(key, key=replace(key.key, user_id="reader"))
     after = replace(before, zones=(*_with_codes().zones, moved))
     assert touches_people(before, after)
+
+
+def test_putting_somebody_on_a_scenarios_list_touches_people():
+    from custom_components.foyer.store.editing import touches_people
+
+    before = _with_codes()
+    scenarios = tuple(
+        replace(s, allowed_user_ids=frozenset({"reader"})) if i == 0 else s
+        for i, s in enumerate(before.scenarios)
+    )
+    assert touches_people(before, replace(before, scenarios=scenarios))
+    # A scenario renamed is not a person.
+    renamed = tuple(replace(s, name=s.name + " 2") for s in before.scenarios)
+    assert not touches_people(before, replace(before, scenarios=renamed))

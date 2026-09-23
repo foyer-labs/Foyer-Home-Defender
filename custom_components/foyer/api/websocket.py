@@ -912,7 +912,7 @@ async def ws_config_save(
         else Permission.EDIT_CONFIG
     )
     if (
-        await _gate(
+        actor := await _gate(
             hass,
             system,
             connection,
@@ -929,6 +929,14 @@ async def ws_config_save(
         msg["item"],
         trigger_confirmed=msg["trigger_confirmed"],
     )
+    # A key switch given to somebody, a name added to a scenario's list:
+    # manage_users', whichever page it was saved from (decision 112).
+    if (
+        result.config is not None
+        and touches_people(system.config, result.config)
+        and _refuse_people(system, connection, msg["id"], actor)
+    ):
+        return
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind=msg["kind"]
     )
@@ -957,7 +965,7 @@ async def ws_config_delete(
         Permission.MANAGE_USERS if msg["kind"] == "user" else Permission.EDIT_CONFIG
     )
     if (
-        await _gate(
+        actor := await _gate(
             hass,
             system,
             connection,
@@ -968,6 +976,12 @@ async def ws_config_delete(
     ) is None:
         return
     result = delete(system.config, system.state, msg["kind"], msg["item_id"])
+    if (
+        result.config is not None
+        and touches_people(system.config, result.config)
+        and _refuse_people(system, connection, msg["id"], actor)
+    ):
+        return
     await _apply(
         hass,
         connection,

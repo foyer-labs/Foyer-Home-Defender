@@ -822,8 +822,8 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
 
 def touches_people(old: FoyerConfig, new: FoyerConfig) -> bool:
     """Whether going from one configuration to the other adds, removes or
-    changes a person, a tag, or the person a key switch acts as (decision
-    111).
+    changes a person, a tag, the person a key switch acts as, or the people
+    allowed to use a scenario (decisions 111, 112).
 
     What `manage_users` owns: who exists, what they may do, and which key
     opens the house as whom. The codes and the pseudonym are left out of the
@@ -853,8 +853,19 @@ def touches_people(old: FoyerConfig, new: FoyerConfig) -> bool:
         # the two it is (review).
         return {z.id: z.key.user_id for z in config.zones if z.key is not None}
 
+    def allowed(config: FoyerConfig) -> dict[str, list[str] | None]:
+        # Who may use a scenario is what a person may do, from the other
+        # side (decision 112).
+        return {
+            s.id: None if s.allowed_user_ids is None else sorted(s.allowed_user_ids)
+            for s in config.scenarios
+        }
+
     return (
-        people(old) != people(new) or tags(old) != tags(new) or keys(old) != keys(new)
+        people(old) != people(new)
+        or tags(old) != tags(new)
+        or keys(old) != keys(new)
+        or allowed(old) != allowed(new)
     )
 
 

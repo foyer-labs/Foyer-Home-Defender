@@ -545,3 +545,48 @@ async def test_a_restore_that_changes_people_needs_manage_users(
     assert refused["reason"] == "not_permitted"
     editor_now = next(u for u in hass.data[DOMAIN].config.users if u.name == "Editor")
     assert "manage_users" not in editor_now.permissions
+
+
+async def test_an_editor_cannot_put_people_on_a_scenario_or_a_key(
+    hass, with_user, hass_ws_client, hass_read_only_user, hass_read_only_access_token
+):
+    """Decision 112: edit_config alone does not decide who may do what."""
+    admin = with_user
+    await _make_user(
+        hass,
+        admin,
+        name="Editor",
+        new_code=OTHER,
+        code=CODE,
+        permissions=["edit_config"],
+        ha_user_id=hass_read_only_user.id,
+    )
+    editor = await hass_ws_client(hass, hass_read_only_access_token)
+    config = await _config(editor)
+    editor_id = next(u["id"] for u in config["users"] if u["name"] == "Editor")
+
+    scenario = config["scenarios"][0]
+    renamed = await _ws(
+        editor,
+        {
+            "type": "foyer/config/save",
+            "kind": "scenario",
+            "item": {**scenario, "name": "Out"},
+            "code": OTHER,
+        },
+    )
+    assert renamed["success"], renamed
+    await hass.async_block_till_done()
+
+    scenario = (await _config(editor))["scenarios"][0]
+    listed = await _ws(
+        editor,
+        {
+            "type": "foyer/config/save",
+            "kind": "scenario",
+            "item": {**scenario, "allowed_user_ids": [editor_id]},
+            "code": OTHER,
+        },
+    )
+    assert listed["success"] is False
+    assert listed["reason"] == "not_permitted"
