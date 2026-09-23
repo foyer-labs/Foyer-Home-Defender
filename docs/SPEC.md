@@ -1017,6 +1017,14 @@ otherwise it reads as a bug.
 `arm` · `disarm` · `force_arm` · `bypass_zone` · `change_scenario` ·
 `edit_config` · `view_log` · `test_actions` · `walk_test` · `manage_users`
 
+`manage_users` owns people, and everything that decides what a person may
+do or which key opens the house as whom: a person, a tag, the person a key
+switch acts as, and the list of people allowed to use a scenario. Any change
+that touches one of them — saved, deleted, restored or imported — needs
+`manage_users` as well as `edit_config`; otherwise `edit_config` is a way to
+hand oneself, or somebody else, what `manage_users` withholds (decisions
+111, 112).
+
 ### 8.4 Lockout
 
 After `N` failed code attempts (default 5) within `W` seconds (default 300), the
@@ -2241,3 +2249,4 @@ document should make one of them on purpose.
 | 109 | An administrator recovers access from the integration's Configure step, loudly | Decision 101 left an administrator with no code no way in; INV-6 says they can do anything anyway, so the recovery exists — and is logged, notified in Home Assistant and sent to every contact, so it is never the quiet way round a code |
 | 110 | The recovery enables the account's linked user, removes its validity window and sets its code, or creates the user with every permission; only administrators' accounts are offered | An administrator whose own user was disabled could not undo it; Home Assistant does not say who opened the step, so it asks for the account — and a way in for anybody else is the Users page's, with its permissions |
 | 111 | A restore that touches people, tags or a key switch's person needs `manage_users` | `edit_config` alone let a backup file grant any permission, or give somebody's tag to somebody else; the Alarmo importer already asked for it |
+| 112 | Every change that touches people — a person, a tag, a key switch's person, a scenario's allowed people — needs `manage_users`, however it is made | Decision 111 closed the restore; the editor still let `edit_config` alone give a key switch to somebody or put somebody on a scenario's list |
