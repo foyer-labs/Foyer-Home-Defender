@@ -31,11 +31,11 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 	let t = "";
 	for (let n of e.cssRules) t += n.cssText;
 	return a(t);
-})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: ee, getOwnPropertySymbols: te, getPrototypeOf: ne } = Object, f = globalThis, p = f.trustedTypes, re = p ? p.emptyScript : "", ie = f.reactiveElementPolyfillSupport, m = (e, t) => e, h = {
+})(e) : e, { is: l, defineProperty: u, getOwnPropertyDescriptor: d, getOwnPropertyNames: f, getOwnPropertySymbols: ee, getPrototypeOf: te } = Object, p = globalThis, m = p.trustedTypes, ne = m ? m.emptyScript : "", re = p.reactiveElementPolyfillSupport, h = (e, t) => e, g = {
 	toAttribute(e, t) {
 		switch (t) {
 			case Boolean:
-				e = e ? re : null;
+				e = e ? ne : null;
 				break;
 			case Object:
 			case Array: e = e == null ? e : JSON.stringify(e);
@@ -60,23 +60,23 @@ var e = globalThis, t = e.ShadowRoot && (e.ShadyCSS === void 0 || e.ShadyCSS.nat
 		}
 		return n;
 	}
-}, g = (e, t) => !l(e, t), _ = {
+}, ie = (e, t) => !l(e, t), ae = {
 	attribute: !0,
 	type: String,
-	converter: h,
+	converter: g,
 	reflect: !1,
 	useDefault: !1,
-	hasChanged: g
+	hasChanged: ie
 };
-Symbol.metadata ??= Symbol("metadata"), f.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
-var v = class extends HTMLElement {
+Symbol.metadata ??= Symbol("metadata"), p.litPropertyMetadata ??= /* @__PURE__ */ new WeakMap();
+var _ = class extends HTMLElement {
 	static addInitializer(e) {
 		this._$Ei(), (this.l ??= []).push(e);
 	}
 	static get observedAttributes() {
 		return this.finalize(), this._$Eh && [...this._$Eh.keys()];
 	}
-	static createProperty(e, t = _) {
+	static createProperty(e, t = ae) {
 		if (t.state && (t.attribute = !1), this._$Ei(), this.prototype.hasOwnProperty(e) && ((t = Object.create(t)).wrapped = !0), this.elementProperties.set(e, t), !t.noAccessor) {
 			let n = Symbol(), r = this.getPropertyDescriptor(e, n, t);
 			r !== void 0 && u(this.prototype, e, r);
@@ -102,17 +102,17 @@ var v = class extends HTMLElement {
 		};
 	}
 	static getPropertyOptions(e) {
-		return this.elementProperties.get(e) ?? _;
+		return this.elementProperties.get(e) ?? ae;
 	}
 	static _$Ei() {
-		if (this.hasOwnProperty(m("elementProperties"))) return;
-		let e = ne(this);
+		if (this.hasOwnProperty(h("elementProperties"))) return;
+		let e = te(this);
 		e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
 	}
 	static finalize() {
-		if (this.hasOwnProperty(m("finalized"))) return;
-		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(m("properties"))) {
-			let e = this.properties, t = [...ee(e), ...te(e)];
+		if (this.hasOwnProperty(h("finalized"))) return;
+		if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(h("properties"))) {
+			let e = this.properties, t = [...f(e), ...ee(e)];
 			for (let n of t) this.createProperty(n, e[n]);
 		}
 		let e = this[Symbol.metadata];
@@ -173,14 +173,14 @@ var v = class extends HTMLElement {
 	_$ET(e, t) {
 		let n = this.constructor.elementProperties.get(e), r = this.constructor._$Eu(e, n);
 		if (r !== void 0 && !0 === n.reflect) {
-			let i = (n.converter?.toAttribute === void 0 ? h : n.converter).toAttribute(t, n.type);
+			let i = (n.converter?.toAttribute === void 0 ? g : n.converter).toAttribute(t, n.type);
 			this._$Em = e, i == null ? this.removeAttribute(r) : this.setAttribute(r, i), this._$Em = null;
 		}
 	}
 	_$AK(e, t) {
 		let n = this.constructor, r = n._$Eh.get(e);
 		if (r !== void 0 && this._$Em !== r) {
-			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? h : e.converter;
+			let e = n.getPropertyOptions(r), i = typeof e.converter == "function" ? { fromAttribute: e.converter } : e.converter?.fromAttribute === void 0 ? g : e.converter;
 			this._$Em = r;
 			let a = i.fromAttribute(t, e.type);
 			this[r] = a ?? this._$Ej?.get(r) ?? a, this._$Em = null;
@@ -189,7 +189,7 @@ var v = class extends HTMLElement {
 	requestUpdate(e, t, n, r = !1, i) {
 		if (e !== void 0) {
 			let a = this.constructor;
-			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? g)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
+			if (!1 === r && (i = this[e]), n ??= a.getPropertyOptions(e), !((n.hasChanged ?? ie)(i, t) || n.useDefault && n.reflect && i === this._$Ej?.get(e) && !this.hasAttribute(a._$Eu(e, n)))) return;
 			this.C(e, t, n);
 		}
 		!1 === this.isUpdatePending && (this._$ES = this._$EP());
@@ -253,86 +253,86 @@ var v = class extends HTMLElement {
 	updated(e) {}
 	firstUpdated(e) {}
 };
-v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
+_.elementStyles = [], _.shadowRootOptions = { mode: "open" }, _[h("elementProperties")] = /* @__PURE__ */ new Map(), _[h("finalized")] = /* @__PURE__ */ new Map(), re?.({ ReactiveElement: _ }), (p.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, ae = (e) => e, b = y.trustedTypes, oe = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, x = "$lit$", S = `lit$${Math.random().toFixed(9).slice(2)}$`, C = "?" + S, se = `<${C}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, O = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, j = /-->/g, ce = />/g, M = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, ue = /"/g, de = /^(?:script|style|textarea|title)$/i, N = ((e) => (t, ...n) => ({
+var v = globalThis, y = (e) => e, b = v.trustedTypes, x = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, S = "$lit$", C = `lit$${Math.random().toFixed(9).slice(2)}$`, w = "?" + C, oe = `<${w}>`, T = document, E = () => T.createComment(""), D = (e) => e === null || typeof e != "object" && typeof e != "function", O = Array.isArray, k = (e) => O(e) || typeof e?.[Symbol.iterator] == "function", A = "[ 	\n\f\r]", j = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, se = /-->/g, M = />/g, N = RegExp(`>|${A}(?:([^\\s"'>=/]+)(${A}*=${A}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), P = /'/g, ce = /"/g, le = /^(?:script|style|textarea|title)$/i, F = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), P = Symbol.for("lit-noChange"), F = Symbol.for("lit-nothing"), I = /* @__PURE__ */ new WeakMap(), L = w.createTreeWalker(w, 129);
-function R(e, t) {
-	if (!D(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
-	return oe === void 0 ? t : oe.createHTML(t);
+}))(1), I = Symbol.for("lit-noChange"), L = Symbol.for("lit-nothing"), ue = /* @__PURE__ */ new WeakMap(), R = T.createTreeWalker(T, 129);
+function de(e, t) {
+	if (!O(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
+	return x === void 0 ? t : x.createHTML(t);
 }
 var z = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = A;
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = j;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = j : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (de.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = ce : o === M ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? ue : le) : o === ue || o === le ? o = M : o === j || o === ce ? o = A : (o = M, i = void 0);
-		let d = o === M && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === A ? n + se : l >= 0 ? (r.push(s), n.slice(0, l) + x + n.slice(l) + S + d) : n + S + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === j ? c[1] === "!--" ? o = se : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = N) : (le.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = N) : o = M : o === N ? c[0] === ">" ? (o = i ?? j, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? N : c[3] === "\"" ? ce : P) : o === ce || o === P ? o = N : o === se || o === M ? o = j : (o = N, i = void 0);
+		let d = o === N && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === j ? n + oe : l >= 0 ? (r.push(s), n.slice(0, l) + S + n.slice(l) + C + d) : n + C + (l === -2 ? t : d);
 	}
-	return [R(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+	return [de(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
 }, B = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
 		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = z(t, n);
-		if (this.el = e.createElement(l, r), L.currentNode = this.el.content, n === 2 || n === 3) {
+		if (this.el = e.createElement(l, r), R.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = L.nextNode()) !== null && c.length < s;) {
+		for (; (i = R.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
-				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(x)) {
-					let t = u[o++], n = i.getAttribute(e).split(S), r = /([.?@])?(.*)/.exec(t);
+				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(S)) {
+					let t = u[o++], n = i.getAttribute(e).split(C), r = /([.?@])?(.*)/.exec(t);
 					c.push({
 						type: 1,
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? fe : r[1] === "?" ? G : r[1] === "@" ? pe : W
+						ctor: r[1] === "." ? G : r[1] === "?" ? fe : r[1] === "@" ? pe : W
 					}), i.removeAttribute(e);
-				} else e.startsWith(S) && (c.push({
+				} else e.startsWith(C) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (de.test(i.tagName)) {
-					let e = i.textContent.split(S), t = e.length - 1;
+				if (le.test(i.tagName)) {
+					let e = i.textContent.split(C), t = e.length - 1;
 					if (t > 0) {
 						i.textContent = b ? b.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], T()), L.nextNode(), c.push({
+						for (let n = 0; n < t; n++) i.append(e[n], E()), R.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
-						i.append(e[t], T());
+						i.append(e[t], E());
 					}
 				}
 			} else if (i.nodeType === 8) {
-				if (i.data === C) c.push({
+				if (i.data === w) c.push({
 					type: 2,
 					index: a
 				});
 				else {
 					let e = -1;
-					for (; (e = i.data.indexOf(S, e + 1)) !== -1;) c.push({
+					for (; (e = i.data.indexOf(C, e + 1)) !== -1;) c.push({
 						type: 7,
 						index: a
-					}), e += S.length - 1;
+					}), e += C.length - 1;
 				}
 			}
 			a++;
 		}
 	}
 	static createElement(e, t) {
-		let n = w.createElement("template");
+		let n = T.createElement("template");
 		return n.innerHTML = e, n;
 	}
 };
 function V(e, t, n = e, r) {
-	if (t === P) return t;
-	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = E(t) ? void 0 : t._$litDirective$;
+	if (t === I) return t;
+	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = D(t) ? void 0 : t._$litDirective$;
 	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = V(e, i._$AS(e, t.values), i, r)), t;
 }
 var H = class {
@@ -346,17 +346,17 @@ var H = class {
 		return this._$AM._$AU;
 	}
 	u(e) {
-		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? w).importNode(t, !0);
-		L.currentNode = r;
-		let i = L.nextNode(), a = 0, o = 0, s = n[0];
+		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? T).importNode(t, !0);
+		R.currentNode = r;
+		let i = R.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
 				s.type === 2 ? t = new U(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new me(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = L.nextNode(), a++);
+			a !== s?.index && (i = R.nextNode(), a++);
 		}
-		return L.currentNode = w, r;
+		return R.currentNode = T, r;
 	}
 	p(e) {
 		let t = 0;
@@ -367,7 +367,7 @@ var H = class {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = F, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = L, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -380,7 +380,7 @@ var H = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = V(this, e, t), E(e) ? e === F || e == null || e === "" ? (this._$AH !== F && this._$AR(), this._$AH = F) : e !== this._$AH && e !== P && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? O(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = V(this, e, t), D(e) ? e === L || e == null || e === "" ? (this._$AH !== L && this._$AR(), this._$AH = L) : e !== this._$AH && e !== I && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? k(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -389,10 +389,10 @@ var H = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== F && E(this._$AH) ? this._$AA.nextSibling.data = e : this.T(w.createTextNode(e)), this._$AH = e;
+		this._$AH !== L && D(this._$AH) ? this._$AA.nextSibling.data = e : this.T(T.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = B.createElement(R(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = B.createElement(de(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
 			let e = new H(r, this), n = e.u(this.options);
@@ -400,19 +400,19 @@ var H = class {
 		}
 	}
 	_$AC(e) {
-		let t = I.get(e.strings);
-		return t === void 0 && I.set(e.strings, t = new B(e)), t;
+		let t = ue.get(e.strings);
+		return t === void 0 && ue.set(e.strings, t = new B(e)), t;
 	}
 	k(t) {
-		D(this._$AH) || (this._$AH = [], this._$AR());
+		O(this._$AH) || (this._$AH = [], this._$AR());
 		let n = this._$AH, r, i = 0;
-		for (let a of t) i === n.length ? n.push(r = new e(this.O(T()), this.O(T()), this, this.options)) : r = n[i], r._$AI(a), i++;
+		for (let a of t) i === n.length ? n.push(r = new e(this.O(E()), this.O(E()), this, this.options)) : r = n[i], r._$AI(a), i++;
 		i < n.length && (this._$AR(r && r._$AB.nextSibling, i), n.length = i);
 	}
 	_$AR(e = this._$AA.nextSibling, t) {
 		for (this._$AP?.(!1, !0, t); e !== this._$AB;) {
-			let t = ae(e).nextSibling;
-			ae(e).remove(), e = t;
+			let t = y(e).nextSibling;
+			y(e).remove(), e = t;
 		}
 	}
 	setConnected(e) {
@@ -426,41 +426,41 @@ var H = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = F, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = F;
+		this.type = 1, this._$AH = L, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = L;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = V(this, e, t, 0), a = !E(e) || e !== this._$AH && e !== P, a && (this._$AH = e);
+		if (i === void 0) e = V(this, e, t, 0), a = !D(e) || e !== this._$AH && e !== I, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = V(this, r[n + o], t, o), s === P && (s = this._$AH[o]), a ||= !E(s) || s !== this._$AH[o], s === F ? e = F : e !== F && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = V(this, r[n + o], t, o), s === I && (s = this._$AH[o]), a ||= !D(s) || s !== this._$AH[o], s === L ? e = L : e !== L && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === F ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === L ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, fe = class extends W {
+}, G = class extends W {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === F ? void 0 : e;
+		this.element[this.name] = e === L ? void 0 : e;
 	}
-}, G = class extends W {
+}, fe = class extends W {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== F);
+		this.element.toggleAttribute(this.name, !!e && e !== L);
 	}
 }, pe = class extends W {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = V(this, e, t, 0) ?? F) === P) return;
-		let n = this._$AH, r = e === F && n !== F || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== F && (n === F || r);
+		if ((e = V(this, e, t, 0) ?? L) === I) return;
+		let n = this._$AH, r = e === L && n !== L || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== L && (n === L || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
@@ -477,30 +477,30 @@ var H = class {
 		V(this, e);
 	}
 }, he = {
-	M: x,
-	P: S,
-	A: C,
+	M: S,
+	P: C,
+	A: w,
 	C: 1,
 	L: z,
 	R: H,
-	D: O,
+	D: k,
 	V,
 	I: U,
 	H: W,
-	N: G,
+	N: fe,
 	U: pe,
-	B: fe,
+	B: G,
 	F: me
-}, ge = y.litHtmlPolyfillSupport;
-ge?.(B, U), (y.litHtmlVersions ??= []).push("3.3.3");
+}, ge = v.litHtmlPolyfillSupport;
+ge?.(B, U), (v.litHtmlVersions ??= []).push("3.3.3");
 var _e = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new U(t.insertBefore(T(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new U(t.insertBefore(E(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, K = globalThis, q = class extends v {
+}, K = globalThis, q = class extends _ {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -519,7 +519,7 @@ var _e = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return P;
+		return I;
 	}
 };
 q._$litElement$ = !0, q.finalized = !0, K.litElementHydrateSupport?.({ LitElement: q });
@@ -560,13 +560,13 @@ var J = {
 		return e;
 	}
 	update(e, [t]) {
-		if (t === P || t === F) return t;
+		if (t === I || t === L) return t;
 		let n = e.element, r = e.name;
 		if (e.type === J.PROPERTY) {
-			if (t === n[r]) return P;
+			if (t === n[r]) return I;
 		} else if (e.type === J.BOOLEAN_ATTRIBUTE) {
-			if (!!t === n.hasAttribute(r)) return P;
-		} else if (e.type === J.ATTRIBUTE && n.getAttribute(r) === t + "") return P;
+			if (!!t === n.hasAttribute(r)) return I;
+		} else if (e.type === J.ATTRIBUTE && n.getAttribute(r) === t + "") return I;
 		return we(e), t;
 	}
 }), X = /* @__PURE__ */ new Map();
@@ -913,7 +913,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	"foyer/walk_test"
 ]), Ie = class extends q {
 	constructor(...e) {
-		super(...e), this._busy = !1, this._code = "", this._padOpen = !1, this._tick = 0, this._offset = 0;
+		super(...e), this._busy = !1, this._code = "", this._padOpen = !1, this._retype = !1, this._tick = 0, this._offset = 0;
 	}
 	static {
 		this.properties = {
@@ -926,6 +926,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 			_code: { state: !0 },
 			_padOpen: { state: !0 },
 			_pending: { state: !0 },
+			_retype: { state: !0 },
 			_tick: { state: !0 }
 		};
 	}
@@ -957,13 +958,16 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 		return !!this._status?.security.enforced;
 	}
 	_press(e) {
-		this._code.length >= this._codeLength || (this._code += e, this._feedback = void 0, this._touch());
+		this._code.length >= this._codeLength || (this._code += e, this._feedback = void 0, this._retype = !1, this._touch());
 	}
 	_touch() {
-		window.clearTimeout(this._idle), this._idle = window.setTimeout(() => this._forget(), Pe);
+		window.clearTimeout(this._idle), this._idle = window.setTimeout(() => this._expire(), Pe);
 	}
 	_forget() {
-		window.clearTimeout(this._idle), this._idle = void 0, this._code = "", this._pending = void 0;
+		window.clearTimeout(this._idle), this._idle = void 0, this._code = "", this._pending = void 0, this._retype = !1;
+	}
+	_expire() {
+		this._forget(), this._feedback = void 0, this._entryOpened || (this._padOpen = !1);
 	}
 	_padKey(e) {
 		if (!(this._busy || e.ctrlKey || e.metaKey || e.altKey)) {
@@ -987,6 +991,8 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 			this._language = void 0;
 		})), !this._unsubscribe && this.isConnected && (this._unsubscribe = this.hass.connection.subscribeMessage((e) => {
 			this._offset = Date.parse(e.now) - Date.now(), this._status = e;
+			let t = this._entryWantsCode();
+			t && t !== this._entryOpened && (this._padOpen = !0), this._entryOpened = t;
 		}, { type: "foyer/subscribe" }), this._unsubscribe.catch(() => this._unsubscribe = void 0)));
 	}
 	get _isMaster() {
@@ -995,6 +1001,32 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	}
 	get _area() {
 		return this._status?.areas.find((e) => e.entity_id === this._config?.entity);
+	}
+	_entryWantsCode() {
+		let e = this._status;
+		if (!e || !this._codeUsed) return;
+		let t = this._area;
+		return (this._isMaster || !t ? e.areas : [t]).find((t) => t.timer?.kind === "entry" && (t.require_code?.disarm ?? e.security.require_code?.disarm))?.timer?.due;
+	}
+	_isPending(e) {
+		let t = this._pending;
+		if (!t || t.type !== e.type) return !1;
+		let n = (e) => JSON.stringify({
+			...e,
+			force: void 0
+		});
+		return n(t) === n(e);
+	}
+	_primary(e) {
+		return e && !this._pending ? "primary" : "";
+	}
+	_targetOf(e) {
+		let t = this._status, n = this._strings;
+		return e.scenario_id ? t?.scenarios.find((t) => t.id === e.scenario_id)?.name ?? "" : e.area_id ? t?.areas.find((t) => t.id === e.area_id)?.name ?? "" : Array.isArray(e.area_ids) ? e.area_ids.map((e) => t?.areas.find((t) => t.id === e)?.name ?? "").join(", ") : e.zone_id ? t?.zones.find((t) => t.id === e.zone_id)?.name ?? "" : e.pending_id ? t?.auto?.pending.find((t) => t.id === e.pending_id)?.rule_name ?? "" : Z(n, "overview.master");
+	}
+	_disarmLabel(e, t) {
+		let n = this._strings;
+		return e === "disarmed" && t ? Z(n, "card.clear_memory") : Z(n, "card.disarm");
 	}
 	async _run(e) {
 		if (!this.hass) return;
@@ -1006,17 +1038,36 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 				...e,
 				...n ? { code: n } : {}
 			});
-			if (!this.isConnected || (t || (this._pending = void 0), r.success && r.low_battery_zones.length && (this._feedback = {
+			if (!this.isConnected || (t || (this._pending = void 0), r.success && !this._pending && (this._padOpen = !1), r.success && r.low_battery_zones.length && (this._feedback = {
 				text: Z(this._strings, "card.low_battery", { zones: r.low_battery_zones.map((e) => e.name).join(", ") }),
 				warning: !0
 			}), !r.success && r.reason === "nothing_to_cancel" && e.type === "foyer/auto/cancel")) return;
-			r.success || (Ne.has(r.reason ?? "") && (t && (this._code = ""), this._padOpen = !0, this._pending = e, this._touch()), this._feedback = {
-				text: Z(this._strings, `reason.${r.reason ?? "unknown"}`, { zones: r.blocking_zones.map((e) => e.name).join(", ") }),
-				retry: e.type === "foyer/arm" && !e.force && Me.has(r.reason ?? "") ? {
-					...e,
-					force: !0
-				} : void 0
-			});
+			if (!r.success) {
+				if (Ne.has(r.reason ?? "")) {
+					if (t && (this._retype = !!this._code, this._code = ""), this._padOpen = !0, this._pending = e, this._touch(), r.reason === "code_required") return;
+					this._feedback = {
+						text: Z(this._strings, `reason.${r.reason}`),
+						pad: !0,
+						reason: r.reason ?? void 0
+					};
+					return;
+				}
+				if (r.reason === "locked_out") {
+					this._code = "", this._padOpen = !0, this._feedback = {
+						text: Z(this._strings, "reason.locked_out"),
+						pad: !0,
+						reason: "locked_out"
+					};
+					return;
+				}
+				this._feedback = {
+					text: Z(this._strings, `reason.${r.reason ?? "unknown"}`, { zones: r.blocking_zones.map((e) => e.name).join(", ") }),
+					retry: e.type === "foyer/arm" && !e.force && Me.has(r.reason ?? "") ? {
+						...e,
+						force: !0
+					} : void 0
+				};
+			}
 		} catch {
 			this._feedback = { text: Z(this._strings, "card.not_sent") };
 		} finally {
@@ -1025,7 +1076,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	}
 	render() {
 		let e = this._strings;
-		if (!e || !this.hass) return F;
+		if (!e || !this.hass) return L;
 		this._tick;
 		let t = this._config?.entity;
 		return t ? this.hass.states[t] ? this._layout === "badge" ? this._renderBadge(e) : this._layout === "compact" ? this._renderCompact(e) : this._layout === "keypad" ? this._renderKeypadLayout(e) : this._isMaster ? this._renderMaster(e) : this._renderArea(e) : this._message(Z(e, "card.entity_missing", { entity: t })) : this._message(Z(e, "card.no_entity"));
@@ -1034,7 +1085,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
 		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n, l = this._pendingAuto, u = c?.timer, d = u && u.kind !== "siren" ? Z(e, `timer.${u.kind}`, { seconds: Math.max(0, Math.round((Date.parse(u.due) - (Date.now() + this._offset)) / 1e3)) }) : Z(e, `state.${i}`);
-		return N`
+		return F`
       <div
         class="badge"
         role="button"
@@ -1047,11 +1098,13 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
       >
         <span class="badge-name">${s}</span>
         <span class="state ${i}">${d}</span>
-        ${a ? N`<span class="state memory">${Z(e, "overview.memory")}</span>` : F}
-        ${t.walk_test ? N`<span class="state walk-chip" title=${Z(e, "walk.badge_title")}
+        ${a ? F`<span class="state memory">${Z(e, "overview.memory")}</span>` : L}
+        ${t.technical?.length ? F`<span class="state triggered">${Z(e, "card.technical_badge")}</span>` : L}
+        ${t.incident && !t.incident.acknowledged ? F`<span class="state triggered">${Z(e, "card.incident_badge")}</span>` : L}
+        ${t.walk_test ? F`<span class="state walk-chip" title=${Z(e, "walk.badge_title")}
               >${Z(e, "walk.badge")}</span
-            >` : F}
-        ${l ? N`<span
+            >` : L}
+        ${l ? F`<span
               class="state auto-chip"
               title=${Z(e, `rules.counting_${l.action}`, {
 			rule: l.rule_name,
@@ -1059,7 +1112,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 			seconds: Q(l.due, this._offset)
 		})}
               >${Z(e, `card.auto_badge_${l.action}`, { seconds: Q(l.due, this._offset) })}</span
-            >` : F}
+            >` : L}
       </div>
     `;
 	}
@@ -1074,20 +1127,21 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	_renderCompact(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
-		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = r ? t.areas.some((e) => e.state !== "disarmed" || e.memory) : n.state !== "disarmed" || n.memory, l = r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n;
-		return N`
+		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = r ? t.areas.some((e) => e.state !== "disarmed" || e.memory) : n.state !== "disarmed" || n.memory, l = r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n, u = {
+			type: "foyer/arm",
+			area_id: n?.id
+		}, d = r ? { type: "foyer/disarm" } : {
+			type: "foyer/disarm",
+			area_ids: [n.id]
+		}, f = (this._pending?.type === "foyer/arm" ? String(this._pending.scenario_id ?? "") : "") || o?.id;
+		return F`
       <ha-card>
         <div class="content compact">
-          ${this._walkBanner(e)} ${this._autoBanner(e)}
-          <div class="head">
-            <div class="name">${s}</div>
-            <span class="state ${i}">${Z(e, `state.${i}`)}</span>
-            ${a ? N`<span class="state memory">${Z(e, "overview.memory")}</span>` : F}
-          </div>
-          ${l ? this._countdown(e, l) : F}
+          ${this._renderAlerts(e)} ${this._head(s, i, a)}
+          ${l ? this._countdown(e, l) : L}
           ${this._renderInlinePad(e)}
           <div class="buttons">
-            ${r ? N`<select
+            ${r ? F`<select
                   ?disabled=${this._busy}
                   aria-label=${Z(e, "card.scenario")}
                   @change=${(e) => {
@@ -1098,29 +1152,26 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 			});
 		}}
                 >
-                  <option value="" .selected=${Y(!o)}>${Z(e, "card.pick_scenario")}</option>
-                  ${t.scenarios.map((e) => N`<option .value=${e.id} .selected=${Y(e.id === o?.id)}>
+                  <option value="" .selected=${Y(!f)}>
+                    ${Z(e, "card.pick_scenario")}
+                  </option>
+                  ${t.scenarios.map((e) => F`<option .value=${e.id} .selected=${Y(e.id === f)}>
                       ${e.name}
                     </option>`)}
-                </select>` : n.state === "disarmed" ? N`<button
-                    class="primary"
+                </select>` : n.state === "disarmed" && !this._isPending(u) ? F`<button
+                    class=${this._primary(!0)}
                     ?disabled=${this._busy}
-                    @click=${() => this._run({
-			type: "foyer/arm",
-			area_id: n.id
-		})}
+                    @click=${() => this._run(u)}
                   >
                     ${Z(e, "card.arm")}
-                  </button>` : F}
-            ${c ? N`<button
+                  </button>` : L}
+            ${c && !this._isPending(d) ? F`<button
+                  class=${this._primary(i === "entry" || i === "triggered")}
                   ?disabled=${this._busy}
-                  @click=${() => this._run(r ? { type: "foyer/disarm" } : {
-			type: "foyer/disarm",
-			area_ids: [n.id]
-		})}
+                  @click=${() => this._run(d)}
                 >
-                  ${Z(e, "card.disarm")}
-                </button>` : F}
+                  ${this._disarmLabel(i, a)}
+                </button>` : L}
           </div>
           ${this._renderFeedback()}
         </div>
@@ -1130,33 +1181,34 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	_renderArea(e) {
 		let t = this._area;
 		if (!t) return this._message(Z(e, "common.loading"));
-		let n = t.state !== "disarmed" || t.memory;
-		return N`
+		let n = t.state !== "disarmed" || t.memory, r = {
+			type: "foyer/arm",
+			area_id: t.id
+		}, i = {
+			type: "foyer/disarm",
+			area_ids: [t.id]
+		};
+		return F`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)} ${this._head(t.name, t.state, t.memory)}
           ${this._countdown(e, t)} ${this._renderBlocking(e, t)}
           ${this._renderInlinePad(e)}
           <div class="buttons">
-            ${t.state === "disarmed" ? N`<button
-                  class="primary"
+            ${t.state === "disarmed" && !this._isPending(r) ? F`<button
+                  class=${this._primary(!0)}
                   ?disabled=${this._busy}
-                  @click=${() => this._run({
-			type: "foyer/arm",
-			area_id: t.id
-		})}
+                  @click=${() => this._run(r)}
                 >
                   ${Z(e, "card.arm")}
-                </button>` : F}
-            ${n ? N`<button
+                </button>` : L}
+            ${n && !this._isPending(i) ? F`<button
+                  class=${this._primary(t.state === "entry" || t.state === "triggered")}
                   ?disabled=${this._busy}
-                  @click=${() => this._run({
-			type: "foyer/disarm",
-			area_ids: [t.id]
-		})}
+                  @click=${() => this._run(i)}
                 >
-                  ${Z(e, "card.disarm")}
-                </button>` : F}
+                  ${this._disarmLabel(t.state, t.memory)}
+                </button>` : L}
           </div>
           ${this._renderFeedback()}
         </div>
@@ -1164,13 +1216,14 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
     `;
 	}
 	_renderBlocking(e, t) {
-		if (t.state !== "disarmed" || t.ready) return F;
+		if (t.state !== "disarmed" || t.ready) return L;
 		let n = this._status?.zones ?? [], r = [...t.blocking.fault, ...t.blocking.open].map((e) => n.find((t) => t.id === e)).filter((e) => !!e);
-		return r.length ? N`
+		return r.length ? F`
       <div class="blocking">
-        ${r.map((t) => N`<div class="row">
+        <div class="blocking-hd">${Z(e, "card.not_ready")}</div>
+        ${r.map((t) => F`<div class="row">
             <span>${t.name}</span>
-            ${t.bypassable ? N`<button
+            ${t.bypassable && !t.bypassed ? F`<button
                   class="link"
                   ?disabled=${this._busy}
                   @click=${() => this._run({
@@ -1180,68 +1233,78 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 		})}
                 >
                   ${Z(e, "zones.bypass")}
-                </button>` : F}
+                </button>` : L}
           </div>`)}
       </div>
-    ` : F;
+    ` : L;
 	}
 	_renderMaster(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
-		let n = t.areas.some((e) => e.memory), r = t.scenarios.find((e) => e.id === t.active_scenario_id), i = t.areas.some((e) => e.state !== "disarmed" || e.memory);
-		return N`
+		let n = t.areas.some((e) => e.memory), r = t.scenarios.find((e) => e.id === t.active_scenario_id), i = t.areas.some((e) => e.state !== "disarmed" || e.memory), a = this._alarmRunning, o = { type: "foyer/disarm" };
+		return F`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)}
           ${this._head(r?.name ?? Z(e, "overview.master"), t.master.state, n)}
           <div class="areas">
-            ${t.areas.map((t) => N`<div class="row">
+            ${t.areas.map((t) => F`<div class="row">
                 <span class="area-name">${t.name}</span>
                 <span class="state ${t.state}">${Z(e, `state.${t.state}`)}</span>
-                ${t.memory ? N`<span class="state memory">${Z(e, "overview.memory")}</span>` : F}
+                ${t.memory ? F`<span class="state memory">${Z(e, "overview.memory")}</span>` : L}
                 ${this._countdown(e, t)}
               </div>`)}
           </div>
           ${this._renderNotReady(e)} ${this._renderInlinePad(e)}
           <div class="buttons">
-            ${t.scenarios.map((e) => N`<button
-                class=${e.id === t.active_scenario_id ? "primary" : ""}
-                ?disabled=${this._busy}
-                @click=${() => this._run({
-			type: "foyer/arm",
-			scenario_id: e.id
-		})}
-              >
-                ${e.name}
-              </button>`)}
-            ${i ? N`<button
+            ${a ? L : this._scenarioButtons(e, t.active_scenario_id)}
+            ${i && !this._isPending(o) ? F`<button
+                  class=${this._primary(a)}
                   ?disabled=${this._busy}
-                  @click=${() => this._run({ type: "foyer/disarm" })}
+                  @click=${() => this._run(o)}
                 >
-                  ${Z(e, "card.disarm")}
-                </button>` : F}
+                  ${this._disarmLabel(t.master.state, n)}
+                </button>` : L}
           </div>
           ${this._renderFeedback()}
         </div>
       </ha-card>
     `;
 	}
+	get _alarmRunning() {
+		return !!this._status?.areas.some((e) => e.state === "entry" || e.state === "triggered");
+	}
+	_scenarioButtons(e, t) {
+		return (this._status?.scenarios ?? []).map((n) => {
+			let r = {
+				type: "foyer/arm",
+				scenario_id: n.id
+			};
+			return this._isPending(r) ? L : F`<button
+        class=${this._primary(n.id === t)}
+        ?disabled=${this._busy}
+        @click=${() => this._run(r)}
+      >
+        ${Z(e, "card.arm_scenario", { scenario: n.name })}
+      </button>`;
+		});
+	}
 	_renderNotReady(e) {
 		let t = this._status;
-		if (!t) return F;
+		if (!t) return L;
 		let n = /* @__PURE__ */ new Map();
 		for (let e of t.areas) if (!(e.state !== "disarmed" || e.ready)) for (let t of [...e.blocking.fault, ...e.blocking.open]) n.set(t, [...n.get(t) ?? [], e.name]);
-		return n.size ? N`
+		return n.size ? F`
       <div class="blocking">
         <div class="blocking-hd">${Z(e, "card.not_ready")}</div>
         ${[...n.entries()].map(([n, r]) => {
 			let i = t.zones.find((e) => e.id === n);
-			return i ? N`<div class="row">
+			return i ? F`<div class="row">
             <span>${Z(e, "card.zone_in", {
 				zone: i.name,
 				areas: r.join(", ")
 			})}</span>
-            ${i.bypassable && !i.bypassed ? N`<button
+            ${i.bypassable && !i.bypassed ? F`<button
                   class="link"
                   ?disabled=${this._busy}
                   @click=${() => this._run({
@@ -1251,17 +1314,17 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 			})}
                 >
                   ${Z(e, "zones.bypass")}
-                </button>` : F}
-          </div>` : F;
+                </button>` : L}
+          </div>` : L;
 		})}
       </div>
-    ` : F;
+    ` : L;
 	}
 	_walkBanner(e) {
 		let t = this._status?.walk_test;
-		if (!t) return F;
+		if (!t) return L;
 		let n = Q(t.deadline, this._offset);
-		return N`
+		return F`
       <div class="alert walk" role="alert">
         <span>
           <strong>${Z(e, "walk.banner_title")}</strong>
@@ -1284,9 +1347,9 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	}
 	_autoBanner(e) {
 		let t = this._pendingAuto;
-		if (!t) return F;
+		if (!t) return L;
 		let n = this._status?.scenarios.find((e) => e.id === t.scenario_id), r = Q(t.due, this._offset);
-		return N`
+		return F`
       <div class="alert auto" role="alert">
         <span>
           ${Z(e, `rules.counting_${t.action}`, {
@@ -1294,7 +1357,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 			scenario: n?.name ?? "",
 			seconds: r
 		})}
-          ${t.suspension_name ? N`<em>${Z(e, "rules.because", { name: t.suspension_name })}</em>` : F}
+          ${t.suspension_name ? F`<em>${Z(e, "rules.because", { name: t.suspension_name })}</em>` : L}
         </span>
         <button
           ?disabled=${this._busy}
@@ -1310,13 +1373,13 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	}
 	_renderAlerts(e) {
 		let t = this._status;
-		if (!t) return F;
+		if (!t) return L;
 		let n = new Map(t.zones.map((e) => [e.id, e.name])), r = t.technical ?? [], i = t.incident;
-		return N`
+		return F`
       ${this._walkBanner(e)} ${this._autoBanner(e)}
-      ${r.length ? N`<div class="alert technical" role="alert">
+      ${r.length ? F`<div class="alert technical" role="alert">
             <span>${Z(e, "card.technical", { zones: r.map((e) => e.name).join(", ") })}</span>
-            ${r.some((e) => !e.acknowledged) ? N`<button
+            ${r.some((e) => !e.acknowledged) ? F`<button
                   ?disabled=${this._busy}
                   @click=${() => this._run({
 			type: "foyer/acknowledge",
@@ -1324,13 +1387,13 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 		})}
                 >
                   ${Z(e, "common.acknowledge")}
-                </button>` : F}
-          </div>` : F}
-      ${i ? N`<div class="alert incident" role="alert">
+                </button>` : L}
+          </div>` : L}
+      ${i ? F`<div class="alert incident" role="alert">
             <span>
               ${Z(e, "card.incident", { zones: i.zone_ids.map((e) => n.get(e) ?? e).join(", ") })}
             </span>
-            ${i.acknowledged ? F : N`<button
+            ${i.acknowledged ? L : F`<button
                   ?disabled=${this._busy}
                   @click=${() => this._run({
 			type: "foyer/acknowledge",
@@ -1339,23 +1402,26 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
                 >
                   ${Z(e, "common.acknowledge")}
                 </button>`}
-          </div>` : F}
+          </div>` : L}
     `;
 	}
 	_head(e, t, n) {
 		let r = this._strings;
-		return N`
+		return F`
       <div class="head">
         <div class="name">${e}</div>
         <span class="state ${t}">${Z(r, `state.${t}`)}</span>
-        ${n ? N`<span class="state memory">${Z(r, "overview.memory")}</span>` : F}
+        ${n ? F`<span class="state memory">${Z(r, "overview.memory")}</span>` : L}
+        ${this._status?.walk_test ? F`<span class="state walk-chip" title=${Z(r, "walk.badge_title")}
+              >${Z(r, "walk.badge")}</span
+            >` : L}
       </div>
     `;
 	}
 	_countdown(e, t, n = !1) {
-		if (!t.timer || t.timer.kind === "siren") return F;
+		if (!t.timer || t.timer.kind === "siren") return L;
 		let r = Math.max(0, Math.round((Date.parse(t.timer.due) - (Date.now() + this._offset)) / 1e3)), i = Z(e, `timer.${t.timer.kind}`, { seconds: r });
-		return N`<div class="countdown">
+		return F`<div class="countdown ${t.timer.kind}">
       ${n ? Z(e, "card.area_countdown", {
 			area: t.name,
 			countdown: i
@@ -1364,7 +1430,31 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	}
 	_pendingLabel(e) {
 		let t = this._pending;
-		return t ? t.type === "foyer/disarm" ? Z(e, "card.disarm") : t.type === "foyer/bypass" ? Z(e, "zones.bypass") : t.type === "foyer/arm" ? t.force ? Z(e, "overview.force_arm") : Z(e, "card.arm") : Z(e, "card.code_confirm") : Z(e, "card.code_confirm");
+		if (!t) return Z(e, "card.code_confirm");
+		let n = this._targetOf(t);
+		switch (t.type) {
+			case "foyer/disarm": return Z(e, "card.confirm_disarm", { target: n });
+			case "foyer/bypass": return Z(e, "card.confirm_bypass", { target: n });
+			case "foyer/arm": return Z(e, t.force ? "card.confirm_force" : "card.confirm_arm", { target: n });
+			case "foyer/walk_test": return Z(e, "walk.end");
+			case "foyer/auto/cancel": return Z(e, "rules.cancel_now");
+			case "foyer/acknowledge": return Z(e, "common.acknowledge");
+			default: return Z(e, "card.code_confirm");
+		}
+	}
+	_pendingCaption(e) {
+		let t = this._pending;
+		if (!t) return;
+		let n = this._targetOf(t);
+		switch (t.type) {
+			case "foyer/disarm": return Z(e, "card.code_for_disarm", { target: n });
+			case "foyer/bypass": return Z(e, "card.code_for_bypass", { target: n });
+			case "foyer/arm": return Z(e, t.force ? "card.code_for_force" : "card.code_for_arm", { target: n });
+			case "foyer/walk_test": return Z(e, "card.code_for_walk");
+			case "foyer/auto/cancel": return Z(e, "card.code_for_cancel", { target: n });
+			case "foyer/acknowledge": return Z(e, t.target === "technical" ? "card.code_for_ack_technical" : "card.code_for_ack_incident");
+			default: return;
+		}
 	}
 	_renderPad(e) {
 		let t = [
@@ -1377,22 +1467,25 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 			"7",
 			"8",
 			"9"
-		], n = this._lockedUntil;
-		return N`
+		], n = this._lockedUntil, r = this._pendingCaption(e), i = this._feedback?.pad && !(n && this._feedback.reason === "locked_out") ? this._feedback : void 0;
+		return F`
       <div class="pad" tabindex="0" @keydown=${(e) => this._padKey(e)}>
-        ${n ? N`<div class="locked" role="status">
+        ${r ? F`<div class="pad-for">${r}</div>` : L}
+        ${this._retype ? F`<div class="pad-note" role="status">${Z(e, "card.code_retype")}</div>` : L}
+        ${n ? F`<div class="locked" role="status">
               ${Z(e, "card.locked_until", { time: n.toLocaleTimeString(this.hass?.language, De(this.hass, {
 			hour: "2-digit",
 			minute: "2-digit"
 		})) })}
-            </div>` : F}
+            </div>` : L}
         <div class="display" aria-live="polite" aria-label=${Z(e, "card.code_entered")}>
-          ${this._code ? "•".repeat(this._code.length) : N`<span class="placeholder"
+          ${this._code ? "•".repeat(this._code.length) : F`<span class="placeholder"
                 >${Z(e, "card.code_hint", { n: this._codeLength })}</span
               >`}
         </div>
+        ${i ? F`<div class="pad-error" role="alert">${i.text}</div>` : L}
         <div class="keys">
-          ${t.map((e) => N`<button
+          ${t.map((e) => F`<button
               class="key"
               ?disabled=${this._busy}
               @click=${() => this._press(e)}
@@ -1409,14 +1502,14 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
           <button class="key" ?disabled=${this._busy} @click=${() => this._press("0")}>
             0
           </button>
-          ${this._pending ? N`<button
-                class="key word confirm"
-                ?disabled=${this._busy || !this._code}
-                @click=${() => this._run(this._pending)}
-              >
-                ${this._pendingLabel(e)}
-              </button>` : F}
         </div>
+        ${this._pending ? F`<button
+              class="key word confirm"
+              ?disabled=${this._busy || !this._code}
+              @click=${() => this._run(this._pending)}
+            >
+              ${this._pendingLabel(e)}
+            </button>` : L}
       </div>
     `;
 	}
@@ -1429,42 +1522,31 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	_renderKeypadLayout(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
-		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = this._isMaster ? t.scenarios : [], s = t.scenarios.find((e) => e.id === t.active_scenario_id);
-		return N`
+		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = {
+			type: "foyer/arm",
+			area_id: n?.id
+		}, s = {
+			type: "foyer/disarm",
+			...this._isMaster || !n ? {} : { area_ids: [n.id] }
+		}, c = t.scenarios.find((e) => e.id === t.active_scenario_id);
+		return F`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)}
-          ${this._head(this._isMaster ? s?.name ?? Z(e, "overview.master") : n?.name ?? "", r, i)}
-          ${this._isMaster ? t.areas.filter((e) => e.timer && e.timer.kind !== "siren").map((t) => this._countdown(e, t, !0)) : n ? this._countdown(e, n) : F}
+          ${this._head(this._isMaster ? c?.name ?? Z(e, "overview.master") : n?.name ?? "", r, i)}
+          ${this._isMaster ? t.areas.filter((e) => e.timer && e.timer.kind !== "siren").map((t) => this._countdown(e, t, !0)) : n ? this._countdown(e, n) : L}
           ${this._renderPad(e)}
           <div class="buttons">
-            ${a ? F : o.length ? o.map((e) => N`<button
-                      ?disabled=${this._busy}
-                      @click=${() => this._run({
-			type: "foyer/arm",
-			scenario_id: e.id
-		})}
-                    >
-                      ${e.name}
-                    </button>`) : N`<button
-                    ?disabled=${this._busy}
-                    @click=${() => this._run({
-			type: "foyer/arm",
-			area_id: n?.id
-		})}
-                  >
-                    ${Z(e, "card.arm")}
-                  </button>`}
-            ${a ? N`<button
-                  class="primary"
+            ${a || this._alarmRunning ? L : this._isMaster && t.scenarios.length ? this._scenarioButtons(e) : this._isPending(o) ? L : F`<button ?disabled=${this._busy} @click=${() => this._run(o)}>
+                      ${Z(e, "card.arm")}
+                    </button>`}
+            ${a && !this._isPending(s) ? F`<button
+                  class=${this._primary(!0)}
                   ?disabled=${this._busy}
-                  @click=${() => this._run({
-			type: "foyer/disarm",
-			...this._isMaster || !n ? {} : { area_ids: [n.id] }
-		})}
+                  @click=${() => this._run(s)}
                 >
-                  ${Z(e, "card.disarm")}
-                </button>` : F}
+                  ${this._disarmLabel(r, i)}
+                </button>` : L}
           </div>
           ${this._renderFeedback()}
         </div>
@@ -1472,36 +1554,39 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
     `;
 	}
 	_renderInlinePad(e) {
-		return this._codeUsed ? this._padOpen ? N`${this._renderPad(e)}
+		return !this._codeUsed && !this._pending ? L : !this._padOpen && !this._pending ? F`<button class="link pad-toggle" @click=${() => this._padOpen = !0}>
+        ${Z(e, "card.code_show")}
+      </button>` : F`${this._renderPad(e)}
       <button
         class="link pad-toggle"
         @click=${() => {
-			this._padOpen = !1, this._code = "", this._pending = void 0;
+			this._padOpen = !1, this._forget(), this._feedback?.pad && (this._feedback = void 0);
 		}}
       >
         ${Z(e, "card.code_hide")}
-      </button>` : N`<button class="link pad-toggle" @click=${() => this._padOpen = !0}>
-        ${Z(e, "card.code_show")}
-      </button>` : F;
+      </button>`;
+	}
+	get _padShown() {
+		return this._layout === "keypad" || this._layout !== "badge" && (this._codeUsed || !!this._pending) && (this._padOpen || !!this._pending);
 	}
 	_renderFeedback() {
 		let e = this._feedback;
-		if (!e) return F;
+		if (!e || e.pad && this._padShown) return L;
 		let t = this._strings;
-		return N`<div class="feedback ${e.warning ? "warning" : ""}" role="alert">
+		return F`<div class="feedback ${e.warning ? "warning" : ""}" role="alert">
       <div>${e.text}</div>
-      ${e.retry ? N`<button
+      ${e.retry ? F`<button
               class="force"
               ?disabled=${this._busy}
               @click=${() => this._run(e.retry)}
             >
               ${Z(t, "overview.force_arm")}
             </button>
-            <span class="force-hint">${Z(t, "overview.force_arm_hint")}</span>` : F}
+            <span class="force-hint">${Z(t, "overview.force_arm_hint")}</span>` : L}
     </div>`;
 	}
 	_message(e) {
-		return N`<ha-card><div class="content">${e}</div></ha-card>`;
+		return F`<ha-card><div class="content">${e}</div></ha-card>`;
 	}
 	static {
 		this.styles = [Ee, o`
@@ -1527,10 +1612,24 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
         font-size: 13px;
         color: var(--secondary-text-color);
       }
+      /* minmax(0, 1fr), not 1fr: a column may never grow to fit a word, or
+         "Cancella" at 220 px leaves 2, 5, 8 and 0 narrower than the rest. */
       .keys {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px;
+      }
+      .pad-for {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .pad-note {
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+      .pad-error {
+        color: var(--error-color);
+        font-size: 14px;
       }
       .key {
         padding: 14px 0;
@@ -1545,16 +1644,22 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
         opacity: 0.5;
         cursor: default;
       }
-      /* A word instead of a digit — "Clear", "Disarm" — so it is set
-         smaller to fit the same square. It does not span two columns, and
-         has never been asked to: the pad is three columns, and with a
-         pending command the last row fills exactly. */
+      /* A word instead of a digit — "Clear" — so it is set smaller to fit
+         the same square, and may break rather than widen its column. */
       .key.word {
-        font-size: 14px;
+        font-size: 13px;
+        padding: 14px 2px;
+        overflow-wrap: anywhere;
       }
+      /* The confirm key names an action and a target — "Inserisci Fuori
+         casa" — so it has a row of its own under the digits, and while it
+         is there it is the one primary action on the card. */
       .key.confirm {
+        width: 100%;
+        background: var(--primary-color);
         border-color: var(--primary-color);
-        color: var(--primary-color);
+        color: var(--text-primary-color, #fff);
+        font-size: 16px;
         font-weight: 500;
       }
       .pad-toggle {
@@ -1591,6 +1696,10 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
         font-size: 15px;
         font-weight: 500;
         font-variant-numeric: tabular-nums;
+      }
+      .countdown.entry {
+        font-size: 21px;
+        color: var(--error-color);
       }
       .blocking {
         margin: 8px 0 0;
@@ -1665,6 +1774,13 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
         background: none;
         padding: 0;
       }
+      /* At 220 px the chips wrap onto a second line rather than being cut
+         off at the badge's edge. */
+      .badge .state.auto-chip,
+      .badge .state.walk-chip {
+        padding: 2px 8px;
+        white-space: normal;
+      }
       .content.compact .head .name {
         font-size: 16px;
       }
@@ -1677,12 +1793,17 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
         background: var(--card-background-color);
         color: var(--primary-text-color);
       }
-      .blocking .link {
+      /* A link, not a button: "Exclude" beside a zone, and the toggle that
+         unfolds the pad — which, drawn as a full button, read as one more
+         action. Tall enough to hit with a finger all the same. */
+      .link {
         background: none;
         border: 0;
-        padding: 0;
+        padding: 0 4px;
+        min-height: 36px;
         color: var(--primary-color);
         font: inherit;
+        font-weight: 500;
         cursor: pointer;
       }
       .buttons {
@@ -1759,15 +1880,23 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
         border-left-color: var(--primary-color);
         background: color-mix(in srgb, var(--primary-color) 12%, transparent);
       }
+      /* Tinted, with the theme's text colour on top: white on a light-blue
+         or amber fill is too faint to read at a glance. */
       .state.auto-chip {
-        background: var(--primary-color);
-        color: var(--text-primary-color, #fff);
+        background: color-mix(in srgb, var(--primary-color) 20%, transparent);
+        color: var(--primary-text-color);
         font-weight: 600;
       }
       .state.walk-chip {
-        background: var(--warning-color, #c77700);
-        color: var(--text-primary-color, #fff);
+        background: color-mix(in srgb, var(--warning-color, #c77700) 28%, transparent);
+        color: var(--primary-text-color);
         font-weight: 600;
+      }
+      .state.auto-chip::before {
+        background: var(--primary-color);
+      }
+      .state.walk-chip::before {
+        background: var(--warning-color, #c77700);
       }
     `];
 	}
@@ -1802,17 +1931,17 @@ var Le = class extends q {
 	}
 	render() {
 		let e = this._strings;
-		if (!e || !this.hass) return F;
-		let t = Ae(this.hass);
-		return !this._config.entity && t.length && queueMicrotask(() => this._emit({ entity: t[0] })), N`
+		if (!e || !this.hass) return L;
+		let t = je(this.hass), n = Ae(this.hass).sort((e, n) => Number(n === t || n === $) - Number(e === t || e === $)), r = this._config.layout ?? "full";
+		return !this._config.entity && n.length && queueMicrotask(() => this._emit({ entity: n[0] })), F`
       <div class="editor">
         <label>
           <span>${Z(e, "card.editor_entity")}</span>
           <select
             @change=${(e) => this._emit({ entity: e.target.value })}
           >
-            ${t.map((t) => N`<option .value=${t} .selected=${Y(t === this._config.entity)}>
-                ${t === $ || t === je(this.hass) ? Z(e, "card.editor_master") : String(this.hass.states[t]?.attributes.friendly_name ?? t)}
+            ${n.map((n) => F`<option .value=${n} .selected=${Y(n === this._config.entity)}>
+                ${n === $ || n === t ? Z(e, "card.editor_master") : String(this.hass.states[n]?.attributes.friendly_name ?? n)}
               </option>`)}
           </select>
         </label>
@@ -1826,13 +1955,11 @@ var Le = class extends q {
 			"compact",
 			"badge",
 			"keypad"
-		].map((t) => N`<option
-                .value=${t}
-                .selected=${Y(t === (this._config.layout ?? "full"))}
-              >
+		].map((t) => F`<option .value=${t} .selected=${Y(t === r)}>
                 ${Z(e, `card.layout_${t}`)}
               </option>`)}
           </select>
+          <span class="hint">${Z(e, `card.layout_hint_${r}`)}</span>
         </label>
         <p class="hint">${Z(e, "card.editor_hint")}</p>
       </div>
