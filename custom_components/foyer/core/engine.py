@@ -572,6 +572,9 @@ class _Run:
         # Filled by check_arming, and empty for every event that is not an
         # arming attempt: the warning belongs to the attempt (part 1 decision 2).
         self.low_battery_zones: tuple[str, ...] = ()
+        # Which setting asked for the code, when a request was refused for
+        # want of one (§8.2): for the UI to name it.
+        self.code_required_by: tuple[str, str | None] | None = None
         # Who is asking. decide() fills it from the event; a timer or a zone
         # opening has no actor, and the default one identifies nobody.
         self.actor = Actor()
@@ -2679,6 +2682,9 @@ class _Run:
             )
             and not actor.code_verified
         ):
+            self.code_required_by = authz.code_required_by(
+                self.config, operation, areas=areas, scenario=scenario
+            )
             return Reason.CODE_REQUIRED
         self.code_cleared()
         return None
@@ -3961,6 +3967,11 @@ class _Run:
             blocking_zones=outcome.blocking,
             bypassed_zones=tuple(self.new_bypasses),
             low_battery_zones=self.low_battery_zones,
+            code_required_by=(
+                self.code_required_by
+                if outcome.reason is Reason.CODE_REQUIRED
+                else None
+            ),
             occurrences=occurrences,
             actions=(*self.extra, *steps, *plan.intents, *chime, *countdown),
             inhibited=(*plan.inhibited, *chime_inhibited),

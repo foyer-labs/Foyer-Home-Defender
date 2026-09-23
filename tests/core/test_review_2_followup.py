@@ -431,3 +431,34 @@ def test_putting_somebody_on_a_scenarios_list_touches_people():
     # A scenario renamed is not a person.
     renamed = tuple(replace(s, name=s.name + " 2") for s in before.scenarios)
     assert not touches_people(before, replace(before, scenarios=renamed))
+
+
+# --- §8.2: the UI names the area that is asking ------------------------------------
+
+
+def test_a_refusal_for_want_of_a_code_says_which_area_asked():
+    config = _with_codes()
+    config = replace(
+        config,
+        areas=tuple(
+            replace(a, require_code_to_arm=True) if a.id == "garage" else a
+            for a in config.areas
+        ),
+    )
+    world = World(config)
+    decision = world.arm("away")
+    assert decision.reason is Reason.CODE_REQUIRED
+    assert decision.code_required_by == ("area", "garage")
+
+
+def test_the_installations_policy_is_named_when_nothing_explicit_asked():
+    world = _armed_house()
+    world.config = replace(world.config, users=_with_codes().users)
+    decision = world.disarm()
+    assert decision.reason is Reason.CODE_REQUIRED
+    assert decision.code_required_by == ("policy", None)
+
+
+def test_an_accepted_request_names_nobody():
+    world = World()
+    assert world.arm("away").code_required_by is None

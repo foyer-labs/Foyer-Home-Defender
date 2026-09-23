@@ -1522,8 +1522,23 @@ class FoyerSystem:
             "low_battery_zones": [
                 {"id": z, "name": names.get(z, z)} for z in decision.low_battery_zones
             ],
+            # §8.2: the UI names the area that is asking.
+            "code_required_by": self._asked_by(decision.code_required_by),
             "state": self.status(ha_user),
         }
+
+    def _asked_by(self, by: tuple[str, str | None] | None) -> dict[str, Any] | None:
+        if by is None:
+            return None
+        kind, item_id = by
+        named = (
+            self.config.area(item_id)
+            if kind == "area"
+            else self.config.scenario(item_id)
+            if kind == "scenario"
+            else None
+        )
+        return {"kind": kind, "id": item_id, "name": named.name if named else None}
 
     def refusal(self, reason: Reason, ha_user: Any = None) -> dict[str, Any]:
         """The same shape for a request refused before the engine saw it.

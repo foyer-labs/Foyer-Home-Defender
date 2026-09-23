@@ -122,6 +122,28 @@ def code_required(
     return required
 
 
+def code_required_by(
+    config: FoyerConfig,
+    operation: Operation,
+    *,
+    areas: tuple[Area, ...] = (),
+    scenario: Scenario | None = None,
+) -> tuple[str, str | None]:
+    """Which setting asked for the code, once `code_required` has said yes.
+
+    §8.2: "the UI names the area that is asking". The first area whose own
+    setting asks, else the scenario if its own setting does, else the
+    installation's policy. Read by the panel and the card to say who is
+    asking; it grants nothing and refuses nothing.
+    """
+    for area in areas:
+        if _area_setting(area, operation):
+            return ("area", area.id)
+    if _scenario_setting(scenario, operation):
+        return ("scenario", scenario.id if scenario else None)
+    return ("policy", None)
+
+
 def _area_setting(area: Area | None, operation: Operation) -> bool | None:
     if area is None:
         return None

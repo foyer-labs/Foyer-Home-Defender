@@ -2944,6 +2944,9 @@ class Decision:
     # the morning it matters (Phase 3 part 1 decision 2). What to do about
     # them is the caller's: excluding one is an ordinary manual bypass.
     low_battery_zones: tuple[str, ...] = ()
+    # Which setting asked for the code, on a refusal for want of one: an
+    # area's, a scenario's or the installation's policy (§8.2).
+    code_required_by: tuple[str, str | None] | None = None
     occurrences: tuple[Occurrence, ...] = ()
     actions: tuple[ActionIntent, ...] = ()
     # What the walk test held back (§11.3, part 2 decision 1). These intents
