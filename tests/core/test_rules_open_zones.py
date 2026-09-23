@@ -188,3 +188,102 @@ def test_a_rule_refused_by_a_zone_that_may_not_be_bypassed_retries_once_shut():
     decision = world.advance(121)
     (outcome,) = _occurrences(decision, Moment.AUTO_OUTCOME)
     assert outcome.detail["outcome"] == "armed_later"
+
+
+# --- what the review of these three found -------------------------------------------
+
+
+def test_a_cancelled_retry_leaves_no_armed_later_behind():
+    from custom_components.foyer.core.models import CancelAutoAction
+
+    world = World(house())
+    world.set(WINDOW, "on")
+    leave(world)
+    world.advance(30 * 60)
+    world.advance(121)  # refused, not armed
+    world.set(WINDOW, "off")  # retry: a new countdown
+    assert world.state.pending_rules
+    world.send(CancelAutoAction(world.state.pending_rules[0].id))
+    assert not any(rt.retrying for rt in world.state.rules.values())
+
+
+def test_a_time_rule_refused_says_it_will_not_try_again_and_does_not():
+    """Decision 127: an instant has one turn, and the message says so."""
+    from datetime import timedelta
+
+    from custom_components.foyer.core.models import RuleTriggerKind
+
+    from .helpers import NOW
+
+    at = (NOW + timedelta(minutes=2)).strftime("%H:%M")
+    world = World(house(kind=RuleTriggerKind.TIME, at=at, entity_ids=()))
+    world.set(WINDOW, "on")
+    world.advance(3 * 60)  # 23:00 comes: the countdown starts
+    decision = world.advance(121)
+    (outcome,) = _occurrences(decision, Moment.AUTO_OUTCOME)
+    assert outcome.detail["outcome"] == "not_armed_once"
+    world.set(WINDOW, "off")
+    world.advance(600)
+    assert world.states()["ground"] == "disarmed"
+
+
+def test_a_zone_the_rule_would_exclude_does_not_hold_back_its_retry():
+    """A stuck zone refused the arming; once it shuts, the open window the
+    rule excludes is no reason to keep waiting."""
+    from .helpers import PATIO
+
+    config = house(exclude_open_zones=True)
+    config = replace(
+        config,
+        zones=tuple(
+            replace(z, bypassable=False, arm_policy=type(z.arm_policy).BLOCK)
+            if z.id == "patio"
+            else z
+            for z in config.zones
+        ),
+    )
+    world = World(config)
+    world.set(WINDOW, "on")
+    world.set(PATIO, "on")
+    leave(world)
+    world.advance(30 * 60)
+    world.advance(121)
+    assert world.states()["ground"] == "disarmed"
+    world.set(PATIO, "off")  # the window is still open
+    decision = world.advance(121)
+    (outcome,) = _occurrences(decision, Moment.AUTO_OUTCOME)
+    assert outcome.detail["outcome"] == "excluding"
+    assert "window" in world.state.bypassed
+
+
+def test_a_zone_excluded_by_its_own_policy_is_not_the_rules_doing():
+    """An auto-bypass zone at a zero exit delay is not "armed excluding"."""
+    from .helpers import BATH
+
+    config = house()
+    config = replace(
+        config,
+        scenarios=tuple(replace(s, exit_delay_override=0) for s in config.scenarios),
+    )
+    world = World(config)
+    world.set(BATH, "on")
+    leave(world)
+    world.advance(30 * 60)
+    decision = world.advance(121)
+    assert _occurrences(decision, Moment.AUTO_OUTCOME) == []
+
+
+def test_an_exclusion_covers_only_what_was_open_when_it_armed():
+    """Not a forced arming: a zone opening during the exit delay fails the
+    arming as it always does, and the rule's contacts hear it."""
+    world = World(house(exclude_open_zones=True))
+    leave(world)
+    world.advance(30 * 60)
+    world.advance(121)  # arming, nothing open, nothing excluded
+    assert world.states()["ground"] == "arming"
+    world.set(WINDOW, "on")
+    decision = world.advance(120)
+    assert world.states()["ground"] == "disarmed"
+    (outcome,) = _occurrences(decision, Moment.AUTO_OUTCOME)
+    assert outcome.detail["outcome"] == "hold_expired"
+    assert outcome.detail["zones"] == "Window"

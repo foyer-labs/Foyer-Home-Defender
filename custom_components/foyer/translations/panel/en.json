@@ -1449,6 +1449,34 @@
     "auto_pending_switch_open_exclude": {
       "title": "Foyer: switching scenario in {seconds} s, excluding",
       "message": "Rule “{rule}” will switch to {scenario} — {zones} is open and will be excluded. Cancel to stop it."
+    },
+    "auto_outcome_not_armed_once": {
+      "title": "Foyer: not armed",
+      "message": "“{rule}” could not arm {scenario}: not ready — {zones}. It will not try again until its next time."
+    },
+    "auto_outcome_hold_expired": {
+      "title": "Foyer: not armed",
+      "message": "“{rule}” started arming {scenario}, but {zones} was still open when the exit delay ended: that part of the house is not armed."
+    },
+    "auto_outcome_not_armed_switch": {
+      "title": "Foyer: scenario not changed",
+      "message": "“{rule}” could not switch to {scenario}: not ready — {zones}. It will switch by itself as soon as they are."
+    },
+    "auto_outcome_not_armed_once_switch": {
+      "title": "Foyer: scenario not changed",
+      "message": "“{rule}” could not switch to {scenario}: not ready — {zones}. It will not try again until its next time."
+    },
+    "auto_outcome_armed_later_switch": {
+      "title": "Foyer: switching scenario now",
+      "message": "“{rule}” is switching to {scenario} now: the zones that were not ready are ready."
+    },
+    "auto_outcome_excluding_switch": {
+      "title": "Foyer: scenario changed with zones excluded",
+      "message": "“{rule}” switched to {scenario} excluding what was open: {zones}. They stay excluded until you disarm."
+    },
+    "auto_outcome_failed_switch": {
+      "title": "Foyer: scenario not changed",
+      "message": "“{rule}” could not switch to {scenario}. The log says why."
     }
   },
   "chime_mode": {

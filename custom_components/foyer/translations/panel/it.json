@@ -1449,6 +1449,34 @@
     "auto_pending_switch_open_exclude": {
       "title": "Foyer: cambia scenario fra {seconds} s, escludendo",
       "message": "La regola «{rule}» passerà a {scenario} — {zones} è aperta e verrà esclusa. Annulla per fermarla."
+    },
+    "auto_outcome_not_armed_once": {
+      "title": "Foyer: non inserita",
+      "message": "«{rule}» non ha potuto inserire {scenario}: non pronte — {zones}. Non riproverà fino alla prossima volta."
+    },
+    "auto_outcome_hold_expired": {
+      "title": "Foyer: non inserita",
+      "message": "«{rule}» ha iniziato a inserire {scenario}, ma {zones} era ancora aperta alla fine del ritardo di uscita: quella parte della casa non è inserita."
+    },
+    "auto_outcome_not_armed_switch": {
+      "title": "Foyer: scenario non cambiato",
+      "message": "«{rule}» non ha potuto passare a {scenario}: non pronte — {zones}. Passerà da sola appena lo saranno."
+    },
+    "auto_outcome_not_armed_once_switch": {
+      "title": "Foyer: scenario non cambiato",
+      "message": "«{rule}» non ha potuto passare a {scenario}: non pronte — {zones}. Non riproverà fino alla prossima volta."
+    },
+    "auto_outcome_armed_later_switch": {
+      "title": "Foyer: cambio di scenario in corso",
+      "message": "«{rule}» sta passando a {scenario} ora: le zone che non erano pronte ora lo sono."
+    },
+    "auto_outcome_excluding_switch": {
+      "title": "Foyer: scenario cambiato con zone escluse",
+      "message": "«{rule}» è passata a {scenario} escludendo ciò che era aperto: {zones}. Restano escluse fino al disinserimento."
+    },
+    "auto_outcome_failed_switch": {
+      "title": "Foyer: scenario non cambiato",
+      "message": "«{rule}» non ha potuto passare a {scenario}. Il registro dice perché."
     }
   },
   "chime_mode": {

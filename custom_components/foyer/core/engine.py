@@ -581,6 +581,9 @@ class _Run:
         # Filled by check_arming, and empty for every event that is not an
         # arming attempt: the warning belongs to the attempt (part 1 decision 2).
         self.low_battery_zones: tuple[str, ...] = ()
+        # What a rule excluded on its own opt-in (decision 126), for the
+        # message that tells its contacts.
+        self.rule_excluded: list[str] = []
         # Which setting asked for the code, when a request was refused for
         # want of one (§8.2): for the UI to name it.
         self.code_required_by: tuple[str, str | None] | None = None
@@ -2923,6 +2926,26 @@ class _Run:
 
     def arming_failed(self, area_id: str, zones: list[Zone], reason: Reason) -> None:
         rt = self.areas[area_id]
+        rule = self.config.rule(rt.rule_id) if rt.rule_id else None
+        if rule is not None:
+            # An arming a rule started failed at the end of its exit delay:
+            # the rule's contacts heard it would arm, and must hear that it
+            # did not (decision 124, review).
+            self.occur(
+                Moment.AUTO_OUTCOME,
+                channel=AUTO_RULE_CHANNEL,
+                scenario_id=rt.scenario_id,
+                area_id=area_id,
+                zone_ids=tuple(z.id for z in zones),
+                detail={
+                    "rule": rule.name,
+                    "rule_id": rule.id,
+                    "outcome": "hold_expired",
+                    "zones": ", ".join(z.name for z in zones),
+                    "reason": reason.value,
+                    "contacts": ",".join(rule.notify_contact_ids),
+                },
+            )
         self.occur(
             Moment.ARM_FAILED,
             area_id=area_id,
@@ -2959,6 +2982,7 @@ class _Run:
         force: bool,
         skip_exit_delay: bool = False,
         keep_armed: frozenset[str] = frozenset(),
+        exclude_open: bool = False,
     ) -> _Outcome:
         """Arm a scenario, or switch to it while armed (decisions 7 and 9).
 
@@ -3007,11 +3031,32 @@ class _Run:
             # A switch also disarms what only the old scenario armed, so the
             # areas it leaves behind have their say in the policy too.
             *(((Operation.CHANGE_SCENARIO, (*to_arm, *leaving)),) if switching else ()),
-            *(((Operation.FORCE_ARM, to_arm),) if force else ()),
+            *(((Operation.FORCE_ARM, to_arm),) if force or exclude_open else ()),
         ):
             reason = self.authorize(operation, area_ids=tuple(areas), scenario=scenario)
             if reason is not None:
                 return _reject(reason)
+        if exclude_open:
+            # A rule's own opt-in (decision 126): the zones open now, if
+            # every one may be bypassed, and nothing else. Not a forced
+            # arming — a zone that opens during the exit delay, or an
+            # arm-after-closing zone still open when its hold runs out, is
+            # treated as it always is, never covered by it (review).
+            faulted, open_ = self.blockers(to_arm)
+            if faulted:
+                return _reject(Reason.ZONE_FAULT, tuple(z.id for z in faulted))
+            stuck = tuple(z.id for z in open_ if not z.bypassable)
+            if stuck:
+                return _reject(Reason.ZONE_NOT_BYPASSABLE, stuck)
+            if open_:
+                self.occur(
+                    Moment.FORCED_ARM,
+                    scenario_id=scenario.id,
+                    zone_ids=tuple(z.id for z in open_),
+                    channel=self.channel,
+                )
+                self.bypass(open_, BypassReason.FORCED)
+                self.rule_excluded = [z.id for z in open_]
         outcome, to_bypass = self.check_arming(to_arm, force)
         if not outcome.accepted:
             return outcome
@@ -3365,7 +3410,12 @@ class _Run:
                 # next time it becomes true, and whatever blocked it is over.
                 return (
                     replace(
-                        runtime, since=None, latched=False, blocked=None, seen=True
+                        runtime,
+                        since=None,
+                        latched=False,
+                        blocked=None,
+                        seen=True,
+                        retrying=False,
                     ),
                     False,
                     None,
@@ -3450,10 +3500,19 @@ class _Run:
         if runtime.blocked is not RuleBlock.NOT_READY_REFUSED:
             return
         scenario = self.config.scenario(rule.scenario_id)
-        faulted, open_ = self.blockers(tuple(scenario.areas) if scenario else ())
+        faulted, open_ = self.blockers(self.to_arm(scenario))
+        if rule.exclude_open_zones:
+            # What the rule would exclude is not what it waits for: only a
+            # fault, or a zone it may not bypass, keeps it back (review).
+            open_ = [z for z in open_ if not z.bypassable]
         if not faulted and not open_:
             self.rules_runtime[rule.id] = replace(
-                runtime, latched=False, blocked=None, retrying=True
+                runtime,
+                latched=False,
+                blocked=None,
+                # Only a condition tries again; an instant had its one turn
+                # (decision 127), and "armed later" would never come.
+                retrying=rule.trigger.level,
             )
 
     def spend(self, rule: AutoRule) -> None:
@@ -3713,6 +3772,10 @@ class _Run:
             return _reject(reason)
         for pending in targets:
             self.pending_rules.remove(pending)
+            # A cancelled retry is over: the next arming is an ordinary one,
+            # not "armed later" (review).
+            if (kept := self.rules_runtime.get(pending.rule_id)) is not None:
+                self.rules_runtime[pending.rule_id] = replace(kept, retrying=False)
             self.occur(
                 Moment.AUTO_CANCELLED,
                 channel=self.channel or AUTO_RULE_CHANNEL,
@@ -3895,19 +3958,10 @@ class _Run:
         if decided.action is RuleActionKind.DISARM:
             return self.disarm(decided.area_ids)
         scenario = self.config.scenario(decided.scenario_id)
-        force = False
-        if rule.exclude_open_zones and scenario is not None:
-            # Open zones only, and only bypassable ones (decision 126): the
-            # forced arming refuses a zone that may not be bypassed, and a
-            # fault is refused here, because a silent sensor is never
-            # "all quiet" (INV-4) and nobody chose to leave it uncovered.
-            faulted, _open = self.blockers(tuple(scenario.areas))
-            if faulted:
-                return _reject(Reason.ZONE_FAULT, tuple(z.id for z in faulted))
-            force = True
         return self.arm_scenario(
             scenario,
-            force=force,
+            force=False,
+            exclude_open=rule.exclude_open_zones,
             # A switch never disarms a perimeter area: those stay armed,
             # outside any scenario, and the master then reports
             # armed_custom_bypass (§13, part 2 decision 6).
@@ -4093,6 +4147,18 @@ class _Run:
             )
         return tuple(intents)
 
+    def to_arm(self, scenario: Scenario | None) -> tuple[str, ...]:
+        """The areas arming this scenario would arm: those of it disarmed
+        now, as ``arm_scenario`` computes them. An area already armed is not
+        waiting on its zones (review)."""
+        if scenario is None:
+            return ()
+        return tuple(
+            a
+            for a in scenario.areas
+            if a in self.areas and self.areas[a].state is AreaState.DISARMED
+        )
+
     def not_ready_detail(
         self, rule: AutoRule, decided: _RuleDecision
     ) -> dict[str, str]:
@@ -4103,7 +4169,7 @@ class _Run:
         scenario = self.config.scenario(decided.scenario_id)
         if scenario is None:
             return {}
-        faulted, open_ = self.blockers(tuple(scenario.areas))
+        faulted, open_ = self.blockers(self.to_arm(scenario))
         if not faulted and not open_:
             return {}
         names = ", ".join(z.name for z in (*open_, *faulted))
@@ -4128,16 +4194,20 @@ class _Run:
         """
         names = {z.id: z.name for z in self.config.zones}
         if outcome.accepted:
-            if self.new_bypasses:
+            if self.rule_excluded:
+                # Only what the rule itself excluded: an automatic bypass of
+                # a zone's own policy is not its doing (review).
                 kind = "excluding"
-                zones = [names.get(z, z) for z in self.new_bypasses]
+                zones = [names.get(z, z) for z in self.rule_excluded]
             elif retrying:
                 kind = "armed_later"
                 zones = []
             else:
                 return
         elif outcome.reason in self._ZONE_REFUSALS:
-            kind = "not_armed"
+            # A condition tries again once the zones are ready; an instant
+            # does not, and says so (decision 127).
+            kind = "not_armed" if rule.trigger.level else "not_armed_once"
             zones = [names.get(z, z) for z in outcome.blocking]
         elif outcome.reason is Reason.INVALID_STATE:
             return
@@ -4152,7 +4222,12 @@ class _Run:
             detail={
                 "rule": rule.name,
                 "rule_id": rule.id,
-                "outcome": kind,
+                # A switch is told in a switch's words.
+                "outcome": (
+                    f"{kind}_switch"
+                    if decided.action is RuleActionKind.SWITCH
+                    else kind
+                ),
                 "zones": ", ".join(zones),
                 "reason": outcome.reason.value if outcome.reason else "",
                 "contacts": ",".join(rule.notify_contact_ids),
