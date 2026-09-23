@@ -339,6 +339,16 @@ silenzio è la peggior risposta possibile. E la mattina che aspetti qualcuno, un
 con un nome — «Tecnico della caldaia, 09:00–13:00» — tiene ferme le regole e,
 se vuoi, mette il solo perimetro al posto di quello che avrebbero inserito.
 
+Spegni la condizione che ogni zona sia pronta, e una finestra aperta non ferma
+più la regola in silenzio: il conto alla rovescia la nomina e dice che la casa
+non può inserirsi finché non viene chiusa, e la regola si inserisce da sola
+appena lo è. I contatti della regola vengono avvisati di com'è andata — non
+inserita e perché, poi inserimento in corso — anche nelle loro ore di
+silenzio. In alternativa, con l'opzione **Inserisci comunque, escludendo le
+zone aperte** la regola si inserisce lo stesso: spenta di default, esclude
+solo le zone aperte che si possono escludere, mai una zona guasta, e il
+registro lo segna come inserimento forzato.
+
 **Inserire e disinserire non sono trattati come ugualmente sicuri.** Il
 disinserimento automatico esiste, è spento finché non lo accendi, e non può
 mai agire su un'area che hai segnato come perimetrale. In Home Assistant la presenza è

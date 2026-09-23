@@ -302,6 +302,15 @@ somebody is expected, a named window — "Boiler engineer, 09:00–13:00" — ho
 the rules back, and can put the perimeter alone in place of what they would
 have armed.
 
+Turn off the check that every zone is ready, and an open window no longer
+holds the rule back quietly: the countdown names it and says the house cannot
+arm until it is closed, and the rule arms by itself once it is. The rule's
+contacts are told what came of it — not armed and why, then arming now —
+even in their quiet hours. A rule can instead be set to **Arm anyway,
+excluding open zones**: off by default, it excludes only open zones that
+may be excluded, never one in fault, and the log records it as a forced
+arming.
+
 **Arming and disarming are not treated as equally safe.** Automatic disarming
 exists, is off until you turn it on, and can never act on an area you marked
 as the perimeter. Presence in Home Assistant is inferred from a phone: a

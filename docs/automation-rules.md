@@ -37,6 +37,7 @@ are worth reading before writing a rule:
 | **Active window** | weekdays plus a time range; outside it the rule does not exist |
 | **Guards** | only if currently disarmed · only if every zone is ready · only if no interior zone has moved for N minutes |
 | **Grace period** | an actionable notification with a countdown and a **Cancel** button before the action runs. 120 s for an arming, 0 for a disarming, up to 900 s |
+| **Open zones** | off by default: an open zone stops the arming, and the rule arms by itself once it closes · on: **Arm anyway, excluding open zones** — only the open zones that may be excluded. [Below](#when-the-house-is-not-ready) |
 | **Suspension** | until a date and time · skip the next occurrence · a named expected-visitor window · the global switch |
 
 ### Presence-based arming, from the start
@@ -97,7 +98,7 @@ finally shut" would be a different rule from the one somebody wrote.
 | Guard | What it catches |
 |---|---|
 | Only if currently disarmed | The house is already armed, or somebody is walking out through an exit delay |
-| Only if every zone is ready | An open window, or a zone in fault. Without it the rule would try to arm and fail, which is a louder answer than not trying |
+| Only if every zone is ready | An open window, or a zone in fault. With it on, the rule does not start at all; with it off, the countdown starts anyway and says what is not ready — [below](#when-the-house-is-not-ready) |
 | Only if no interior motion for N minutes | The flat phone battery: somebody is in the house, and their phone is not telling anybody |
 
 The third one reads the zones themselves — an interior zone that is active
@@ -114,6 +115,85 @@ the row is written once, when the block begins, because the rule is
 re-evaluated at every wake-up and a row a minute would bury the log. For a
 `time` or an arrival, every blocked occurrence gets its own row: Monday's is
 not an answer to Tuesday's.
+
+### When the house is not ready
+
+Everybody has left and the bathroom window is open. What happens depends on
+the "ready" guard.
+
+**With "Only if every zone is ready" on** — as a new rule has it — the rule
+does not start. There is no countdown and no message; the log gets one
+`auto_blocked` row under `system`, and the rule starts its countdown as soon
+as the window is shut.
+
+**With it off**, the countdown starts anyway and says what is wrong:
+
+- **The countdown names the open zone.** *"Nobody seems to be in, so “Arm
+  when empty” will arm Away — but Bathroom window is not ready, and it cannot
+  arm until it is. Cancel to stop it."* A zone in fault is named the same
+  way.
+- **By default the rule forces nothing.** When the countdown ends with the
+  window still open, the arming is refused and the house stays disarmed.
+  The rule does not retry on a timer: it arms by itself as soon as the
+  window closes, after a new countdown.
+- **The rule's contacts are told the outcome** — the same contacts its
+  countdown goes to. First *"“Arm when empty” could not arm Away: not ready
+  — Bathroom window. It will arm by itself as soon as they are."*, then,
+  under the title *Foyer: arming now*, a message saying the zones that were
+  not ready are ready. An arming refused for anything else gets *"could not
+  arm Away. The log says why."* An arming that went as the countdown
+  announced gets no second message.
+- **These messages go through quiet hours.** The countdown does not — it is
+  held like any other warning — but the outcome is about a house the
+  household believes armed and is not, and that reaches them at any hour.
+
+A `time` rule — and any rule triggered by an instant, such as an arrival —
+is the exception, as it is for the guards: its occurrence happened once,
+and a window shut at 23:02 is not another 23:00. Its message says so
+instead: *"…not ready — Bathroom window. It will not try again until its
+next time."* An arming the rule started that fails at the end of the exit
+delay, because a zone opened while everybody was leaving, is told as well:
+the exclusion covers only what was open when the rule armed.
+
+#### Arm anyway, excluding open zones
+
+A rule can be told to arm with the window open. The option is **Arm anyway,
+excluding open zones**, beside the guards. It is off by default, and the
+panel warns when it is switched on: it is a forced arming nobody types a
+code for, and the house arms with that window uncovered.
+
+- **The countdown says so**: *"…— Bathroom window is open and will be
+  excluded. Cancel to stop it."*
+- **It excludes only zones that are open and may be excluded.** A zone whose
+  **May be excluded** is off still stops the arming, and the rule waits for
+  it to close like any other.
+- **It never excludes a zone in fault or unavailable.** A sensor that has
+  gone silent is not "all quiet" (INV-4), and nobody chose to leave it
+  uncovered: the arming is refused and the contacts are told, as above.
+- **What it excludes stays excluded until the house is disarmed**, as with
+  any forced arming. Closing the window does not bring it back into the
+  armed house.
+- **It is logged as a forced arming**: a `forced_arm` row naming the
+  excluded zones, on channel `auto_rule` with the rule's name. The contacts
+  are told *"“Arm when empty” armed Away excluding what was open: Bathroom
+  window. They stay excluded until you disarm."*
+
+It does nothing when **Only if every zone is ready** is on: that guard stops
+the rule before any countdown, so there is never an open zone to exclude.
+The panel says so beside the option.
+
+#### Each zone's own arm policy still comes first
+
+Only zones whose **If open when arming** is **Block arming** stop an arming,
+so only those are named in the countdown or excluded by the rule. The
+others behave as they do for a person arming by hand:
+
+| The zone's policy | With the window open when the rule arms |
+|---|---|
+| **Block arming** | named in the countdown; refused, or excluded by the rule's option |
+| **Exclude automatically** | excluded by its own policy and announced, and included again by itself once closed — not held until disarm |
+| **Arm after closing** | the arming goes ahead; after the exit delay it waits for the zone to close, and fails if it stays open too long |
+| **Ignore** | arms regardless; the zone fires the next time it opens |
 
 ### The active window
 
@@ -232,7 +312,9 @@ What the log records:
 | Row | Category | When |
 |---|---|---|
 | `armed` / `disarmed`, `channel: auto_rule`, with the rule's name | `arming` | A rule acted |
-| `auto_pending` | `system` | A countdown started |
+| `auto_pending` | `system` | A countdown started, naming any zone that was not ready |
+| `auto_outcome` | `system` | The rule's contacts were told an arming did not go as announced: not armed, armed later, or armed with zones excluded |
+| `forced_arm`, `channel: auto_rule`, with the rule's name | `security` | A rule armed excluding open zones, which it names |
 | `auto_cancelled` | `system` | Somebody pressed Cancel, with who and through which path |
 | `auto_blocked` | `system` | A guard, a suspension or the switch stopped a rule |
 | `auto_suspension_set` / `auto_suspension_cleared` | `system` | A suspension was created, used, lifted or expired |
@@ -249,7 +331,9 @@ What the log records:
 - **Quiet hours still apply** to the countdown's notification. A contact whose
   quiet window is on, with a threshold above a warning, does not hear it — and
   the countdown still runs. Give at least one contact a channel that gets
-  through, or set the grace period to 0 and know that it acts at once.
+  through, or set the grace period to 0 and know that it acts at once. The
+  message that follows an arming that did not go as announced is the
+  exception: it goes through quiet hours.
 - **A person entity Home Assistant cannot read is never taken as absence.** An
   `unknown` or `unavailable` person is not evidence that nobody is in, which is
   the same rule INV-4 applies to zones.
@@ -272,8 +356,8 @@ What the log records:
   the escalation (§7.2) — a person may do that, and an inference from a phone
   walking through the door may not.
 - **An arming the house refused is not retried on a timer.** If a window was
-  open, the rule tries again when the areas it wants are ready, and not
-  before. Anything else it was refused for waits like a rule that has had its
+  open — or a zone in fault, or an open zone the rule could not exclude — the
+  rule tries again when the areas it wants are ready, and not before. Anything else it was refused for waits like a rule that has had its
   turn: until its condition goes false and true again.
 
 ---
