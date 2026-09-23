@@ -916,7 +916,9 @@ components:
               coordinator_down_since: {type: [string, 'null'], format: date-time}
         unreachable_zones:
           type: array
-          description: Zones unreadable for long enough to need a repair.
+          description: |
+            Zones unreadable for long enough to need a repair. After a code,
+            only those in the areas the code's owner may reach.
           items:
             type: object
             required: [id, name, since, days]

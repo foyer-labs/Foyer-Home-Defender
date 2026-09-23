@@ -86,6 +86,8 @@ DEFAULT_LOG_ROWS = 20
 # Who is unlocked, until when, and with whose code. In memory on purpose: a
 # restart ends every unlock, which is the safe direction for it to fail.
 _UNLOCKS = f"{DOMAIN}_device_unlocks"
+# The last log row each device's reader could see, for the stream's notice.
+_LOG_SEEN = f"{DOMAIN}_device_log_seen"
 
 
 @dataclass(slots=True)
@@ -275,10 +277,14 @@ def batteries_section(
     }
 
 
-def health_section(system: FoyerSystem) -> dict[str, Any]:
+def health_section(
+    system: FoyerSystem, areas: frozenset[str] | None = None
+) -> dict[str, Any]:
     """System health as a device may read it: how each part is doing, and
-    nobody's name, phone or service (review). The page keeps the rest."""
+    nobody's name, phone or service (review). The page keeps the rest. The
+    zones it names are only those of the reader's areas."""
     health = system.health_status()
+    zone_areas = {z.id: z.area_id for z in system.config.zones}
     mains = health.get("mains") or {}
     watchdog = health.get("watchdog") or {}
     return {
@@ -322,6 +328,7 @@ def health_section(system: FoyerSystem) -> dict[str, Any]:
                 "days": zone.get("days"),
             }
             for zone in health.get("unreachable_zones", [])
+            if areas is None or zone_areas.get(zone.get("id") or "") in areas
         ],
     }
 
@@ -351,6 +358,7 @@ async def async_log_section(
     scope = area_scope(person)
     areas = {a.id: a.name for a in config.areas}
     zones = {z.id: z.name for z in config.zones}
+    zone_areas = {z.id: z.area_id for z in config.zones}
     rows = [
         {
             "ts": row["ts"],
@@ -365,11 +373,29 @@ async def async_log_section(
         for row in answer["rows"]
         # Rows about an area the unlocking person may not reach are theirs
         # neither to read; rows about no area (the system's) are.
-        if scope is None or not row.get("area_id") or row["area_id"] in scope
+        if _row_visible(row, scope, zone_areas)
     ]
     more = offset + len(answer["rows"]) < int(answer["total"])
     following = offset + len(answer["rows"])
     return {"rows": rows, "next": f"o{following}" if more else None}
+
+
+def _row_visible(
+    row: Any, scope: frozenset[str] | None, zone_areas: dict[str, str]
+) -> bool:
+    """Whether a row is about an area the reader may reach.
+
+    A row that names a zone and no area (a refused exclusion, say) is about
+    the zone's area (review); one about neither is the system's, and shown.
+    """
+    if scope is None:
+        return True
+    area = _get(row, "area_id") or zone_areas.get(_get(row, "zone_id") or "")
+    return area is None or area in scope
+
+
+def _get(row: Any, key: str) -> Any:
+    return row.get(key) if isinstance(row, dict) else getattr(row, key, None)
 
 
 def _offset(cursor: str | None) -> int:
@@ -407,10 +433,18 @@ def fingerprints(
     if may(DeviceScope.BATTERIES):
         out["batteries"] = json.dumps(batteries_section(system, areas), sort_keys=True)
     if may(DeviceScope.HEALTH):
-        out["health"] = json.dumps(health_section(system), sort_keys=True, default=str)
+        out["health"] = json.dumps(
+            health_section(system, areas), sort_keys=True, default=str
+        )
     if may(DeviceScope.LOG):
+        # The last row this reader could see: a row about an area it may not
+        # reach must not announce itself either (review).
+        seen = hass.data.setdefault(_LOG_SEEN, {})
         row = system.last_row
-        out["log"] = "" if row is None else f"{row.ts.isoformat()}:{row.event_type}"
+        zone_areas = {z.id: z.area_id for z in system.config.zones}
+        if row is not None and _row_visible(row, areas, zone_areas):
+            seen[device.id] = f"{row.ts.isoformat()}:{row.event_type}"
+        out["log"] = seen.get(device.id, "")
     return out
 
 
@@ -470,10 +504,17 @@ def _drops(
     this device: its `disarm` scope, within its areas (review)."""
     if state is None:
         return None
+    current = state.active_scenario_id
+    if current is None or current == scenario.id:
+        return None
+    # Exactly what the engine drops (§4.6): the areas the current scenario
+    # armed. An area armed on its own is left as it is, and needs nothing.
     dropped = [
         area_id
         for area_id, rt in state.areas.items()
-        if rt.state is not AreaState.DISARMED and area_id not in scenario.areas
+        if rt.state is not AreaState.DISARMED
+        and rt.scenario_id == current
+        and area_id not in scenario.areas
     ]
     if not dropped:
         return None

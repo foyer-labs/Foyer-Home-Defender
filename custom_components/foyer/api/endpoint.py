@@ -561,7 +561,7 @@ class DeviceSectionView(HomeAssistantView):
         elif section == "batteries":
             body = device_api.batteries_section(system, areas)
         elif section == "health":
-            body = device_api.health_section(system)
+            body = device_api.health_section(system, areas)
         else:
             try:
                 limit = int(request.query.get("limit", device_api.DEFAULT_LOG_ROWS))

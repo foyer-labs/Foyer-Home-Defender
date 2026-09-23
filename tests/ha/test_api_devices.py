@@ -362,3 +362,32 @@ async def test_health_names_nobody(
     body = await (await _get(http, token, "health")).text()
     assert "Anna" not in body and "mobile_app_anna" not in body
     assert '"channels"' in body
+
+
+async def test_an_area_armed_on_its_own_does_not_count_as_dropped(
+    hass,
+    endpoint,  # noqa: F811
+):
+    """The engine disarms only what the current scenario armed: arming a
+    scenario after an area armed alone asks nothing more of the device."""
+    from custom_components.foyer.core.models import Scenario
+
+    http, token, device_id, _client = endpoint
+    system = hass.data[DOMAIN]
+    area = system.config.areas[0]
+    system.config = replace(
+        system.config,
+        scenarios=(
+            *system.config.scenarios,
+            Scenario(id="empty", name="Empty", areas=(), ha_master_state="armed_night"),
+        ),
+    )
+    _with(hass, device_id, scopes=frozenset({"status", "arm"}))
+    alone = await (
+        await _post(http, token, {"action": "arm", "area": area.name, "code": CODE})
+    ).json()
+    assert alone["success"], alone
+    answer = await (
+        await _post(http, token, {"action": "arm", "scenario": "Empty", "code": CODE})
+    ).json()
+    assert answer["reason"] != "scope_not_granted", answer

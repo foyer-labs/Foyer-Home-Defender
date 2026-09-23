@@ -369,3 +369,23 @@ def test_the_mqtt_reasons_are_the_endpoint_s_less_its_own():
     asyncapi = _enum(_load(ASYNCAPI), "Reason")
     assert openapi >= ENDPOINT_ONLY
     assert asyncapi == openapi - ENDPOINT_ONLY
+
+
+def test_the_health_section_reads_only_what_the_page_builds():
+    """health_section picks fields out of the page's health status with
+    ``.get``; a field renamed there would turn into null here with nothing
+    failing (review)."""
+    tree = _device_api()["tree"]
+    picked: set[str] = set()
+    for node in ast.walk(_function(tree, "health_section")):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "get"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            picked.add(node.args[0].value)
+    built = _keys(_tree(SYSTEM), "_health_status")
+    assert picked - {"id"} <= built | {"id"}, picked - built
