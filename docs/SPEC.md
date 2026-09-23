@@ -158,6 +158,17 @@ entities are Foyer talking to its own household, and there the rule is the
 opposite — say everything, because a system that hides what it knows is the
 failure this project exists to avoid.
 
+Two things are kept from view even inside. **Credentials**: the panel says
+that a code, a device's token, the acknowledgement webhook or the watchdog URL
+exists, and never reads one back; a token and the webhook's address are shown
+once, in the answer that generates them, and never again (decisions 128–130).
+Inside is read by more people than the one who set the credential — whoever
+holds `edit_config`, whoever finds the tablet — and a credential shown there
+can be carried out of the house. And **`duress`**: its row is read on the log
+page and in an export, never where a glance would find it, because the person
+who asked for help may be standing beside whoever made them (§8.1, decision
+133).
+
 ---
 
 ## 3. Architecture
@@ -384,9 +395,10 @@ scenario, and the two must not be confused:
 | `select.foyer_scenario`, the panel, the card | the chosen scenario | — (disarm is a separate command) |
 
 **Switching scenario while armed** (A → B): areas armed by A and absent from
-B are disarmed; areas in both stay armed and now belong to B; areas of B not
-yet armed go through their exit delay; areas armed on their own, outside any
-scenario, are left exactly as they are. A switch is refused while any area it
+B are disarmed; areas in both stay armed and now belong to B, keeping any
+alarm memory, because nothing armed them again (§5.2); areas of B not yet
+armed go through their exit delay and start clean; areas armed on their own,
+outside any scenario, are left exactly as they are. A switch is refused while any area it
 would touch is in `entry` or `triggered`: changing scenario must never silence
 an alarm without a disarm.
 
@@ -499,7 +511,7 @@ independent state holder.
 
 | From | Event | To | Notes |
 |---|---|---|---|
-| `disarmed` | `arm_request` accepted | `arming` | exit delay starts; skipped if delay is 0 |
+| `disarmed` | `arm_request` accepted | `arming` | exit delay starts; skipped if delay is 0. Alarm memory the area still holds is cleared, with `alarm_cleared`: the area starts clean |
 | `arming` | exit delay elapsed | `armed` | zones still open with `arm_policy = auto_bypass` are bypassed and logged |
 | `arming` | `disarm_request` accepted | `disarmed` | |
 | `arming` | zone with `arm_policy = block` still open at expiry | `disarmed` | arming fails, `arm_failed` event |
@@ -512,10 +524,25 @@ independent state holder.
 | `entry` | `disarm_request` accepted | `disarmed` | the normal homecoming path |
 | `entry` | instant zone triggers | `triggered` | entry delay does not protect other zones |
 | `triggered` | `disarm_request` accepted | `disarmed` | stops sirens and escalation |
-| `triggered` | siren cutoff elapsed | the pre-trigger state | sounders stop; alarm memory stays set until disarm. Triggered from `armed` or `entry` → `armed`; from `disarmed` (an `always_on` zone) → `disarmed`, never armed by the cutoff; from `arming` → `arming` resumes with its original exit deadline and the normal expiry checks |
+| `triggered` | siren cutoff elapsed | the pre-trigger state | sounders stop; alarm memory stays set until the area is disarmed or armed again. Triggered from `armed` or `entry` → `armed`; from `disarmed` (an `always_on` zone) → `disarmed`, never armed by the cutoff; from `arming` → `arming` resumes with its original exit deadline and the normal expiry checks, and keeps the memory: resuming an arming is not arming again |
 | `disarmed` with alarm memory | `disarm_request` accepted | `disarmed` | clears the memory; the only transition allowed from `disarmed` by a disarm |
 | any | `always_on` zone triggers | `triggered` | including from `disarmed` |
 | any | supervision/availability fault | `fault` overlay | `fault` is a flag alongside the state, not a replacement |
+
+**Alarm memory lasts until the area is disarmed or armed again** (decisions
+140, 141). It is there so that somebody learns an alarm happened while nobody
+was looking. An arming starts a new watch, and a memory carried into it would
+describe an earlier night on a house armed since — which is why real panels
+clear it at the next arming. It is cleared when an arming is accepted, for
+each area that arming takes out of `disarmed`, with `alarm_cleared` as a
+disarm raises it (§6.1) — whoever or whatever armed, an automatic rule
+included. Nothing else that looks like arming clears it: a refused arming
+leaves it, the cutoff resuming an interrupted arming is not a new one, an
+area that stays armed through a scenario switch was not armed again, and a
+walk test is not a watch (§11.3). An arming accepted and then failed when its
+exit delay ends (`arm_failed`) has cleared it already, and it does not come
+back. Clearing the memory is not taking note of the alarm: the incident and its escalation go on until somebody acknowledges
+it or disarms (§5.6).
 
 ### 5.3 Timers
 
@@ -526,7 +553,7 @@ independent state holder.
 | siren cutoff | global | 180 s | **hard max 900 s** (EN 50131 reference for external sounders) |
 | escalation steps | response profile | — | |
 | supervision | zone, per sensor | off | 60 s – 7 days |
-| walk test auto-exit | global | 15 min | mandatory, non-disableable |
+| walk test auto-exit | global | 15 min without a detection | 1–60 min; never later than 3 h from the start; mandatory, non-disableable |
 
 ### 5.4 Arming preconditions
 
@@ -613,7 +640,10 @@ So an **incident** is the unit, not the zone:
 - **One acknowledgement closes the whole incident.** Disarming an area the
   incident touched is an acknowledgement, as it is for escalation (§7.2);
   disarming an area it did not touch is not — whoever disarms the bedrooms in
-  the morning has not seen the alarm on the perimeter (decision 57).
+  the morning has not seen the alarm on the perimeter (decision 57). Arming is
+  never one, even when it clears the area's alarm memory (§5.2): arming asks
+  no code by default, and a lamp switched off is not somebody who has seen the
+  alarm.
 - The incident closes when it is acknowledged *and* every contributing area is
   disarmed or has returned to `armed`. A trigger after that opens a new incident.
 
@@ -662,7 +692,7 @@ A profile can attach actions to three distinct moments, not just alarms:
 | Moment | Events |
 |---|---|
 | **Alarm** | `entry_started`, `triggered`, `siren_cutoff`, `alarm_cleared`, `alarm_ended` |
-| **State change** | `armed`, `disarmed`, `arm_failed`, `forced_arm`, `zone_bypassed`, `code_rejected`, `lockout` |
+| **State change** | `armed`, `disarmed`, `arm_failed`, `forced_arm`, `zone_bypassed`, `code_rejected`, `lockout`, `duress` |
 | **System** | `zone_fault`, `low_battery`, `ha_restarted`, `walk_test_started`, `walk_test_ended` |
 
 `alarm_ended` belongs to one area and is raised once for each area an
@@ -672,11 +702,22 @@ moment for "switch the light off when the alarm is over", which an area's
 profile can answer; the acknowledgement of the incident belongs to no area
 and cannot serve (decision 105).
 
-`alarm_cleared` belongs to one area too, and is raised when a disarm clears
-that area's alarm memory — whether the siren is still sounding or its cutoff
-ran hours ago. It is not `alarm_ended`: the alarm can be over long before
-anybody comes home and clears it. It is the moment for "switch off the lamp
-that says an alarm happened while you were out" (decision 108).
+`alarm_cleared` belongs to one area too, and is raised when that area's alarm
+memory is cleared: by a disarm, whether the siren is still sounding or its
+cutoff ran hours ago, or by the next arming of that area (§5.2, decision
+140). It is not `alarm_ended`: the alarm can be over long before anybody comes
+home and clears it. It is the moment for "switch off the lamp that says an
+alarm happened while you were out" (decision 108).
+
+`duress` is raised once for every request made with a duress code (§8.1),
+whatever it asked for. It belongs to no area, so only the global default
+profile answers it. It always runs silent: the action kinds on the global
+silent list are left out, as for a silent zone (§6.2), because a siren
+answering a code nobody may know was used would tell the room exactly that. A
+persistent notification is the wrong answer too — it appears on every Home
+Assistant screen, the wall tablet included — and the profile editor says so.
+`duress` never escalates and is never held back by a walk test (decision
+132).
 
 ### 6.2 Action catalogue
 
@@ -813,6 +854,11 @@ over the whole state machine:
 `{{ zone }}` `{{ area }}` `{{ scenario }}` `{{ user }}` `{{ channel }}`
 `{{ time }}` `{{ date }}` `{{ state }}` `{{ open_zones }}` `{{ reason }}`
 `{{ incident_zones }}` — every zone that has joined the current incident (§5.6)
+`{{ operation }}` — what a request made with a duress code asked for: the
+operation of §8.2, or for a command that is none of them the name its
+service in §14.1 or its device `action` in §9.2.2 gives it (`disarm`,
+`bypass_zone`, `unlock`, `export_log`…). A duress message that cannot say
+what the person was made to do tells its contact half of it (decision 134)
 
 ### 6.5 Profile severity
 
@@ -829,8 +875,10 @@ precisely in the partial scenarios this project exists for: with *Windows only*
 armed, the internal door is unmonitored and a chime there is just as useful as
 with the system off.
 
-It needs no special case for walk test: during a walk test the area is genuinely
-armed, so its zones are monitored and no chime fires.
+No zone chimes during a walk test. An area the test armed is monitoring its
+zones; an area it could not arm, or left disarmed because of its alarm memory
+(§11.3), is not, and its chime is held back with every other action the test
+inhibits.
 
 "Monitored" is read **per area**, however the area came to be armed or not —
 an area can be armed on its own, outside any scenario (§4.6.1). An area
@@ -871,6 +919,13 @@ A **channel** is `{ kind, service, target, data }` where `service` is any
 whether that service is Twilio, Pushover, a GSM modem or Telegram — it is
 discovered from the service registry and presented in a dropdown.
 
+A contact that a profile in use by an armed area names — at once or as an
+escalation step — cannot be changed, switched off or deleted until every area
+is disarmed (§15.1, decision 138). Every field counts: the number, the
+service, the quiet hours and the person it is linked to all decide who hears
+the alarm. So do all of its channels, because a notification that names none,
+or names one switched off, goes over the contact's first enabled channel.
+
 Documented recipes live in `docs/notification-channels.md` and cover, at minimum:
 Home Assistant Companion (with actionable notifications and iOS critical alerts),
 Pushover priority 2, Twilio SMS, Twilio voice call, `sms` via a USB GSM modem,
@@ -900,6 +955,18 @@ Every acknowledgement records **who** and **through which channel**. An
 escalation that runs to the last step without acknowledgement is logged as
 `escalation_exhausted`, which is itself an event a profile can act on.
 
+**The DTMF webhook is a credential.** A Home Assistant webhook is not
+authenticated, so whoever holds its address can acknowledge an alarm in
+progress. It does not exist until somebody switches it on; its id is
+generated by the backend, never chosen by a caller; switching it off forgets
+it. Its address is shown once, in the answer to the command that generates
+it — the full URL when Home Assistant knows its external address, the path
+otherwise — and no API returns it afterwards: the panel says only whether it
+is on (decisions 128, 129). To see it again, generate a new one, which
+replaces the old at once and has to be given to the voice provider again. A
+Home Assistant administrator can still read it from `.storage`: that is
+INV-6's boundary, not a leak.
+
 ### 7.3 Resilience note (documentation requirement)
 
 `docs/resilience.md` must state clearly that every internet-dependent channel
@@ -918,10 +985,10 @@ cannot keep.
 |---|---|
 | `id`, `name` | |
 | `code_hash` | bcrypt; write-only through the API, never returned |
-| `duress_code_hash` | optional; disarms normally but raises a silent `duress` event |
+| `duress_code_hash` | optional; acts exactly as the ordinary code, for every operation, and raises a silent `duress` event each time it is used |
 | `ha_user_id` | optional link to a Home Assistant user |
 | `permissions` | see 8.3 |
-| `allowed_area_ids` | null = all |
+| `allowed_area_ids` | null = all. It narrows every operation that acts on an area — arming an area or a scenario, excluding a zone, disarming, the master's disarm of every area included. A walk test acts on the whole house and is not narrowed (§8.3) |
 | `allowed_scenario_ids` | null = all |
 | `valid_from` / `valid_until` | optional, for guest codes |
 | `code_exempt_when_identified` | off by default; skip the code on channels that identify this user (§8.2, decision 79) |
@@ -942,6 +1009,43 @@ project exists — becomes decorative. Two consequences follow:
 
 The duress code is likewise per user and follows the same uniqueness rule,
 including against ordinary codes.
+
+**A duress code is its owner's code, and says so only to the log**
+(decisions 131–134). It is accepted wherever the ordinary code is — arming,
+disarming, excluding a zone, acknowledging, a walk test, unlocking an API
+device, the panel's configuration and log commands, a service, a keypad, the
+card — and does exactly what the ordinary code would: the same permissions,
+the same answer, the same lockout counter, the same acknowledgement of an
+incident. Nothing in the answer the person at the keypad, the panel or the
+card sees or hears is different, and nothing a glance at the house's screens
+would find is different either (below). The panel keeps it for its two minutes like any other
+code (§15.1), because forgetting it sooner would be a difference somebody
+could see.
+
+What differs is one occurrence, `duress`, raised once for every request that
+carried the duress code, whatever the request asked for and whether or not it
+was granted — a locked-out channel and a device refusing an action outside
+its scopes included. Somebody made to open the house is as easily made to
+switch off the siren, stop the escalation or delete a contact, and a person
+asking for help has asked, whatever the answer. A request a device refuses
+before the engine hears it hands the engine the duress and nothing else: it
+neither counts towards the lockout nor clears it, exactly as the ordinary
+code would not. The occurrence names the operation (§6.4) and belongs to no
+area and to no incident: an incident is on every card, and the person
+standing beside the intruder would watch it open. It never escalates, runs
+silent, and is answered by the global default profile (§6.1).
+
+The `duress` row is read on the log page and in an export, and nowhere a
+glance would find it: never `sensor.foyer_last_event`, never among the
+Overview's recent events, never in an API device's `log` section, and it
+sends no `changed: log` notice — the wall tablet the code was typed on shows
+all of them. Like
+every row it is also fired on Home Assistant's bus as `foyer_event`, which is
+how a Home Assistant automation answers duress; an automation that shows
+security rows somewhere in the house must leave it out. Offering one's own
+duress code as a new code is not a use of it: it raises no `duress`, and is
+refused and counted as a failed attempt, as any code already in use is
+(§8.4).
 
 ### 8.2 Code policy resolution
 
@@ -979,7 +1083,18 @@ Two rules the resolution needs that the arrows above do not carry:
 - **The policy is inert while no enabled user holds a code.** No code can be
   verified then, so enforcing it would make the alarm unusable rather than
   safer. The panel and the card say so plainly while it lasts; from the first
-  user created the policy applies in full (decision 78).
+  user created the policy applies in full (decision 78). That is also why,
+  while any area is armed, an edit that would leave nobody with a usable code
+  is refused (§15.1): a house armed asking for a code to disarm is disarmed
+  with one.
+
+**Entering a walk test asks for a code for the reason disarming does.** A
+walk test holds back the answer of the whole house (§8.3), so its code is what
+stands between the unlocked wall tablet and a quiet house. An installation may
+lower it like any other entry, and should know what that buys: a request
+nobody identified is checked against nobody's permissions, so with no code
+asked, any caller that can reach a Foyer service or `switch.foyer_walk_test`
+can start one (decision 137).
 
 **A Home Assistant administrator is asked for the code like anybody else**
 when the policy asks for one (decision 101). Being an administrator is not
@@ -1012,6 +1127,16 @@ code *is* the identity, so the per-user exemption cannot apply and the code is
 always required. The configuration UI must state this next to the setting,
 otherwise it reads as a bug.
 
+The Home Assistant UI includes Home Assistant's own alarm card and the
+`alarm_control_panel` actions a signed-in account calls, and there Home
+Assistant decides before Foyer does: an entity that says arming needs a code
+is refused a codeless arming by Home Assistant itself, for everybody, before
+Foyer can see that the person asking is exempt. So Foyer's panels say arming
+needs a code only while the policy asks for one and no enabled user has the
+exemption switched on (§13, decision 136). An
+automation calling the same actions identifies nobody, and Foyer asks it for
+the code whenever the policy does.
+
 ### 8.3 Permissions
 
 `arm` · `disarm` · `force_arm` · `bypass_zone` · `change_scenario` ·
@@ -1025,16 +1150,38 @@ that touches one of them — saved, deleted, restored or imported — needs
 hand oneself, or somebody else, what `manage_users` withholds (decisions
 111, 112).
 
+**`walk_test` reaches further than its name** (decision 137). A walk test is
+walked through the whole house, so it arms every disarmed area that can arm —
+whatever the person's `allowed_area_ids`, and except an area still holding
+alarm memory (§11.3) — and until it ends no area answers an ordinary
+detection, including an area somebody else had armed. It ends fifteen minutes
+after the last detection by default, and never later than three hours after
+it started. Whoever holds `walk_test` can therefore keep an armed house quiet
+without holding `disarm`. This is kept on purpose, not overlooked. What
+restrains it is that the test is never quiet about itself — a code by default
+(§8.2), a banner on every screen, a notification at the start and at the end,
+both log rows naming the person — and that `always_on` zones, an incident
+already open and `duress` stay live (§11.3). The README's security model says
+so as plainly as it says what a code does not protect against. It is not
+among the permissions a person added on the Users page starts with — only the
+first person, created by the first-run wizard, and the recovery of §8.2 hold
+every permission — and the Users page warns, when it is ticked, that it can
+keep an armed house quiet without `disarm`: it is given deliberately, as
+`edit_config` and `manage_users` are.
+
 ### 8.4 Lockout
 
 After `N` failed code attempts (default 5) within `W` seconds (default 300), the
 originating channel is locked for `L` seconds (default 300), exponentially
 increasing on repetition. The originating channel is counted per device for a
-declared device, per source address for the device endpoint's tokens
-(§9.2.1), and **per Home Assistant account** for the panel, the card and the
+declared device, per source address for the device endpoint's missing or
+wrong tokens —
+a right token is never refused for its address (§9.2.1) — and **per Home
+Assistant account** for the panel, the card and the
 services: one account guessing codes locks itself out, not the household
-(decision 103). A code offered for somebody else's when saving a person
-counts as a failed attempt (decision 104). A lockout:
+(decision 103). A code offered when saving a person that is already in use —
+somebody else's, or that person's own other code — counts as a failed attempt
+(decision 104). A lockout:
 
 - raises a `lockout` event that response profiles can act on (a tamper attempt on
   the keypad is a genuine alarm signal),
@@ -1211,18 +1358,30 @@ GET  /api/foyer/device/state                Authorization: Bearer <token>
   (`minimal` by default, decision 83), pushed on every change so a countdown
   and an alarm arrive at once rather than at the next poll. A comment line
   every thirty seconds keeps a connection alive through proxies.
-- **The token is a credential** and is treated like the acknowledgement webhook
-  and the watchdog URL: 32 random bytes, shown once when it is generated,
-  stored as a SHA-256 hash — a random token needs no slow hash, a guessed code
-  does — compared in constant time, and never returned by any API, written to
-  a log row, put in a backup or the diagnostics dump, or set by a restore.
+- **The token is a credential**, as the acknowledgement webhook (§7.2) and the
+  watchdog URL (§12.3) are, and is kept as one: 32 random bytes, shown once
+  when it is generated, stored as a SHA-256 hash — a random token needs no slow hash, a
+  guessed code does — compared in constant time, and never returned by any
+  API, written to a log row, put in a backup or the diagnostics dump, or set
+  by a restore.
   Generating one invalidates the previous token at once and closes its open
   streams. Generating and revoking are `edit_config` operations with a code,
   as saving the keypad is: the token alone disarms nothing.
 - **A wrong or missing token** answers 401 with no detail, and is counted per
-  source address: past the lockout thresholds of §8.4 that address is refused
-  for the lockout period, the refusal is recorded under `security`, and it is
-  notified once — a token-guessing loop is a tamper signal like a keypad's.
+  source address: past the lockout thresholds of §8.4 a wrong or missing
+  token from that address is refused for the lockout period, the lockout is
+  recorded under `security`, and it is notified once — a token-guessing loop
+  is a tamper signal like a keypad's.
+- **A right token is never refused for its address** (decision 135). The
+  token is checked first, and the address's lockout applies only to a request
+  whose token is missing or wrong. Behind NAT, a reverse proxy or one IPv6
+  /64, a real keypad shares its address with whoever is guessing, and refusing
+  the address locked the household out of its own keypad. A token is 32
+  random bytes and cannot be guessed, so letting it through costs the lockout
+  nothing: the lockout is a tamper signal and a brake on the log, not what
+  keeps a token safe. Every row such a request causes says the address was
+  locked, so the log shows a keypad sharing its address with somebody
+  guessing; the request neither spends nor clears the address's counter.
 - **Plain HTTP is accepted, and said** (decision 97). Foyer knows whether a
   request arrived encrypted, including behind a reverse proxy Home Assistant
   trusts. A keypad whose requests arrive in the clear carries a permanent
@@ -1334,7 +1493,9 @@ GET  /api/foyer/device/log?before=<cursor>&limit=<≤50>
   always have. The sections themselves carry names — they are read only by a
   device given that scope, and after a code unless the owner chose otherwise.
 - The log is paged by an opaque cursor, at most fifty rows a request, and is
-  the same rows the log page shows (§10), after the privacy sweeps of §10.4.
+  the same rows the log page shows (§10), after the privacy sweeps of §10.4 —
+  less the `duress` rows, which a device in the hall never shows (§8.1); a
+  `duress` row sends no `changed: log` notice either.
 
 **The contract is written down, versioned and tested** (decision 121). The
 endpoint and the stream are described in `docs/api/openapi.yaml`, the MQTT
@@ -1478,7 +1639,10 @@ document:
 
 1. Automatic **arming** is fully supported.
 2. Automatic **disarming** exists but is **disabled by default**, and enabling it
-   raises an explicit warning in the UI naming the attack above.
+   raises an explicit warning in the UI naming the attack above. The setting
+   cannot change while any area is armed (§15.1); a phone lost while the house
+   is armed is answered by `switch.foyer_auto_arming`, a suspension, or
+   switching the rule off, none of which is refused.
 3. Automatic disarming can only target areas where `is_perimeter` is false. **A
    perimeter area is never disarmed by a rule.** Whoever walks in on a stolen
    phone still finds every external door and window protected. This is a hard
@@ -1669,28 +1833,53 @@ Output is the full decision chain, step by step:
 calls the same `decide()` the runtime calls, with a fabricated snapshot and a
 fabricated clock, and simply never hands the `Decision` to the executor.
 
+A code given for a rehearsal is checked like any other. A duress code raises
+`duress` for the request that carried it (§8.1), and the rehearsal then runs
+as the ordinary code would: a trace that showed it would put it on the screen
+the code was typed at.
+
 Every simulation run is logged (category `system`) with its inputs, so a
 configuration change can be justified after the fact.
 
 ### 11.3 Walk test
 
-The area is genuinely armed and zone states are genuinely real, but **all actions
-are inhibited**. The user walks the house and the panel records, live, which
+Every disarmed area that can arm is genuinely armed — whoever started the
+test, whatever their `allowed_area_ids` — and zone states are genuinely real,
+but **all actions are inhibited**, in every area: an area already armed when
+the test began stays armed, and does not answer either until the test ends
+(§8.3). The user walks the house and the panel records, live, which
 zones detected them — highlighting zones that never reacted. This is the only way
 to find a misaimed PIR or a dead battery before it matters.
 
 Mandatory safeguards:
 
-- an automatic exit timeout (default 15 minutes, not disableable),
+- an automatic exit, not disableable: 15 minutes without a detection by
+  default (1–60), and never later than three hours after the start (§5.3),
 - a permanent, unmissable banner in the panel and on every card while active,
 - entry and exit logged with the user who started it,
 - a notification on start and on end,
 - `always_on` zones (tamper, technical, panic) remain **fully live** — walk test
   must never silence a smoke detector.
-- **No arming while it runs.** Every area is already armed by the test and
-  its end disarms them all, so an arming accepted during it would be undone
-  without a word: it is refused, with its own reason, until the test has
-  ended (decision 107).
+- an incident already open when the test began stays live: its sounders, its
+  cutoff and its escalation carry on, because nothing that belongs to an
+  incident is held back. It does not grow: an ordinary zone that trips during
+  the test is recorded as a walk detection, not as a zone joining it.
+- a `duress` occurrence (§8.1) is never held back, whether the duress code
+  started the test, ended it or disarmed during it: a walk test inhibits the
+  house, not a person asking for help. It is silent by definition, so it
+  cannot spoil the walk (decision 132).
+- **No arming while it runs.** Its end disarms the areas the test armed,
+  except one in alarm or holding its memory, which only a person's disarm may
+  end, and leaves every other area as it found it. An arming accepted during
+  the test would either be undone by that end or answer nothing until it, so
+  it is refused, with its own reason, until the test has ended (decision
+  107).
+- **A walk test does not arm an area holding alarm memory.** Such an area is
+  not armed by the test, and keeps its memory: the test arms for a walk, not
+  for a watch, so it is not the arming that clears it (§5.2). Its own
+  `alarm_cleared` would be held back with every other action, and the end of
+  the test would read the memory as an alarm still in progress. Its zones are
+  still walked (decision 141).
 
 ### 11.4 Real action test
 
@@ -1716,10 +1905,11 @@ technical channel (§5.5), as a condition of the system itself.
 ### 12.1 Mains power and UPS
 
 A UPS exposed over NUT, or a smart plug, already provides a `binary_sensor` for
-mains failure. In the Foyer model that is simply a zone of type `technical`, so
-this costs almost no code — what it needs is the **concept**: a mains failure
-raises `system_power_lost`, notifies immediately, is logged, and can drive a
-response profile. It must never be confused with a quiet night.
+mains failure. Foyer reads it as a system-health input chosen on page 14, not
+as a zone, so this costs almost no code — what it needs is the **concept**: a
+mains failure raises `system_power_lost`, notifies immediately, is logged,
+and can drive a response profile. It never opens an incident. It must never
+be confused with a quiet night.
 
 Documented alongside it in `docs/resilience.md`: a burglar cuts the power. Without
 a UPS on the router, every internet-dependent notification channel dies with it,
@@ -1746,7 +1936,7 @@ crashes or loses connectivity, the pings stop and the external service raises th
 alarm. It is the only answer to the fundamental problem that a dead system cannot
 report its own death.
 
-Two rules:
+Three rules:
 
 - **The heartbeat carries no data by default.** A ping saying "armed, Night,
   nobody home" would be a channel telling a third party exactly when the house is
@@ -1755,6 +1945,14 @@ Two rules:
 - **Foyer watches the watchdog.** Repeated failures to reach the endpoint are
   themselves reported locally: being unable to reach the internet means no
   internet-based notification would go out either, and the panel should say so.
+- **The URL is a credential, written and never read back** (decision 130).
+  Whoever holds a ping URL can keep the check green for ever, which silences
+  the one thing that reports Foyer's own death. No API returns it — the panel
+  included, which anybody holding `edit_config` reads without a code — and the
+  panel says only whether one is set. A save that leaves the URL out, or
+  sends it empty, keeps the stored one rather than clearing it; a new URL
+  replaces it; switching the watchdog off keeps it too. An error is stored
+  with the URL taken out.
 
 Documented limits, so they do not arrive as issues: a watchdog hosted on the same
 infrastructure dies with it and protects nothing; and the external service cannot
@@ -1772,8 +1970,9 @@ you find out, from somewhere else, that the power went out at home.
   issues**, so they appear in Settings where a user sees them without opening the
   Foyer panel.
 - Home Assistant's standard **download diagnostics** button produces an anonymised
-  dump of configuration and state: no codes, no hashes, no personal names,
-  entity ids redacted to stable placeholders. This is what turns a GitHub issue
+  dump of configuration and state: no codes, no hashes, no credentials — the
+  webhook id, the watchdog URL, a device's token — no personal names, entity
+  ids redacted to stable placeholders. This is what turns a GitHub issue
   into something answerable instead of five rounds of questions.
 
 ### 12.5 RF interference detection
@@ -1812,6 +2011,12 @@ treated as a tamper condition:
 | Armed | Alarm-grade: raises an incident-capable event a response profile can act on |
 | Disarmed | Warning: notification, log entry, repair issue |
 
+On an armed house the radios and the thresholds — the zone count, the window
+and the time a suspicion must last before it is raised — decide whether an
+incident opens, as a zone's trigger does, so they cannot change while any area
+is armed (§15.1). The mains, the watchdog and the channel checks never open
+an incident, and stay free.
+
 One rule that is easy to miss and that defeats the whole feature if missed:
 **notify over a channel that does not depend on the affected radio.** Announcing a
 Zigbee blackout through a Zigbee siren is not a notification.
@@ -1827,14 +2032,14 @@ enough for the user to tell the cases apart.
 
 | Entity | Per | Purpose |
 |---|---|---|
-| `alarm_control_panel.foyer_<area>` | area | real area state; supports arm/disarm with code |
+| `alarm_control_panel.foyer_<area>` | area | real area state; arms and disarms that area. Whether a code is needed is Foyer's answer (§8.2) |
 | `alarm_control_panel.foyer_master` | 1 | aggregated state, reports the active scenario's `ha_master_state`; the surface voice assistants and HomeKit see |
 | `select.foyer_scenario` | 1 | active scenario by name; the persistent record of *which* scenario is running |
 | `binary_sensor.foyer_zone_<zone>` | zone | normalised zone state (`on` = triggered), with attributes for bypass, fault, last trigger |
 | `binary_sensor.foyer_ready_to_arm` | 1 + per area | whether arming would succeed right now |
 | `binary_sensor.foyer_fault` | 1 | any zone in fault |
 | `sensor.foyer_open_zones` | 1 | count, with the list as an attribute |
-| `sensor.foyer_last_event` | 1 | last significant event, for dashboards |
+| `sensor.foyer_last_event` | 1 | last significant event, for dashboards — never a `duress` (§8.1) |
 | `sensor.foyer_countdown` | per area | remaining exit/entry seconds |
 | `button.foyer_acknowledge` | 1 | acknowledge an ongoing escalation. Acknowledging needs no code by default (decision 77), so the button exists; it honours the policy and refuses when an installation has raised it |
 | `switch.foyer_walk_test` | 1 | walk test on/off, reflecting the timeout |
@@ -1855,6 +2060,21 @@ When the result is `armed`, the master reports the active scenario's
 armed set — an extra area armed on its own, or one of the scenario's areas
 that failed to arm — is reported as `armed_custom_bypass`. The exact scenario
 is always on `select.foyer_scenario`.
+
+**What the panels tell Home Assistant about codes** (decision 136).
+`code_arm_required` is one answer for everybody, and Home Assistant acts on it
+before Foyer sees the request: while it is true, a codeless arming is refused
+by Home Assistant itself. So it is true only while the policy asks a code to
+arm and no enabled user has the exemption of §8.2 switched on — then nobody
+arming from Home Assistant could arm without one, and Home Assistant's
+more-info dialog and tile buttons, which ask for a code only when it is true,
+keep asking. Once somebody is exempt it is false, Home Assistant passes every
+arming on, and the backend answers it, `code_required` included, with the
+log's row for a refusal (INV-2). A panel refusing a codeless arming for that
+reason says where a code can be typed: Home Assistant's alarm panel card,
+Foyer's card or the panel. `code_format` follows the policy, and the master's
+reads every area and scenario as well as the global default, so the alarm
+panel card keeps its field wherever a code may be asked.
 
 ---
 
@@ -1889,7 +2109,7 @@ mirror the trigger moments in §6.1.
 | 3 | Zones | Filterable list + zone detail: entity, type preset, trigger spec, delays, arm policy, bypass, profile, supervision, the zone's cameras |
 | 4 | Scenarios | Create scenarios, choose areas, HA state mapping, default profile, allowed users |
 | 5 | Response profiles | Profiles, action list, per-action conditions, escalation steps |
-| 6 | Contacts | Address book, prioritised channels, quiet hours, escalation policies, per-channel test |
+| 6 | Contacts | Address book, prioritised channels, quiet hours, escalation policies, per-channel test, the acknowledgement webhook — its address shown once (§7.2) |
 | 7 | Users & codes | Users, codes, permissions, area/scenario scope, validity, duress code, per-user policy |
 | 8 | Arming devices | Keypads, NFC tags, remotes; MQTT mapping or the device endpoint and its token (§9.2.1); feedback configuration |
 | 9 | Test & diagnostics | Four tabs: diagnostics · simulator · walk test · action test |
@@ -1897,7 +2117,7 @@ mirror the trigger moments in §6.1.
 | 11 | Settings | Global defaults, siren duration and cutoff, log retention per category, the language of the messages Foyer sends out, config backup/restore |
 | 12 | Automation rules | Presence and time rules (§9.4), guards, grace period, suspensions and expected-visitor windows, next scheduled action |
 | 13 | Verification groups | N-of-M groups (§4.8): members, threshold, window, group profile |
-| 14 | System health | Mains power, notification channel health, watchdog status, faults, diagnostics download (§12) |
+| 14 | System health | Mains power, notification channel health, watchdog status and settings (its URL written, never read back, §12.3), faults, diagnostics download (§12) |
 
 Plus a **first-run wizard**: create the first area → map three zones with
 confirmed trigger specs → create one scenario → create one user with a code →
@@ -1911,15 +2131,59 @@ next. It is forgotten after two minutes unused, after every arming or
 disarming, and when the panel is closed. The card keeps no code at all
 beyond the command it was typed for.
 
+**An armed house keeps the answer and the codes it was armed with**
+(decision 138). While any area is not disarmed, an edit that would change how
+the house answers an alarm, or what it asks a code for, is refused and says
+why. Refused, besides the armed areas themselves, their zones and groups and
+the scenario that is running:
+
+- the siren duration, the global `arm_hold_timeout`, the default entry and
+  exit delays and the walk test's auto-exit window (§5.3);
+- the default and technical profiles, the silent list and the camera folder;
+- every profile an armed area could answer with — its own, its scenario's,
+  its zones' and groups', the default, the technical channel's and its
+  zones', and the one an escalation is running;
+- every contact such a profile names, which can be neither changed, switched
+  off nor deleted (§7.1);
+- the code policy, the code length and the lockout;
+- whether a rule may disarm (§9.4);
+- the radios and thresholds that decide whether interference opens an
+  incident (§12.5).
+
+Otherwise whoever holds `edit_config` could lower the guard of a house nobody
+disarmed, and nothing in the log would read as a disarm. What does not change
+the answer stays free: the language of messages, the log and its retention,
+personal data in the log, the chime, the battery threshold, the backup
+download, the mains, the watchdog, the channel health checks and how long a
+problem lasts before it becomes a repair issue, and whether the first-run
+wizard is done.
+
+**Who may command the house stays editable while it is armed** (decision
+139). A person, their code, their permissions and exemption, a tag, a keypad,
+its token and its scopes, an API device, the MQTT settings, the
+acknowledgement webhook and the automatic rules can be added, changed or
+revoked: taking a guest's code or a lost phone's rule away from the other
+side of the world is the edit an armed house needs most, and the recovery of
+§8.2 writes a person too. Every command they carry still meets the code
+policy, and changing that policy is among the edits refused above. The one
+refusal among them is an edit that would leave nobody holding a usable code,
+because §8.2 then switches the whole policy off — the policy changed by
+another route. A key switch's person and a running scenario's list of people
+wait for the disarm with the zone and the scenario they belong to; the person
+themselves can be disabled at once. A disarmed area can still be programmed
+while others stay armed.
+
 **Config backup/restore** (JSON export/import) is not optional: nobody who has
 configured forty zones will do it twice. The exported document carries its
 schema version: a restore migrates an older one through the same steps a real
 upgrade uses, refuses one written by a newer major version rather than reading
-it half-way, and then goes through validation and the armed-area guard like
-any other edit. A restore that adds, removes or changes a person, a tag, or
-the person a key switch acts as needs `manage_users` as well as
-`edit_config`, as the Alarmo importer's
-does: otherwise `edit_config` was a way to hand oneself every permission, or
+it half-way, and then goes through validation and the guard above like any
+other edit: while an area is armed it is refused exactly where the same change
+made on its own page would be. The download is never refused for an armed
+area; it asks for `edit_config` and the code, as it always has. A restore that
+adds, removes or changes a person, a tag, or the person a key switch acts as
+needs `manage_users` as well as `edit_config`, as the Alarmo importer's does:
+otherwise `edit_config` was a way to hand oneself every permission, or
 somebody else's key (decision 111).
 
 **The language setting is not the panel's.** The panel follows each Home
@@ -2177,6 +2441,22 @@ rendition.
   escalation; actions are unioned without restarting a running siren; the
   highest-severity contributing profile supplies the escalation; one
   acknowledgement closes everything; a trigger after closure opens a new incident.
+- Alarm memory tests: a disarm and an accepted arming each clear it and raise
+  `alarm_cleared` once per area; a refused arming, the cutoff resuming an
+  arming, an area staying armed through a scenario switch and a walk test
+  leave it; an arming that clears it acknowledges no incident and stops no
+  escalation.
+- Duress tests: a duress code raises `duress` on every operation, accepted or
+  refused, and the answer is identical to the ordinary code's; the response
+  runs silent and is not held back by a walk test; the row never reaches
+  `sensor.foyer_last_event`, the Overview's recent events, a device's `log`
+  section or its `changed: log` notice.
+- Armed-edit tests: every global setting is classified as kept while armed or
+  free, so a new one cannot arrive unclassified; each kept setting, a profile
+  in use and a contact it names are refused while an area is armed and
+  accepted once every area is disarmed; revoking a person's code while armed
+  is accepted, and so is the recovery of §8.2; removing the last usable code
+  while armed is refused.
 - Technical channel tests: a technical zone fires while disarmed; **disarming does
   not clear it**; it never changes any `alarm_control_panel` state; it never joins
   an intrusion incident.
@@ -2191,17 +2471,23 @@ rendition.
   raises the event; the same pattern with the coordinator ALSO unavailable reports
   a coordinator failure instead; zones spread across two radios do not trigger it;
   and a Zigbee event never notifies through a Zigbee target.
-- A test asserting diagnostics output contains no code hashes and no personal names.
+- A test asserting diagnostics output contains no code hashes, no credentials —
+  the webhook id, the watchdog URL, a device's token — and no personal names;
+  that no configuration read returns the webhook id or the watchdog URL; and
+  that a save without a watchdog URL, or switching the watchdog off, keeps the
+  stored one.
 - Zone camera tests: a `zone` notification carries the cameras of every zone
   in the incident, each once and at most four; each escalation step repeats
   them; `entry_started` never carries one; a `fixed` action is unchanged by
   the migration; a camera that fails costs only its own picture.
 - Device endpoint tests: a request without the right token is refused and
-  counted per address; an `http` keypad's `device_id` is refused over MQTT and
-  through a service; a tag cannot be given a token; the token never appears in
-  any response, row, backup or dump; a plain-HTTP request is served and
-  recorded as not encrypted; a new token invalidates the old one and its
-  stream.
+  counted per address; a request with the right token from a locked address
+  is served on every route, leaves the address's counter as it was, and its
+  rows say the address was locked; an `http` keypad's `device_id` is refused
+  over MQTT and through a service; a tag cannot be given a token; the token
+  never appears in any response, row, backup or dump; a plain-HTTP request is
+  served and recorded as not encrypted; a new token invalidates the old one
+  and its stream.
 - A regression test asserting that `core/` imports nothing from
   `homeassistant.*` — this is what keeps INV-1 true over time.
 
@@ -2403,7 +2689,7 @@ document should make one of them on purpose.
 | 104 | A code that is somebody else's, offered when saving a person, counts as a wrong code | Otherwise the uniqueness check of §8.1 is a way of testing codes against the household without limit |
 | 105 | `alarm_ended` is a per-area moment: siren cutoff or a disarm with alarm memory, never an ordinary disarm | "Switch it off when the alarm is over" needs a moment an area's profile hears; the incident's acknowledgement belongs to no area, and `disarmed` fires every evening |
 | 106 | A refused service raises when the caller does not ask for its response | An automation that does not read the result took a wrong code for success and carried on as if the house were disarmed |
-| 107 | Arming is refused while a walk test runs | The test arms every area and its end disarms them all; an arming accepted in between was undone without a word |
+| 107 | Arming is refused while a walk test runs | The test arms every area it can and its end disarms what it armed; an arming accepted in between could be undone without a word |
 | 108 | `alarm_cleared` is raised when a disarm clears an area's alarm memory | §6.1 named it and nothing raised it; an alarm is often over long before anybody clears it, and "the lamp that says something happened" needs the second moment, not the first |
 | 109 | An administrator recovers access from the integration's Configure step, loudly | Decision 101 left an administrator with no code no way in; INV-6 says they can do anything anyway, so the recovery exists — and is logged, notified in Home Assistant and sent to every contact, so it is never the quiet way round a code |
 | 110 | The recovery enables the account's linked user, removes its validity window and sets its code, or creates the user with every permission; only administrators' accounts are offered | An administrator whose own user was disabled could not undo it; Home Assistant does not say who opened the step, so it asks for the account — and a way in for anybody else is the Users page's, with its permissions |
@@ -2424,3 +2710,17 @@ document should make one of them on purpose.
 | 125 | The countdown names the open zones and says what will happen to them | "It will arm in two minutes" was a promise the open window was about to break, sent to the only people who could still shut it |
 | 126 | A rule may arm excluding open zones — opt-in, bypassable zones only, never a fault | Some households want the house armed with the window open; a forced arming nobody chose must be the rule's owner's deliberate choice, and a silent sensor is never excluded by it |
 | 127 | A rule triggered by an instant is not retried when the zone that refused it closes, and its message says so | Its one turn has gone; arming the house at noon for "23:00 yesterday" is a surprise, and a message promising a retry that never comes is worse |
+| 128 | No API returns a configuration credential: the configuration says whether the acknowledgement webhook and the watchdog URL are set, never what they are | Reading the configuration needs `edit_config` and no code, so whoever held it could copy the URL that stops an alarm or the one that keeps a dead house looking alive; §9.2.1 already said neither is ever returned |
+| 129 | The webhook's address is shown once, in the answer that generates it — the full URL when Home Assistant knows its external address, the path otherwise; to see it again, generate a new one | The keypad token's rule: an address the panel can read back is one the next person at the tablet can read, and the one moment it is shown should give something that can be pasted as it is |
+| 130 | The watchdog URL is written and never read back; a save that leaves it out or sends it empty, or switching the watchdog off, keeps it; a new one replaces it | The panel no longer holds it to send back, and a save that cleared it would stop the heartbeat quietly — the failure §12.3 exists to report |
+| 131 | A duress code acts as its owner's code wherever a code is read, and raises `duress` once for every request it comes with, accepted or refused; a request refused before the engine hands it the duress and nothing else | Somebody made to open the house is as easily made to switch off the siren, stop the escalation or delete a contact; a person asking for help has asked, whatever the answer. The lockout must see the duress code exactly as it sees the ordinary one |
+| 132 | `duress` belongs to no area and no incident, is answered by the default profile, always runs silent, never escalates, and is never held back by a walk test | An incident is on every card; a siren answering it would tell the room; a walk test inhibits the house, not a person — and the coerced person may be made to start one |
+| 133 | The `duress` row is read on the log page, in an export and on Home Assistant's bus as `foyer_event`, never among the Overview's recent events, in `sensor.foyer_last_event`, in a device's `log` section or its change notice | "Nothing visible differs" has to hold on the tablet the code was typed on, and that tablet shows all four; an automation answering duress needs the bus |
+| 134 | `{{ operation }}` joins the template variables, naming the command a duress code was used for | A duress message that cannot say what the person was made to do tells its contact half of it; "edit the configuration" for somebody made to export the log tells them the wrong half |
+| 135 | A right token always passes the device endpoint's per-address lockout; the lockout refuses only a missing or wrong token; the rows a right token causes from a locked address say so, and the request neither spends nor clears the address's counter | Behind NAT, a reverse proxy or one IPv6 /64 a real keypad shares its address with whoever is guessing, and was locked out with them; a token of 32 random bytes cannot be guessed, so the lockout loses nothing |
+| 136 | A panel says arming needs a code only while the policy asks for one and nobody is exempt; its refusal of a codeless arming says where to type one; the master's `code_format` reads every area and scenario | Home Assistant refuses on that one answer before Foyer knows who is asking, so an exempt person could not arm from Home Assistant's card; always false, the more-info dialog and the tiles would stop asking everybody else for the code |
+| 137 | `walk_test` keeps its whole-house reach — every area whatever `allowed_area_ids`, those armed by somebody else included — and the reach is written in §8.2, §8.3 and the README, and the Users page warns when it is granted | A walk test is walked through the whole house, so it arms and quiets every area whoever starts it; what restrains it is that it is never quiet about itself, and a permission that can quiet an armed house has to be granted knowing that |
+| 138 | While any area is armed, an edit that changes the response or the code policy is refused: siren, delays, response defaults, the profiles in use and the contacts they name, the code policy and lockout, automatic disarming, radios | The guard covered areas, zones, groups, the running scenario, the profiles in use and three settings; the siren, the disarm policy and the contact who would be called could still be changed under a house nobody had disarmed, and the log would show no disarm |
+| 139 | People, codes, tags, keypads, API devices, the webhook and the rules stay editable while armed; only an edit leaving nobody with a usable code is refused | Revoking a guest's code or a lost phone's rule from abroad, and the administrator's recovery, are needed most while the house is armed; with no usable code the policy switches itself off (decision 78), which is a policy change by another route |
+| 140 | An accepted arming clears the alarm memory of the areas it takes out of `disarmed`, raising `alarm_cleared` — an automatic rule's arming included — and acknowledges nothing | Real panels clear the memory at the next arming, and a memory carried into a new watch describes an earlier night; the incident is another matter — arming needs no code by default, and only an acknowledgement or a disarm is somebody who has seen the alarm |
+| 141 | A refused arming, the cutoff resuming one, an area staying armed through a switch and a walk test leave the memory; a walk test does not arm an area that holds it | None of them is somebody arming that area again, and a memory nobody has seen must not vanish on the way — a walk test least of all, whose own `alarm_cleared` would be held back with every other action |
