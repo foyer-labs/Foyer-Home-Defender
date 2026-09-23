@@ -233,10 +233,9 @@ class FoyerPageDevices extends LitElement {
     if (!this.ctx || !this._mqtt) return;
     this._busy = true;
     try {
-      const settings: Partial<SettingsConfig> = {
-        ...this.ctx.config!.settings,
-        mqtt: this._mqtt,
-      };
+      // Only the broker block travels: the panel merges it over the
+      // configuration as it is now (third review).
+      const settings: Partial<SettingsConfig> = { mqtt: this._mqtt };
       const result = await this.ctx.saveSettings(settings);
       this._mqttProblems = result.problems;
       if (result.success) this._mqtt = undefined;

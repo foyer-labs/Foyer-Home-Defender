@@ -5130,10 +5130,7 @@ var Wt = [
 		if (this.ctx && this._mqtt) {
 			this._busy = !0;
 			try {
-				let e = {
-					...this.ctx.config.settings,
-					mqtt: this._mqtt
-				}, t = await this.ctx.saveSettings(e);
+				let e = { mqtt: this._mqtt }, t = await this.ctx.saveSettings(e);
 				this._mqttProblems = t.problems, t.success && (this._mqtt = void 0);
 			} finally {
 				this._busy = !1;
@@ -8101,7 +8098,7 @@ var gn = class extends j {
             <input
               type="checkbox"
               .checked=${U(n)}
-              ?disabled=${this._busy || !t.isAdmin}
+              ?disabled=${this._busy}
               @change=${async (n) => {
 			let r = n.target.checked;
 			this._busy = !0, this._error = void 0;
@@ -8858,25 +8855,32 @@ var xn = 30, Sn = {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.saveChime(this._chime);
-				this._problems = e.problems, e.success && (this._draft = void 0, this._saved = !0);
+				this._problems = e.problems, this._problemsIn = "chime", e.success && (this._draft = void 0, this._saved = !0);
 			} finally {
 				this._busy = !1;
 			}
 		}
 	}
-	async _saveSettings(e) {
+	async _saveSettings(e, t) {
 		if (this.ctx?.config) {
 			this._settings = {
 				...this._settings ?? this.ctx.config.settings,
 				...e
 			}, this._busy = !0;
 			try {
-				let e = await this.ctx.saveSettings(this._settings);
-				this._problems = e.problems, e.success && (this._settings = void 0);
+				let n = await this.ctx.saveSettings(e);
+				this._problems = n.problems, this._problemsIn = t, this._settings = void 0;
 			} finally {
 				this._busy = !1;
 			}
 		}
+	}
+	_renderProblems(e, t) {
+		return this._problemsIn !== t || !this._problems.length ? T : C`<div class="problems" role="alert">
+      <ul>
+        ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
+      </ul>
+    </div>`;
 	}
 	render() {
 		let e = this.ctx;
@@ -8896,7 +8900,7 @@ var xn = 30, Sn = {
         min=${r ? r[0] : 0}
         max=${r ? r[1] : 3600}
         .value=${String(n[t])}
-        @change=${(e) => V(e, (e) => void this._saveSettings({ [t]: e }))}
+        @change=${(e) => V(e, (e) => void this._saveSettings({ [t]: e }, "defaults"))}
       />
       <span class="hint">${i ?? N(e, "common.seconds_unit")}</span>
     </label>`;
@@ -8913,6 +8917,7 @@ var xn = 30, Sn = {
             ${i("low_battery_threshold", r.low_battery_threshold, N(e, "settings.low_battery_hint"))}
             ${i("walk_test_timeout", r.walk_test_timeout, N(e, "settings.walk_test_hint"))}
           </div>
+          ${this._renderProblems(e, "defaults")}
         </div>
       </div>
     `;
@@ -8931,7 +8936,7 @@ var xn = 30, Sn = {
 					...e.retention_days ?? {}
 				}
 			};
-			this._saveSettings({ log: t });
+			this._saveSettings({ log: t }, "log");
 		};
 		return C`
       <div class="card">
@@ -8980,6 +8985,7 @@ var xn = 30, Sn = {
 			categories: (t.meta?.named_categories ?? []).map((t) => N(e, `category.${t}`)).join(", ")
 		})}
           </p>
+          ${this._renderProblems(e, "log")}
         </div>
       </div>
     `;
@@ -8988,7 +8994,7 @@ var xn = 30, Sn = {
 		let t = this.ctx, n = (this._settings ?? t.config.settings).log, [r, i] = t.meta?.pseudonymise_bounds ?? [1, 365], a = n.pseudonymise_after !== null, o = (e) => void this._saveSettings({ log: {
 			...n,
 			...e
-		} });
+		} }, "privacy");
 		return C`
       <div class="card">
         <div class="card-hd"><h2>${N(e, "settings.privacy_title")}</h2></div>
@@ -9012,10 +9018,7 @@ var xn = 30, Sn = {
                     min=${r}
                     max=${i}
                     .value=${String(n.pseudonymise_after ?? 30)}
-                    @change=${(e) => {
-			let t = Number(e.target.value);
-			Number.isFinite(t) && o({ pseudonymise_after: t });
-		}}
+                    @change=${(e) => V(e, (e) => o({ pseudonymise_after: e }))}
                   />
                   <span class="hint">${N(e, "settings.log_days")}</span>
                 </label>` : T}
@@ -9051,6 +9054,7 @@ var xn = 30, Sn = {
           </label>
           <p class="hint">${N(e, "settings.delete_on_uninstall_hint")}</p>
           <p class="hint">${N(e, "settings.uninstall_snapshots_hint")}</p>
+          ${this._renderProblems(e, "privacy")}
         </div>
       </div>
     `;
@@ -9246,7 +9250,7 @@ var xn = 30, Sn = {
           <label class="field">
             <span class="lbl">${N(e, "field.language")}</span>
             <select
-              @change=${(e) => this._saveSettings({ language: e.target.value || null })}
+              @change=${(e) => this._saveSettings({ language: e.target.value || null }, "language")}
             >
               <option value="" .selected=${U(!n.language)}>
                 ${N(e, "settings.language_system")}
@@ -9263,11 +9267,7 @@ var xn = 30, Sn = {
             </select>
             <span class="hint">${N(e, "settings.language_hint")}</span>
           </label>
-          ${this._problems.length ? C`<div class="problems" role="alert">
-                <ul>
-                  ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
-                </ul>
-              </div>` : T}
+          ${this._renderProblems(e, "language")}
         </div>
       </div>
     `;
@@ -9276,7 +9276,7 @@ var xn = 30, Sn = {
 		let t = this.ctx, n = this._settings ?? t.config.settings, r = t.config.profiles ?? [], i = t.meta?.silenceable ?? [], a = (t, i) => C`<label class="field">
         <span class="lbl">${N(e, `field.${t}`)}</span>
         <select
-          @change=${(e) => this._saveSettings({ [t]: e.target.value || null })}
+          @change=${(e) => this._saveSettings({ [t]: e.target.value || null }, "response")}
         >
           <option value="" .selected=${U(!n[t])}>${N(e, "settings.none")}</option>
           ${r.map((e) => C`<option .value=${e.id ?? ""} .selected=${U(e.id === n[t])}>
@@ -9297,7 +9297,7 @@ var xn = 30, Sn = {
               <span class="lbl">${N(e, "field.camera_dir")}</span>
               <input
                 .value=${n.camera_dir}
-                @change=${(e) => this._saveSettings({ camera_dir: e.target.value.trim() })}
+                @change=${(e) => this._saveSettings({ camera_dir: e.target.value.trim() }, "response")}
               />
               <span class="hint">${N(e, "settings.camera_dir_hint")}</span>
             </label>
@@ -9310,7 +9310,7 @@ var xn = 30, Sn = {
                     .checked=${U(n.silent_suppresses.includes(t))}
                     @change=${(e) => {
 			let r = e.target.checked ? [...n.silent_suppresses, t] : n.silent_suppresses.filter((e) => e !== t);
-			this._saveSettings({ silent_suppresses: r });
+			this._saveSettings({ silent_suppresses: r }, "response");
 		}}
                   />
                   <span
@@ -9319,6 +9319,7 @@ var xn = 30, Sn = {
                 </label>`)}
             <p class="hint">${N(e, "settings.silent_hint")}</p>
           </fieldset>
+          ${this._renderProblems(e, "response")}
         </div>
       </div>
     `;
@@ -9409,11 +9410,7 @@ var xn = 30, Sn = {
             </span>
           </label>
           <p class="hint">${N(e, "settings.switch_hint")}</p>
-          ${this._problems.length ? C`<div class="problems" role="alert">
-                  <ul>
-                    ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
-                  </ul>
-                </div>` : T}
+          ${this._renderProblems(e, "chime")}
           ${this._saved ? C`<div class="notice">${N(e, "settings.saved")}</div>` : T}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
@@ -10952,7 +10949,7 @@ function $(e) {
 }
 var Fn = class extends j {
 	constructor(...e) {
-		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._focusCode = !1, this._offset = 0;
+		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._focusCode = !1, this._offset = 0, this._retryAt = 0;
 	}
 	static {
 		this.properties = {
@@ -10975,10 +10972,10 @@ var Fn = class extends j {
 		}, 1e3);
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this._forgetCode(), this._asking?.resolve(void 0), this._asking = void 0, this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0, window.clearInterval(this._timer);
+		super.disconnectedCallback(), this._forgetCode(), this._asking?.resolve(void 0), this._asking = void 0, this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0, window.clearInterval(this._timer), window.clearTimeout(this._retryTimer);
 	}
 	willUpdate(e) {
-		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, We(this.hass).then((e) => this._strings = e).catch((e) => this._error = String(e?.message ?? e))), !this._unsubscribe && this.isConnected && this._start());
+		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, We(this.hass).then((e) => this._strings = e).catch((e) => this._error = String(e?.message ?? e))), !this._unsubscribe && this.isConnected && Date.now() >= this._retryAt && this._start());
 	}
 	get _isAdmin() {
 		return !!this.hass?.user?.is_admin;
@@ -10989,7 +10986,7 @@ var Fn = class extends j {
 	}
 	_askForCode(e, t, n) {
 		return new Promise((r) => {
-			this._asking = {
+			this._asking?.resolve(void 0), this._asking = {
 				resolve: r,
 				retry: e,
 				purpose: t,
@@ -11037,7 +11034,9 @@ var Fn = class extends j {
 		this.hass && !this._unsubscribe && (this._unsubscribe = this.hass.connection.subscribeMessage((e) => {
 			this._offset = Date.parse(e.now) - Date.now(), this._status = e, this._error = void 0, !this._config && this._canConfigure && this._loadConfig().catch(() => void 0);
 		}, { type: "foyer/subscribe" }), this._unsubscribe.catch((e) => {
-			this._unsubscribe = void 0, this._error = e?.code === "not_loaded" ? N(this._strings, "common.not_loaded") : N(this._strings, "common.connection_error", { error: String(e?.message ?? e) });
+			this._unsubscribe = void 0, this._retryAt = Date.now() + 5e3, window.clearTimeout(this._retryTimer), this._retryTimer = window.setTimeout(() => {
+				this.isConnected && !this._unsubscribe && this._start();
+			}, 5e3), this._error = e?.code === "not_loaded" ? N(this._strings, "common.not_loaded") : N(this._strings, "common.connection_error", { error: String(e?.message ?? e) });
 		}), this.hass.callWS({ type: "foyer/prefs" }).then((e) => this._prefs = e).catch(() => void 0), this._isAdmin && this.hass.callWS({ type: "config/auth/list" }).then((e) => this._haUsers = e.filter((e) => !e.system_generated)).catch(() => void 0));
 	}
 	async _loadConfig() {
@@ -11112,13 +11111,13 @@ var Fn = class extends j {
 				suspension_id: t,
 				...Q(n)
 			})),
-			saveSettings: (e) => this._edit("settings", {
+			saveSettings: async (e) => (await this._loadConfig().catch(() => void 0), this._edit("settings", {
 				type: "foyer/config/settings",
 				settings: {
 					...this._config?.settings,
 					...e
 				}
-			}),
+			})),
 			queryLog: (t) => e.callWS({
 				type: "foyer/log/query",
 				...$(t)
@@ -11268,6 +11267,7 @@ var Fn = class extends j {
 	render() {
 		let e = this._strings, t = !!this._prefs.help_hidden;
 		return C`
+      <div class="shell" ?inert=${!!this._asking}>
       <div class="toolbar">
         <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
         <span class="symbol" aria-hidden="true"
@@ -11288,6 +11288,7 @@ var Fn = class extends j {
       ${e ? this._renderWalkTestBanner(e) : T}
       ${e ? this._renderTabs(e) : T}
       <main>${e ? this._renderBody(e) : T}</main>
+      </div>
       ${this._asking && e ? this._renderCodeDialog(e) : T}
     `;
 	}

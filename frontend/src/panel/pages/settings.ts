@@ -24,6 +24,9 @@ import { chimeTargets, entityTargets } from "../ha-targets";
 // rather than before them.
 const DEFAULT_PSEUDONYMISE_DAYS = 30;
 
+/** The card a refusal is shown under: the one whose save it answers. */
+type ProblemsCard = "defaults" | "response" | "log" | "privacy" | "language" | "chime";
+
 const NO_CHIME: ChimeConfig = {
   targets: [],
   mode: "sound",
@@ -55,6 +58,7 @@ class FoyerPageSettings extends LitElement {
   private _draft?: ChimeConfig;
   private _settings?: SettingsConfig;
   private _problems: Problem[] = [];
+  private _problemsIn?: ProblemsCard;
   // The backup card's own: a refused download or restore is said beside the
   // buttons that caused it, not in a card further down the page.
   private _backupProblems: Problem[] = [];
@@ -117,6 +121,7 @@ class FoyerPageSettings extends LitElement {
     try {
       const result = await this.ctx.saveChime(this._chime);
       this._problems = result.problems;
+      this._problemsIn = "chime";
       if (result.success) {
         this._draft = undefined;
         this._saved = true;
@@ -126,7 +131,10 @@ class FoyerPageSettings extends LitElement {
     }
   }
 
-  private async _saveSettings(changes: Partial<SettingsConfig>): Promise<void> {
+  private async _saveSettings(
+    changes: Partial<SettingsConfig>,
+    card: ProblemsCard,
+  ): Promise<void> {
     if (!this.ctx?.config) return;
     this._settings = {
       ...(this._settings ?? this.ctx.config.settings),
@@ -134,12 +142,28 @@ class FoyerPageSettings extends LitElement {
     };
     this._busy = true;
     try {
-      const result = await this.ctx.saveSettings(this._settings);
+      // Only what changed travels: the panel merges it over the
+      // configuration as it is now (third review).
+      const result = await this.ctx.saveSettings(changes);
       this._problems = result.problems;
-      if (result.success) this._settings = undefined;
+      this._problemsIn = card;
+      // A refusal, or a cancelled prompt, leaves the stored value on
+      // screen: a draft kept after "nothing was changed" was sent again
+      // with the next unrelated save (third review).
+      this._settings = undefined;
     } finally {
       this._busy = false;
     }
+  }
+
+  /** The refusal, under the card whose save it answers. */
+  private _renderProblems(s: Strings, card: ProblemsCard) {
+    if (this._problemsIn !== card || !this._problems.length) return nothing;
+    return html`<div class="problems" role="alert">
+      <ul>
+        ${this._problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
+      </ul>
+    </div>`;
   }
 
   override render() {
@@ -182,7 +206,7 @@ class FoyerPageSettings extends LitElement {
         @change=${(e: Event) =>
           // Emptied is "not changed": Number("") is 0, which saved a delay of
           // no seconds at all (second review).
-          whenNumber(e, (n) => void this._saveSettings({ [key]: n }))}
+          whenNumber(e, (n) => void this._saveSettings({ [key]: n }, "defaults"))}
       />
       <span class="hint">${hint ?? t(s, "common.seconds_unit")}</span>
     </label>`;
@@ -207,6 +231,7 @@ class FoyerPageSettings extends LitElement {
               t(s, "settings.walk_test_hint"),
             )}
           </div>
+          ${this._renderProblems(s, "defaults")}
         </div>
       </div>
     `;
@@ -227,7 +252,7 @@ class FoyerPageSettings extends LitElement {
         enabled: { ...log.enabled, ...(changes.enabled ?? {}) },
         retention_days: { ...log.retention_days, ...(changes.retention_days ?? {}) },
       };
-      void this._saveSettings({ log: next });
+      void this._saveSettings({ log: next }, "log");
     };
     return html`
       <div class="card">
@@ -294,6 +319,7 @@ class FoyerPageSettings extends LitElement {
                 .join(", "),
             })}
           </p>
+          ${this._renderProblems(s, "log")}
         </div>
       </div>
     `;
@@ -311,7 +337,7 @@ class FoyerPageSettings extends LitElement {
     const [min, max] = ctx.meta?.pseudonymise_bounds ?? [1, 365];
     const on = log.pseudonymise_after !== null;
     const change = (changes: Partial<LogSettingsConfig>) =>
-      void this._saveSettings({ log: { ...log, ...changes } });
+      void this._saveSettings({ log: { ...log, ...changes } }, "privacy");
     return html`
       <div class="card">
         <div class="card-hd"><h2>${t(s, "settings.privacy_title")}</h2></div>
@@ -341,10 +367,10 @@ class FoyerPageSettings extends LitElement {
                     min=${min}
                     max=${max}
                     .value=${String(log.pseudonymise_after ?? 30)}
-                    @change=${(e: Event) => {
-                      const days = Number((e.target as HTMLInputElement).value);
-                      if (Number.isFinite(days)) change({ pseudonymise_after: days });
-                    }}
+                    @change=${(e: Event) =>
+                      // Emptied is "not changed": Number("") is 0, below the
+                      // floor the backend refuses (third review).
+                      whenNumber(e, (days) => change({ pseudonymise_after: days }))}
                   />
                   <span class="hint">${t(s, "settings.log_days")}</span>
                 </label>`
@@ -385,6 +411,7 @@ class FoyerPageSettings extends LitElement {
           </label>
           <p class="hint">${t(s, "settings.delete_on_uninstall_hint")}</p>
           <p class="hint">${t(s, "settings.uninstall_snapshots_hint")}</p>
+          ${this._renderProblems(s, "privacy")}
         </div>
       </div>
     `;
@@ -645,9 +672,10 @@ class FoyerPageSettings extends LitElement {
             <span class="lbl">${t(s, "field.language")}</span>
             <select
               @change=${(e: Event) =>
-                this._saveSettings({
-                  language: (e.target as HTMLSelectElement).value || null,
-                })}
+                this._saveSettings(
+                  { language: (e.target as HTMLSelectElement).value || null },
+                  "language",
+                )}
             >
               <option value="" .selected=${live(!settings.language)}>
                 ${t(s, "settings.language_system")}
@@ -670,13 +698,7 @@ class FoyerPageSettings extends LitElement {
             </select>
             <span class="hint">${t(s, "settings.language_hint")}</span>
           </label>
-          ${this._problems.length
-            ? html`<div class="problems" role="alert">
-                <ul>
-                  ${this._problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
-                </ul>
-              </div>`
-            : nothing}
+          ${this._renderProblems(s, "language")}
         </div>
       </div>
     `;
@@ -694,9 +716,10 @@ class FoyerPageSettings extends LitElement {
         <span class="lbl">${t(s, `field.${key}`)}</span>
         <select
           @change=${(e: Event) =>
-            this._saveSettings({
-              [key]: (e.target as HTMLSelectElement).value || null,
-            })}
+            this._saveSettings(
+              { [key]: (e.target as HTMLSelectElement).value || null },
+              "response",
+            )}
         >
           <option value="" .selected=${live(!settings[key])}>${t(s, "settings.none")}</option>
           ${profiles.map(
@@ -721,9 +744,10 @@ class FoyerPageSettings extends LitElement {
               <input
                 .value=${settings.camera_dir}
                 @change=${(e: Event) =>
-                  this._saveSettings({
-                    camera_dir: (e.target as HTMLInputElement).value.trim(),
-                  })}
+                  this._saveSettings(
+                    { camera_dir: (e.target as HTMLInputElement).value.trim() },
+                    "response",
+                  )}
               />
               <span class="hint">${t(s, "settings.camera_dir_hint")}</span>
             </label>
@@ -741,7 +765,7 @@ class FoyerPageSettings extends LitElement {
                       const next = on
                         ? [...settings.silent_suppresses, kind]
                         : settings.silent_suppresses.filter((k) => k !== kind);
-                      this._saveSettings({ silent_suppresses: next });
+                      this._saveSettings({ silent_suppresses: next }, "response");
                     }}
                   />
                   <span
@@ -751,6 +775,7 @@ class FoyerPageSettings extends LitElement {
             )}
             <p class="hint">${t(s, "settings.silent_hint")}</p>
           </fieldset>
+          ${this._renderProblems(s, "response")}
         </div>
       </div>
     `;
@@ -869,15 +894,7 @@ class FoyerPageSettings extends LitElement {
             </span>
           </label>
           <p class="hint">${t(s, "settings.switch_hint")}</p>
-          ${
-            this._problems.length
-              ? html`<div class="problems" role="alert">
-                  <ul>
-                    ${this._problems.map((p) => html`<li>${problemText(s, p)}</li>`)}
-                  </ul>
-                </div>`
-              : nothing
-          }
+          ${this._renderProblems(s, "chime")}
           ${this._saved ? html`<div class="notice">${t(s, "settings.saved")}</div>` : nothing}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>

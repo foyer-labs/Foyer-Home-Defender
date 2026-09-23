@@ -1214,8 +1214,12 @@ class FoyerCard extends LitElement {
           <div class="buttons">
             ${armed || this._alarmRunning
               ? nothing
-              : this._isMaster && status.scenarios.length
-                ? this._scenarioButtons(s)
+              : this._isMaster
+                ? // The master arms a scenario, and with none configured
+                  // there is nothing it could send (third review).
+                  status.scenarios.length
+                  ? this._scenarioButtons(s)
+                  : nothing
                 : this._isPending(arm)
                   ? nothing
                   : html`<button ?disabled=${this._busy} @click=${() => this._run(arm)}>

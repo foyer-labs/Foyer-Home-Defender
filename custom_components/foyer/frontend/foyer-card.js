@@ -1540,7 +1540,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
           ${this._isMaster ? t.areas.filter((e) => e.timer && e.timer.kind !== "siren").map((t) => this._countdown(e, t, !0)) : n ? this._countdown(e, n) : L}
           ${this._renderPad(e)}
           <div class="buttons">
-            ${a || this._alarmRunning ? L : this._isMaster && t.scenarios.length ? this._scenarioButtons(e) : this._isPending(o) ? L : F`<button ?disabled=${this._busy} @click=${() => this._run(o)}>
+            ${a || this._alarmRunning ? L : this._isMaster ? t.scenarios.length ? this._scenarioButtons(e) : L : this._isPending(o) ? L : F`<button ?disabled=${this._busy} @click=${() => this._run(o)}>
                       ${Z(e, "card.arm")}
                     </button>`}
             ${a && !this._isPending(s) ? F`<button

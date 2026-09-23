@@ -971,7 +971,7 @@ class FoyerPageRules extends LitElement {
             <input
               type="checkbox"
               .checked=${live(allowed)}
-              ?disabled=${this._busy || !ctx.isAdmin}
+              ?disabled=${this._busy}
               @change=${async (e: Event) => {
                 const enabled = (e.target as HTMLInputElement).checked;
                 this._busy = true;

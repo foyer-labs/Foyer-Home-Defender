@@ -2409,7 +2409,8 @@
       "held_by_delay": "held back by a delay earlier in the sequence",
       "quiet_hours": "every contact it names is inside their quiet hours",
       "walk_test": "A walk test is running, so nothing was executed",
-      "no_channel": "nobody it names has a channel it may use now"
+      "no_channel": "nobody it names has a channel it may use now",
+      "impaired_radio": "every target sits on a radio suspected of being jammed"
     },
     "timer": {
       "exit": "exit delay",

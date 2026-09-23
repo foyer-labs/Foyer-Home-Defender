@@ -220,6 +220,11 @@ class FoyerPanel extends LitElement {
   private _offset = 0; // server clock minus browser clock, in ms
   private _language?: string;
   private _unsubscribe?: Promise<() => Promise<void>>;
+  // When a refused subscription may be tried again: every state change
+  // re-renders the panel, and retrying on each one hammered a backend that
+  // was still loading (third review).
+  private _retryAt = 0;
+  private _retryTimer?: number;
   private _timer?: number;
 
   override connectedCallback(): void {
@@ -252,6 +257,7 @@ class FoyerPanel extends LitElement {
     this._unsubscribe?.then((unsub) => unsub()).catch(() => undefined);
     this._unsubscribe = undefined;
     window.clearInterval(this._timer);
+    window.clearTimeout(this._retryTimer);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -262,7 +268,7 @@ class FoyerPanel extends LitElement {
         .then((strings) => (this._strings = strings))
         .catch((err) => (this._error = String(err?.message ?? err)));
     }
-    if (!this._unsubscribe && this.isConnected) this._start();
+    if (!this._unsubscribe && this.isConnected && Date.now() >= this._retryAt) this._start();
   }
 
   private get _isAdmin(): boolean {
@@ -286,6 +292,12 @@ class FoyerPanel extends LitElement {
     requiredBy: CodeRequiredBy | null,
   ): Promise<string | undefined> {
     return new Promise((resolve) => {
+      // One prompt at a time. A second command asking while the first is
+      // still waiting takes the prompt over; the first is answered
+      // "cancelled" rather than left waiting for ever with its page busy,
+      // and the code typed goes only to the command the title names
+      // (third review).
+      this._asking?.resolve(undefined);
       this._asking = { resolve, retry, purpose, requiredBy };
       this._focusCode = true;
       this.requestUpdate();
@@ -393,6 +405,11 @@ class FoyerPanel extends LitElement {
     );
     this._unsubscribe.catch((err) => {
       this._unsubscribe = undefined;
+      this._retryAt = Date.now() + 5000;
+      window.clearTimeout(this._retryTimer);
+      this._retryTimer = window.setTimeout(() => {
+        if (this.isConnected && !this._unsubscribe) this._start();
+      }, 5000);
       this._error =
         err?.code === "not_loaded"
           ? t(this._strings, "common.not_loaded")
@@ -520,11 +537,17 @@ class FoyerPanel extends LitElement {
             ...withCode(code),
           }),
         ),
-      saveSettings: (settings) =>
-        this._edit("settings", {
+      // Merged over the configuration as it is now, not as this panel
+      // last read it: the block is saved whole, and a copy from before
+      // another administrator's change wrote that change back out
+      // (third review).
+      saveSettings: async (settings) => {
+        await this._loadConfig().catch(() => undefined);
+        return this._edit("settings", {
           type: "foyer/config/settings",
           settings: { ...this._config?.settings, ...settings },
-        }),
+        });
+      },
       queryLog: (query) =>
         hass.callWS({ type: "foyer/log/query", ...prune(query) }),
       exportLog: (query, format) =>
@@ -703,7 +726,12 @@ class FoyerPanel extends LitElement {
   override render() {
     const s = this._strings;
     const hidden = Boolean(this._prefs.help_hidden);
+    // Inert behind the code prompt: the scrim covers the page for the eye,
+    // and this keeps the keyboard out of it too — a Tab that left the
+    // dialog reached the page's buttons and started a second command
+    // (third review).
     return html`
+      <div class="shell" ?inert=${Boolean(this._asking)}>
       <div class="toolbar">
         <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
         <span class="symbol" aria-hidden="true"
@@ -724,6 +752,7 @@ class FoyerPanel extends LitElement {
       ${s ? this._renderWalkTestBanner(s) : nothing}
       ${s ? this._renderTabs(s) : nothing}
       <main>${s ? this._renderBody(s) : nothing}</main>
+      </div>
       ${this._asking && s ? this._renderCodeDialog(s) : nothing}
     `;
   }

@@ -2409,7 +2409,8 @@
       "held_by_delay": "trattenuta da un ritardo precedente nella sequenza",
       "quiet_hours": "ogni contatto indicato è nelle sue ore di silenzio",
       "walk_test": "È in corso un walk test, quindi non è stato eseguito niente",
-      "no_channel": "nessuno dei destinatari ha adesso un canale utilizzabile"
+      "no_channel": "nessuno dei destinatari ha adesso un canale utilizzabile",
+      "impaired_radio": "ogni destinatario è su una radio sospettata di disturbo"
     },
     "timer": {
       "exit": "ritardo d'uscita",
