@@ -1326,6 +1326,10 @@
     "alarm_ended": {
       "title": "Foyer: allarme finito",
       "message": "L'allarme in {area} è finito."
+    },
+    "alarm_cleared": {
+      "title": "Foyer: memoria d'allarme azzerata",
+      "message": "La memoria d'allarme di {area} è stata azzerata."
     }
   },
   "chime_mode": {
@@ -1480,7 +1484,8 @@
     "auto_suspension_set": "Regole automatiche sospese",
     "auto_suspension_cleared": "Sospensione finita",
     "auto_arming_switched": "Regole automatiche attivate o disattivate",
-    "alarm_ended": "Fine dell'allarme"
+    "alarm_ended": "Fine dell'allarme",
+    "alarm_cleared": "Memoria d'allarme azzerata"
   },
   "condition": {
     "add": "Aggiungi una condizione",

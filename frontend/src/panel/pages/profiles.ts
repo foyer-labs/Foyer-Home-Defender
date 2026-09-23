@@ -32,6 +32,7 @@ const MOMENT_GROUPS: Record<string, string[]> = {
     "triggered",
     "siren_cutoff",
     "alarm_ended",
+    "alarm_cleared",
     "incident_opened",
     "incident_joined",
     "incident_acknowledged",

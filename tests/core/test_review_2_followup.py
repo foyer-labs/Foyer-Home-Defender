@@ -322,3 +322,32 @@ def test_a_disarm_during_the_alarm_ends_it():
 def test_an_ordinary_disarm_is_not_the_end_of_an_alarm():
     world = _armed_house()
     assert _ended(world.disarm()) == []
+
+
+# --- decision 108: alarm_cleared ------------------------------------------------------
+
+
+def _cleared(decision):
+    return [o.area_id for o in decision.occurrences if o.moment is Moment.ALARM_CLEARED]
+
+
+def test_the_memory_is_cleared_by_the_disarm_hours_after_the_cutoff():
+    world = _armed_house()
+    world.set(WINDOW, "on")
+    assert _cleared(world.advance(180)) == []
+    world.advance(3 * 3600)
+    assert _cleared(world.disarm()) == ["ground"]
+
+
+def test_a_disarm_during_the_alarm_ends_it_and_clears_it():
+    world = _armed_house()
+    world.set(WINDOW, "on")
+    world.advance(10)
+    decision = world.disarm()
+    assert _ended(decision) == [("ground", "disarmed")]
+    assert _cleared(decision) == ["ground"]
+
+
+def test_an_ordinary_disarm_clears_nothing():
+    world = _armed_house()
+    assert _cleared(world.disarm()) == []

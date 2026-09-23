@@ -3135,6 +3135,14 @@ class _Run:
                 channel=channel,
                 detail={"cause": "disarmed"},
             )
+        if rt.memory:
+            self.occur(
+                Moment.ALARM_CLEARED,
+                area_id=area_id,
+                scenario_id=rt.scenario_id,
+                zone_ids=rt.causes,
+                channel=channel,
+            )
         self.clear_area(area_id)
 
     def clear_area(self, area_id: str) -> None:

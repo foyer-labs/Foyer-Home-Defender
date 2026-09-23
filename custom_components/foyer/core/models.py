@@ -354,6 +354,10 @@ class Moment(StrEnum):
     # moment for "switch the light off when the alarm is over", which the
     # incident's acknowledgement — belonging to no area — cannot serve.
     ALARM_ENDED = "alarm_ended"
+    # A disarm cleared an area's alarm memory, whenever the alarm itself
+    # ended (decision 108): the lamp that says "something happened while you
+    # were out" goes off here, not at the cutoff hours earlier.
+    ALARM_CLEARED = "alarm_cleared"
     ZONE_FAULT = "zone_fault"
     HA_RESTARTED = "ha_restarted"
     TECHNICAL_RAISED = "technical_raised"

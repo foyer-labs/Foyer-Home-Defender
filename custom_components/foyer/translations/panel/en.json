@@ -1326,6 +1326,10 @@
     "alarm_ended": {
       "title": "Foyer: alarm over",
       "message": "The alarm in {area} is over."
+    },
+    "alarm_cleared": {
+      "title": "Foyer: alarm memory cleared",
+      "message": "The alarm memory of {area} has been cleared."
     }
   },
   "chime_mode": {
@@ -1480,7 +1484,8 @@
     "auto_suspension_set": "Automatic rules suspended",
     "auto_suspension_cleared": "Suspension over",
     "auto_arming_switched": "Automatic rules switched",
-    "alarm_ended": "Alarm over"
+    "alarm_ended": "Alarm over",
+    "alarm_cleared": "Alarm memory cleared"
   },
   "condition": {
     "add": "Add a condition",
