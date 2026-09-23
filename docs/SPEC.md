@@ -1293,10 +1293,11 @@ is the sentence a burglar wants.
 
 **Plain HTTP stays accepted and said** (decision 119), as decision 97 does:
 a module that cannot do TLS keeps working, the warning on page 8 stays, and
-every row records that the request was not encrypted. Switching on any scope
-beyond `status` on a device that talks in the clear takes an explicit
-confirmation on page 8 — what that scope says about the house crosses the
-network readable — and the confirmation is recorded in the log.
+every row records that the request was not encrypted. Reading any scope
+beyond `status` in the clear takes an explicit confirmation on page 8 — what
+that scope says about the house crosses the network readable — and the
+confirmation is recorded in the log. An action in the clear needs none: it
+carries a code, as the keypads of decision 97 always have.
 
 **How the data travels** (decision 120). A microcontroller has little memory,
 so nothing large is pushed:
