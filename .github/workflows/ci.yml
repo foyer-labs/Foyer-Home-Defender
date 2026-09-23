@@ -58,7 +58,8 @@ jobs:
           python-version: ${{ matrix.python }}
       # bcrypt, because security/ hashes codes with it and is deliberately
       # free of Home Assistant: it must be testable here, not only there.
-      - run: pip install pytest bcrypt
+      # pyyaml, because tests/repo compares docs/api/*.yaml with the code.
+      - run: pip install pytest bcrypt pyyaml
       - name: Home Assistant must not be importable here
         run: "! python -c 'import homeassistant'"
       - run: pytest

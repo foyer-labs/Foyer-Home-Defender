@@ -1,0 +1,1007 @@
+openapi: 3.1.0
+info:
+  title: Foyer device endpoint
+  version: v1
+  summary: The HTTP contract between Foyer and a device of the household's own.
+  description: |
+    The endpoint a keypad, a touch display, a relay or a microcontroller uses to
+    read what Foyer knows and, when it is allowed to, act on it (SPEC §9.2.1,
+    §9.2.2). This document is contract version `v1`. A change that would break
+    a device written against `v1` is a new version and is said in the
+    changelog. Only what a device may rely on is described here: the panel's
+    WebSocket commands are internal and are not part of this contract.
+
+    ## Devices and tokens
+
+    A device is declared on page 8 with `transport: http` and holds a token of
+    its own: 32 random bytes, shown once when generated, stored only as a
+    SHA-256 hash. The token names the device. A request carries no
+    `device_id`; one it carries anyway is ignored. Generating a new token
+    invalidates the previous one at once and closes its open streams.
+
+    ## What the token buys, and what it does not
+
+    The token authenticates the device. It does not encrypt anything. Over
+    plain HTTP the token and any code sent with it cross the network exactly
+    as readable as over plain MQTT. Confidentiality comes from TLS: HTTPS for
+    this endpoint, TLS on the broker, or ESPHome's native API.
+
+    Plain HTTP is accepted, and said: a device whose requests arrive in the
+    clear carries a permanent warning on page 8, and every log row it causes
+    records that the request was not encrypted. Any scope beyond `status` is
+    served in the clear only after the owner has confirmed it on page 8; until
+    then it answers `403 plain_http_not_confirmed`.
+
+    ## Scopes
+
+    A device is allowed exactly what its scopes say, and every scope is off
+    until switched on. A device never goes beyond its scopes, whatever code is
+    typed on it. Read scopes (`status`, `zones`, `batteries`, `health`, `log`)
+    are each either free (read with the token alone) or after a code (read
+    only while the device is unlocked). The default is `status` free and the
+    rest after a code. Action scopes (`arm`, `disarm`, `exclude`,
+    `acknowledge`) always need a code.
+
+    ## Codes
+
+    Without a code a device only reads. Every action needs a code, arming
+    included, even where the installation's policy asks none elsewhere. The
+    code is the identity of the person: the action is attributed to its owner,
+    checked against their permissions, and refused beyond the device's own
+    scopes even when its owner could do more. A wrong code counts against the
+    device's lockout. A stolen token disarms nothing without a code.
+
+    ## The unlock
+
+    `{"action": "unlock", "code": "…"}` unlocks the device's after-a-code
+    scopes for the length chosen on the device (30 seconds to 10 minutes, two
+    minutes by default), counted from its last use. It ends at once with
+    `{"action": "lock"}`, with every arming or disarming made through the
+    device, and with a restart. It reads only what the code's owner may read:
+    names in the log appear only when the owner holds `view_log`. Each unlock
+    leaves a `security` row in the log.
+
+    ## Wrong tokens
+
+    A missing or wrong token is answered `401` with no body and no detail. It
+    is counted per source address (an IPv6 address by its /64); past the
+    lockout thresholds that address is refused for the lockout period, the
+    refusal is recorded under `security`, and it is notified once.
+
+    ## Where no device uses the endpoint
+
+    When no enabled device is declared with `transport: http`, every route
+    answers `404` as if it did not exist.
+
+    ## What this is not
+
+    Foyer is neither a certified alarm system nor a fire alarm system.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: /
+    description: The Home Assistant instance running Foyer.
+security:
+  - deviceToken: []
+tags:
+  - name: actions
+    description: What a device asks Foyer to do, and the unlock.
+  - name: state
+    description: The state message, streamed.
+  - name: sections
+    description: Zones, batteries, health and log, each read with its own request.
+paths:
+  /api/foyer/device:
+    post:
+      tags: [actions]
+      operationId: deviceAction
+      summary: Send an action
+      description: |
+        One action per request. The body is a JSON object of at most 4096
+        bytes. A `device_id` in the body is ignored: the token names the
+        device.
+
+        Every action except `status` and `lock` needs a `code`. An action
+        outside the device's scopes answers `scope_not_granted`, and one
+        without a code answers `code_required`, before the code or the house
+        is looked at.
+
+        Every action but `unlock` and `lock` is answered with the structured
+        result (`DeviceResult`). A refusal is still `200`: the answer is in
+        `success`, `reason`, `last_result` and `last_reason`.
+
+        `unlock` and `lock` are answered with `SessionResult`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRequest'
+            examples:
+              status:
+                summary: Tell me again (a device that has just booted)
+                value: {action: status}
+              armScenario:
+                summary: Arm a scenario
+                value: {action: arm, scenario: night, code: '1234'}
+              armArea:
+                summary: Arm one area
+                value: {action: arm, area: garage, code: '1234'}
+              disarm:
+                summary: Disarm some areas
+                value: {action: disarm, areas: [ground], code: '1234'}
+              disarmAll:
+                summary: Disarm everything the device may disarm
+                value: {action: disarm, code: '1234'}
+              exclude:
+                summary: Exclude a zone from the next arming
+                value: {action: exclude, zone: kitchen_window, code: '1234'}
+              include:
+                summary: Include it again
+                value: {action: include, zone: kitchen_window, code: '1234'}
+              acknowledge:
+                summary: Take note of an alarm
+                value: {action: acknowledge, target: incident, code: '1234'}
+              unlock:
+                summary: Unlock the after-a-code read scopes
+                value: {action: unlock, code: '1234'}
+              lock:
+                summary: End the unlock at once
+                value: {action: lock}
+      responses:
+        '200':
+          description: |
+            The answer. `DeviceResult` for every action but `unlock` and
+            `lock`; `SessionResult` for those two.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DeviceResult'
+                  - $ref: '#/components/schemas/SessionResult'
+              examples:
+                armed:
+                  summary: Armed
+                  value:
+                    success: true
+                    reason: null
+                    blocking_zones: []
+                    bypassed_zones: []
+                    low_battery_zones: []
+                    last_result: ok
+                    last_reason: null
+                    state:
+                      master: arming
+                      countdown: {kind: exit, remaining: 30}
+                      ready_to_arm: true
+                      blocking_zones: 0
+                      fault: false
+                      last_result: ok
+                      last_reason: null
+                blockedByOpenZone:
+                  summary: Refused, a zone is open (detail level minimal)
+                  value:
+                    success: false
+                    reason: zone_open
+                    blocking_zones: [{id: z_kitchen_window}]
+                    bypassed_zones: []
+                    low_battery_zones: []
+                    last_result: blocked
+                    last_reason: zone_open
+                    state:
+                      master: disarmed
+                      countdown: null
+                      ready_to_arm: false
+                      blocking_zones: 1
+                      fault: false
+                      last_result: blocked
+                      last_reason: zone_open
+                codeRequired:
+                  summary: No code sent
+                  value:
+                    success: false
+                    reason: code_required
+                    blocking_zones: []
+                    bypassed_zones: []
+                    low_battery_zones: []
+                    last_result: bad_code
+                    last_reason: code_required
+                    state:
+                      master: disarmed
+                      countdown: null
+                      ready_to_arm: true
+                      blocking_zones: 0
+                      fault: false
+                      last_result: bad_code
+                      last_reason: code_required
+                unlocked:
+                  summary: Unlocked
+                  value: {success: true, reason: null, until: '2026-09-23T10:02:00+00:00'}
+                unlockRefused:
+                  summary: Unlock with a wrong code
+                  value: {success: false, reason: bad_code, until: null}
+                locked:
+                  summary: Locked
+                  value: {success: true, reason: null, until: null}
+        '400':
+          description: |
+            The body is not a JSON object, or is longer than 4096 bytes. No
+            body.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotInUse'
+        '503':
+          $ref: '#/components/responses/Reloading'
+
+  /api/foyer/device/state:
+    get:
+      tags: [state]
+      operationId: deviceStateStream
+      summary: Stream the state
+      description: |
+        Server-Sent Events. Three kinds of message, each ended by a blank line:
+
+        - `data: <StateMessage as one line of JSON>` on connect, when the
+          device holds `status`, and again whenever it changes. The message
+          is the one of the MQTT state topic, at the same detail level
+          (`minimal` by default). Its `last_result` and `last_reason` are this
+          device's own last answer, never another device's.
+        - `event: changed` followed by `data: <section>`, where section is one
+          of `zones`, `batteries`, `health`, `log`, when a section the device
+          holds a scope for has changed. It is not sent on connect. A device
+          that does not show that section ignores it; one that does reads it
+          with `GET /api/foyer/device/{section}`.
+        - `: keepalive`, a comment line, after thirty seconds with nothing
+          else to say, so a proxy does not close a quiet connection.
+
+        The stream closes when the device's token is replaced or revoked,
+        when the device is removed, disabled or moved off the endpoint, and
+        when Home Assistant stops. A reload of the configuration does not
+        close it.
+      responses:
+        '200':
+          description: The event stream.
+          headers:
+            Cache-Control:
+              schema: {type: string, const: no-cache}
+            X-Accel-Buffering:
+              description: Tells nginx not to buffer the stream.
+              schema: {type: string, const: 'no'}
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Lines of Server-Sent Events. Each `data:` line that is not a
+                  section notice carries a `StateMessage` (see
+                  `#/components/schemas/StateMessage`).
+              example: |
+                data: {"master": "disarmed", "countdown": null, "ready_to_arm": true, "blocking_zones": 0, "fault": false, "last_result": null, "last_reason": null}
+
+                event: changed
+                data: zones
+
+                : keepalive
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotInUse'
+        '503':
+          $ref: '#/components/responses/Reloading'
+
+  /api/foyer/device/{section}:
+    get:
+      tags: [sections]
+      operationId: deviceSection
+      summary: Read a section
+      description: |
+        One section per request, each needing the read scope of the same
+        name. A section after a code is read only while the device is
+        unlocked; any section read over plain HTTP needs the owner's
+        confirmation on page 8.
+
+        The sections carry names of zones and areas at every detail level:
+        they are read only by a device given that scope.
+
+        `log` is paged newest first by an opaque cursor: pass the `next` of
+        one answer as `before` of the next request. It shows the same rows as
+        the log page, after the privacy sweeps. A row carries `person` only
+        when the device was unlocked by a code whose owner holds `view_log`.
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Section'
+        - name: before
+          in: query
+          required: false
+          description: |
+            `log` only. The `next` of the previous page. Opaque: a device
+            stores it and sends it back, and never builds one. Absent or
+            unreadable means the newest page.
+          schema: {type: string}
+        - name: limit
+          in: query
+          required: false
+          description: |
+            `log` only. Rows per page, 1 to 50, 20 when absent. A larger
+            number is read as 50, a smaller one as 1.
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        '200':
+          description: The section.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ZonesSection'
+                  - $ref: '#/components/schemas/BatteriesSection'
+                  - $ref: '#/components/schemas/HealthSection'
+                  - $ref: '#/components/schemas/LogSection'
+              examples:
+                zones:
+                  summary: zones
+                  value:
+                    success: true
+                    reason: null
+                    zones:
+                      - {id: z_front_door, name: Front door, area_id: ground, type: delayed, enabled: true, open: false, fault: null, excluded: false}
+                      - {id: z_kitchen_window, name: Kitchen window, area_id: ground, type: instant, enabled: true, open: true, fault: null, excluded: false}
+                batteries:
+                  summary: batteries
+                  value:
+                    success: true
+                    reason: null
+                    zones:
+                      - {id: z_front_door, name: Front door, battery: 85.0, low: false, tamper: null}
+                      - {id: z_panel_tamper, name: Panel tamper, battery: null, low: false, tamper: false}
+                log:
+                  summary: log, a free scope (no names)
+                  value:
+                    success: true
+                    reason: null
+                    rows:
+                      - {ts: '2026-09-23T07:58:12+00:00', category: arming, event_type: armed, severity: info, outcome: ok, area: Ground floor, zone: null}
+                    next: o1
+        '403':
+          description: The device may not read this section now. The reason says why.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SectionRefusal'
+              examples:
+                notGranted:
+                  value: {success: false, reason: scope_not_granted}
+                unlockRequired:
+                  value: {success: false, reason: unlock_required}
+                plainHttp:
+                  value: {success: false, reason: plain_http_not_confirmed}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: |
+            No device uses the endpoint, or the section does not exist. No
+            body.
+        '503':
+          $ref: '#/components/responses/Reloading'
+
+components:
+  securitySchemes:
+    deviceToken:
+      type: http
+      scheme: bearer
+      description: |
+        The device's own token, from page 8. It authenticates the device and
+        encrypts nothing: over plain HTTP it is readable on the network. It is
+        not a Home Assistant access token, and a Home Assistant access token
+        is not accepted here.
+
+  responses:
+    Unauthorized:
+      description: |
+        The token is missing or wrong, or the source address is locked out.
+        No body, and no detail about which.
+    NotInUse:
+      description: No enabled device uses the endpoint. No body.
+    Reloading:
+      description: |
+        Foyer is reloading, which every configuration save causes. No body.
+        Try again in a moment; the token is not wrong.
+
+  schemas:
+    Action:
+      type: string
+      description: |
+        Every action a device may send. `status` needs the `status` scope;
+        `arm`, `disarm` and `acknowledge` the scope of the same name;
+        `exclude` and `include` the `exclude` scope. `unlock` and `lock` need
+        no scope.
+      enum: [status, arm, disarm, exclude, include, acknowledge, unlock, lock]
+
+    Scope:
+      type: string
+      description: |
+        What a device may read (`status`, `zones`, `batteries`, `health`,
+        `log`) or do (`arm`, `disarm`, `exclude`, `acknowledge`). Every scope
+        is off until switched on for that device.
+      enum: [status, zones, batteries, health, log, arm, disarm, exclude, acknowledge]
+
+    Section:
+      type: string
+      description: A section read with its own request; each needs the read scope of the same name.
+      enum: [zones, batteries, health, log]
+
+    Code:
+      type: [string, integer]
+      description: |
+        The code typed on the device. A number is accepted and read as its
+        digits; send a string to keep leading zeros.
+
+    Reason:
+      type: string
+      description: |
+        Why a request was refused. A stable identifier, never a sentence:
+        a device maps it to its own words. This set may grow in a later
+        version of the contract; a device that meets a value it does not
+        know falls back on `last_result`, which never grows.
+
+        - `scope_not_granted`: the device's scopes do not give this, or
+          arming or disarming reaches outside the scenarios and areas chosen
+          for the device.
+        - `unlock_required`, `plain_http_not_confirmed`: see the sections.
+        - `unknown_action`: an action this contract does not define.
+        - `code_required`, `bad_code`, `locked_out`, `user_not_valid`,
+          `not_permitted`, `area_not_allowed`, `scenario_not_allowed`: the
+          code and what its owner may do.
+        - `zone_open`, `zone_fault`, `zone_not_bypassable`,
+          `alarm_in_progress`, `invalid_state`, `walk_test_active`: the
+          state of the house.
+        - `unknown_scenario`, `unknown_area`, `unknown_zone`,
+          `no_scenario_for_mode`, `ambiguous_mode`: what the request names.
+        - `nothing_to_acknowledge`: there is no alarm to take note of.
+        - `device_not_registered`: the device is not, or no longer, declared.
+        - `not_loaded`: the request reached Foyer while it was unloading.
+      enum:
+        - alarm_in_progress
+        - ambiguous_mode
+        - area_not_allowed
+        - bad_code
+        - code_required
+        - device_not_registered
+        - invalid_state
+        - locked_out
+        - no_scenario_for_mode
+        - not_loaded
+        - not_permitted
+        - nothing_to_acknowledge
+        - plain_http_not_confirmed
+        - scenario_not_allowed
+        - scope_not_granted
+        - unknown_action
+        - unknown_area
+        - unknown_scenario
+        - unknown_zone
+        - unlock_required
+        - user_not_valid
+        - walk_test_active
+        - zone_fault
+        - zone_not_bypassable
+        - zone_open
+
+    LastResult:
+      type: string
+      description: |
+        One word for a keypad's beeps and LED. This closed set of four never
+        grows. `bad_code` covers a wrong code and a missing one; `blocked`
+        covers every other refusal.
+      enum: [ok, blocked, bad_code, locked_out]
+
+    DetailLevel:
+      type: string
+      description: |
+        How much the state message says, chosen for the installation and
+        shared with the MQTT state topic. `minimal` (the default) names
+        nothing; `standard` adds the active scenario and the per-area states
+        by name; `full` adds the open zones by name.
+      enum: [minimal, standard, full]
+
+    DeviceRequest:
+      type: object
+      description: |
+        One action. When both `scenario` and `area` are sent with `arm`,
+        `area` is used.
+      required: [action]
+      properties:
+        action: {$ref: '#/components/schemas/Action'}
+      oneOf:
+        - $ref: '#/components/schemas/StatusRequest'
+        - $ref: '#/components/schemas/ArmScenarioRequest'
+        - $ref: '#/components/schemas/ArmAreaRequest'
+        - $ref: '#/components/schemas/DisarmRequest'
+        - $ref: '#/components/schemas/ExcludeRequest'
+        - $ref: '#/components/schemas/AcknowledgeRequest'
+        - $ref: '#/components/schemas/UnlockRequest'
+        - $ref: '#/components/schemas/LockRequest'
+
+    StatusRequest:
+      type: object
+      description: |
+        Tell me again: the structured result with the device's last answer
+        and the current state. A read; needs the `status` scope and no code.
+      required: [action]
+      properties:
+        action: {type: string, const: status}
+
+    ArmScenarioRequest:
+      type: object
+      description: |
+        Arm a scenario. Needs the `arm` scope and a code, and a scenario
+        among those chosen for the device. `scenario` is the scenario's id
+        or name. A Home Assistant mode (`armed_night`, …) is accepted too,
+        but only by a device allowed every scenario.
+      required: [action, scenario, code]
+      properties:
+        action: {type: string, const: arm}
+        scenario: {type: string}
+        code: {$ref: '#/components/schemas/Code'}
+        force:
+          type: boolean
+          default: false
+          description: Arm even with zones open, excluding those that may be excluded.
+        skip_exit_delay:
+          type: boolean
+          default: false
+          description: No exit delay; every delayed zone is instant. The log records it.
+
+    ArmAreaRequest:
+      type: object
+      description: |
+        Arm one area. Needs the `arm` scope and a code, and an area among
+        those chosen for the device. `area` is the area's id or name. When
+        both `area` and `scenario` are sent, `area` is used.
+      required: [action, area, code]
+      properties:
+        action: {type: string, const: arm}
+        area: {type: string}
+        code: {$ref: '#/components/schemas/Code'}
+        force: {type: boolean, default: false}
+        skip_exit_delay: {type: boolean, default: false}
+
+    DisarmRequest:
+      type: object
+      description: |
+        Disarm. Needs the `disarm` scope and a code. Without `areas`, it
+        disarms everything the device may disarm: the whole house, or the
+        areas chosen for the device. With `areas`, those areas, each by id or
+        name, each among those chosen for the device.
+      required: [action, code]
+      properties:
+        action: {type: string, const: disarm}
+        areas:
+          type: array
+          minItems: 1
+          items: {type: string}
+        area_ids:
+          type: array
+          minItems: 1
+          items: {type: string}
+          description: The same as `areas`, the name the MQTT contract uses. `areas` wins when both are sent.
+        code: {$ref: '#/components/schemas/Code'}
+
+    ExcludeRequest:
+      type: object
+      description: |
+        `exclude` takes a zone out of the next arming; `include` puts it
+        back. Both need the `exclude` scope and a code. `zone` is the zone's
+        id or name.
+      required: [action, zone, code]
+      properties:
+        action: {type: string, enum: [exclude, include]}
+        zone: {type: string}
+        code: {$ref: '#/components/schemas/Code'}
+
+    AcknowledgeRequest:
+      type: object
+      description: |
+        Take note of an alarm (`incident`, the default) or of a technical
+        alarm such as smoke or water (`technical`). Needs the `acknowledge`
+        scope and a code.
+      required: [action, code]
+      properties:
+        action: {type: string, const: acknowledge}
+        target:
+          type: string
+          enum: [incident, technical]
+          default: incident
+        code: {$ref: '#/components/schemas/Code'}
+
+    UnlockRequest:
+      type: object
+      description: |
+        Unlock the device's after-a-code read scopes. A wrong code counts
+        against the device's lockout.
+      required: [action, code]
+      properties:
+        action: {type: string, const: unlock}
+        code: {$ref: '#/components/schemas/Code'}
+
+    LockRequest:
+      type: object
+      description: End the unlock at once. Needs no code.
+      required: [action]
+      properties:
+        action: {type: string, const: lock}
+
+    ZoneRef:
+      type: object
+      description: |
+        A zone in a result. `name` is present only at the `full` detail
+        level; below it a zone is its opaque id.
+      required: [id]
+      properties:
+        id: {type: string}
+        name: {type: string}
+
+    DeviceResult:
+      type: object
+      description: |
+        The structured result shared by the services, the WebSocket commands
+        and the MQTT bridge, with the device's answer beside it and the state
+        message as `state`.
+      required:
+        - success
+        - reason
+        - blocking_zones
+        - bypassed_zones
+        - low_battery_zones
+        - last_result
+        - last_reason
+        - state
+      properties:
+        success: {type: boolean}
+        reason:
+          description: Null on success. On a refusal, why; null when the refusal carries no reason.
+          oneOf:
+            - $ref: '#/components/schemas/Reason'
+            - type: 'null'
+        blocking_zones:
+          type: array
+          description: The zones that stopped an arming.
+          items: {$ref: '#/components/schemas/ZoneRef'}
+        bypassed_zones:
+          type: array
+          description: The zones excluded by this arming.
+          items: {$ref: '#/components/schemas/ZoneRef'}
+        low_battery_zones:
+          type: array
+          description: The zones armed with a low battery.
+          items: {$ref: '#/components/schemas/ZoneRef'}
+        last_result: {$ref: '#/components/schemas/LastResult'}
+        last_reason:
+          oneOf:
+            - $ref: '#/components/schemas/Reason'
+            - type: 'null'
+        state: {$ref: '#/components/schemas/StateMessage'}
+
+    SessionResult:
+      type: object
+      description: The answer to `unlock` and `lock`.
+      required: [success, reason, until]
+      properties:
+        success: {type: boolean}
+        reason:
+          oneOf:
+            - $ref: '#/components/schemas/Reason'
+            - type: 'null'
+        until:
+          description: When the unlock ends if the device is not used again (ISO 8601, UTC). Null after `lock` and on a refusal.
+          oneOf:
+            - {type: string, format: date-time}
+            - type: 'null'
+
+    Countdown:
+      type: object
+      description: The soonest exit or entry delay still running.
+      required: [kind, remaining]
+      properties:
+        kind:
+          type: string
+          description: |
+            `exit` or `entry`. `hold` is an arming waiting, after its exit
+            delay, for a zone to close; `siren` is a siren's running time.
+          enum: [exit, entry, hold, siren]
+        remaining: {type: integer, minimum: 0, description: Seconds.}
+
+    StateMessage:
+      type: object
+      description: |
+        The state message: the same as the MQTT state topic, at the
+        installation's detail level. `scenario` and `areas` are present from
+        `standard`, `open_zones` only at `full`.
+      required:
+        - master
+        - countdown
+        - ready_to_arm
+        - blocking_zones
+        - fault
+        - last_result
+        - last_reason
+      properties:
+        master:
+          type: string
+          description: |
+            The Home Assistant mode while armed (`armed_away`, `armed_home`,
+            `armed_night`, `armed_vacation`, `armed_custom_bypass`), otherwise
+            the state of the house (`disarmed`, `arming`, `entry`,
+            `triggered`, `armed`).
+        countdown:
+          oneOf:
+            - $ref: '#/components/schemas/Countdown'
+            - type: 'null'
+        ready_to_arm: {type: boolean}
+        blocking_zones:
+          type: integer
+          minimum: 0
+          description: How many zones block arming. A count, never names.
+        fault:
+          type: boolean
+          description: Whether any zone is in fault (unavailable, unreadable, silent past its supervision window, or its battery entity unavailable).
+        last_result:
+          description: The device's last answer; null until it has had one.
+          oneOf:
+            - $ref: '#/components/schemas/LastResult'
+            - type: 'null'
+        last_reason:
+          oneOf:
+            - $ref: '#/components/schemas/Reason'
+            - type: 'null'
+        scenario:
+          description: '`standard` and `full`. The active scenario''s name, or null.'
+          type: [string, 'null']
+        areas:
+          description: '`standard` and `full`. Each area''s state, by area name.'
+          type: object
+          additionalProperties:
+            type: string
+            enum: [disarmed, arming, armed, entry, triggered]
+        open_zones:
+          description: '`full` only. The zones blocking arming, by name.'
+          type: array
+          items: {type: string}
+
+    SectionRefusal:
+      type: object
+      required: [success, reason]
+      properties:
+        success: {type: boolean, const: false}
+        reason:
+          type: string
+          description: |
+            `scope_not_granted`: the device does not hold this scope.
+            `plain_http_not_confirmed`: the request arrived unencrypted and
+            the owner has not confirmed this scope in the clear.
+            `unlock_required`: the scope is after a code and the device is
+            not unlocked.
+          enum: [scope_not_granted, unlock_required, plain_http_not_confirmed]
+
+    ZonesSection:
+      type: object
+      required: [success, reason, zones]
+      properties:
+        success: {type: boolean, const: true}
+        reason: {type: 'null'}
+        zones:
+          type: array
+          items:
+            type: object
+            required: [id, name, area_id, type, enabled, open, fault, excluded]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              area_id: {type: string}
+              type:
+                type: string
+                enum: [instant, delayed, follower, 24h, tamper, technical, panic, key]
+              enabled: {type: boolean}
+              open:
+                type: boolean
+                description: Whether the zone is in its trigger state.
+              fault:
+                description: |
+                  Why the zone is in fault, or null. Null for a disabled zone.
+                oneOf:
+                  - type: string
+                    enum: [unavailable, not_numeric, supervision, battery_unavailable]
+                  - type: 'null'
+              excluded:
+                type: boolean
+                description: Excluded from the current or next arming.
+
+    BatteriesSection:
+      type: object
+      description: |
+        The zones with a battery, a low-battery flag, or a tamper switch.
+      required: [success, reason, zones]
+      properties:
+        success: {type: boolean, const: true}
+        reason: {type: 'null'}
+        zones:
+          type: array
+          items:
+            type: object
+            required: [id, name, battery, low, tamper]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              battery:
+                description: The battery percentage, or null when the battery entity reports only low or not low.
+                type: [number, 'null']
+              low: {type: boolean}
+              tamper:
+                description: For a tamper zone, whether it is tampered; null for every other zone.
+                type: [boolean, 'null']
+
+    HealthSection:
+      type: object
+      description: System health, as page 14 shows it. Times are ISO 8601, UTC.
+      required:
+        - success
+        - reason
+        - unreachable_zones
+        - causes
+        - mains
+        - watchdog
+        - channels
+        - radios
+        - rf
+        - faults
+        - repair_after
+      properties:
+        success: {type: boolean, const: true}
+        reason: {type: 'null'}
+        unreachable_zones:
+          type: array
+          description: Zones unreadable for long enough to need a repair.
+          items:
+            type: object
+            required: [id, name, since, days]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              since: {type: string, format: date-time}
+              days: {type: integer, minimum: 0}
+        causes:
+          type: array
+          description: Why the system is not healthy; empty when it is.
+          items:
+            type: string
+            enum: [zone_fault, mains_lost, mains_unknown, channel_down, watchdog_unreachable, rf_interference, coordinator_down]
+        mains:
+          type: object
+          required: [entity_id, lost_states, state, lost, since]
+          properties:
+            entity_id: {type: [string, 'null']}
+            lost_states: {type: array, items: {type: string}}
+            state: {type: [string, 'null']}
+            lost:
+              description: True when mains power is lost, false when it is fine or not configured, null when unreadable.
+              type: [boolean, 'null']
+            since: {type: [string, 'null'], format: date-time}
+        watchdog:
+          type: object
+          description: The external watchdog. Never its URL.
+          required: [enabled, url_set, interval, timeout, failures_allowed, payload, failures, down_since, last_ok, last_attempt, last_error, ever_ok]
+          properties:
+            enabled: {type: boolean}
+            url_set: {type: boolean}
+            interval: {type: integer, description: Seconds.}
+            timeout: {type: integer, description: Seconds.}
+            failures_allowed: {type: integer}
+            payload: {type: boolean, description: Whether the heartbeat carries a payload.}
+            failures: {type: integer}
+            down_since: {type: [string, 'null'], format: date-time}
+            last_ok: {type: [string, 'null'], format: date-time}
+            last_attempt: {type: [string, 'null'], format: date-time}
+            last_error: {type: [string, 'null']}
+            ever_ok: {type: boolean}
+        channels:
+          type: array
+          description: Each enabled notification channel of each enabled contact.
+          items:
+            type: object
+            required: [key, contact_id, contact_name, channel_id, kind, service, fault, since, failures, last_ok, checked]
+            properties:
+              key: {type: string}
+              contact_id: {type: string}
+              contact_name: {type: string}
+              channel_id: {type: string}
+              kind:
+                type: string
+                enum: [push, sms, voice, chat, other]
+              service: {type: string}
+              fault:
+                oneOf:
+                  - type: string
+                    enum: [missing_service, send_failed]
+                  - type: 'null'
+              since: {type: [string, 'null'], format: date-time}
+              failures: {type: integer}
+              last_ok: {type: [string, 'null'], format: date-time}
+              checked: {type: boolean, description: Whether a send through it has ever succeeded.}
+        radios:
+          type: array
+          items:
+            type: object
+            required: [id, name, entry_id, coordinator_entity_id, coordinator_state, enabled, zones, quiet, threshold, window, suspected_since, confirmed, coordinator_down_since]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              entry_id: {type: string}
+              coordinator_entity_id: {type: [string, 'null']}
+              coordinator_state: {type: [string, 'null']}
+              enabled: {type: boolean}
+              zones: {type: integer, description: Zones on this radio.}
+              quiet: {type: integer, description: 'Of those, how many fell silent together.'}
+              threshold: {type: integer}
+              window: {type: integer, description: Seconds.}
+              suspected_since: {type: [string, 'null'], format: date-time}
+              confirmed: {type: boolean}
+              coordinator_down_since: {type: [string, 'null'], format: date-time}
+        rf:
+          type: object
+          required: [zones, window, confirm]
+          properties:
+            zones: {type: integer}
+            window: {type: integer, description: Seconds.}
+            confirm: {type: integer, description: Seconds.}
+        faults:
+          type: array
+          description: The ids of the zones recorded in fault.
+          items: {type: string}
+        repair_after:
+          type: integer
+          description: Seconds a zone stays unreadable before it is listed as unreachable.
+
+    LogSection:
+      type: object
+      required: [success, reason, rows, next]
+      properties:
+        success: {type: boolean, const: true}
+        reason: {type: 'null'}
+        rows:
+          type: array
+          maxItems: 50
+          description: Newest first.
+          items:
+            type: object
+            required: [ts, category, event_type, severity, outcome, area, zone]
+            properties:
+              ts: {type: string, format: date-time}
+              category:
+                type: string
+                enum: [arming, alarm, action, config, security, system, zone_armed, zone_disarmed]
+              event_type:
+                type: string
+                description: What happened, as a stable identifier (`armed`, `disarmed`, `device_unlocked`, …).
+              severity:
+                type: string
+                enum: [info, warning, alarm]
+              outcome: {type: [string, 'null']}
+              area:
+                description: The area's name, or its id when it no longer exists; null when the row names none.
+                type: [string, 'null']
+              zone:
+                description: The zone's name, or its id when it no longer exists; null when the row names none.
+                type: [string, 'null']
+              person:
+                description: |
+                  Present only when the device was unlocked by a code whose
+                  owner holds `view_log`. Null when the row names nobody.
+                type: [string, 'null']
+        next:
+          description: The cursor for the next, older page, as `before`; null on the last page.
+          type: [string, 'null']

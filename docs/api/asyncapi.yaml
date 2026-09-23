@@ -1,0 +1,298 @@
+asyncapi: 3.0.0
+info:
+  title: Foyer MQTT contract
+  version: v1
+  description: |
+    The MQTT contract between Foyer and a keypad on a broker (SPEC §9.2).
+    This document is contract version `v1`, the same version as the HTTP
+    endpoint of `openapi.yaml`. A change that would break a keypad written
+    against `v1` is a new version and is said in the changelog.
+
+    MQTT is off until the installation switches it on.
+
+    ## Security
+
+    MQTT travels in the clear unless the broker is set up with TLS. On the
+    broker a keypad is only the name it gives: anybody who can publish to the
+    command topic can publish a command. That is why `device_id` is required
+    and must name a keypad declared on page 8 with `transport: mqtt`; any
+    other name is refused as `device_not_registered`, before the code is
+    looked at, recorded under `security` and notified. A keypad declared with
+    `transport: http` is refused here the same way: one transport per keypad.
+    The code is the identity of the person and the lockout counts per device.
+
+    The state message is retained on a broker that is often shared, so
+    whatever is in it is told to whoever connects next. How much it says is
+    a setting in three steps, and it starts at the least (`minimal`).
+
+    For a keypad whose token authenticates it, see the HTTP endpoint of
+    `openapi.yaml`. Neither transport encrypts anything by itself.
+
+    Foyer is neither a certified alarm system nor a fire alarm system.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+defaultContentType: application/json
+
+channels:
+  command:
+    address: 'foyer/{install_id}/command'
+    title: Command topic
+    description: |
+      Device to Foyer. The default address; the whole topic is configurable
+      per installation, and an installation that set one uses that instead.
+      A payload that is not a JSON object is ignored. Every readable command
+      is answered by a publish on the state topic, even when nothing about
+      the house moved.
+    parameters:
+      install_id:
+        description: The installation's id. Part of the default topic only.
+    messages:
+      command:
+        $ref: '#/components/messages/Command'
+  state:
+    address: 'foyer/{install_id}/state'
+    title: State topic
+    description: |
+      Foyer to device. Published retained (unless the installation turned
+      retain off) on every change and after every command. The message has
+      one of three shapes, one per detail level, chosen for the installation.
+      An empty retained payload is published when Foyer is removed, to clear
+      the retained message.
+    parameters:
+      install_id:
+        description: The installation's id. Part of the default topic only.
+    messages:
+      stateMinimal:
+        $ref: '#/components/messages/StateMinimal'
+      stateStandard:
+        $ref: '#/components/messages/StateStandard'
+      stateFull:
+        $ref: '#/components/messages/StateFull'
+
+operations:
+  sendCommand:
+    action: receive
+    title: Foyer receives a command
+    channel:
+      $ref: '#/channels/command'
+    messages:
+      - $ref: '#/channels/command/messages/command'
+  publishState:
+    action: send
+    title: Foyer publishes its state
+    channel:
+      $ref: '#/channels/state'
+    messages:
+      - $ref: '#/channels/state/messages/stateMinimal'
+      - $ref: '#/channels/state/messages/stateStandard'
+      - $ref: '#/channels/state/messages/stateFull'
+
+components:
+  messages:
+    Command:
+      name: command
+      title: A keypad's command
+      payload:
+        $ref: '#/components/schemas/Command'
+      examples:
+        - name: arm
+          payload: {action: arm, scenario: night, code: '1234', device_id: keypad_hall}
+        - name: disarm
+          payload: {action: disarm, code: '1234', device_id: keypad_hall}
+        - name: disarmSomeAreas
+          payload: {action: disarm, area_ids: [ground], code: '1234', device_id: keypad_hall}
+        - name: acknowledge
+          payload: {action: acknowledge, code: '1234', device_id: keypad_hall}
+        - name: status
+          payload: {action: status}
+    StateMinimal:
+      name: state_minimal
+      title: State at detail level minimal (the default)
+      payload:
+        $ref: '#/components/schemas/StateMinimal'
+      examples:
+        - name: exitDelay
+          payload: {master: arming, countdown: {kind: exit, remaining: 22}, ready_to_arm: true, blocking_zones: 0, fault: false, last_result: ok, last_reason: null}
+    StateStandard:
+      name: state_standard
+      title: State at detail level standard
+      payload:
+        $ref: '#/components/schemas/StateStandard'
+      examples:
+        - name: armedNight
+          payload: {master: armed_night, countdown: null, ready_to_arm: true, blocking_zones: 0, fault: false, last_result: ok, last_reason: null, scenario: Night, areas: {Ground floor: armed, Upstairs: disarmed}}
+    StateFull:
+      name: state_full
+      title: State at detail level full
+      payload:
+        $ref: '#/components/schemas/StateFull'
+      examples:
+        - name: blocked
+          payload: {master: disarmed, countdown: null, ready_to_arm: false, blocking_zones: 1, fault: false, last_result: blocked, last_reason: zone_open, scenario: null, areas: {Ground floor: disarmed, Upstairs: disarmed}, open_zones: [Kitchen window]}
+
+  schemas:
+    Action:
+      type: string
+      description: |
+        `status` is "tell me again", for a keypad that has just booted, and
+        needs neither `device_id` nor a code. Any other value is answered
+        `blocked` / `unknown_action`.
+      enum: [arm, disarm, acknowledge, status]
+
+    DetailLevel:
+      type: string
+      description: |
+        `minimal` (default): master state, countdown, `ready_to_arm`,
+        `fault`, `last_result`, `last_reason` and how many zones block
+        arming. `standard` adds the active scenario and the per-area states,
+        by name. `full` adds the open zones by name.
+      enum: [minimal, standard, full]
+
+    LastResult:
+      type: string
+      description: |
+        One word for the beeps and the LED. This closed set of four never
+        grows. `bad_code` covers a wrong code and a missing one; `blocked`
+        covers every other refusal.
+      enum: [ok, blocked, bad_code, locked_out]
+
+    Reason:
+      type: string
+      description: |
+        The precise reason, from the same stable set the HTTP endpoint
+        returns (`openapi.yaml`, `Reason`). A stable identifier and never a
+        name, so it is present at every detail level. The set may grow in a
+        later version; a keypad that meets a value it does not know falls
+        back on `last_result`.
+      enum:
+        - alarm_in_progress
+        - ambiguous_mode
+        - area_not_allowed
+        - bad_code
+        - code_required
+        - device_not_registered
+        - invalid_state
+        - locked_out
+        - no_scenario_for_mode
+        - not_loaded
+        - not_permitted
+        - nothing_to_acknowledge
+        - scenario_not_allowed
+        - unknown_action
+        - unknown_area
+        - unknown_scenario
+        - user_not_valid
+        - walk_test_active
+        - zone_fault
+        - zone_not_bypassable
+        - zone_open
+
+    Command:
+      type: object
+      required: [action]
+      properties:
+        action:
+          $ref: '#/components/schemas/Action'
+        device_id:
+          type: string
+          description: |
+            Required for every action but `status`. The keypad's name as
+            declared on page 8, not a Home Assistant device id.
+        code:
+          type: [string, integer]
+          description: |
+            The code typed on the keypad. A number is accepted and read as its
+            digits; send a string to keep leading zeros. Whether it is needed
+            is the installation's policy.
+        scenario:
+          type: string
+          description: |
+            `arm`: the scenario's name, or a Home Assistant mode such as
+            `armed_night`.
+        area_ids:
+          type: array
+          items: {type: string}
+          description: '`disarm`: the ids of the areas to disarm; absent means every area.'
+        force:
+          type: boolean
+          default: false
+          description: '`arm`: arm even with zones open, excluding those that may be excluded.'
+        skip_exit_delay:
+          type: boolean
+          default: false
+          description: '`arm`: no exit delay; every delayed zone is instant. The log records it.'
+
+    Countdown:
+      type: object
+      description: The soonest exit or entry delay still running.
+      required: [kind, remaining]
+      properties:
+        kind:
+          type: string
+          description: |
+            `exit` or `entry`. `hold` is an arming waiting, after its exit
+            delay, for a zone to close; `siren` is a siren's running time.
+          enum: [exit, entry, hold, siren]
+        remaining: {type: integer, minimum: 0, description: Seconds.}
+
+    StateMinimal:
+      type: object
+      required: [master, countdown, ready_to_arm, blocking_zones, fault, last_result, last_reason]
+      properties:
+        master:
+          type: string
+          description: |
+            The Home Assistant mode while armed (`armed_away`, `armed_home`,
+            `armed_night`, `armed_vacation`, `armed_custom_bypass`), otherwise
+            the state of the house (`disarmed`, `arming`, `entry`,
+            `triggered`, `armed`).
+        countdown:
+          oneOf:
+            - $ref: '#/components/schemas/Countdown'
+            - type: 'null'
+        ready_to_arm: {type: boolean}
+        blocking_zones:
+          type: integer
+          minimum: 0
+          description: How many zones block arming. A count, never names.
+        fault:
+          type: boolean
+          description: Whether any zone is in fault.
+        last_result:
+          description: The answer to the last command; null until there has been one.
+          oneOf:
+            - $ref: '#/components/schemas/LastResult'
+            - type: 'null'
+        last_reason:
+          oneOf:
+            - $ref: '#/components/schemas/Reason'
+            - type: 'null'
+
+    StateStandard:
+      allOf:
+        - $ref: '#/components/schemas/StateMinimal'
+        - type: object
+          required: [scenario, areas]
+          properties:
+            scenario:
+              description: The active scenario's name, or null.
+              type: [string, 'null']
+            areas:
+              description: Each area's state, by area name.
+              type: object
+              additionalProperties:
+                type: string
+                enum: [disarmed, arming, armed, entry, triggered]
+
+    StateFull:
+      allOf:
+        - $ref: '#/components/schemas/StateStandard'
+        - type: object
+          required: [open_zones]
+          properties:
+            open_zones:
+              description: The zones blocking arming, by name.
+              type: array
+              items: {type: string}
