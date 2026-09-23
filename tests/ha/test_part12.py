@@ -244,17 +244,93 @@ async def test_the_code_is_still_required(hass, endpoint, freezer):
     assert answer["reason"] == "code_required"
 
 
-async def test_a_wrong_or_missing_token_is_401_and_counted_per_address(hass, endpoint):
-    http, _token, _device_id, _client = endpoint
+async def _lock_out(hass, http) -> str:
+    """Five wrong or missing tokens from the test client: its address locks."""
     for token in (None, "not-the-token", "still-not", "nope", "no"):
         response = await _post(http, token, {"action": "status"})
         assert response.status == 401
         assert await response.text() == ""
-    system = hass.data[DOMAIN]
-    assert [k for k in system.state.lockouts if k.startswith("http:")]
-    # Past the threshold the address is refused, even with the right token.
-    response = await _post(http, _token, {"action": "status"})
+    (key,) = [k for k in hass.data[DOMAIN].state.lockouts if k.startswith("http:")]
+    assert hass.data[DOMAIN].state.lockouts[key].until is not None
+    return key
+
+
+async def test_a_wrong_or_missing_token_is_401_and_counted_per_address(hass, endpoint):
+    http, token, _device_id, _client = endpoint
+    key = await _lock_out(hass, http)
+    counter = hass.data[DOMAIN].state.lockouts[key]
+    # Past the threshold a wrong token from the address is refused, and not
+    # counted again: the lockout is a brake on the log.
+    response = await _post(http, "still-guessing", {"action": "status"})
     assert response.status == 401
+    assert hass.data[DOMAIN].state.lockouts[key] == counter
+    # The right token is not (decision 135): a keypad behind the same NAT as
+    # somebody guessing keeps working.
+    response = await _post(http, token, {"action": "status"})
+    assert response.status == 200
+    assert hass.data[DOMAIN].state.lockouts[key] == counter
+
+
+def _noted(row: dict) -> bool:
+    return (
+        row["detail"].get("address") == "127.0.0.1"
+        and row["detail"].get("address_locked") == "true"
+    )
+
+
+async def test_a_right_token_from_a_locked_address_is_served_and_said(
+    hass, endpoint, freezer
+):
+    """Decision 135: every row the keypad's request causes says the address
+    was locked; the request neither spends nor clears the address's counter,
+    and a wrong code counts against the keypad, as it always has."""
+    http, token, device_id, _client = endpoint
+    key = await _lock_out(hass, http)
+    counter = hass.data[DOMAIN].state.lockouts[key]
+
+    answer = await (
+        await _post(http, token, {"action": "arm", "scenario": SCENARIO, "code": CODE})
+    ).json()
+    assert answer["success"], answer
+    await _advance(hass, freezer, 31)
+    assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.ARMED_AWAY
+
+    answer = await (
+        await _post(http, token, {"action": "disarm", "code": "000000"})
+    ).json()
+    assert answer["last_result"] == "bad_code"
+    lockouts = hass.data[DOMAIN].state.lockouts
+    assert lockouts[f"keypad:{device_id}"].failures
+    assert lockouts[key] == counter
+    answer = await (await _post(http, token, {"action": "disarm", "code": CODE})).json()
+    assert answer["success"]
+    await hass.async_block_till_done()
+
+    rows = [r for r in await _rows(hass) if r.get("device_id") == device_id]
+    kinds = {r["event_type"] for r in rows}
+    assert {"armed", "code_rejected", "disarmed"} <= kinds
+    assert all(_noted(r) for r in rows)
+    assert hass.data[DOMAIN].state.lockouts[key] == counter
+
+
+async def test_a_right_token_from_a_locked_address_opens_its_stream(hass, endpoint):
+    http, token, _device_id, _client = endpoint
+    key = await _lock_out(hass, http)
+    counter = hass.data[DOMAIN].state.lockouts[key]
+    response = await http.get(
+        "/api/foyer/device/state", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status == 200
+    assert response.headers["Content-Type"].startswith("text/event-stream")
+    first = json.loads((await response.content.readline()).decode()[len("data: ") :])
+    assert "master" in first
+    response.close()
+    # A wrong token from it is still refused, and not counted again.
+    response = await http.get(
+        "/api/foyer/device/state", headers={"Authorization": "Bearer nope"}
+    )
+    assert response.status == 401
+    assert hass.data[DOMAIN].state.lockouts[key] == counter
 
 
 async def test_the_stream_says_the_countdown_at_once(hass, endpoint):

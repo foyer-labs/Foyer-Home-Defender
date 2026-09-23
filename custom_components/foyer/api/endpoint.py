@@ -28,7 +28,9 @@ still required by the policy (§8.2), the channel is ``keypad`` (nothing about
 the transport identifies a person), and the lockout of §8.4 counts per
 device. A wrong or missing token has no device to count against, so it
 counts against its source address, through the engine like every other
-wrong credential, and is answered 401 with no detail.
+wrong credential, and is answered 401 with no detail. A right token is never
+refused for its address (decision 135): the lockout on an address stops
+wrong tokens, and the rows a right token causes from a locked address say so.
 """
 
 from __future__ import annotations
@@ -362,31 +364,43 @@ def _summarise(hass: HomeAssistant, _now: Any) -> None:
 
 async def _async_authenticate(
     hass: HomeAssistant, request: web.Request
-) -> tuple[FoyerSystem | None, ArmingDevice | None, web.Response | None]:
-    """The keypad behind this request, or the answer to give instead."""
+) -> tuple[FoyerSystem | None, ArmingDevice | None, str | None, web.Response | None]:
+    """The keypad behind this request, or the answer to give instead.
+
+    With the keypad comes its source address when that address is locked
+    out for wrong tokens, for the rows the request causes to say so
+    (decision 135); None otherwise.
+    """
     system = _system(hass)
     if system is None or system.superseded:
         # A reload, which every configuration save performs. The keypad tries
         # again in a moment, and must not be told its token is wrong; and a
         # system that has already stored a newer configuration — a revoked
         # token, say — must not keep answering from the old one.
-        return None, None, web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
+        return None, None, None, web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
     if not _endpoint_in_use(system):
-        return system, None, web.Response(status=HTTPStatus.NOT_FOUND)
-    # The address's own counter, never the shared overflow one: that one
-    # stops strangers' guesses from being counted one by one, and must never
-    # refuse a keypad whose token is right. Refusing on it let anybody who
-    # had filled the sixty-four counters lock every keypad in the house out
-    # (second review).
-    address = _address(request)
-    if authz.address_locked_until(system.state.lockouts, address, dt_util.utcnow()):
-        # Answered here, before the engine: a locked address hammering the
-        # endpoint must not write a row per request.
-        return system, None, _unauthorised()
+        return system, None, None, web.Response(status=HTTPStatus.NOT_FOUND)
+    # The token first: no counter ever refuses a right one (decision 135).
+    # Behind NAT, a reverse proxy or one IPv6 /64 a real keypad shares its
+    # address with whoever is guessing, and refusing the address locked the
+    # household out of its own keypad; 32 random bytes are not guessed, so
+    # the lockout loses nothing by it. It is a tamper signal and a brake on
+    # the log, for wrong tokens only.
     device = device_by_token(system.config, _bearer(request))
+    # The address's own counter, never the shared overflow one: that one
+    # holds strangers' guesses from addresses nobody here shares, and a
+    # keypad's rows must not say its address was locked when it never was.
+    address = _address(request)
+    locked = authz.address_locked_until(
+        system.state.lockouts, address, dt_util.utcnow()
+    )
     if device is None:
+        if locked:
+            # Answered here, before the engine: a locked address hammering
+            # the endpoint must not write a row per request.
+            return system, None, None, _unauthorised()
         await _async_bad_token(hass, system, request)
-        return system, None, _unauthorised()
+        return system, None, None, _unauthorised()
     if (device.id in system.state.in_clear) == request.secure:
         # Whether this keypad talks in the clear has changed (or was never
         # known): recorded, so page 8's warning is right after a restart.
@@ -399,7 +413,10 @@ async def _async_authenticate(
                 )
             )
         )
-    return system, device, None
+    # Served, and neither spending nor clearing the address's counter: that
+    # counts wrong tokens, and a keypad in daily use must not keep a
+    # guesser's count at zero.
+    return system, device, address if locked else None, None
 
 
 def _remember(
@@ -421,7 +438,9 @@ class DeviceCommandView(HomeAssistantView):
 
     async def post(self, request: web.Request) -> web.Response:
         hass: HomeAssistant = request.app["hass"]
-        system, device, refusal = await _async_authenticate(hass, request)
+        system, device, locked_address, refusal = await _async_authenticate(
+            hass, request
+        )
         if refusal is not None:
             return refusal
         assert system is not None and device is not None
@@ -460,6 +479,7 @@ class DeviceCommandView(HomeAssistantView):
             device=device,
             code=as_code(data.get("code")),
             encrypted=request.secure,
+            locked_address=locked_address,
         )
         assert requester.actor is not None
         if action == "unlock":
@@ -504,7 +524,9 @@ class DeviceStateView(HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.StreamResponse:
         hass: HomeAssistant = request.app["hass"]
-        system, device, refusal = await _async_authenticate(hass, request)
+        # A read and a stream write no row, so a locked address has nothing
+        # to be said on (decision 135): the lockout's own row names it.
+        system, device, _locked, refusal = await _async_authenticate(hass, request)
         if refusal is not None:
             return refusal
         assert system is not None and device is not None
@@ -539,7 +561,9 @@ class DeviceSectionView(HomeAssistantView):
 
     async def get(self, request: web.Request, section: str) -> web.Response:
         hass: HomeAssistant = request.app["hass"]
-        system, device, refusal = await _async_authenticate(hass, request)
+        # A read and a stream write no row, so a locked address has nothing
+        # to be said on (decision 135): the lockout's own row names it.
+        system, device, _locked, refusal = await _async_authenticate(hass, request)
         if refusal is not None:
             return refusal
         assert system is not None and device is not None

@@ -1,9 +1,11 @@
 """The device endpoint's half of identity (SPEC §9.2.1). Pure: no Home Assistant.
 
-What reaches the engine from the endpoint is an Actor like any other. Two
+What reaches the engine from the endpoint is an Actor like any other. Three
 things are new: a wrong token has no device to count against, so the lockout
-of §8.4 counts per source address; and a request that crossed the network in
-the clear says so on every row it causes, and keeps page 8's warning up.
+of §8.4 counts per source address; a request that crossed the network in the
+clear says so on every row it causes, and keeps page 8's warning up; and a
+right token from an address locked out for wrong tokens is served, every row
+it causes saying the address was locked (decision 135).
 """
 
 from __future__ import annotations
@@ -270,3 +272,141 @@ def test_a_keypad_moved_to_mqtt_is_no_longer_in_the_clear():
     )
     world.advance(1)
     assert world.state.in_clear == frozenset()
+
+
+# --- a right token from a locked-out address (decision 135) ----------------------
+
+LOCKED = {"address": "192.0.2.7", "address_locked": "true"}
+
+
+def _locked(world: World, address: str = "192.0.2.7") -> None:
+    """Lock an address out the way a guesser does: five wrong tokens."""
+    for _ in range(5):
+        bad_token(world, address)
+    assert authz.address_locked_until(world.state.lockouts, address, world.now)
+
+
+def _noted(detail: dict) -> bool:
+    return all(detail.get(k) == v for k, v in LOCKED.items())
+
+
+def test_a_right_token_from_a_locked_address_says_so_on_every_row_it_causes():
+    """Served, and said: the arming's own `armed` row thirty seconds later
+    too, as it carries the person — and the rows of a disarm at once."""
+    world = World(house())
+    _locked(world)
+    world.arm("away", channel="keypad", device_id="hall", locked_address="192.0.2.7")
+    decision = world.advance(30)
+    armed = [o for o in decision.occurrences if o.moment is Moment.ARMED]
+    assert armed and all(_noted(row_for(o, world.now).detail) for o in armed)
+
+    decision = world.disarm(
+        channel="keypad",
+        device_id="hall",
+        user_id="luca",
+        code=CodeResult.VALID,
+        locked_address="192.0.2.7",
+    )
+    assert decision.accepted
+    rows = [
+        row_for(o, world.now) for o in decision.occurrences if o.channel == "keypad"
+    ]
+    assert {r.event_type for r in rows} >= {"disarmed"}
+    assert all(_noted(r.detail) for r in rows)
+
+
+def test_a_keypad_whose_address_is_not_locked_says_nothing_about_it():
+    world = World(house())
+    world.arm("night", channel="keypad", device_id="hall")
+    decision = world.advance(6)
+    armed = next(o for o in decision.occurrences if o.moment is Moment.ARMED)
+    assert "address_locked" not in armed.detail
+    assert "address" not in armed.detail
+
+
+def test_the_note_survives_a_restart_inside_the_exit_delay():
+    world = World(house())
+    world.arm("away", channel="keypad", device_id="hall", locked_address="192.0.2.7")
+    restored = state_from_dict(state_to_dict(world.state), world.config)
+    assert {rt.locked_address for rt in restored.areas.values()} == {"192.0.2.7"}
+    world.state = restored
+    decision = world.advance(30)
+    armed = next(o for o in decision.occurrences if o.moment is Moment.ARMED)
+    assert _noted(armed.detail)
+
+
+def test_a_right_token_neither_spends_nor_clears_the_address_counter():
+    """The keypad's own wrong code counts against the keypad, never against
+    the address its token came from; its valid code leaves both alone."""
+    world = World(house())
+    world.arm("night", channel="keypad", device_id="hall")
+    _locked(world)
+    before = world.state.lockouts["http:192.0.2.7"]
+
+    decision = world.disarm(
+        channel="keypad",
+        device_id="hall",
+        code=CodeResult.INVALID,
+        locked_address="192.0.2.7",
+    )
+    rejected = next(o for o in decision.occurrences if o.moment is Moment.CODE_REJECTED)
+    row = row_for(rejected, world.now)
+    assert _noted(row.detail)
+    assert row.detail["reason"] == Reason.BAD_CODE.value
+    assert world.state.lockouts["keypad:hall"].failures
+    assert world.state.lockouts["http:192.0.2.7"] == before
+
+    decision = world.disarm(
+        channel="keypad",
+        device_id="hall",
+        user_id="luca",
+        code=CodeResult.VALID,
+        locked_address="192.0.2.7",
+    )
+    assert decision.accepted
+    assert world.state.lockouts["http:192.0.2.7"] == before
+
+
+def test_a_refusal_behind_a_locked_address_says_so():
+    from custom_components.foyer.core.journal import rejection_row
+    from custom_components.foyer.core.models import Actor, ArmRequest
+
+    from .helpers import DOOR
+
+    world = World(house())
+    world.set(DOOR, "on")
+    event = ArmRequest(
+        "away",
+        actor=Actor(channel="keypad", device_id="hall", locked_address="192.0.2.7"),
+    )
+    decision = world.send(event)
+    assert decision.reason is Reason.ZONE_OPEN
+    row = rejection_row(event, decision, world.config)
+    assert row is not None and _noted(row.detail)
+
+
+def test_a_locked_address_note_never_lands_on_somebody_else_s_row():
+    """Another keypad's arming whose exit delay runs out inside the request
+    is that keypad's row, and says nothing about this one's address."""
+    from custom_components.foyer.core.models import Actor
+
+    garden = ArmingDevice("garden", "Garden", DeviceKind.KEYPAD, ref="keypad_garden")
+    world = World(replace(house(), devices=(KEYPAD, garden)))
+    world.arm("night", channel="keypad", device_id="garden", user_id="luca")
+    world.now += timedelta(seconds=6)  # past the exit delay, before any Tick
+    decision = world.send(
+        CodeAttempt(
+            None,
+            actor=Actor(
+                channel="keypad",
+                device_id="hall",
+                code=CodeResult.INVALID,
+                locked_address="203.0.113.9",
+            ),
+        )
+    )
+    armed = next(o for o in decision.occurrences if o.moment is Moment.ARMED)
+    assert "address_locked" not in armed.detail
+    rejected = next(o for o in decision.occurrences if o.moment is Moment.CODE_REJECTED)
+    assert rejected.detail["address_locked"] == "true"
+    assert rejected.detail["address"] == "203.0.113.9"

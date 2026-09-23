@@ -66,6 +66,7 @@ _ACTOR_FIELDS = (
     "token",
     "claimed",
     "address",
+    "locked_address",
     "encrypted",
 )
 

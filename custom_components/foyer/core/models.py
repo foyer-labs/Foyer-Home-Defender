@@ -1902,6 +1902,10 @@ class AreaRuntime:
     # Whether that name was claimed rather than established (decision 88).
     # Remembered for the same reason the name is.
     claimed: bool = False
+    # The locked-out address a keypad's right token armed it from (§9.2.1,
+    # decision 135). Remembered for the same reason again: the ``armed`` row
+    # is one the request caused, and has to say so thirty seconds later.
+    locked_address: str | None = None
     # Armed with no exit delay at all (§9.1). Remembered for the same reason
     # as `forced`: the row that says so is written when the area reaches
     # `armed`, and "why did it sound while I was still in the hall?" is a
@@ -2635,6 +2639,14 @@ class Actor:
     # the wrong one (§9.2.1). The lockout of §8.4 then counts per source
     # address. Nothing else sets it.
     address: str | None = None
+    # The source address of a device endpoint request whose token was right,
+    # while that address is locked out for wrong tokens (§9.2.1, decision
+    # 135). A right token is served whatever its address did, and every row
+    # the request causes says so: the log then shows a keypad sharing its
+    # address with somebody guessing. Never a counter's key — the keypad's
+    # own failures count against the keypad, and a keypad in daily use must
+    # neither spend nor clear the guesser's count.
+    locked_address: str | None = None
     # The Home Assistant account behind a request that has no device: the
     # panel, the card, a service call made by a signed-in person. The lockout
     # of §8.4 counts per account there, so one account guessing locks itself

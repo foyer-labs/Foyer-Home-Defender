@@ -1399,8 +1399,8 @@
       "message": "Qualcosa ha usato il nome {device} via MQTT o con una chiamata di servizio. Quel tastierino parla solo attraverso l'endpoint dei dispositivi, con il suo token, quindi la richiesta è stata rifiutata e non è cambiato nulla. Se non sei stato tu, qualcuno conosce il nome del tastierino."
     },
     "token_lockout": {
-      "title": "Foyer: endpoint dei dispositivi bloccato per un indirizzo",
-      "message": "Troppe richieste con un token sbagliato o mancante sono arrivate da {address}. Quell'indirizzo è rifiutato per la durata del blocco. Lo fa anche un tastierino configurato con un token vecchio; lo fa anche qualcuno che tira a indovinare."
+      "title": "Foyer: token sbagliati rifiutati da un indirizzo",
+      "message": "Troppe richieste con un token sbagliato o mancante sono arrivate da {address}. Fino alla fine del blocco, un token sbagliato o mancante da quell'indirizzo è rifiutato. Un dispositivo lì con il suo token giusto continua a funzionare, e le sue righe nel registro dicono che l'indirizzo era bloccato. Lo fa anche un tastierino configurato con un token vecchio; lo fa anche qualcuno che tira a indovinare."
     },
     "alarm_ended": {
       "title": "Foyer: allarme finito",
@@ -1847,7 +1847,7 @@
     "person_keep_pseudonym": "Tieni un identificatore stabile invece di dimenticare",
     "person_keep_pseudonym_hint": "Se è disattivato, le righe perdono la persona del tutto. Se è attivato, tengono un identificatore opaco che non dice nulla di lei ma continua a legare le sue righe fra loro. Chi chiede di essere dimenticato di solito chiede la prima.",
     "person_erased": "Righe che non nominano più nessuno: {rows}.",
-    "tokens_rejected": "{count} token sbagliati da {addresses} indirizzi mentre l'endpoint era bloccato"
+    "tokens_rejected": "{count} token sbagliati rifiutati da {addresses} indirizzi con un blocco in comune"
   },
   "language": {
     "self": "Italiano"
@@ -2094,7 +2094,9 @@
     "addresses": "Indirizzi",
     "since": "Dal",
     "account": "Account",
-    "created": "Persona nuova"
+    "created": "Persona nuova",
+    "address": "Indirizzo",
+    "address_locked": "Indirizzo bloccato per token sbagliati"
   },
   "code": {
     "title": "Codice",

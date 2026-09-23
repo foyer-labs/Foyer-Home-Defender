@@ -391,3 +391,50 @@ async def test_an_area_armed_on_its_own_does_not_count_as_dropped(
         await _post(http, token, {"action": "arm", "scenario": "Empty", "code": CODE})
     ).json()
     assert answer["reason"] != "scope_not_granted", answer
+
+
+async def test_a_right_token_from_a_locked_address_reads_and_unlocks(
+    hass,
+    endpoint,  # noqa: F811
+):
+    """Decision 135 on the section reads and the unlock: served, the unlock's
+    row and a wrong code's row say the address was locked, and neither the
+    reads nor the codes touch the address's counter."""
+    from .test_part12 import _lock_out, _noted
+
+    http, token, device_id, _client = endpoint
+    _with(
+        hass,
+        device_id,
+        scopes=frozenset({"status", "zones", "batteries"}),
+        free_scopes=frozenset({"status", "zones"}),
+        clear_text_confirmed=True,
+    )
+    key = await _lock_out(hass, http)
+    counter = hass.data[DOMAIN].state.lockouts[key]
+
+    assert (await _get(http, token, "zones")).status == 200
+    response = await _get(http, token, "batteries")
+    assert (await response.json())["reason"] == "unlock_required"
+
+    wrong = await (
+        await _post(http, token, {"action": "unlock", "code": "000000"})
+    ).json()
+    assert wrong["reason"] == "bad_code"
+    lockouts = hass.data[DOMAIN].state.lockouts
+    assert lockouts[f"keypad:{device_id}"].failures
+    assert lockouts[key] == counter
+    right = await (await _post(http, token, {"action": "unlock", "code": CODE})).json()
+    assert right["success"], right
+    assert (await _get(http, token, "batteries")).status == 200
+
+    rows = await _rows(hass, category="security")
+    unlocked = [r for r in rows if r["event_type"] == "device_unlocked"]
+    rejected = [
+        r
+        for r in rows
+        if r["event_type"] == "code_rejected" and r.get("device_id") == device_id
+    ]
+    assert unlocked and all(_noted(r) for r in unlocked)
+    assert rejected and all(_noted(r) for r in rejected)
+    assert hass.data[DOMAIN].state.lockouts[key] == counter

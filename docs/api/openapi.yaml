@@ -65,8 +65,15 @@ info:
 
     A missing or wrong token is answered `401` with no body and no detail. It
     is counted per source address (an IPv6 address by its /64); past the
-    lockout thresholds that address is refused for the lockout period, the
-    refusal is recorded under `security`, and it is notified once.
+    lockout thresholds a missing or wrong token from that address is refused
+    for the lockout period without being counted again, the lockout is
+    recorded under `security`, and it is notified once.
+
+    A right token is never refused for its address. A device behind the same
+    NAT, reverse proxy or /64 as somebody guessing keeps working while that
+    address is locked out; every log row its requests cause carries the
+    address and says it was locked, and its requests neither add to the
+    address's count nor clear it.
 
     ## Where no device uses the endpoint
 
@@ -403,8 +410,9 @@ components:
   responses:
     Unauthorized:
       description: |
-        The token is missing or wrong, or the source address is locked out.
-        No body, and no detail about which.
+        The token is missing or wrong. No body, and no detail — not even
+        whether the source address is locked out for wrong tokens. A right
+        token is never answered `401` because of the address it comes from.
     NotInUse:
       description: No enabled device uses the endpoint. No body.
     Reloading:

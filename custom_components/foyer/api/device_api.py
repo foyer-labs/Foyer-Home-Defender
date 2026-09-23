@@ -30,7 +30,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from ..const import DOMAIN
-from ..core.journal import security_row
+from ..core.journal import address_note, security_row
 from ..core.models import (
     READ_SCOPES,
     AcknowledgeIncident,
@@ -163,7 +163,9 @@ async def async_unlock(
         user.id, until, device.token_hash
     )
     # A display that shows the house after a code is a place where somebody
-    # read it: which device, whose code, until when.
+    # read it: which device, whose code, until when — and, like every row a
+    # right token causes from a locked-out address, that address (decision
+    # 135). Written here rather than by the engine, so noted here too.
     system.async_record(
         (
             security_row(
@@ -174,7 +176,11 @@ async def async_unlock(
                 user_id=user.id,
                 user_name=user.name,
                 outcome="ok",
-                detail={"device": device.name, "seconds": str(device.unlock_seconds)},
+                detail={
+                    "device": device.name,
+                    "seconds": str(device.unlock_seconds),
+                    **address_note(actor.locked_address),
+                },
             ),
         )
     )

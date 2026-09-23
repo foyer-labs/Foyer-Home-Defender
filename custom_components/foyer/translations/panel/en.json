@@ -1399,8 +1399,8 @@
       "message": "Something used the name {device} over MQTT or a service call. That keypad speaks only through the device endpoint, with its own token, so the request was refused and nothing was changed. If it was not you, somebody knows the keypad's name."
     },
     "token_lockout": {
-      "title": "Foyer: device endpoint locked for one address",
-      "message": "Too many requests with a wrong or missing token came from {address}. That address is refused for the lockout period. A keypad configured with an old token does this too; so does somebody guessing."
+      "title": "Foyer: wrong tokens refused from one address",
+      "message": "Too many requests with a wrong or missing token came from {address}. Until the lockout ends, a wrong or missing token from that address is refused. A device there with its right token keeps working, and its rows in the log say the address was locked. A keypad configured with an old token does this too; so does somebody guessing."
     },
     "alarm_ended": {
       "title": "Foyer: alarm over",
@@ -1847,7 +1847,7 @@
     "person_keep_pseudonym": "Keep a stable identifier instead of forgetting",
     "person_keep_pseudonym_hint": "Off, the rows lose the person entirely. On, they keep an opaque identifier that says nothing about them but still links their rows to each other. Somebody asking to be forgotten is usually asking for the first.",
     "person_erased": "Rows that no longer name anybody: {rows}.",
-    "tokens_rejected": "{count} wrong tokens from {addresses} addresses while the endpoint was locked"
+    "tokens_rejected": "{count} wrong tokens refused from {addresses} addresses sharing one lockout"
   },
   "language": {
     "self": "English"
@@ -2094,7 +2094,9 @@
     "addresses": "Addresses",
     "since": "Since",
     "account": "Account",
-    "created": "New person"
+    "created": "New person",
+    "address": "Address",
+    "address_locked": "Address locked out for wrong tokens"
   },
   "code": {
     "title": "Code",

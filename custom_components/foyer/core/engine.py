@@ -34,6 +34,7 @@ from . import (
     health as health_engine,
     rules as rules_engine,
 )
+from .journal import address_note
 from .models import (
     CUSTOM_BYPASS,
     ESCALATION_RESTART_GRACE,
@@ -783,7 +784,10 @@ class _Run:
         # thirty seconds later says it too — and for a request with no
         # device behind it, from the request, with where it came from:
         # without that, a token-guessing loop in the log is a list of
-        # refusals from nowhere.
+        # refusals from nowhere. A keypad whose right token came from an
+        # address locked out for wrong tokens says that too, on the rows of
+        # its own request (decision 135); its `armed` row carries the note
+        # from the area, as it carries the person.
         extra: dict[str, str] = {}
         if kwargs.get("device_id") in self.in_clear:
             extra["encrypted"] = "false"
@@ -796,6 +800,8 @@ class _Run:
             extra["address"] = actor.address
             if actor.encrypted is False:
                 extra["encrypted"] = "false"
+        if not replayed and kwargs.get("channel") == actor.channel:
+            extra.update(address_note(actor.locked_address))
         if extra:
             kwargs["detail"] = {**kwargs.get("detail", {}), **extra}
         self.occurrences.append(Occurrence(moment=moment, **kwargs))
@@ -2881,6 +2887,7 @@ class _Run:
                 user_id=self.actor.user_id,
                 device_id=self.actor.device_id,
                 claimed=self.actor.claimed,
+                locked_address=self.actor.locked_address,
                 skipped_exit=skip_exit_delay,
                 causes=(),
                 rule_id=self.rule_detail.get("rule_id"),
@@ -2958,6 +2965,7 @@ class _Run:
                 **({"skip_exit_delay": "1"} if rt.skipped_exit else {}),
                 **({"low_battery": ",".join(low)} if low else {}),
                 **(_CLAIMED if rt.claimed else {}),
+                **address_note(rt.locked_address),
                 **_rule_detail(rt),
             },
         )
@@ -2995,6 +3003,7 @@ class _Run:
             detail={
                 "reason": reason.value,
                 **(_CLAIMED if rt.claimed else {}),
+                **address_note(rt.locked_address),
                 **_rule_detail(rt),
             },
         )

@@ -286,7 +286,11 @@ def lockout_key(actor: Actor) -> str:
 def address_locked_until(
     lockouts: Mapping[str, Lockout], address: str, now: datetime
 ) -> datetime | None:
-    """When this source address may try a token again, or None (§9.2.1)."""
+    """When this source address may try a token again, or None (§9.2.1).
+
+    It stops wrong and missing tokens only: a right token is served whatever
+    its address did (decision 135).
+    """
     lock = lockouts.get(f"http:{address}")
     if lock is None or lock.until is None or lock.until <= now:
         return None

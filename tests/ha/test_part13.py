@@ -153,7 +153,7 @@ async def test_a_full_overflow_counter_never_refuses_the_right_token(
 
     from .test_part12 import _post
 
-    http, token, _device_id, _client = endpoint
+    http, token, device_id, _client = endpoint
     system = hass.data[DOMAIN]
     until = dt_util.utcnow() + timedelta(hours=1)
     locks = {f"http:198.51.100.{i}": Lockout(until=None) for i in range(64)}
@@ -162,6 +162,23 @@ async def test_a_full_overflow_counter_never_refuses_the_right_token(
 
     response = await _post(http, token, {"action": "status"})
     assert response.status == 200
+
+    # And its rows say nothing about a locked address (decision 135): only
+    # the address's own counter can say that, and the test client has none.
+    for body in (
+        {"action": "arm", "scenario": SCENARIO, "code": CODE},
+        {"action": "disarm", "code": CODE},
+    ):
+        answer = await (await _post(http, token, body)).json()
+        assert answer["success"], answer
+    await hass.async_block_till_done()
+    await system.log.async_flush()
+    rows = [
+        r
+        for r in (await system.log.async_query(limit=200))["rows"]
+        if r.get("device_id") == device_id
+    ]
+    assert rows and not any("address_locked" in (r["detail"] or {}) for r in rows)
 
 
 async def test_tokens_refused_on_the_locked_shared_counter_leave_one_row_a_minute(

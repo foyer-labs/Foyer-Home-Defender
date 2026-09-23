@@ -203,9 +203,16 @@ already.
   and in service calls, recorded and notified as an unknown device is —
   otherwise whoever knows its name reaches the house without the token.
 - **A wrong or missing token** is answered `401`, with no detail, and counted
-  per source address: past the lockout thresholds that address is refused for
-  the lockout period, the refusal is recorded under `security`, and it is
-  notified once.
+  per source address: past the lockout thresholds a wrong or missing token
+  from that address is refused for the lockout period without being counted
+  again, the lockout is recorded under `security`, and it is notified once.
+- **A right token is never refused for its address.** Behind the same router,
+  reverse proxy or IPv6 /64 as somebody guessing, a device with its right
+  token keeps working while that address is locked out: a token is 32 random
+  bytes, and nobody guesses one. Every row its requests cause in the log
+  carries the address and says it was locked, so a device sharing its address
+  with a guesser shows up there. Its requests neither add to the address's
+  count nor clear it.
 - **Plain HTTP is accepted, and said.** A device whose last request arrived
   unencrypted carries a permanent *Unencrypted* warning under *Arming devices*,
   and every row of the log it causes records that the request was not

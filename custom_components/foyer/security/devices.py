@@ -130,6 +130,7 @@ async def async_requester(
     device: ArmingDevice | None = None,
     encrypted: bool | None = None,
     account: str | None = None,
+    locked_address: str | None = None,
 ) -> Requester:
     """Resolve one request arriving from a service call or a broker.
 
@@ -140,6 +141,10 @@ async def async_requester(
     permissions and validity window still apply in full, which is the safe
     direction for a claim to travel: claiming to be somebody gets you their
     restrictions, never their exemptions.
+
+    ``locked_address`` is the device endpoint's alone: the address a right
+    token came from while that address is locked out for wrong tokens
+    (§9.2.1, decision 135), carried to every row the request causes.
     """
     if device is not None:
         # Already established by a token (§9.2.1): the device endpoint is the
@@ -191,6 +196,7 @@ async def async_requester(
             code=credential.result,
             duress=credential.duress,
             encrypted=encrypted,
+            locked_address=locked_address,
             # Only for a request with no device: a keypad's failures count
             # against the keypad, whoever's automation relayed them.
             account=None if device is not None else account,

@@ -344,6 +344,20 @@ def row_for(occurrence: Occurrence, at: datetime) -> LogRow:
     )
 
 
+def address_note(locked_address: str | None) -> dict[str, str]:
+    """What a row says when a right token came from a locked-out address.
+
+    The device endpoint serves a right token whatever its address did
+    (§9.2.1, decision 135), and every row such a request causes says so,
+    with the address: a keypad sharing its address with somebody guessing is
+    something the log has to show. One shape, for the engine's rows, the
+    refusals and the unlock alike.
+    """
+    if not locked_address:
+        return {}
+    return {"address": locked_address, "address_locked": "true"}
+
+
 def rejection_row(
     event: Event, decision: Decision, config: FoyerConfig | None = None
 ) -> LogRow | None:
@@ -371,6 +385,8 @@ def rejection_row(
         # The same note the engine puts on every row a request in the clear
         # causes (§9.2.1).
         detail["encrypted"] = "false"
+    # And the one it puts on a right token's rows from a locked-out address.
+    detail.update(address_note(actor.locked_address))
     if actor.claimed:
         # The same note as every accepted row: the name came with the
         # request and was not established by it (decision 88).
