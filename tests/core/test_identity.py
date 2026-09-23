@@ -288,8 +288,29 @@ def test_a_duress_code_disarms_exactly_as_the_ordinary_one_does():
 
     assert decision.accepted
     assert world.states()["ground"] == "disarmed"
-    # The only trace is this, which a profile can answer quietly.
-    assert Moment.DURESS in decision.moments
+    # The only trace is this, which the default profile can answer quietly.
+    # Raised once, before the disarm it was used for, naming it — and on no
+    # area, so nothing that is an area's to show shows it (decisions 131, 132).
+    duress = [o for o in decision.occurrences if o.moment is Moment.DURESS]
+    assert len(duress) == 1
+    assert duress[0].detail["operation"] == "disarm"
+    assert duress[0].area_id is None and duress[0].incident_id is None
+    assert decision.moments.index(Moment.DURESS) < decision.moments.index(
+        Moment.DISARMED
+    )
+
+
+def test_a_duress_code_is_its_owners_code_for_anything_else_too():
+    """Not only disarming (decision 131): arming and excluding a zone get the
+    answer the ordinary code gets, and one `duress` each. Every other
+    operation is in tests/core/test_duress.py."""
+    world = house()
+    for decision in (
+        world.arm("night", **typed(duress=True)),
+        world.bypass("patio", **typed(duress=True)),
+    ):
+        assert decision.accepted
+        assert decision.moments.count(Moment.DURESS) == 1
 
 
 # --- key zones carry identity and no code (§4.7, §9.3) -------------------------

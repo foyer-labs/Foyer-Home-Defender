@@ -41,7 +41,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import dt as dt_util
 
 from ..core.journal import LogRow
-from ..core.models import LogCategory, LogSettings
+from ..core.models import LogCategory, LogSettings, Moment
 from ..core.privacy import (
     ERASED_COLUMNS,
     PersonRef,
@@ -443,6 +443,7 @@ class LogStore:
         user_id: str | None = None,
         incident_id: str | None = None,
         outcome: str | None = None,
+        glance: bool = False,
         limit: int = DEFAULT_LIMIT,
         offset: int = 0,
     ) -> dict[str, Any]:
@@ -456,6 +457,7 @@ class LogStore:
             user_id=user_id,
             incident_id=incident_id,
             outcome=outcome,
+            glance=glance,
         )
         limit = max(1, min(int(limit), MAX_LIMIT))
         with self._lock:
@@ -514,11 +516,29 @@ class LogStore:
         if (incident := filters.get("incident_id")) is not None:
             clauses.append("incident_id = ?")
             params.append(incident)
+        if filters.get("glance"):
+            # Only what a glance may find: core.journal.glanceable, in SQL
+            # (§8.1, decision 133). In the query rather than after it, so a
+            # page is as long as it says and the cursor after it is right.
+            # The action rows are matched on the text this module writes,
+            # spelled the way `json.dumps` spells it.
+            clauses.append(
+                "event_type != ? AND NOT (category = ? AND detail IS NOT NULL "
+                "AND instr(detail, ?) > 0)"
+            )
+            params.extend(
+                (
+                    Moment.DURESS.value,
+                    LogCategory.ACTION.value,
+                    '"moment": "' + Moment.DURESS.value + '"',
+                )
+            )
         return (f" WHERE {' AND '.join(clauses)}" if clauses else ""), params
 
     async def async_last(self) -> dict[str, Any] | None:
-        """The newest row, for ``sensor.foyer_last_event``."""
-        result = await self.async_query(limit=1)
+        """The newest row, for ``sensor.foyer_last_event``: never one a glance
+        may not find (decision 133)."""
+        result = await self.async_query(limit=1, glance=True)
         rows = result["rows"]
         return rows[0] if rows else None
 

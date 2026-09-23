@@ -175,8 +175,9 @@ SEVERITY: dict[Moment, LogSeverity] = {
     Moment.ZONE_REJOINED: LogSeverity.INFO,
     Moment.CODE_REJECTED: LogSeverity.WARNING,
     Moment.LOCKOUT: LogSeverity.WARNING,
-    # A duress disarm is somebody being made to open their own house. It is
-    # the loudest row in the log, and the only one the house itself hides.
+    # A duress code used is somebody being made to act against their own
+    # house. It is the loudest row in the log, and the only one the house
+    # itself keeps from a glance (see `glanceable`).
     Moment.DURESS: LogSeverity.ALARM,
     Moment.ENTRY_STARTED: LogSeverity.WARNING,
     Moment.TRIGGERED: LogSeverity.ALARM,
@@ -310,6 +311,25 @@ def severity_of(moment: Moment) -> LogSeverity:
 
 def event_type_of(moment: Moment) -> str:
     return EVENT_TYPE.get(moment, moment.value)
+
+
+def glanceable(row: LogRow) -> bool:
+    """Whether a row may be shown where a glance would find it (§8.1).
+
+    Not the `duress` row, and not the rows of the actions that answered it
+    (decision 133). They are read on the log page, in an export and on the
+    bus as `foyer_event`; the Overview's recent events,
+    `sensor.foyer_last_event`, an API device's `log` section and its change
+    notice are on the wall tablet the code was typed on, beside whoever made
+    somebody type it. store/log_store says the same thing in SQL, so a page
+    of the log is cut in the query rather than after it.
+    """
+    if row.event_type == Moment.DURESS.value:
+        return False
+    return not (
+        row.category == LogCategory.ACTION
+        and row.detail.get("moment") == Moment.DURESS.value
+    )
 
 
 def row_for(occurrence: Occurrence, at: datetime) -> LogRow:

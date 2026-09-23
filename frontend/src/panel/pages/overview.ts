@@ -272,9 +272,13 @@ class FoyerPageOverview extends LitElement {
     const ctx = this.ctx;
     if (!ctx) return;
     try {
+      // Never the `duress` row: this list is on the tablet the code was
+      // typed at, and "nothing visible differs" has to hold here most of all
+      // (§8.1). Left out by the backend, so six rows are still six.
       const page = await ctx.queryLog({
         limit: 6,
         categories: ["arming", "alarm", "security", "system"],
+        glance: true,
       });
       this._recent = page.rows;
     } catch {

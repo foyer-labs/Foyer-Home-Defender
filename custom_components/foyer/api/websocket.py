@@ -93,6 +93,7 @@ from ..core.models import (
     Operation,
     Outcome,
     Permission,
+    Purpose,
     Reason,
     RuleActionKind,
     RuleTriggerKind,
@@ -237,12 +238,17 @@ async def _gate(
     operation: Operation,
     permission: Permission,
     need_code: bool = True,
+    purpose: Purpose | None = None,
 ) -> Actor | None:
     """Check, answer the caller on refusal, and record the refusal.
 
     ``need_code`` is False for the commands that only read: §8.2 asks for a
     code to *edit* the configuration, and a panel that demanded one to open a
     page would teach the household to keep the code on a sticky note.
+
+    ``purpose`` names the command where ``operation`` — the policy entry —
+    does not: a duress code used to empty the log raises a `duress` that
+    says so, and not "edit the configuration" (decision 134).
     """
     actor = await _actor(hass, system, connection, msg)
     # The lockout of §8.4, spent through the engine so that a wrong code here
@@ -252,11 +258,12 @@ async def _gate(
     # before this they counted nothing at all — an unlimited, silent oracle
     # over the whole code space (found in review). A request carrying no
     # code offers nothing to count, and the engine is not woken for it: a
-    # page opened is not an attempt (third review).
+    # page opened is not an attempt (third review). A duress code raises
+    # `duress` here, once for the command, whatever follows (§8.1).
     reason = None
     if actor.code is not CodeResult.NONE:
         attempt = await system.async_handle(
-            CodeAttempt(operation=operation, actor=actor)
+            CodeAttempt(operation=operation, actor=actor, purpose=purpose)
         )
         reason = attempt.reason
     reason = reason or _may_configure(
@@ -494,6 +501,10 @@ async def ws_arm(
     elif "mode" in msg:
         event = ArmModeRequest(msg["mode"], actor, force)
     else:
+        # Refused before the engine, after the code was read (decision 131).
+        await system.async_refused_before_engine(
+            actor, (Operation.FORCE_ARM if force else Operation.ARM).value
+        )
         connection.send_error(msg["id"], "invalid_format", "no target")
         return
     decision = await system.async_handle(event)
@@ -682,6 +693,9 @@ async def ws_auto_suspend(
             start = _parse_time(msg.get("start"))
             until = _parse_time(msg.get("until"))
         except ValueError:
+            # Refused before the engine, after the code was read (decision
+            # 131).
+            await system.async_refused_before_engine(actor, Purpose.SUSPEND_AUTO_ARMING)
             connection.send_error(msg["id"], "invalid_format", "invalid timestamp")
             return
         suspension = Suspension(
@@ -1504,10 +1518,13 @@ async def ws_user_save(
         # review, decision 5): the same counter, the same row, the same
         # lockout. The accidental collision of a household choosing codes is
         # one attempt; a series of them is somebody testing codes.
+        #
+        # Offering one's own duress code as a new code is this and nothing
+        # else: a collision, not a use of it, so it raises no `duress` (§8.1).
         await system.async_handle(
             CodeAttempt(
                 operation=Operation.EDIT_CONFIG,
-                actor=replace(actor, code=CodeResult.INVALID),
+                actor=replace(actor, code=CodeResult.INVALID, duress=False),
             )
         )
     if problems:
@@ -1717,6 +1734,10 @@ _LOG_FILTERS = {
     vol.Optional("user_id"): vol.Any(str, None),
     vol.Optional("incident_id"): vol.Any(str, None),
     vol.Optional("outcome"): vol.Any(str, None),
+    # Only the rows a glance may find (§8.1, decision 133): what the
+    # Overview's recent events ask for, on the tablet a duress code may have
+    # been typed at. The log page and an export never ask.
+    vol.Optional("glance"): bool,
 }
 
 
@@ -1737,6 +1758,7 @@ def _filters(msg: dict[str, Any]) -> dict[str, Any]:
         "user_id",
         "incident_id",
         "outcome",
+        "glance",
     ):
         if msg.get(key):
             out[key] = msg[key]
@@ -1861,6 +1883,7 @@ async def ws_log_clear(
             msg,
             operation=Operation.EDIT_CONFIG,
             permission=Permission.EDIT_CONFIG,
+            purpose=Purpose.CLEAR_LOG,
         )
     ) is None:
         return
@@ -2061,6 +2084,7 @@ async def ws_privacy_erase(
             msg,
             operation=Operation.EDIT_CONFIG,
             permission=Permission.MANAGE_USERS,
+            purpose=Purpose.ERASE_PERSON,
         )
     ) is None:
         return
@@ -2129,6 +2153,7 @@ async def ws_config_export(
             msg,
             operation=Operation.EDIT_CONFIG,
             permission=Permission.EDIT_CONFIG,
+            purpose=Purpose.EXPORT_CONFIG,
         )
     ) is None:
         return
@@ -2172,6 +2197,7 @@ async def ws_config_import(
             msg,
             operation=Operation.EDIT_CONFIG,
             permission=Permission.EDIT_CONFIG,
+            purpose=Purpose.IMPORT_CONFIG,
         )
     ) is None:
         return
@@ -2304,6 +2330,7 @@ async def ws_alarmo_apply(
             msg,
             operation=Operation.EDIT_CONFIG,
             permission=Permission.EDIT_CONFIG,
+            purpose=Purpose.IMPORT_ALARMO,
         )
     ) is None:
         return
@@ -2435,6 +2462,7 @@ async def ws_simulate(
             msg,
             operation=Operation.EDIT_CONFIG,
             permission=Permission.VIEW_LOG,
+            purpose=Purpose.SIMULATE,
             need_code=False,
         )
     ) is None:

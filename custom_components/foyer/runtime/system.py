@@ -49,6 +49,7 @@ from ..core.engine import (
 from ..core.journal import (
     LogRow,
     action_row,
+    glanceable,
     rows_for,
     security_row,
     test_action_row,
@@ -60,6 +61,7 @@ from ..core.models import (
     Area,
     AreaState,
     Decision,
+    DuressNotice,
     EntityState,
     Event,
     FoyerConfig,
@@ -884,6 +886,25 @@ class FoyerSystem:
         for report in _send_reports(batches):
             await self.async_handle(HealthReport(channel_sends=report))
 
+    async def async_refused_before_engine(
+        self,
+        actor: Actor | None,
+        operation: str,
+        targets: Mapping[str, str] | None = None,
+    ) -> None:
+        """A request refused before ``decide()`` heard it, after its code
+        was read (§8.1, decision 131).
+
+        With a duress code, the engine is handed the duress and nothing
+        else: the person asked for help whatever the answer, and no lockout
+        counter moves, because the ordinary code at this refusal moves none.
+        With any other code, nothing happens here, exactly as before. The
+        caller answers as it always did.
+        """
+        if actor is None or not (actor.duress and actor.code_verified):
+            return
+        await self.async_handle(DuressNotice(operation, targets or {}, actor))
+
     async def async_zone_changed(
         self, entity_id: str, old: State | None, new: State | None
     ) -> Decision:
@@ -904,8 +925,13 @@ class FoyerSystem:
         if self.log is not None:
             self.log.async_write(rows, self.config.settings.log)
         # sensor.foyer_last_event shows the last row that is worth showing,
-        # which is not the thousandth motion of the day.
+        # which is not the thousandth motion of the day — and never one a
+        # glance may not find: the dashboard and the device stream's log
+        # notice both read this, on the tablet a duress code was typed at
+        # (decision 133).
         for row in rows:
+            if not glanceable(row):
+                continue
             quiet = row.category in _QUIET_CATEGORIES
             if not quiet or (row.category is LogCategory.ACTION and not _ok(row)):
                 self.last_row = row

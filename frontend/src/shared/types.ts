@@ -881,6 +881,10 @@ export interface LogQuery {
   zone_id?: string | null;
   incident_id?: string | null;
   outcome?: string | null;
+  /** Only the rows a glance may find (SPEC §8.1, decision 133): what the
+   * Overview asks for, on the tablet a duress code may have been typed at.
+   * The log page never asks. */
+  glance?: boolean;
   limit?: number;
   offset?: number;
 }

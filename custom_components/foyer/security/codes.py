@@ -56,8 +56,8 @@ class Credential:
     ``user`` is the person recognised, if any. ``result`` is what ``core/``
     is told: nothing was supplied, something was and it matched, something
     was and it did not. ``duress`` means the match was on the duress code,
-    which disarms exactly as the ordinary one does and says so to nobody
-    except the log and a response profile.
+    which acts exactly as the ordinary one does wherever it is used, and
+    says so to nobody except the log and the default profile (§8.1).
     """
 
     result: CodeResult = CodeResult.NONE

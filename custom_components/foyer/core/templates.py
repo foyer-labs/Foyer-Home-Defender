@@ -24,6 +24,8 @@ TEMPLATE_VARIABLES: tuple[str, ...] = (
     "open_zones",
     "reason",
     "incident_zones",
+    # What a request made with a duress code asked for (decision 134).
+    "operation",
 )
 
 _PLACEHOLDER = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}")

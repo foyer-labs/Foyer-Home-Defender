@@ -19,7 +19,7 @@ from custom_components.foyer.const import (
 )
 
 from .conftest import ZONE
-from .test_part2 import _advance, _set, _ws
+from .test_part2 import _IDS, _advance, _set, _ws
 
 PERSON = "person.luca"
 AUTO_SWITCH = "switch.foyer_auto_arming"
@@ -301,8 +301,11 @@ async def test_the_card_path_cancels_by_id(hass, loaded, hass_ws_client, freezer
 
     # And pressing it twice is refused rather than silent: there is nothing
     # left to cancel, and somebody pressed a button.
+    # The next id of the shared counter, not a number of its own: a
+    # connection takes only increasing ids, and a fixed one fell behind the
+    # counter as soon as the suite before it grew.
     await client.send_json(
-        {"id": 990, "type": "foyer/auto/cancel", "pending_id": pending.id}
+        {"id": next(_IDS), "type": "foyer/auto/cancel", "pending_id": pending.id}
     )
     again = await client.receive_json()
     assert again["result"]["success"] is False

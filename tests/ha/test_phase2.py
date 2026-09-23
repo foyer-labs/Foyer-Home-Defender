@@ -62,6 +62,10 @@ async def _config(client) -> dict:
     return (await _ws(client, {"type": "foyer/config"}))["config"]
 
 
+async def _log(client) -> list[dict]:
+    return (await _ws(client, {"type": "foyer/log/query"}))["rows"]
+
+
 async def _arm(hass, client, **extra) -> dict:
     scenario_id = hass.data[DOMAIN].config.scenarios[0].id
     return await _ws(client, {"type": "foyer/arm", "scenario_id": scenario_id, **extra})
@@ -325,11 +329,22 @@ async def test_a_duress_code_may_not_be_the_persons_own_ordinary_code(hass, with
     assert not reversed_["success"]
     assert reversed_["problems"][0]["code"] == "code_in_use"
 
-    # The duress code still works, which is the whole point of refusing.
+    # Offering one's own duress code as a new code is a collision, not a use
+    # of it: it raises no `duress` (§8.1).
     await hass.async_block_till_done()
+    assert not [r for r in await _log(client) if r["event_type"] == "duress"]
+
+    # The duress code still works, which is the whole point of refusing — and
+    # a disarm with it on a house with nothing to disarm is still a request
+    # made with it (decision 131).
     assert (await _ws(client, {"type": "foyer/disarm", "code": DURESS}))[
         "reason"
     ] != "bad_code"
+    assert [
+        r["detail"]["operation"]
+        for r in await _log(client)
+        if r["event_type"] == "duress"
+    ] == ["disarm"]
 
 
 async def test_clearing_the_code_field_does_not_remove_the_code(hass, with_user):
@@ -386,17 +401,27 @@ async def test_a_duress_code_disarms_and_leaves_only_a_silent_trace(
 ):
     client = with_user
     await _armed(hass, client, freezer)
+    ordinary = await _ws(client, {"type": "foyer/disarm", "code": CODE})
+    await _armed(hass, client, freezer)
     result = await _ws(client, {"type": "foyer/disarm", "code": DURESS})
 
     assert result["success"]
     assert _state(hass, PANEL_ENTITY) == AlarmControlPanelState.DISARMED
-    rows = (await _ws(client, {"type": "foyer/log/query"}))["rows"]
+    rows = await _log(client)
     duress = next(r for r in rows if r["event_type"] == "duress")
     assert duress["severity"] == "alarm"
     assert duress["user_name"] == "Luca"
+    assert duress["detail"]["operation"] == "disarm"
+    # Before the disarm it was used for, and in no area (decision 132).
+    disarmed = next(r for r in rows if r["event_type"] == "disarmed")
+    assert duress["id"] < disarmed["id"]
+    assert duress["area_id"] is None and duress["incident_id"] is None
     # Nothing in what the person at the keypad is told differs from a normal
-    # disarm: the answer carries no sign of it.
+    # disarm: the answer carries no sign of it, and is the ordinary one.
     assert "duress" not in str(result).lower()
+    assert {k: v for k, v in result.items() if k != "state"} == {
+        k: v for k, v in ordinary.items() if k != "state"
+    }
 
 
 # --- editing the configuration (§8.2) ---------------------------------------------

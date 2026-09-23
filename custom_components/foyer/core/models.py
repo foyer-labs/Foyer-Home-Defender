@@ -259,6 +259,40 @@ class Operation(StrEnum):
     CANCEL_AUTO_ACTION = "cancel_auto_action"
 
 
+class Purpose(StrEnum):
+    """What a command is, where its §8.2 ``Operation`` does not say it (§6.4).
+
+    Not a policy entry, and never read by the code policy: the operation is
+    still what decides whether a code is asked. This is the name a `duress`
+    row and ``{{ operation }}`` give the command — the service of §14.1, the
+    device action of §9.2.2, or the panel command — because a contact told
+    "the configuration" when the person was made to export the log, or
+    "an automatic action" when they were made to switch automatic arming
+    off, has been told the wrong half (decision 134).
+    """
+
+    # Letting a zone back in: its own service in §14.1, and not an exclusion.
+    UNBYPASS_ZONE = "unbypass_zone"
+    # §9.4's switch and suspensions, which share Cancel's policy entry.
+    AUTO_ARMING = "auto_arming"
+    SUSPEND_AUTO_ARMING = "suspend_auto_arming"
+    LIFT_SUSPENSION = "lift_suspension"
+    CHIME = "chime"
+    # An action a device or a keypad sent that the contract does not have.
+    UNKNOWN_ACTION = "unknown_action"
+    # A code typed on an API device to read it (§9.2.2).
+    UNLOCK = "unlock"
+    # The configuration and log commands that take a code, named as their
+    # services are. The panel's reads take none, and raise nothing.
+    EXPORT_LOG = "export_log"
+    CLEAR_LOG = "clear_log"
+    ERASE_PERSON = "erase_person"
+    EXPORT_CONFIG = "export_config"
+    IMPORT_CONFIG = "import_config"
+    IMPORT_ALARMO = "import_alarmo"
+    SIMULATE = "simulate"
+
+
 class Permission(StrEnum):
     """What a user is allowed to do at all (SPEC §8.3).
 
@@ -391,9 +425,11 @@ class Moment(StrEnum):
     # battery is replaced: "the cell is fine again" is not news.
     LOW_BATTERY = "low_battery"
 
-    # A disarm with a duress code (§8.1). Silent by definition: the house
-    # behaves exactly as it does on an ordinary disarm, and this is the only
-    # trace, for the log and for a profile that alerts somebody quietly.
+    # A request made with a duress code, whatever it asked for and whether or
+    # not it was granted (§8.1, decision 131). Silent by definition: the
+    # house answers exactly as it does to the ordinary code, and this is the
+    # only trace — for the log, and for the default profile to alert somebody
+    # quietly. It belongs to no area and to no incident (decision 132).
     DURESS = "duress"
 
     # Moments no phase produces yet. They exist so a profile can be written
@@ -1593,8 +1629,9 @@ class User:
     into decoration. The hashes are written through the API and never
     returned by it, in any shape, to anyone.
 
-    ``duress_code_hash`` disarms exactly as the ordinary code does and raises
-    a silent event; nothing about the response may betray that it was used.
+    ``duress_code_hash`` acts exactly as the ordinary code does, for every
+    operation, and raises a silent event each time it is used; nothing about
+    the answer may betray that it was (§8.1, decision 131).
 
     ``code_exempt_when_identified`` is the per-user override of §8.2, off by
     default: it applies only on channels that identify the user by themselves,
@@ -2817,6 +2854,35 @@ class CodeAttempt:
     # asked for, and a state stream asks for nothing (§9.2.1).
     operation: Operation | None
     actor: Actor = field(default_factory=Actor)
+    # What the command is, when §8.2's operation does not say it: a log
+    # export, a person erased, a device unlocked (§6.4). The policy is still
+    # ``operation``'s; this is what a `duress` row names, so that the contact
+    # it reaches learns what the person was made to do and not merely that
+    # "the configuration" was involved (decision 134). None means the
+    # operation says it.
+    purpose: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DuressNotice:
+    """A request refused before the engine heard it carried a duress code.
+
+    A device's scope, a zone or an area outside its own restrictions, an
+    action the contract does not have: the refusal is the caller's, decided
+    without ``decide()``. The person asked for help all the same (§8.1,
+    decision 131), so the engine is handed the duress and nothing else — no
+    lockout counter is spent or cleared, because the ordinary code at the
+    same refusal spends and clears none, and the lockout must see the two
+    codes exactly alike. ``operation`` and ``targets`` are what the request
+    named, for the row and the message.
+    """
+
+    operation: str
+    targets: Mapping[str, str] = field(default_factory=dict)
+    actor: Actor = field(default_factory=Actor)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "targets", _frozen(self.targets))
 
 
 @dataclass(frozen=True, slots=True)
@@ -2937,6 +3003,7 @@ Event = (
     | SetSuspension
     | HealthReport
     | DeviceContact
+    | DuressNotice
 )
 
 

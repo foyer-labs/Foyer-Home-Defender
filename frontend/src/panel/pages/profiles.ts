@@ -63,10 +63,11 @@ const MOMENT_GROUPS: Record<string, string[]> = {
     "code_rejected",
     "lockout",
     "chime_switched",
-    // A disarm with a duress code (§8.1). It was left out of this list, so
-    // the one moment whose whole purpose is to reach somebody quietly could
-    // not be answered from the panel at all — while the backend dispatched
-    // it and both translation files carried its message (found in review).
+    // A request made with a duress code, whatever it was for (§8.1). It was
+    // left out of this list once, so the one moment whose whole purpose is to
+    // reach somebody quietly could not be answered from the panel at all —
+    // while the backend dispatched it and both translation files carried its
+    // message (found in review).
     "duress",
   ],
   system: [
@@ -593,7 +594,7 @@ class FoyerPageProfiles extends LitElement {
           open
             ? html`<div class="action-bd">
                 ${this._renderParams(s, action, index)} ${this._renderMoments(s, action, index)}
-                ${this._renderEscalation(s, action, index)}
+                ${this._renderDuress(s, action)} ${this._renderEscalation(s, action, index)}
                 ${this._renderConditions(s, action, index)}
                 <div class="actions">
                   <button
@@ -1173,6 +1174,30 @@ class FoyerPageProfiles extends LitElement {
     </div>`;
   }
 
+  /** Said where `duress` is ticked (SPEC §6.1, decision 132): only the
+   * default profile answers it, it runs silent, and a Home Assistant
+   * notification is the one answer that shows on the tablet the code was
+   * typed at. Warned, not forbidden: which answer is right is the
+   * household's to choose, as long as it chooses knowing. */
+  private _renderDuress(s: Strings, action: ActionConfig) {
+    if (!action.moments.includes("duress")) return nothing;
+    const settings = this.ctx?.config?.settings;
+    const draft = this._draft;
+    const isDefault = Boolean(draft?.id) && settings?.default_profile_id === draft?.id;
+    const silenced = (settings?.silent_suppresses ?? []).includes(action.kind);
+    const warn = (text: string) => html`<span class="hint bad wide" role="alert">${text}</span>`;
+    return html`<div class="duress">
+      <span class="hint wide">${t(s, "profiles.duress_hint")}</span>
+      ${isDefault ? nothing : warn(t(s, "profiles.duress_not_default"))}
+      ${action.kind === "persistent_notification"
+        ? warn(t(s, "profiles.duress_persistent"))
+        : nothing}
+      ${silenced
+        ? warn(t(s, "profiles.duress_silent", { kind: t(s, `action_kind.${action.kind}`) }))
+        : nothing}
+    </div>`;
+  }
+
   // --- conditions (§6.3): at most two, and or or --------------------------------
 
   private _renderConditions(s: Strings, action: ActionConfig, index: number) {
@@ -1396,6 +1421,12 @@ class FoyerPageProfiles extends LitElement {
       }
       .entities.wide {
         grid-column: 1 / -1;
+      }
+      .duress {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 12px;
       }
       .entity-list {
         max-height: 200px;

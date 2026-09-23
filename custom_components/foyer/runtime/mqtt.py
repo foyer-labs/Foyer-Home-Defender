@@ -54,6 +54,7 @@ from ..core.models import (
     Decision,
     DisarmRequest,
     MqttDetail,
+    Purpose,
     Reason,
 )
 from ..security.devices import async_requester
@@ -372,6 +373,11 @@ async def _async_command(
     event = command_event(system.config, data, requester.actor)
     if event is None:
         _LOGGER.warning("Foyer: unknown MQTT action %r", action)
+        # Refused before the engine, after the code was read: a duress code
+        # on it has been used all the same (decision 131).
+        await system.async_refused_before_engine(
+            requester.actor, Purpose.UNKNOWN_ACTION
+        )
         return RESULT_BLOCKED, UNKNOWN_ACTION
     decision = await system.async_handle(event)
     return result_of(decision)

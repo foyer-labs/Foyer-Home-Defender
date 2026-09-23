@@ -64,6 +64,7 @@ from ..core.models import (
     DisarmRequest,
     Operation,
     Permission,
+    Purpose,
     Reason,
     WalkTestRequest,
 )
@@ -442,6 +443,7 @@ def async_register(hass: HomeAssistant) -> None:
             Operation.EDIT_CONFIG,
             Permission.VIEW_LOG,
             need_code=False,
+            purpose=Purpose.EXPORT_LOG,
         )
         if refused is not None:
             return refused
@@ -465,7 +467,11 @@ def async_register(hass: HomeAssistant) -> None:
         system = _system(hass)
         requester = await _requester(hass, system, call)
         refused = await _refused(
-            system, requester, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            system,
+            requester,
+            Operation.EDIT_CONFIG,
+            Permission.EDIT_CONFIG,
+            purpose=Purpose.EXPORT_CONFIG,
         )
         if refused is not None:
             return refused
@@ -475,7 +481,11 @@ def async_register(hass: HomeAssistant) -> None:
         system = _system(hass)
         requester = await _requester(hass, system, call)
         refused = await _refused(
-            system, requester, Operation.EDIT_CONFIG, Permission.EDIT_CONFIG
+            system,
+            requester,
+            Operation.EDIT_CONFIG,
+            Permission.EDIT_CONFIG,
+            purpose=Purpose.IMPORT_CONFIG,
         )
         if refused is not None:
             return refused
@@ -483,13 +493,15 @@ def async_register(hass: HomeAssistant) -> None:
         result = restore(system, call.data["document"])
         if result.config is not None and touches_people(system.config, result.config):
             # People and tags are manage_users' (decision 111); the code was
-            # checked above.
+            # checked above, and spent there: offered to the engine again, a
+            # duress code would raise `duress` twice for one call (§8.1).
             refused = await _refused(
                 system,
                 requester,
                 Operation.EDIT_CONFIG,
                 Permission.MANAGE_USERS,
                 need_code=False,
+                attempt=False,
             )
             if refused is not None:
                 return refused
@@ -512,6 +524,8 @@ def async_register(hass: HomeAssistant) -> None:
         permission: Permission,
         *,
         need_code: bool = True,
+        purpose: str | None = None,
+        attempt: bool = True,
     ) -> ServiceResponse | None:
         """The gate for the services that read or write the configuration.
 
@@ -520,6 +534,11 @@ def async_register(hass: HomeAssistant) -> None:
         reach the engine, so they ask core/authz the panel's question — with
         no administrator in it: a service call is not the admin path of §8.4,
         so the permission bites in full.
+
+        ``purpose`` is the service's own name where §8.2's operation does not
+        say what it is — a `duress` row names the log export, not "the
+        configuration" (decision 134). ``attempt`` is False for a second
+        question about a code already spent in the same call.
         """
         from ..core import authz
 
@@ -543,11 +562,12 @@ def async_register(hass: HomeAssistant) -> None:
         # found in review): these services verify their own and never reach
         # `decide()`, so a script could try codes here for ever without a
         # counter ever reaching its limit.
-        attempt = await system.async_handle(
-            CodeAttempt(operation=operation, actor=actor)
-        )
-        if attempt.reason is not None:
-            return {"success": False, "reason": attempt.reason.value}
+        if attempt:
+            spent = await system.async_handle(
+                CodeAttempt(operation=operation, actor=actor, purpose=purpose)
+            )
+            if spent.reason is not None:
+                return {"success": False, "reason": spent.reason.value}
         # core/authz decides, as it does for the panel. A claimed `user_id`
         # grants nothing here (decision 102); before the first code exists
         # an automation may read and write the configuration (decision 78).

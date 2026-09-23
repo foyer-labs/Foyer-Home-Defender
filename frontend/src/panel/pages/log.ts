@@ -610,6 +610,7 @@ class FoyerPageLog extends LitElement {
   private _summary(s: Strings, row: LogRow): string {
     const ctx = this.ctx!;
     const detail = row.detail ?? {};
+    if (row.event_type === "duress") return this._duressSummary(s, row);
     if (typeof detail.reason === "string" && detail.reason) {
       const zones = Array.isArray(detail.blocking_zones)
         ? detail.blocking_zones
@@ -665,6 +666,32 @@ class FoyerPageLog extends LitElement {
         : lines.join(" · ");
     }
     return "";
+  }
+
+  /** What somebody was made to do with a duress code, and to what (SPEC
+   * §8.1, decision 134). The row is read here and in an export, and nowhere a
+   * glance would find it; here it has to say the whole of it. */
+  private _duressSummary(s: Strings, row: LogRow): string {
+    const status = this.ctx!.status;
+    const detail = row.detail ?? {};
+    const text = (key: string): string => {
+      const value = detail[key];
+      return typeof value === "string" ? value : "";
+    };
+    const operation = text("operation");
+    const key = `operation.${operation}`;
+    const said = operation ? t(s, key) : "";
+    const areas = [...text("areas").split(","), text("area")].filter(Boolean);
+    const named = [
+      ...areas.map((id) => status.areas.find((a) => a.id === id)?.name ?? id),
+      ...[text("scenario")]
+        .filter(Boolean)
+        .map((id) => status.scenarios.find((sc) => sc.id === id)?.name ?? id),
+      ...[text("zone")]
+        .filter(Boolean)
+        .map((id) => status.zones.find((z) => z.id === id)?.name ?? id),
+    ];
+    return [said === key ? operation : said, named.join(", ")].filter(Boolean).join(" · ");
   }
 
   /** What a configuration change actually changed, in words.

@@ -314,9 +314,10 @@ paths:
         they are read only by a device given that scope.
 
         `log` is paged newest first by an opaque cursor: pass the `next` of
-        one answer as `before` of the next request. It shows the same rows as
-        the log page, after the privacy sweeps. A row carries `person` only
-        when the device was unlocked by a code whose owner holds `view_log`.
+        one answer as `before` of the next request. It shows the rows of the
+        log page a display may show, after the privacy sweeps. A row carries
+        `person` only when the device was unlocked by a code whose owner
+        holds `view_log`.
       parameters:
         - name: section
           in: path

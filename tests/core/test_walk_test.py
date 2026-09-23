@@ -256,6 +256,20 @@ def test_the_arming_the_walk_test_performs_is_itself_inhibited():
     assert [i.moment for i in decision.actions] == [Moment.WALK_TEST_STARTED]
 
 
+def test_a_duress_code_that_starts_the_walk_test_is_heard_all_the_same():
+    """The rule above has one exception, about a person rather than the
+    house (§11.3, decision 132): the coerced person may be made to start the
+    test, and asking for help is not an action the walk quiets."""
+    config = answering(make_house(), Moment.ARMED, Moment.DURESS)
+    world = World(replace(config, users=(user(),)))
+    decision = world.walk_test(
+        code=CodeResult.VALID, user_id="luca", channel="keypad", duress=True
+    )
+
+    assert [i.moment for i in decision.inhibited] == [Moment.ARMED]
+    assert [i.moment for i in decision.actions] == [Moment.DURESS]
+
+
 def test_an_inhibited_action_never_reaches_the_actions_list():
     """Part 2 decision 1: the executor receives only what it must do, so a
     bug there cannot sound a siren during a walk test."""

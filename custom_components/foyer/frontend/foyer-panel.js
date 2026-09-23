@@ -1159,7 +1159,8 @@ var Qe = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), $e = class extend
 					"alarm",
 					"security",
 					"system"
-				]
+				],
+				glance: !0
 			});
 			this._recent = t.rows;
 		} catch {
@@ -3658,7 +3659,7 @@ var Lt = class extends j {
         </button>
         ${r ? w`<div class="action-bd">
                 ${this._renderParams(e, t, n)} ${this._renderMoments(e, t, n)}
-                ${this._renderEscalation(e, t, n)}
+                ${this._renderDuress(e, t)} ${this._renderEscalation(e, t, n)}
                 ${this._renderConditions(e, t, n)}
                 <div class="actions">
                   <button
@@ -3991,6 +3992,16 @@ var Lt = class extends j {
           </fieldset>`)}
     </div>`;
 	}
+	_renderDuress(e, t) {
+		if (!t.moments.includes("duress")) return E;
+		let n = this.ctx?.config?.settings, r = this._draft, i = !!r?.id && n?.default_profile_id === r?.id, a = (n?.silent_suppresses ?? []).includes(t.kind), o = (e) => w`<span class="hint bad wide" role="alert">${e}</span>`;
+		return w`<div class="duress">
+      <span class="hint wide">${N(e, "profiles.duress_hint")}</span>
+      ${i ? E : o(N(e, "profiles.duress_not_default"))}
+      ${t.kind === "persistent_notification" ? o(N(e, "profiles.duress_persistent")) : E}
+      ${a ? o(N(e, "profiles.duress_silent", { kind: N(e, `action_kind.${t.kind}`) })) : E}
+    </div>`;
+	}
 	_renderConditions(e, t, n) {
 		let r = this.ctx?.meta?.max_conditions ?? 2, i = (e) => this._setAction(n, { conditions: e });
 		return w`<fieldset class="conditions">
@@ -4164,6 +4175,12 @@ var Lt = class extends j {
       }
       .entities.wide {
         grid-column: 1 / -1;
+      }
+      .duress {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 12px;
       }
       .entity-list {
         max-height: 200px;
@@ -8735,6 +8752,7 @@ var X = 50, vn = class extends j {
 	}
 	_summary(e, t) {
 		let n = this.ctx, r = t.detail ?? {};
+		if (t.event_type === "duress") return this._duressSummary(e, t);
 		if (typeof r.reason == "string" && r.reason) {
 			let t = Array.isArray(r.blocking_zones) ? r.blocking_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? String(e)).join(", ") : "", i = `reason.${r.reason}`, a = N(e, i, { zones: t });
 			return a === i ? N(e, `rules.block_${r.reason}`) : a;
@@ -8753,6 +8771,17 @@ var X = 50, vn = class extends j {
 		if (typeof r.kind == "string" && t.category === "action") return N(e, `action_kind.${r.kind}`);
 		let i = this._changeLines(e, t);
 		return i.length ? i.length > 2 ? `${i.slice(0, 2).join(" · ")} ${N(e, "log.and_more", { count: i.length - 2 })}` : i.join(" · ") : "";
+	}
+	_duressSummary(e, t) {
+		let n = this.ctx.status, r = t.detail ?? {}, i = (e) => {
+			let t = r[e];
+			return typeof t == "string" ? t : "";
+		}, a = i("operation"), o = `operation.${a}`, s = a ? N(e, o) : "", c = [
+			...[...i("areas").split(","), i("area")].filter(Boolean).map((e) => n.areas.find((t) => t.id === e)?.name ?? e),
+			...[i("scenario")].filter(Boolean).map((e) => n.scenarios.find((t) => t.id === e)?.name ?? e),
+			...[i("zone")].filter(Boolean).map((e) => n.zones.find((t) => t.id === e)?.name ?? e)
+		];
+		return [s === o ? a : s, c.join(", ")].filter(Boolean).join(" · ");
 	}
 	_changeLines(e, t) {
 		let n = t.detail?.changes;

@@ -30,6 +30,11 @@ from ..core.models import (
 # automatic bypass are announced because §5.4 says so, a technical alarm
 # because it must never be silent (part 2 decision 10), and an alarm because
 # an alarm that says nothing is the worst failure there is (part 3 decision 3).
+#
+# Never `duress`. This profile's one action is a persistent notification,
+# which appears on every Home Assistant screen — the wall tablet the duress
+# code was typed at included (§6.1). The household answers it with a
+# notification to somebody outside, which only it can choose.
 SEED_MOMENTS = frozenset(
     {
         Moment.ARMED,

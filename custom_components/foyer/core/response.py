@@ -555,10 +555,25 @@ def variables(ctx: PlanContext, group: Sequence[Occurrence]) -> dict[str, str]:
         if o.area_id is not None and o.area_id in ctx.areas
     ]
     incident_zones = ctx.incident.zone_ids if ctx.incident is not None else ()
+    # What a `duress` request named. It travels in the detail and never on
+    # the occurrence, where an area would make it that area's to answer
+    # (decision 132); read back here, so a duress message can say which
+    # areas somebody was made to disarm, and the built-in one is never left
+    # with an empty place where the area goes.
+    duress = [o.detail for o in group if o.moment is Moment.DURESS]
+    named_areas = [
+        area
+        for d in duress
+        for area in (*d.get("areas", "").split(","), d.get("area", ""))
+        if area
+    ]
     return {
-        "zone": _names([o.zone_id for o in group], zones) or _names(zone_ids, zones),
-        "area": _names([o.area_id for o in group], areas),
-        "scenario": _names([o.scenario_id for o in group], scenarios),
+        "zone": _names([o.zone_id for o in group], zones)
+        or _names(zone_ids, zones)
+        or _names([d.get("zone") for d in duress], zones),
+        "area": _names([o.area_id for o in group], areas) or _names(named_areas, areas),
+        "scenario": _names([o.scenario_id for o in group], scenarios)
+        or _names([d.get("scenario") for d in duress], scenarios),
         # Who asked, as the engine established it (§8): the person on
         # the occurrence, which is empty for a door opening or a timer.
         # Not a name a request merely claimed (decision 88): the log marks
@@ -576,6 +591,10 @@ def variables(ctx: PlanContext, group: Sequence[Occurrence]) -> dict[str, str]:
         ),
         "reason": detail.get("reason") or detail.get("cause", ""),
         "incident_zones": _names(list(incident_zones), zones),
+        # A stable identifier, as `channel` and `state` are (§6.4): what a
+        # request made with a duress code asked for — or one refused for
+        # its code, which names it too (decision 134).
+        "operation": detail.get("operation", ""),
         # Not a §6.4 variable: the built-in notification's own placeholder for
         # every zone of the batch, kept from Phase 0 so its text is unchanged.
         "zones": _names(zone_ids, zones),
@@ -1016,6 +1035,12 @@ WALK_TEST_MOMENTS: frozenset[Moment] = frozenset(
     {Moment.WALK_TEST_STARTED, Moment.WALK_TEST_ENDED}
 )
 
+# Moments that are about a person, not the house (§11.3, decision 132). A
+# walk test inhibits the house; the person made to start one, end one or
+# disarm during one has asked for help all the same. `duress` always runs
+# silent, so answering it cannot spoil the walk.
+PERSON_MOMENTS: frozenset[Moment] = frozenset({Moment.DURESS})
+
 
 def inhibits(ctx: PlanContext, occurrence: Occurrence) -> bool:
     """Whether a walk test holds back the response to this occurrence (§11.3).
@@ -1030,14 +1055,16 @@ def inhibits(ctx: PlanContext, occurrence: Occurrence) -> bool:
       test can only have been opened by one of those zones (part 2 decision
       3: an ordinary detection does not drive the state machine);
     - and so are the walk test's own start and end, which §11.3 requires to
-      be announced.
+      be announced;
+    - and so is `duress`, which is a person asking for help rather than the
+      house doing something (decision 132).
 
     Everything else — the arming the walk test performs, a chime, a fault —
     is held back, because §11.3 says all actions are inhibited and means it.
     """
     if not ctx.walk_test:
         return False
-    if occurrence.moment in WALK_TEST_MOMENTS:
+    if occurrence.moment in WALK_TEST_MOMENTS | PERSON_MOMENTS:
         return False
     if occurrence.moment in TECHNICAL_MOMENTS or occurrence.incident_id is not None:
         return False
@@ -1088,7 +1115,13 @@ def _silent(ctx: PlanContext, occurrence: Occurrence, zone: Zone | None) -> bool
     this was the sounder on `incident_opened` running for a silent zone,
     which is the natural place to put one siren per incident (found in
     review).
+
+    `duress` is always silent (§6.1, decision 132): a siren or a spoken
+    message answering a code nobody may know was used would tell the room
+    exactly that.
     """
+    if occurrence.moment is Moment.DURESS:
+        return True
     if occurrence.moment in ZONE_MOMENTS:
         return bool(zone and zone.silent)
     if occurrence.moment in INCIDENT_MOMENTS and ctx.incident is not None:

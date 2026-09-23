@@ -70,6 +70,23 @@ NOTIFY_TIMEOUT = 20
 NOTIFY_RETRY_SECONDS = 3
 
 
+def _worded(strings: dict[str, Any], placeholders: Mapping[str, str]) -> dict[str, str]:
+    """The placeholders as one of Foyer's own sentences wants them.
+
+    ``operation`` is an identifier (§6.4) — the engine cannot translate and
+    must not — and a message of Foyer's own says it in the house's words.
+    One the translation files do not name stays as it came, rather than
+    being dropped: a message that says `export_log` has still said what the
+    person was made to do (decision 134).
+    """
+    values = dict(placeholders)
+    if operation := values.get("operation"):
+        key = f"operation.{operation}"
+        worded = i18n.translate(strings, key)
+        values["operation"] = operation if worded == key else worded
+    return values
+
+
 @dataclass(frozen=True, slots=True)
 class ActionResult:
     """What one intent did, for the log (§10.2, category ``action``)."""
@@ -199,10 +216,9 @@ class Executor:
             base = f"notification.{intent.moment.value}"
             if intent.variant:
                 base = f"{base}_{intent.variant}"
-            message = i18n.translate(strings, f"{base}.message", **intent.placeholders)
-            title = title or i18n.translate(
-                strings, f"{base}.title", **intent.placeholders
-            )
+            values = _worded(strings, intent.placeholders)
+            message = i18n.translate(strings, f"{base}.message", **values)
+            title = title or i18n.translate(strings, f"{base}.title", **values)
         notices.async_create(
             self.hass,
             message,
@@ -233,9 +249,10 @@ class Executor:
             key = f"{variant}.message"
             if i18n.translate(strings, key) != key:
                 base = variant
+        values = _worded(strings, intent.placeholders)
         return (
-            i18n.translate(strings, f"{base}.title", **intent.placeholders),
-            i18n.translate(strings, f"{base}.message", **intent.placeholders),
+            i18n.translate(strings, f"{base}.title", **values),
+            i18n.translate(strings, f"{base}.message", **values),
         )
 
     async def _async_notify(self, intent: ActionIntent, sends: dict[str, bool]) -> None:

@@ -11,7 +11,7 @@ One call runs in a fixed order, so that the result depends only on its inputs:
 2. timers that fell due by ``now`` are processed, whatever the event;
 3. the event's entity change, if any, is applied to the world;
 4. zones whose trigger became active (or fired, for event zones) act;
-5. the event itself is handled;
+5. the event itself is handled, the duress code it carried raised first;
 6. bypassed zones that have closed rejoin;
 7. faults are reconciled, and each new one is announced once;
 8. the incident closes if it is acknowledged and every area it touched
@@ -71,6 +71,7 @@ from .models import (
     DeviceContact,
     DeviceTransport,
     DisarmRequest,
+    DuressNotice,
     EntityState,
     EntryMode,
     Escalation,
@@ -86,6 +87,7 @@ from .models import (
     Occurrence,
     Operation,
     PendingRuleAction,
+    Purpose,
     Radio,
     RadioHealth,
     Reason,
@@ -163,7 +165,9 @@ _JOIN_ENTRY = "join_entry"
 
 # Occurrences that never carry an incident id, even in an incident's area:
 # the technical channel never joins an intrusion incident (§5.5), and a
-# chime or a restart is not part of one.
+# chime or a restart is not part of one. Nor is `duress`: an incident is on
+# every card, and the person beside whoever made them type the code would
+# watch it open (decision 132).
 _NOT_INCIDENT = frozenset(
     {
         Moment.TECHNICAL_RAISED,
@@ -172,6 +176,7 @@ _NOT_INCIDENT = frozenset(
         Moment.CHIME,
         Moment.CHIME_SWITCHED,
         Moment.HA_RESTARTED,
+        Moment.DURESS,
     }
 )
 
@@ -201,6 +206,9 @@ def decide(
         run.entities[event.entity_id] = event.new
     run.process_zone_changes(snapshot, changed)
     run.process_device_scans(snapshot, changed)
+    # After what fell due before the request arrived, and before anything the
+    # request can be refused for — a locked channel included (§8.1).
+    run.raise_duress(event)
 
     outcome = _ACCEPTED
     if isinstance(event, ArmRequest):
@@ -256,6 +264,10 @@ def decide(
     elif isinstance(event, DeviceContact):
         # Nothing to decide: `note_transport` above has already recorded
         # whether this keypad reached the endpoint encrypted (§9.2.1).
+        pass
+    elif isinstance(event, DuressNotice):
+        # Nothing to decide either: `raise_duress` above has raised it, and
+        # the refusal was the caller's (decision 131). No counter moves.
         pass
     elif not isinstance(event, ZoneStateChanged | Tick):
         raise TypeError(f"unsupported event: {event!r}")
@@ -544,6 +556,10 @@ def _suspension_detail(suspension: Suspension) -> dict[str, str]:
 
 def _reject(reason: Reason, blocking: tuple[str, ...] = ()) -> _Outcome:
     return _Outcome(accepted=False, reason=reason, blocking=blocking)
+
+
+def _flag(value: bool) -> str:
+    return "true" if value else "false"
 
 
 class _Run:
@@ -1206,6 +1222,105 @@ class _Run:
         else:
             self.in_clear.add(actor.device_id)
 
+    def raise_duress(self, event: Event) -> None:
+        """The one place `duress` is raised (§8.1, decisions 131, 132).
+
+        Once for the request, whatever it asked for and whatever the answer:
+        before anything can refuse it, a locked channel included, and here
+        rather than in ``authorize``, which one arming asks up to three
+        times. Only for a code that verified — a code spent as a wrong one,
+        such as one's own duress code offered as somebody's new code, is not
+        a use of it (§8.4).
+
+        The occurrence names no area, zone or scenario of its own: any of
+        them would make it an area's, or a scenario's, to answer, and an
+        area in the incident puts it on every card. What the request named
+        travels in its detail, for the row and the message (§6.4).
+        """
+        actor = self.actor
+        if not (actor.duress and actor.code_verified):
+            return
+        operation, targets = self.duress_request(event)
+        self.occur(
+            Moment.DURESS,
+            channel=actor.channel,
+            detail={"operation": operation, **targets},
+        )
+
+    def duress_request(self, event: Event) -> tuple[str, dict[str, str]]:
+        """What a request made with a duress code asked for, and named (§6.4).
+
+        §8.2's operation where it says what the request was, and otherwise
+        the name a ``Purpose`` gives it — the service of §14.1, the device
+        action of §9.2.2, the panel command.
+        """
+        operation: str
+        named: dict[str, str] = {}
+        if isinstance(event, ArmRequest | ArmModeRequest | ArmAreaRequest):
+            scenario: Scenario | None = None
+            if isinstance(event, ArmRequest):
+                scenario = self.config.scenario(event.scenario_id)
+                named = {"scenario": event.scenario_id}
+            elif isinstance(event, ArmModeRequest):
+                moded = [
+                    s for s in self.config.scenarios if s.ha_master_state == event.mode
+                ]
+                scenario = moded[0] if len(moded) == 1 else None
+                named = {"mode": event.mode}
+            else:
+                named = {"area": event.area_id}
+            # As arm_scenario tells a switch from an arming: another scenario
+            # is running, and this one would replace it (§4.6.1).
+            switching = scenario is not None and self.active_scenario_id not in (
+                None,
+                scenario.id,
+            )
+            operation = (
+                Operation.FORCE_ARM
+                if event.force
+                else Operation.CHANGE_SCENARIO
+                if switching
+                else Operation.ARM
+            )
+        elif isinstance(event, DisarmRequest):
+            operation = Operation.DISARM
+            areas = event.area_ids if event.area_ids is not None else tuple(self.areas)
+            named = {"areas": ",".join(areas)}
+        elif isinstance(event, BypassZone):
+            operation = Operation.BYPASS_ZONE if event.bypass else Purpose.UNBYPASS_ZONE
+            named = {"zone": event.zone_id}
+        elif isinstance(event, AcknowledgeIncident | AcknowledgeTechnical):
+            operation = Operation.ACKNOWLEDGE
+            technical = isinstance(event, AcknowledgeTechnical)
+            named = {"target": "technical" if technical else "incident"}
+        elif isinstance(event, WalkTestRequest):
+            operation = Operation.WALK_TEST
+            named = {"enabled": _flag(event.enable)}
+        elif isinstance(event, CancelAutoAction):
+            operation = Operation.CANCEL_AUTO_ACTION
+        elif isinstance(event, SetAutoArming):
+            operation = Purpose.AUTO_ARMING
+            named = {"enabled": _flag(event.enabled)}
+        elif isinstance(event, SetSuspension):
+            operation = (
+                Purpose.LIFT_SUSPENSION
+                if event.suspension is None
+                else Purpose.SUSPEND_AUTO_ARMING
+            )
+        elif isinstance(event, SetChime):
+            operation = Purpose.CHIME
+            named = {"enabled": _flag(event.enabled)}
+        elif isinstance(event, CodeAttempt):
+            operation = event.purpose or (event.operation or "")
+        elif isinstance(event, DuressNotice):
+            operation = event.operation
+            named = dict(event.targets)
+        else:
+            operation = ""
+        # A plain string, whichever enum it came from: it is a stable
+        # identifier in a row and a template, not a member of either.
+        return str(operation), named
+
     def code_attempt(self, event: CodeAttempt) -> _Outcome:
         """A code offered to a command that decides for itself (§8.4).
 
@@ -1213,7 +1328,9 @@ class _Run:
         was wrong, and the counter either way. What the caller may *do* with
         a right code is its own question — a log read asks for `view_log`,
         not for the permission this operation maps to — so it stays with the
-        caller, and this stays the one place a wrong code is counted.
+        caller, and this stays the one place a wrong code is counted. A
+        duress code offered here has raised `duress` already, on entry, like
+        one offered anywhere else (§8.1).
         """
         if (reason := self.check_code(event.operation)) is not None:
             return _reject(reason)
@@ -3235,15 +3352,8 @@ class _Run:
         )
         if reason is not None:
             return _reject(reason)
-        if self.actor.duress:
-            # The house disarms exactly as it always does, and nothing the
-            # person at the keypad can see says otherwise (§8.1). What is
-            # different is this occurrence, which a profile can answer.
-            self.occur(
-                Moment.DURESS,
-                channel=self.channel,
-                detail={"areas": ",".join(targets)},
-            )
+        # A duress code disarms exactly as the ordinary one does; its one
+        # difference was raised on entry, for every request (§8.1).
         for area_id in targets:
             self.disarm_area(area_id, self.channel)
         return _ACCEPTED

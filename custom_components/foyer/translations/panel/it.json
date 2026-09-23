@@ -963,7 +963,7 @@
         },
         "duress": {
           "term": "Codice di coercizione",
-          "text": "Disinserisce esattamente come quello normale e fa scattare un allarme silenzioso. Chi è al tastierino non vede alcuna differenza."
+          "text": "Funziona esattamente come quello normale — inserire, disinserire, escludere, impostazioni, qualunque cosa — e ogni uso fa scattare un allarme silenzioso a cui risponde solo il profilo predefinito. Chi è al tastierino non vede alcuna differenza."
         },
         "lockout": {
           "term": "Blocco",
@@ -1320,7 +1320,7 @@
     },
     "duress": {
       "title": "Codice di coercizione usato",
-      "message": "{user} ha disinserito {area} con un codice di coercizione alle {time}."
+      "message": "{user} ha usato un codice di coercizione alle {time} ({operation})."
     },
     "action_tested": {
       "title": "Foyer: prova azione",
@@ -1724,7 +1724,11 @@
     "flash_short": "Lampeggio breve",
     "flash_long": "Lampeggio lungo",
     "test_after_save": "Salva il profilo per provare questa azione così com'è adesso: la prova esegue quella salvata.",
-    "json_invalid": "Questo non è JSON valido, quindi non è stato salvato. Correggilo ed esci dal campo."
+    "json_invalid": "Questo non è JSON valido, quindi non è stato salvato. Correggilo ed esci dal campo.",
+    "duress_hint": "Scatta a ogni uso di un codice di coercizione, qualunque cosa si stesse facendo. Risponde solo il profilo predefinito, e in silenzio. Mandalo a qualcuno fuori casa.",
+    "duress_not_default": "Questo non è il profilo predefinito, quindi questa azione non risponde mai a un codice di coercizione.",
+    "duress_persistent": "Una notifica di Home Assistant compare su ogni schermo di Home Assistant, tablet a muro compreso — dove chi ha digitato il codice di coercizione può trovarsi accanto a chi l'ha costretto. Manda invece una notifica a un contatto.",
+    "duress_silent": "{kind} è nell'elenco silenzioso, quindi non viene mai eseguito per un codice di coercizione: un suono in casa lo direbbe a chi è nella stanza."
   },
   "camera_mode": {
     "snapshot": "Scatto",
@@ -1794,7 +1798,7 @@
     "device_rejected": "Dispositivo rifiutato",
     "config_history_erased": "Storia di una persona cancellata",
     "config_pseudonymisation": "Sostituzione automatica dei nomi modificata",
-    "duress": "Disinserito con codice di coercizione",
+    "duress": "Codice di coercizione usato",
     "auto_pending": "Azione automatica in conto alla rovescia",
     "auto_cancelled": "Azione automatica annullata",
     "auto_blocked": "Azione automatica trattenuta",
@@ -2119,7 +2123,13 @@
     "account": "Account",
     "created": "Persona nuova",
     "address": "Indirizzo",
-    "address_locked": "Indirizzo bloccato per token sbagliati"
+    "address_locked": "Indirizzo bloccato per token sbagliati",
+    "operation": "Operazione",
+    "areas": "Aree",
+    "area": "Area",
+    "mode": "Modalità",
+    "target": "Destinazione",
+    "enabled": "Attivato"
   },
   "code": {
     "title": "Codice",
@@ -2166,7 +2176,21 @@
     "edit_config": "Modifica della configurazione",
     "walk_test": "Avvio del walk test",
     "test_action": "Prova reale di un'azione",
-    "cancel_auto_action": "Annullamento di un'azione automatica"
+    "cancel_auto_action": "Annullamento di un'azione automatica",
+    "unbypass_zone": "Reinclusione di una zona",
+    "auto_arming": "Attivazione o disattivazione delle regole automatiche",
+    "suspend_auto_arming": "Sospensione delle regole automatiche",
+    "lift_suspension": "Revoca di una sospensione delle regole automatiche",
+    "chime": "Attivazione o disattivazione del campanello",
+    "unknown_action": "Un'azione che il dispositivo non prevede",
+    "unlock": "Sblocco di un dispositivo per leggerlo",
+    "export_log": "Esportazione del registro",
+    "clear_log": "Svuotamento del registro",
+    "erase_person": "Cancellazione della storia di una persona",
+    "export_config": "Esportazione della configurazione",
+    "import_config": "Ripristino della configurazione",
+    "import_alarmo": "Importazione da Alarmo",
+    "simulate": "Uso del simulatore"
   },
   "users": {
     "title": "Utenti",
@@ -2183,7 +2207,7 @@
     "code_optional": "Facoltativo",
     "code_hint": "{n} cifre, e non può essere quello di un altro. Lascia vuoto per non cambiarlo.",
     "duress": "Codice di coercizione",
-    "duress_hint": "Disinserisce esattamente come il codice normale e fa scattare un allarme silenzioso. Nulla di visibile cambia.",
+    "duress_hint": "Funziona esattamente come il codice normale, per qualunque cosa venga usato, e ogni volta fa scattare un allarme silenzioso a cui risponde solo il profilo predefinito. Nulla di visibile cambia.",
     "scope": "Aree",
     "every_area": "Tutte le aree",
     "everything": "Tutto",

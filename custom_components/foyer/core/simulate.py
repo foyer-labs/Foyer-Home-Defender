@@ -30,7 +30,7 @@ at 23:30, and that only works if nothing here reads a real clock.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Any
 
@@ -260,12 +260,18 @@ def _premise(
     config: FoyerConfig, request: SimulationRequest
 ) -> list[tuple[datetime, Event]]:
     """The arming the run supposes, at the start instant. Empty for a
-    disarmed house, which is a question in its own right."""
+    disarmed house, which is a question in its own right.
+
+    As the ordinary code would arm it (§11.2). A duress code given for the
+    rehearsal has raised `duress` already, for the real request that carried
+    it; a premise that raised it again would put it in the trace, on the
+    screen the code was typed at (§8.1).
+    """
+    actor = replace(request.actor, duress=False)
     if request.scenario_id:
-        return [(request.start, ArmRequest(request.scenario_id, request.actor))]
+        return [(request.start, ArmRequest(request.scenario_id, actor))]
     return [
-        (request.start, ArmAreaRequest(area_id, request.actor))
-        for area_id in request.area_ids
+        (request.start, ArmAreaRequest(area_id, actor)) for area_id in request.area_ids
     ]
 
 

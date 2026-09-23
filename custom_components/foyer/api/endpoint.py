@@ -498,6 +498,13 @@ class DeviceCommandView(HomeAssistantView):
         )
         if event is None:
             assert reason is not None
+            # Refused here, by the device's own scopes and restrictions. A
+            # duress code on it has still been used (decision 131); the
+            # answer below is the one the ordinary code gets.
+            await system.async_refused_before_engine(
+                requester.actor,
+                *device_api.refused_request(system.config, device, data, system.state),
+            )
             last = (
                 RESULT_BAD_CODE if reason is Reason.CODE_REQUIRED else RESULT_BLOCKED,
                 reason.value,

@@ -963,7 +963,7 @@
         },
         "duress": {
           "term": "Duress code",
-          "text": "Disarms exactly as the ordinary code does and raises a silent alarm. Nothing the person at the keypad can see is different."
+          "text": "Works exactly as the ordinary code — arming, disarming, excluding, settings, anything — and every use raises a silent alarm that only the default profile answers. Nothing the person at the keypad can see is different."
         },
         "lockout": {
           "term": "Lockout",
@@ -1320,7 +1320,7 @@
     },
     "duress": {
       "title": "Duress code used",
-      "message": "{user} disarmed {area} with a duress code at {time}."
+      "message": "{user} used a duress code at {time} ({operation})."
     },
     "action_tested": {
       "title": "Foyer: action test",
@@ -1724,7 +1724,11 @@
     "flash_short": "Short flash",
     "flash_long": "Long flash",
     "test_after_save": "Save the profile to test this action as it is now: the test runs the saved one.",
-    "json_invalid": "This is not valid JSON, so it was not kept. Correct it and leave the box."
+    "json_invalid": "This is not valid JSON, so it was not kept. Correct it and leave the box.",
+    "duress_hint": "Raised by every use of a duress code, whatever it was for. Only the default profile answers it, and it runs silent. Send it to somebody outside the house.",
+    "duress_not_default": "This is not the default profile, so this action never answers a duress code.",
+    "duress_persistent": "A Home Assistant notification shows on every Home Assistant screen, the wall tablet included — where the person who typed the duress code may be standing beside whoever made them. Send a notification to a contact instead.",
+    "duress_silent": "{kind} is on the silent list, so it never runs for a duress code: a sound in the house would tell the room."
   },
   "camera_mode": {
     "snapshot": "Snapshot",
@@ -1794,7 +1798,7 @@
     "device_rejected": "Device refused",
     "config_history_erased": "History of a person erased",
     "config_pseudonymisation": "Automatic name replacement changed",
-    "duress": "Disarmed under duress",
+    "duress": "Duress code used",
     "auto_pending": "Automatic action counting down",
     "auto_cancelled": "Automatic action cancelled",
     "auto_blocked": "Automatic action held back",
@@ -2119,7 +2123,13 @@
     "account": "Account",
     "created": "New person",
     "address": "Address",
-    "address_locked": "Address locked out for wrong tokens"
+    "address_locked": "Address locked out for wrong tokens",
+    "operation": "Operation",
+    "areas": "Areas",
+    "area": "Area",
+    "mode": "Mode",
+    "target": "Target",
+    "enabled": "Switched on"
   },
   "code": {
     "title": "Code",
@@ -2166,7 +2176,21 @@
     "edit_config": "Edit the configuration",
     "walk_test": "Start a walk test",
     "test_action": "Run a real action test",
-    "cancel_auto_action": "Cancel an automatic action"
+    "cancel_auto_action": "Cancel an automatic action",
+    "unbypass_zone": "Include a zone again",
+    "auto_arming": "Switch automatic rules on or off",
+    "suspend_auto_arming": "Suspend automatic rules",
+    "lift_suspension": "Lift a suspension of automatic rules",
+    "chime": "Switch the chime on or off",
+    "unknown_action": "An action the device does not have",
+    "unlock": "Unlock a device to read it",
+    "export_log": "Export the log",
+    "clear_log": "Empty the log",
+    "erase_person": "Erase a person's history",
+    "export_config": "Export the configuration",
+    "import_config": "Restore the configuration",
+    "import_alarmo": "Import from Alarmo",
+    "simulate": "Run the simulator"
   },
   "users": {
     "title": "Users",
@@ -2183,7 +2207,7 @@
     "code_optional": "Optional",
     "code_hint": "{n} digits, and it may not be anybody else's. Leave it empty to keep the current one.",
     "duress": "Duress code",
-    "duress_hint": "Disarms exactly as the ordinary code does, and raises a silent alarm. Nothing visible changes.",
+    "duress_hint": "Works exactly as the ordinary code, for anything it is used for, and each time raises a silent alarm that only the default profile answers. Nothing visible changes.",
     "scope": "Areas",
     "every_area": "Every area",
     "everything": "Everything",

@@ -47,7 +47,9 @@ from ..core.models import (
     DeviceScope,
     DisarmRequest,
     FoyerConfig,
+    Operation,
     Permission,
+    Purpose,
     Reason,
     RuntimeState,
     ZoneType,
@@ -148,10 +150,17 @@ async def async_unlock(
     device: ArmingDevice,
     actor: Actor,
 ) -> tuple[Reason | None, datetime | None]:
-    """A code offered to read. Counted like any other code (§8.4)."""
+    """A code offered to read. Counted like any other code (§8.4).
+
+    A duress code unlocks exactly as its owner's code does, and raises
+    `duress` naming the unlock (§9.2.2, decision 131): a display in the hall
+    somebody was made to open is a place the house was read from.
+    """
     if actor.code is CodeResult.NONE:
         return Reason.CODE_REQUIRED, None
-    attempt = await system.async_handle(CodeAttempt(None, actor=actor))
+    attempt = await system.async_handle(
+        CodeAttempt(None, actor=actor, purpose=Purpose.UNLOCK)
+    )
     if attempt.reason is not None:
         return attempt.reason, None
     now = dt_util.utcnow()
@@ -348,10 +357,14 @@ async def async_log_section(
 ) -> dict[str, Any]:
     """The log, newest first, paged by an opaque cursor.
 
-    The same rows the log page shows (§10), after the sweeps of §10.4. A
-    person's name appears only when the code that unlocked the device is
-    somebody's who may read the log (decision 118); a free log scope shows
-    what happened and never who.
+    The rows of the log page (§10) a display may show, after the sweeps of
+    §10.4: never the `duress` row, nor the actions that answered it, which a
+    device in the hall would show to whoever is standing there (§9.2.2,
+    decision 133) — left out by the query rather than after it, so a page
+    is as long as it says and the next one starts where it ended. A person's name
+    appears only when the code that unlocked the device is somebody's who
+    may read the log (decision 118); a free log scope shows what happened
+    and never who.
     """
     if system.log is None:
         return {"rows": [], "next": None}
@@ -359,7 +372,7 @@ async def async_log_section(
     limit = max(1, min(limit, MAX_LOG_ROWS))
     # What the stream announced is written before it is read (review).
     await system.log.async_flush()
-    answer = await system.log.async_query(limit=limit, offset=offset)
+    answer = await system.log.async_query(limit=limit, offset=offset, glance=True)
     names = person is not None and person.may(Permission.VIEW_LOG)
     scope = area_scope(person)
     areas = {a.id: a.name for a in config.areas}
@@ -490,6 +503,78 @@ def command(
     if str(data.get("target") or "incident") == "technical":
         return AcknowledgeTechnical(actor), None
     return AcknowledgeIncident(actor), None
+
+
+def refused_request(
+    config: FoyerConfig,
+    device: ArmingDevice,
+    data: dict[str, Any],
+    state: RuntimeState | None = None,
+) -> tuple[str, dict[str, str]]:
+    """What an action refused before the engine asked for, for its `duress`.
+
+    Named as the engine names the same request once it is built (§6.4): the
+    operation of §8.2, the service of §14.1 for letting a zone back in, or
+    `unknown_action` for one the contract does not have. Only the targets the
+    configuration knows are named: a reference it does not know is the
+    sender's to choose, and has no place in the log (decision 131).
+    """
+    action = str(data.get("action") or "")
+    if action == "arm":
+        area = _find(config.areas, data.get("area"))
+        if data.get("area") is not None:
+            named = {"area": area.id} if area is not None else {}
+            scenario = None
+        else:
+            scenario = _find(config.scenarios, data.get("scenario"))
+            mode = data.get("scenario")
+            if scenario is not None:
+                named = {"scenario": scenario.id}
+            elif isinstance(mode, str) and mode in {
+                s.ha_master_state for s in config.scenarios
+            }:
+                named = {"mode": mode}
+            else:
+                named = {}
+        current = state.active_scenario_id if state is not None else None
+        switching = scenario is not None and current not in (None, scenario.id)
+        operation = (
+            Operation.FORCE_ARM
+            if data.get("force")
+            else Operation.CHANGE_SCENARIO
+            if switching
+            else Operation.ARM
+        )
+        return operation.value, named
+    if action == "disarm":
+        refs = data.get("areas", data.get("area_ids"))
+        if refs is None:
+            allowed = device.disarm_area_ids
+            ids = (
+                tuple(allowed)
+                if allowed is not None
+                else tuple(a.id for a in config.areas)
+            )
+        else:
+            found = (
+                [_find(config.areas, ref) for ref in refs]
+                if isinstance(refs, list)
+                else []
+            )
+            ids = tuple(a.id for a in found if a is not None)
+        return Operation.DISARM.value, {"areas": ",".join(ids)}
+    if action in ("exclude", "include"):
+        zone = _find(config.zones, data.get("zone"))
+        operation = (
+            Operation.BYPASS_ZONE if action == "exclude" else Purpose.UNBYPASS_ZONE
+        )
+        return operation.value, {"zone": zone.id} if zone is not None else {}
+    if action == "acknowledge":
+        target = (
+            "technical" if str(data.get("target") or "") == "technical" else "incident"
+        )
+        return Operation.ACKNOWLEDGE.value, {"target": target}
+    return Purpose.UNKNOWN_ACTION.value, {}
 
 
 def _find(items: Any, ref: Any) -> Any:

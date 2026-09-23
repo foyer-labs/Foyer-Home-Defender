@@ -20,7 +20,7 @@ import string
 
 import pytest
 
-from custom_components.foyer.core.models import Moment, Reason
+from custom_components.foyer.core.models import Moment, Operation, Purpose, Reason
 from custom_components.foyer.core.validation import KEPT_WHILE_ARMED
 from custom_components.foyer.store.seed import seed_config
 
@@ -258,6 +258,19 @@ def test_every_moment_the_profile_editor_offers_has_a_name():
     for language in LANGUAGES:
         names = load(TRANSLATIONS / "panel", language)["moment"]
         assert not offered - names.keys(), (language, offered - names.keys())
+
+
+def test_every_name_a_duress_row_can_carry_is_translated():
+    """A `duress` row names what the person was made to do (decision 134):
+    §8.2's operation or a Purpose. The log page and the built-in message read
+    `operation.<name>` at run time, so the key check above cannot see them,
+    and a name without words would reach a contact as an identifier."""
+    names = {o.value for o in Operation} | {p.value for p in Purpose}
+    for language in LANGUAGES:
+        words = load(TRANSLATIONS / "panel", language)["operation"]
+        assert not names - words.keys(), (language, names - words.keys())
+    detail = load(TRANSLATIONS / "panel", "en")["detail"]
+    assert {"operation", "areas", "area", "mode", "target", "enabled"} <= detail.keys()
 
 
 def test_every_notification_the_seed_can_send_is_translated():
