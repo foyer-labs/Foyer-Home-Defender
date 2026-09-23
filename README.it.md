@@ -108,8 +108,9 @@ già intelligente.
   il pannello lo chiede, dice a cosa serve — *Codice per disinserire Piano
   terra* — e quale area o scenario lo sta chiedendo; lo dimentica dopo due
   minuti senza usarlo, dopo ogni inserimento o disinserimento, e quando il
-  pannello si chiude. In più un codice di coercizione, che disinserisce
-  normalmente e fa scattare un allarme silenzioso, e il blocco dopo codici
+  pannello si chiude. In più un codice di coercizione, che funziona
+  esattamente come il codice del suo titolare, per qualunque cosa venga usato,
+  e ogni volta fa scattare un allarme silenzioso; e il blocco dopo codici
   sbagliati ripetuti.
 - **Un tastierino accanto alla porta, un tag in tasca.** Tastierini Ring e Zigbee, tag
   NFC, badge RFID e telecomandi. Foyer non parla con i singoli modelli: espone
@@ -762,6 +763,28 @@ niente. Non esiste finché non lo accendi, l'id è generato a caso, il pannello
 ne mostra l'indirizzo una sola volta — quando viene generato — e spegnendolo
 viene dimenticato; per rivederlo se ne genera uno nuovo.
 [I dettagli](docs/notification-channels.md#twilio-voice-call) (in inglese).
+
+**Un codice di coercizione è il codice del suo titolare, e lo dice solo al
+registro.** Ogni persona può averne uno oltre al codice normale. Vale ovunque
+vale quello normale — inserire, disinserire, escludere una zona, un walk test,
+le impostazioni del pannello, sbloccare un dispositivo, una chiamata di
+servizio, un tastierino, la card — e fa esattamente quello che farebbe il
+codice normale, risposta compresa: chi è al tastierino non vede e non sente
+nessuna differenza. Quello che cambia è un evento silenzioso, `duress`, che
+scatta a ogni uso del codice, qualunque cosa si stesse facendo e che sia stata
+permessa o no, e dice che cosa è stato chiesto (`{{ operation }}` in un
+messaggio). Gli risponde solo il **profilo predefinito**, e nulla finché non
+gli dai un'azione: mandalo a qualcuno fuori casa. È sempre silenzioso — resta
+fuori quello che nomina l'elenco silenzioso, di serie la sirena, la voce e il
+campanello — e anche una notifica di Home Assistant è la risposta sbagliata,
+perché compare su ogni schermo di Home Assistant, tablet a muro compreso. La
+riga sta nella pagina del registro e in un'esportazione, mai nella Panoramica,
+in `sensor.foyer_last_event` o nel registro di un dispositivo API. Arriva anche
+sul bus degli eventi di Home Assistant come `foyer_event`, ed è così che una
+tua automazione può risponderle: una che mostra gli eventi di sicurezza da
+qualche parte in casa deve lasciare fuori `duress`.
+[Come rispondere](docs/notification-channels.md#answering-a-duress-code) (in
+inglese).
 
 **E non è un sistema antincendio.** Il canale tecnico è davvero utile — è
 attivo che la casa sia inserita o no, e disinserire non ha nessuna autorità su

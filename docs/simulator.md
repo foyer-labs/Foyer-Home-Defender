@@ -120,6 +120,9 @@ too. The premise is a real arming, run through the real engine, and §8.2 has no
 exemption for a rehearsal — inventing one would be a second authorisation path,
 which is exactly what this feature is built to avoid. The trace says so on its
 first line and the page offers the field. Nothing is executed either way.
+A code typed there is a real code, checked and counted like any other: a
+duress code raises its silent `duress` for the request, and the rehearsal then
+runs as the ordinary code would, so the trace never shows it.
 
 The house starts disarmed whatever it is really doing, with your sensors'
 real current readings underneath your overrides. If a window is genuinely open,

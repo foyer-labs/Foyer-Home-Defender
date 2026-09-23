@@ -108,8 +108,9 @@ good result for the money, on a house that is already smart.
   asks, it says what the code is for — *Code to disarm Ground floor* — and
   which area or scenario is asking; it forgets the code after two minutes
   unused, after every arming or disarming, and when the panel closes. Plus a
-  duress code that disarms normally and raises a silent alarm, and a lockout
-  after repeated wrong codes.
+  duress code that works exactly as its owner's code, for anything it is used
+  for, and raises a silent alarm each time; and a lockout after repeated
+  wrong codes.
 - **Zones that declare their own trigger.** Normally-closed and normally-open
   contact sensors behave in opposite ways, so Foyer proposes a trigger from the
   entity's device class and then makes you confirm it against the real sensor.
@@ -709,6 +710,26 @@ switch it on, the id is generated and random, the panel shows its address
 once — when it is generated — and switching it off forgets it; to see it
 again, you generate a new one.
 [The details](docs/notification-channels.md#twilio-voice-call).
+
+**A duress code is its owner's code, and says so only to the log.** Each person
+may have one besides their ordinary code. It is accepted wherever the ordinary
+code is — arming, disarming, excluding a zone, a walk test, the panel's
+settings, unlocking a device, a service call, a keypad, the card — and does
+exactly what the ordinary code would, answer included: nothing the person at
+the keypad sees or hears is different. What differs is one silent event,
+`duress`, raised every time the code is used, whatever it was used for and
+whether or not it was allowed, naming what was asked (`{{ operation }}` in a
+message). Only the **default profile** answers it, and nothing does until you
+give it an action: send it to somebody outside the house. It always runs silent
+— what the silent list names, the siren, speech and the chime by default, is
+left out — and a Home Assistant notification is the wrong answer too, because
+it shows on every Home Assistant screen, the wall tablet included. The row is
+on the log page and in an export, never on the Overview, in
+`sensor.foyer_last_event` or in an API device's log. It is also on Home
+Assistant's event bus as `foyer_event`, which is how an automation of yours can
+answer it: one that shows security events somewhere in the house should leave
+`duress` out.
+[Answering it](docs/notification-channels.md#answering-a-duress-code).
 
 **And it is not a fire alarm system.** The technical channel is genuinely
 useful — it is live whether the house is armed or not, and disarming has no

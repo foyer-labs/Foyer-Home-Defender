@@ -283,6 +283,49 @@ by whoever holds the other end.
 The one thing Foyer adds by itself is the acknowledge action, and only on a
 channel declared able to carry one.
 
+## Answering a duress code
+
+A duress code does everything its owner's ordinary code does, and each time it
+is used Foyer raises one silent event, `duress` — for a disarm, but just as
+much for an arming, an excluded zone, a walk test, a settings page, a device
+unlocked or a request that was refused. Whoever is standing beside the person
+typing it sees nothing different; the message is the only place it shows.
+
+Four things decide how to answer it:
+
+- **Only the default profile answers `duress`.** It belongs to no area and to
+  no incident, so an area's or a scenario's profile is never asked. Put the
+  action on the profile chosen as the default under *Settings*.
+- **Nothing answers it until you add an action.** The profile a new
+  installation starts with does not: its only action is a Home Assistant
+  notification.
+- **A Home Assistant notification is the wrong answer.** It appears on every
+  Home Assistant screen, the wall tablet the code was typed at included. So is
+  anything the house does out loud: `duress` always runs silent, and the kinds
+  on the silent list — the siren, speech and the chime by default — are left
+  out of its answer whatever the profile says. The profile editor warns about
+  both.
+- **Send it to somebody outside the house**, through a contact or a `notify.*`
+  service, with a message that says what happened:
+
+```
+{{ user }} used a duress code at {{ time }}: {{ operation }} {{ area }}
+```
+
+`{{ operation }}` names what the person was made to do — `disarm`, `arm`,
+`bypass_zone`, `edit_config`, `export_log`, `unlock`… — and `{{ area }}`,
+`{{ scenario }}` and `{{ zone }}` what the request named. It never escalates:
+there is nothing to acknowledge, so choose a channel that reaches somebody the
+first time. A request made with it again two minutes later is a second
+message, because it is a second thing the person was made to do.
+
+The `duress` row is on the log page and in an export, and nowhere a glance
+would find it: not on the Overview, not in `sensor.foyer_last_event`, not in
+an API device's log. It is on Home Assistant's event bus as `foyer_event`,
+like every row, which is how an automation of yours can answer it too — and
+why an automation that shows security events somewhere in the house must
+leave `duress` out.
+
 ---
 
 ## When a send fails

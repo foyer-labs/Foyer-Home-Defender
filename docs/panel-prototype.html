@@ -685,7 +685,7 @@ const HELP = {
   users: ['Codes, identity and permissions',
     'Every user has their own code, stored as a bcrypt hash and verified in the backend only. Codes must be unique across users, because otherwise the first matching hash wins and the log credits the wrong person.',
     [['Code', 'Individual per user. Length is a global setting, since a keypad must know how many digits to collect.'],
-     ['Duress code', 'Disarms normally and raises a silent alarm. Nobody watching can tell it apart from a normal disarm.'],
+     ['Duress code', 'Works exactly as the ordinary code, for anything it is used for, and raises a silent alarm each time. Nobody watching can tell it apart.'],
      ['Permissions', 'What this user may do at all. Separate from whether a code is required to do it.'],
      ['Area scope', 'Which areas this user may act on. A cleaner can be given the ground floor and nothing else.'],
      ['Valid until', 'The code stops working on this date. Use it for guests and tradespeople rather than deleting a user later.'],
