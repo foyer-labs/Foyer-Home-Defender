@@ -127,6 +127,15 @@ class FoyerPageTest extends LitElement {
   private _busy = false;
   private _error?: string;
   private _notice?: string;
+  private _walkWasOn = false;
+
+  override willUpdate(): void {
+    // The note about areas left out of a walk test is about that test: once
+    // it has ended, by the banner or by its timeout, it is no longer true.
+    const on = Boolean(this.ctx?.status.walk_test);
+    if (this._walkWasOn && !on) this._notice = undefined;
+    this._walkWasOn = on;
+  }
   private _scenario = "";
   private _start = "";
   private _overrides: Override[] = [];
@@ -211,6 +220,7 @@ class FoyerPageTest extends LitElement {
                 this._tab = tab;
                 // An answer belongs to the tab that asked for it.
                 this._error = undefined;
+                this._notice = undefined;
               }}
             >
               ${t(s, `test.tab.${tab}`)}
@@ -681,7 +691,7 @@ class FoyerPageTest extends LitElement {
           inputmode="numeric"
           autocomplete="off"
           aria-label=${t(s, "test.simulator.premise_code")}
-          .value=${live(this._code)}
+          .value=${this._code}
           @change=${(e: Event) => (this._code = (e.target as HTMLInputElement).value)}
         />
         <div class="actions">
@@ -983,6 +993,7 @@ class FoyerPageTest extends LitElement {
    */
   private _renderWalkTest(s: Strings) {
     const walk = this.ctx!.status.walk_test;
+
     // While one is running the shell's banner is directly above this, on
     // every page, and it already says what is held back, when it ends and
     // what stays live. Saying it again here would be the page repeating

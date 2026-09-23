@@ -255,6 +255,13 @@ class FoyerPageProfiles extends LitElement {
 
   private async _save(): Promise<void> {
     if (!this.ctx || !this._draft) return;
+    if (Object.values(this._jsonErrors).some(Boolean)) {
+      // The box holds text that could not be read, and the draft still has
+      // the previous data: saving would store that while the box showed the
+      // broken text (second review).
+      this._problems = [{ code: "data_invalid", kind: "profile", ref: null, field: "data" }];
+      return;
+    }
     this._busy = true;
     try {
       const result = await this.ctx.save("profile", this._draft);
@@ -548,7 +555,15 @@ class FoyerPageProfiles extends LitElement {
     const open = this._open === index;
     return html`
       <div class="action" ?data-open=${open}>
-        <button class="action-hd" @click=${() => (this._open = open ? -1 : index)}>
+        <button
+          class="action-hd"
+          @click=${() => {
+            this._open = open ? -1 : index;
+            // Reopened, the box shows the data the draft holds, which is
+            // valid: an error about text no longer there is dropped.
+            this._jsonErrors = {};
+          }}
+        >
           <span class="tag">${t(s, `action_kind.${action.kind}`)}</span>
           <span class="summary">${this._summary(s, action)}</span>
           <span class="moments">${this._momentSummary(s, action)}</span>
@@ -771,7 +786,10 @@ class FoyerPageProfiles extends LitElement {
     domains: string[],
     multiple: boolean,
   ) {
-    const options = this._entities(domains);
+    // A copy: the list is shared by every picker of these domains until Home
+    // Assistant's states change, and an entity no longer there is added
+    // below for this picker alone.
+    const options = [...this._entities(domains)];
     const current = action.params[key];
     const selected = new Set(
       Array.isArray(current) ? (current as string[]) : current ? [String(current)] : [],

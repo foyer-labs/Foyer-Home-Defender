@@ -174,7 +174,7 @@ class FoyerWizard extends LitElement {
             type="number"
             min="0"
             max="300"
-            .value=${live(String(area.default_exit_delay))}
+            .value=${String(area.default_exit_delay)}
             @change=${(e: Event) =>
               whenNumber(e, (n) => save({ default_exit_delay: n }))}
           />
@@ -186,7 +186,7 @@ class FoyerWizard extends LitElement {
             type="number"
             min="0"
             max="300"
-            .value=${live(String(area.default_entry_delay))}
+            .value=${String(area.default_entry_delay)}
             @change=${(e: Event) =>
               whenNumber(e, (n) => save({ default_entry_delay: n }))}
           />

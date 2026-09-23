@@ -1540,7 +1540,7 @@
     "flash_short": "Short flash",
     "flash_long": "Long flash",
     "test_after_save": "Save the profile to test this action as it is now: the test runs the saved one.",
-    "json_invalid": "This is not valid JSON, so it was not kept. Correct it and leave the box again."
+    "json_invalid": "This is not valid JSON, so it was not kept. Correct it and leave the box."
   },
   "camera_mode": {
     "snapshot": "Snapshot",

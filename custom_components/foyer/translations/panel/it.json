@@ -1503,7 +1503,7 @@
     "delete_action": "Rimuovi azione",
     "severity_hint": "Serve a una cosa sola: quando più zone entrano in uno stesso incidente, l'incidente adotta l'escalation del profilo più severo fra quelli coinvolti. Non cambia nulla quando questo profilo gira da solo.",
     "inherit": "Eredita",
-    "effective": "Profilo efficace: {profile}",
+    "effective": "Profilo in uso: {profile}",
     "inherited_from_area": "ereditato dall'area",
     "inherited_from_scenario": "ereditato dallo scenario",
     "inherited_from_default": "il profilo predefinito",
@@ -1535,12 +1535,12 @@
     "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto.",
     "images_text_alone": "Le immagini partono solo con un allarme: l'allarme stesso, una zona che vi si aggiunge, un passo di escalation, un allarme tecnico. Per «{moments}» questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
     "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale \"altro\" riceve solo il testo, invece di un messaggio in più per ogni telecamera.",
-    "effective_from": "Profilo efficace: {profile} — {from}",
+    "effective_from": "Profilo in uso: {profile} — {from}",
     "flash_none": "Nessun lampeggio",
     "flash_short": "Lampeggio breve",
     "flash_long": "Lampeggio lungo",
     "test_after_save": "Salva il profilo per provare questa azione così com'è adesso: la prova esegue quella salvata.",
-    "json_invalid": "Questo non è JSON valido, quindi non è stato tenuto. Correggilo e lascia di nuovo il campo."
+    "json_invalid": "Questo non è JSON valido, quindi non è stato salvato. Correggilo ed esci dal campo."
   },
   "camera_mode": {
     "snapshot": "Scatto",

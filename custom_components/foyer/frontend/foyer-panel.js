@@ -3170,6 +3170,15 @@ var jt = class extends N {
 	}
 	async _save() {
 		if (this.ctx && this._draft) {
+			if (Object.values(this._jsonErrors).some(Boolean)) {
+				this._problems = [{
+					code: "data_invalid",
+					kind: "profile",
+					ref: null,
+					field: "data"
+				}];
+				return;
+			}
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("profile", this._draft);
@@ -3384,7 +3393,12 @@ var jt = class extends N {
 		let r = this._open === n;
 		return T`
       <div class="action" ?data-open=${r}>
-        <button class="action-hd" @click=${() => this._open = r ? -1 : n}>
+        <button
+          class="action-hd"
+          @click=${() => {
+			this._open = r ? -1 : n, this._jsonErrors = {};
+		}}
+        >
           <span class="tag">${I(e, `action_kind.${t.kind}`)}</span>
           <span class="summary">${this._summary(e, t)}</span>
           <span class="moments">${this._momentSummary(e, t)}</span>
@@ -3532,7 +3546,7 @@ var jt = class extends N {
     </label>`;
 	}
 	_picker(e, t, n, r, i, a) {
-		let o = this._entities(i), s = t.params[r], c = new Set(Array.isArray(s) ? s : s ? [String(s)] : []);
+		let o = [...this._entities(i)], s = t.params[r], c = new Set(Array.isArray(s) ? s : s ? [String(s)] : []);
 		for (let e of c) o.some((t) => t.id === e) || o.push({
 			id: e,
 			name: e
@@ -5318,7 +5332,7 @@ function J(e, t, n) {
 }
 var Jt = class extends N {
 	constructor(...e) {
-		super(...e), this._tab = "diagnostics", this._busy = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set(), this._walkDuration = "", this._tested = {};
+		super(...e), this._tab = "diagnostics", this._busy = !1, this._walkWasOn = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set(), this._walkDuration = "", this._tested = {};
 	}
 	static {
 		this.properties = {
@@ -5339,6 +5353,10 @@ var Jt = class extends N {
 			_tested: { state: !0 },
 			_confirming: { state: !0 }
 		};
+	}
+	willUpdate() {
+		let e = !!this.ctx?.status.walk_test;
+		this._walkWasOn && !e && (this._notice = void 0), this._walkWasOn = e;
 	}
 	updated() {
 		!this._loaded && this.ctx && (this._loaded = !0, this._refresh());
@@ -5385,7 +5403,7 @@ var Jt = class extends N {
               role="tab"
               aria-selected=${e === this._tab ? "true" : "false"}
               @click=${() => {
-			this._tab = e, this._error = void 0;
+			this._tab = e, this._error = void 0, this._notice = void 0;
 		}}
             >
               ${I(t, `test.tab.${e}`)}
@@ -5732,7 +5750,7 @@ var Jt = class extends N {
           inputmode="numeric"
           autocomplete="off"
           aria-label=${I(e, "test.simulator.premise_code")}
-          .value=${W(this._code)}
+          .value=${this._code}
           @change=${(e) => this._code = e.target.value}
         />
         <div class="actions">
@@ -8334,7 +8352,7 @@ var un = 30, dn = {
         type="number"
         min=${r ? r[0] : 0}
         max=${r ? r[1] : 3600}
-        .value=${W(String(n[t]))}
+        .value=${String(n[t])}
         @change=${(e) => H(e, (e) => void this._saveSettings({ [t]: e }))}
       />
       <span class="hint">${i ?? I(e, "common.seconds_unit")}</span>
@@ -8395,7 +8413,7 @@ var un = 30, dn = {
                         type="number"
                         min=${i}
                         max=${a}
-                        .value=${W(String(n.retention_days[t] ?? 30))}
+                        .value=${String(n.retention_days[t] ?? 30)}
                         @change=${(e) => H(e, (e) => o({ retention_days: { [t]: e } }))}
                       />
                       <span class="hint">${I(e, "settings.log_days")}</span>
@@ -9634,7 +9652,7 @@ var Z = [
             type="number"
             min="0"
             max="300"
-            .value=${W(String(t.default_exit_delay))}
+            .value=${String(t.default_exit_delay)}
             @change=${(e) => H(e, (e) => n({ default_exit_delay: e }))}
           />
           <span class="hint">${I(e, "wizard.exit_hint")}</span>
@@ -9645,7 +9663,7 @@ var Z = [
             type="number"
             min="0"
             max="300"
-            .value=${W(String(t.default_entry_delay))}
+            .value=${String(t.default_entry_delay)}
             @change=${(e) => H(e, (e) => n({ default_entry_delay: e }))}
           />
           <span class="hint">${I(e, "wizard.entry_hint")}</span>

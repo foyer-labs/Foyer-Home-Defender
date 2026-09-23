@@ -174,7 +174,7 @@ class FoyerPageSettings extends LitElement {
         type="number"
         min=${range ? range[0] : 0}
         max=${range ? range[1] : 3600}
-        .value=${live(String(settings[key]))}
+        .value=${String(settings[key])}
         @change=${(e: Event) =>
           // Emptied is "not changed": Number("") is 0, which saved a delay of
           // no seconds at all (second review).
@@ -252,7 +252,7 @@ class FoyerPageSettings extends LitElement {
                         type="number"
                         min=${min}
                         max=${max}
-                        .value=${live(String(log.retention_days[category] ?? 30))}
+                        .value=${String(log.retention_days[category] ?? 30)}
                         @change=${(e: Event) =>
                           whenNumber(e, (days) =>
                             change({ retention_days: { [category]: days } }),
