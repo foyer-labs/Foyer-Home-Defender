@@ -5,6 +5,88 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.14] — what a second full review found
+
+No new features. Six reviewers read the whole repository again after beta.13
+— the pure engine, the response and log support, the Home Assistant layer,
+the API and its security, the stored documents, the panel — and four more
+checked the fixes. **Take this one**: several of the defects below are the
+kind an alarm must not have. The stored configuration stays at schema 8.1.
+
+### Changed — read these before you update
+- **A refused `foyer.*` service now raises an error when the caller does not
+  ask for its response.** An automation calling `foyer.disarm` without
+  `response_variable` took a wrong code, a lockout or an open window for
+  success and carried on. A caller that asks for the response still gets the
+  structured result of §9.1, refusal included. An automation that relied on a
+  refusal passing silently will now stop, and say why.
+- **Wrong codes on the panel and through the services count per Home
+  Assistant account.** One shared counter let any account, even one with no
+  permissions, lock the whole household out of the panel and of every
+  automation by typing five wrong codes.
+- **Arming during a walk test is refused** with its own reason. It used to be
+  accepted — every area is already armed by the test — and the end of the
+  test then disarmed the house its owner believed armed.
+- **Each zone joining an incident sends its notification again**, and
+  notifications now wait for their transport's answer: a channel that accepts
+  and then fails (a revoked Telegram token, a refused push) is no longer
+  counted as sent, so the test button, channel health and the retry see it.
+  Actions run beside the request that caused them, so no keypad, service or
+  panel waits for a notification.
+- **A code that belongs to somebody else**, offered when saving a person,
+  now counts like a wrong code, and is checked only once the rest of the
+  person is valid: the check could be used to test codes without limit.
+
+### Fixed — the ones that mattered most
+- **After a restart, disarming switched off a smoke sounder.** The flag that
+  keeps a technical sounder out of a disarm and of the intrusion siren
+  cutoff was not saved.
+- **An automatic disarming rule could close an alarm still in progress**: after
+  the siren cutoff an area is armed again with its incident unacknowledged,
+  and the rule's disarm acknowledged it — the stolen-phone case §9.4 exists
+  for.
+- **The device endpoint could be locked for every keypad**, correct token
+  included, by anybody who filled its sixty-four per-address counters first.
+- **The warning about a broken channel reached nobody** when the person's
+  first channel was the broken one, though their second worked.
+- **A suppressing verification group with a member excluded** held its last
+  working detector back for ever.
+- **Re-enabling a key zone, a rule, or saving a time rule after its hour** acted
+  at once; a new button's first press was lost. Only a change out of
+  `unavailable` is a restore.
+- **An action could write camera pictures under `www`**, which Home Assistant
+  serves without authentication.
+- **An empty "mains lost" state list was saved as `on`**, so the mains alarm
+  of a power sensor could never fire.
+
+### Fixed — also
+- The repair cards measured in days never appeared on a quiet house; the
+  first configuration save after every start logged an error; the last save
+  on unload did not happen; neither the log nor the timers can now keep a
+  stored decision's actions from running; the state file is no longer
+  rewritten for sensor attributes nothing reads.
+- Log exports reach ten thousand rows again; the log's privacy sweeps
+  overwrite what they remove instead of leaving it in the file; the
+  configuration log records people, contacts and rules — by id, never by
+  name, number or code — and says when a webhook id or the watchdog URL is
+  replaced.
+- Invented device names are capped and shown as text, never as a link; a
+  name of a token keypad used on the broker is never lost among them.
+- The simulator shows who a notification reached and the siren time the
+  engine used; `{{ user }}` names the person (not a claimed one); a smoke
+  sounder takes the global siren time; bypass durations are bounded.
+- The panel: a dropdown or checkbox could show a value different from the
+  one saved; a PIN typed for one person stayed in the field for another and
+  was not sent; a switch left wrong by a refused save now goes back and says
+  why; tests run only what is saved; clearing the log asks for the code;
+  emptied number fields no longer turn into their default or zero; hidden
+  fields left by a change of zone channel or rule trigger are cleared; times
+  follow the house's time zone; every list opens from the keyboard; words
+  the log and the simulator showed as raw keys are translated.
+- The Alarmo importer says that an automation run "when the alarm ends" now
+  runs at every disarm, and when an extended scenario's own delays apply to
+  the imported areas.
+
 ## [0.1.0-beta.13] — where it happened, and a keypad that proves which it is
 
 Two additions before the documentation (§6.2.1, §9.2.1): the alarm shows the
