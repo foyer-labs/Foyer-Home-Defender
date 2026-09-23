@@ -34,7 +34,8 @@
     "contacts": "Contacts",
     "rules": "Automatic rules",
     "health": "System health",
-    "group_setup": "Setup"
+    "group_setup": "Setup",
+    "api": "API"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -989,6 +990,10 @@
         "endpoint": {
           "term": "Device endpoint",
           "text": "A keypad can speak to Foyer's own endpoint with a token instead of MQTT, never both. The token proves which keypad it is; only HTTPS keeps the token and the codes from being read."
+        },
+        "scopes": {
+          "term": "Permissions of a device on the endpoint",
+          "text": "A display, a relay or a module reads and does only what is ticked for it, every permission off to begin with. Reading can be free; every action needs a code typed on the device."
         }
       }
     },
@@ -1144,7 +1149,29 @@
         }
       }
     },
-    "learn_more": "Learn more →"
+    "learn_more": "Learn more →",
+    "api": {
+      "title": "What this page is for",
+      "intro": "For whoever builds a device of the household's own — a touch display, a relay, an ESP32 or Arduino module. It shows, and lets you try, exactly what such a device may ask Foyer. Only Home Assistant administrators see it, and it is never served outside the panel: a public documentation page would tell a scanner that an alarm lives here.",
+      "items": {
+        "contract": {
+          "term": "Contract v1",
+          "text": "A device written against v1 keeps working: a change that would break it is a new version, and the changelog says so."
+        },
+        "token": {
+          "term": "Device token",
+          "text": "Generated on Arming devices and shown once. It says which device is asking; by itself it never arms or disarms anything, and it encrypts nothing."
+        },
+        "try": {
+          "term": "Try it out",
+          "text": "Sends real requests with the token you paste, within that device's permissions. A section the device may not read answers 403 with the reason."
+        },
+        "internal": {
+          "term": "What is not here",
+          "text": "The panel's own commands are internal and may change in any release: a device must not rely on them. The MQTT contract is described separately."
+        }
+      }
+    }
   },
   "notification": {
     "device_rejected": {
@@ -2154,7 +2181,43 @@
     "endpoint_stream_hint": "The same message as MQTT's, at the same detail level, the moment anything changes; a comment line every thirty seconds keeps the connection open through proxies.",
     "detail_shared_hint": "The same level applies to the device endpoint's state stream and to its answers.",
     "token_dropped": "Saving it on MQTT revokes its token. Back on the endpoint it will need a new one.",
-    "token_confirm": "The keypad stops working with its current token at once, and every connection it has open is closed."
+    "token_confirm": "The keypad stops working with its current token at once, and every connection it has open is closed.",
+    "scopes_note": "A display in the hall, a relay that lights an “armed” lamp, a module of your own: a device on the endpoint may do exactly what is ticked here and nothing more, whatever code is typed on it. Everything starts off.",
+    "scopes_none": "Nothing is ticked: this device reaches the endpoint and can do nothing at all.",
+    "scopes_read": "What it may read",
+    "scopes_read_hint": "Readable without a code: anybody standing at the device can read it. Otherwise it is read only for a while after somebody types a valid code on the device, and only what that person may see.",
+    "scopes_act": "What it may do",
+    "scopes_act_hint": "Every action needs a code typed on the device, arming included, even where the house would arm without one elsewhere: the token alone never arms or disarms anything. The action is made in the name of whoever the code belongs to, within what that person may do, and never beyond what is ticked here.",
+    "scope": {
+      "status": "State of the alarm",
+      "zones": "Zones",
+      "batteries": "Batteries and tamper",
+      "health": "System health",
+      "log": "Log",
+      "arm": "Arm",
+      "disarm": "Disarm",
+      "exclude": "Exclude and include again",
+      "acknowledge": "Acknowledge"
+    },
+    "scope_hint": {
+      "status": "Armed or not, which scenario, the countdowns, whether it is ready to arm, an alarm. Enough for a lamp that lights when the house is armed.",
+      "zones": "Every zone and its state: open, closed, in fault, excluded. Which window is open is exactly what a burglar wants to know.",
+      "batteries": "Battery levels and tamper, per zone and per device.",
+      "health": "Mains power, the notification channels, the watchdog, the radios.",
+      "log": "The log, newest first, a page at a time. Names appear only after the code of somebody allowed to view the log.",
+      "arm": "Arm a scenario or an area, within the limits chosen below.",
+      "disarm": "Disarm, within the areas chosen below.",
+      "exclude": "Exclude a zone from the next arming, and include it again.",
+      "acknowledge": "Acknowledge an alarm or a technical alarm."
+    },
+    "free_log_hint": "Without a code the log shows events with nobody's name in them.",
+    "unlock_hint": "From 30 seconds to 10 minutes, counted from the last time the device was used. It ends at once whenever the house is armed or disarmed from this device, and every unlock leaves a line in the log.",
+    "reach_all_scenarios": "Every scenario, as far as the code allows",
+    "reach_whole_house": "Whole house, as far as the code allows",
+    "reach_only": "Only what is ticked below",
+    "reach_none": "Nothing is ticked, so it may not do this anywhere.",
+    "clear_text_hint": "If this device talks plain HTTP, everything these permissions read — and the codes typed on it — crosses the network readable by anybody in between. Over plain HTTP Foyer gives these readings only once this is ticked; over HTTPS it changes nothing. Ticking it leaves a line in the log.",
+    "clear_text_now": "Its last request arrived unencrypted: until this is ticked, it reads nothing beyond the state of the alarm."
   },
   "attachment": {
     "companion": "Companion app — live picture, no file",
@@ -2611,5 +2674,15 @@
   "transport": {
     "mqtt": "MQTT",
     "http": "Device endpoint"
+  },
+  "api": {
+    "title": "Device API",
+    "contract": "Contract {version}",
+    "intro": "The contract of the device endpoint: what a display, a relay or a module on your network may ask Foyer, and what it answers. It describes the endpoint and its state stream and nothing else — the panel's own commands are internal and are not listed. Nothing on this page is fetched from the internet.",
+    "try_it": "To try a request, press Authorize and paste the token of a device declared on Arming devices, then Try it out. The token stays in this page only: it is not saved in the browser, and it is forgotten when you leave.",
+    "real_requests": "These are real requests to this house, made as that device: an arming or a disarming with a real code really arms or disarms it, a wrong code counts towards the device's lockout, and every action is recorded in the log.",
+    "loading": "Loading the contract…",
+    "failed": "The contract could not be read from Home Assistant.",
+    "retry": "Try again"
   }
 }

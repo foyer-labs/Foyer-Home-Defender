@@ -94,7 +94,7 @@ async def test_an_alpha_3_configuration_is_migrated_to_the_new_major(
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    assert (STORAGE_VERSION, STORAGE_MINOR_VERSION) == (8, 1)
+    assert (STORAGE_VERSION, STORAGE_MINOR_VERSION) == (8, 2)
     system = hass.data[DOMAIN]
     assert system.config.zones[0].name == "Shutter"
     assert system.config.groups == ()

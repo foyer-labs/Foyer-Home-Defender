@@ -601,7 +601,32 @@ export interface DeviceConfig {
   /** Whether a token exists. The token itself is shown once, on generation,
    * and never again; its hash never reaches the panel. */
   has_token?: boolean;
+  /** An API device on the endpoint only (§9.2.2): what it may read and do,
+   * every scope off until switched on (decision 115). */
+  scopes: DeviceScope[];
+  /** The read scopes it reads with its token alone (decision 117). */
+  free_scopes: DeviceScope[];
+  /** Where its arm and disarm reach; null is everywhere its code's owner
+   * may go. */
+  arm_scenario_ids: string[] | null;
+  arm_area_ids: string[] | null;
+  disarm_area_ids: string[] | null;
+  /** How long a code unlocks the after-a-code scopes, 30–600 s (decision 118). */
+  unlock_seconds: number;
+  /** Scopes beyond status may cross the network in the clear (decision 119). */
+  clear_text_confirmed: boolean;
 }
+
+export type DeviceScope =
+  | "status"
+  | "zones"
+  | "batteries"
+  | "health"
+  | "log"
+  | "arm"
+  | "disarm"
+  | "exclude"
+  | "acknowledge";
 
 export interface SettingsConfig {
   siren_duration: number;
@@ -1129,4 +1154,5 @@ export type PageId =
   | "settings"
   | "rules"
   | "test"
-  | "health";
+  | "health"
+  | "api";

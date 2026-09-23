@@ -34,7 +34,8 @@
     "contacts": "Contatti",
     "rules": "Regole automatiche",
     "health": "Stato del sistema",
-    "group_setup": "Configurazione"
+    "group_setup": "Configurazione",
+    "api": "API"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -989,6 +990,10 @@
         "endpoint": {
           "term": "Endpoint dei dispositivi",
           "text": "Un tastierino può parlare con l'endpoint di Foyer con un token invece che via MQTT, mai entrambi. Il token prova quale tastierino è; solo HTTPS evita che il token e i codici vengano letti."
+        },
+        "scopes": {
+          "term": "Permessi di un dispositivo sull'endpoint",
+          "text": "Un display, un relè o un modulo legge e fa solo ciò che gli è spuntato, e all'inizio ogni permesso è spento. La lettura può essere libera; ogni azione richiede un codice digitato sul dispositivo."
         }
       }
     },
@@ -1144,7 +1149,29 @@
         }
       }
     },
-    "learn_more": "Approfondisci →"
+    "learn_more": "Approfondisci →",
+    "api": {
+      "title": "A cosa serve questa pagina",
+      "intro": "Per chi costruisce un dispositivo di casa propria — un display touch, un relè, un modulo ESP32 o Arduino. Mostra, e permette di provare, esattamente ciò che un dispositivo del genere può chiedere a Foyer. La vedono solo gli amministratori di Home Assistant, e non viene mai servita fuori dal pannello: una pagina di documentazione pubblica direbbe a uno scanner che qui c'è un allarme.",
+      "items": {
+        "contract": {
+          "term": "Contratto v1",
+          "text": "Un dispositivo scritto per la v1 continua a funzionare: una modifica che lo romperebbe è una nuova versione, e il changelog lo dice."
+        },
+        "token": {
+          "term": "Token del dispositivo",
+          "text": "Si genera in Dispositivi di inserimento ed è mostrato una sola volta. Dice quale dispositivo sta chiedendo; da solo non inserisce né disinserisce niente, e non cifra nulla."
+        },
+        "try": {
+          "term": "Try it out",
+          "text": "Invia richieste vere con il token che incolli, entro i permessi di quel dispositivo. Una sezione che il dispositivo non può leggere risponde 403 con il motivo."
+        },
+        "internal": {
+          "term": "Cosa non c'è",
+          "text": "I comandi del pannello sono interni e possono cambiare a ogni versione: un dispositivo non deve farci affidamento. Il contratto MQTT è descritto a parte."
+        }
+      }
+    }
   },
   "notification": {
     "device_rejected": {
@@ -2154,7 +2181,43 @@
     "endpoint_stream_hint": "Lo stesso messaggio di MQTT, allo stesso livello di dettaglio, nel momento in cui cambia qualcosa; una riga di commento ogni trenta secondi tiene aperta la connessione attraverso i proxy.",
     "detail_shared_hint": "Lo stesso livello vale per il flusso di stato dell'endpoint dei dispositivi e per le sue risposte.",
     "token_dropped": "Salvarlo su MQTT revoca il suo token. Tornato sull'endpoint, ne servirà uno nuovo.",
-    "token_confirm": "Il tastierino smette subito di funzionare con il token attuale, e ogni sua connessione aperta viene chiusa."
+    "token_confirm": "Il tastierino smette subito di funzionare con il token attuale, e ogni sua connessione aperta viene chiusa.",
+    "scopes_note": "Un display nell'ingresso, un relè che accende una spia «inserito», un modulo costruito da te: un dispositivo sull'endpoint può fare esattamente ciò che è spuntato qui e niente di più, qualunque codice venga digitato. All'inizio è tutto spento.",
+    "scopes_none": "Nulla è spuntato: questo dispositivo raggiunge l'endpoint ma non può fare niente.",
+    "scopes_read": "Cosa può leggere",
+    "scopes_read_hint": "Leggibile senza codice: chiunque si trovi davanti al dispositivo può leggerlo. Altrimenti si legge solo per un po' dopo che qualcuno ha digitato un codice valido sul dispositivo, e solo ciò che quella persona può vedere.",
+    "scopes_act": "Cosa può fare",
+    "scopes_act_hint": "Ogni azione richiede un codice digitato sul dispositivo, inserimento compreso, anche dove altrove la casa si inserirebbe senza: il token da solo non inserisce né disinserisce mai niente. L'azione è fatta a nome della persona a cui appartiene il codice, entro ciò che quella persona può fare, e mai oltre ciò che è spuntato qui.",
+    "scope": {
+      "status": "Stato dell'allarme",
+      "zones": "Zone",
+      "batteries": "Batterie e manomissioni",
+      "health": "Stato del sistema",
+      "log": "Registro",
+      "arm": "Inserire",
+      "disarm": "Disinserire",
+      "exclude": "Escludere e includere di nuovo",
+      "acknowledge": "Prendere atto"
+    },
+    "scope_hint": {
+      "status": "Inserito o no, quale scenario, i conti alla rovescia, se è pronto per l'inserimento, un allarme. Basta a una spia che si accende quando la casa è inserita.",
+      "zones": "Ogni zona con il suo stato: aperta, chiusa, in guasto, esclusa. Quale finestra è aperta è proprio ciò che un ladro vuole sapere.",
+      "batteries": "Livello delle batterie e manomissioni, per zona e per dispositivo.",
+      "health": "Rete elettrica, canali di notifica, watchdog, radio.",
+      "log": "Il registro, dal più recente, una pagina alla volta. I nomi compaiono solo dopo il codice di qualcuno che può consultare il registro.",
+      "arm": "Inserire uno scenario o un'area, entro i limiti scelti qui sotto.",
+      "disarm": "Disinserire, entro le aree scelte qui sotto.",
+      "exclude": "Escludere una zona dal prossimo inserimento, e includerla di nuovo.",
+      "acknowledge": "Prendere atto di un allarme o di un allarme tecnico."
+    },
+    "free_log_hint": "Senza codice il registro mostra gli eventi senza il nome di nessuno.",
+    "unlock_hint": "Da 30 secondi a 10 minuti, contati dall'ultima volta che il dispositivo è stato usato. Finisce subito ogni volta che la casa viene inserita o disinserita da questo dispositivo, e ogni sblocco lascia una riga nel registro.",
+    "reach_all_scenarios": "Tutti gli scenari, fin dove il codice lo permette",
+    "reach_whole_house": "Tutta la casa, fin dove il codice lo permette",
+    "reach_only": "Solo ciò che è spuntato qui sotto",
+    "reach_none": "Nulla è spuntato, quindi non può farlo da nessuna parte.",
+    "clear_text_hint": "Se questo dispositivo parla in HTTP semplice, tutto ciò che questi permessi leggono — e i codici digitati — attraversa la rete leggibile da chiunque stia in mezzo. In HTTP semplice Foyer fornisce queste letture solo dopo questa spunta; in HTTPS non cambia nulla. La spunta lascia una riga nel registro.",
+    "clear_text_now": "La sua ultima richiesta è arrivata non cifrata: finché questa casella non è spuntata, non legge nulla oltre allo stato dell'allarme."
   },
   "attachment": {
     "companion": "App Companion — immagine dal vivo, nessun file",
@@ -2611,5 +2674,15 @@
   "transport": {
     "mqtt": "MQTT",
     "http": "Endpoint dei dispositivi"
+  },
+  "api": {
+    "title": "API dei dispositivi",
+    "contract": "Contratto {version}",
+    "intro": "Il contratto dell'endpoint dei dispositivi: ciò che un display, un relè o un modulo sulla tua rete può chiedere a Foyer, e ciò che risponde. Descrive l'endpoint e il suo flusso di stato e nient'altro — i comandi del pannello sono interni e non sono elencati. Niente in questa pagina viene scaricato da internet.",
+    "try_it": "Per provare una richiesta, premi Authorize e incolla il token di un dispositivo dichiarato in Dispositivi di inserimento, poi Try it out. Il token resta solo in questa pagina: non viene salvato nel browser, e viene dimenticato quando esci.",
+    "real_requests": "Sono richieste vere a questa casa, fatte come quel dispositivo: un inserimento o un disinserimento con un codice vero inserisce o disinserisce davvero, un codice sbagliato conta per il blocco del dispositivo, e ogni azione finisce nel registro.",
+    "loading": "Caricamento del contratto…",
+    "failed": "Non è stato possibile leggere il contratto da Home Assistant.",
+    "retry": "Riprova"
   }
 }

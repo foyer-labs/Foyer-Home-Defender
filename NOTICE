@@ -17,3 +17,10 @@ The frontend bundles in custom_components/foyer/frontend/ include:
   Lit (https://lit.dev)
   Copyright 2017 Google LLC
   BSD-3-Clause
+
+  Swagger UI (https://github.com/swagger-api/swagger-ui)
+  Copyright 2020-2021 SmartBear Software Inc.
+  Apache-2.0
+  Loaded only by the administrators' API page, from its own file
+  (api-swagger-*.js). The licences of the packages it bundles are in
+  custom_components/foyer/frontend/swagger-ui.LICENSE.txt.

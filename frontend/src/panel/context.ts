@@ -64,6 +64,9 @@ export interface PanelContext {
    * the backend's to generate, and this answer is the only time it is ever
    * shown: it is stored as a hash nothing can read back. */
   deviceToken(deviceId: string, revoke: boolean): Promise<EditResult & { token?: string }>;
+  /** The device endpoint's contract, as YAML text (§9.2.2, decision 121).
+   * Administrators only: the backend refuses anybody else. */
+  apiDocument(): Promise<{ document: string }>;
   /** Automatic arming (§9.4). Cancelling stops a countdown before it acts;
    * the switch is the global kill switch; a suspension holds rules back
    * until a date, for one occurrence, or for a named visitor window. */

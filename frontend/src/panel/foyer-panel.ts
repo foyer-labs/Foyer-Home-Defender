@@ -39,6 +39,7 @@ import "./pages/test";
 import "./pages/log";
 import "./pages/settings";
 import "./pages/health";
+import "./pages/api";
 import "./wizard";
 
 // Fourteen tabs in one row read as one undifferentiated list (UX review).
@@ -47,7 +48,9 @@ import "./wizard";
 // before the zones that live in them, people before the contacts that
 // reach them. The numbering of SPEC §15.1 is the spec's, not the screen's.
 // The setup group is also exactly what is hidden from whoever may not
-// configure (§8.3).
+// configure (§8.3). The API page closes the group, and only for a Home
+// Assistant administrator (decision 122): it is a reference for whoever
+// builds a device, not a step in setting the house up.
 const DAILY_PAGES: PageId[] = ["overview", "log", "test", "health"];
 const CONFIG_PAGES: PageId[] = [
   "areas",
@@ -87,6 +90,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
     "identifies",
     "topics",
     "endpoint",
+    "scopes",
     "detail",
     "last_result",
   ],
@@ -107,6 +111,7 @@ const HELP_ITEMS: Record<PageId, string[]> = {
     "language",
   ],
   health: ["mains", "channels", "watchdog", "payload", "radio", "coordinator", "diagnostics"],
+  api: ["contract", "token", "try", "internal"],
 };
 
 // The "Learn more" deep link §15.2 asks every help panel to carry. Only the
@@ -480,6 +485,7 @@ class FoyerPanel extends LitElement {
       // shows it in this one answer, and keeps only its hash (§9.2.1).
       deviceToken: (deviceId, revoke) =>
         this._edit("device", { type: "foyer/device/token", device_id: deviceId, revoke }),
+      apiDocument: () => hass.callWS<{ document: string }>({ type: "foyer/api/document" }),
       // Automatic arming (§9.4). Cancelling carries a code only where an
       // installation has raised the policy for it; the backend decides.
       cancelAuto: (pendingId) =>
@@ -858,7 +864,7 @@ class FoyerPanel extends LitElement {
       <nav class="tabs" role="tablist">
         ${DAILY_PAGES.map(tab)}
         <span class="tab-group" role="presentation">${t(s, "nav.group_setup")}</span>
-        ${CONFIG_PAGES.map(tab)}
+        ${CONFIG_PAGES.map(tab)} ${this._isAdmin ? tab("api") : nothing}
       </nav>
     `;
   }
@@ -915,6 +921,11 @@ class FoyerPanel extends LitElement {
         return html`<foyer-page-log .ctx=${ctx}></foyer-page-log>`;
       case "settings":
         return html`<foyer-page-settings .ctx=${ctx}></foyer-page-settings>`;
+      case "api":
+        // Only for an administrator, whatever put this page in _page.
+        return this._isAdmin
+          ? html`<foyer-page-api .ctx=${ctx}></foyer-page-api>`
+          : html`<foyer-page-overview .ctx=${ctx}></foyer-page-overview>`;
       default:
         return html`<foyer-page-overview .ctx=${ctx}></foyer-page-overview>`;
     }

@@ -16,6 +16,10 @@
 // nothing. A keypad whose requests arrive in the clear carries a warning here
 // for as long as that is true, because its token and the codes typed on it
 // can be read on the network.
+//
+// And, since §9.2.2, a fourth: a device on the endpoint — a display, a relay,
+// a module — is allowed exactly what its scopes say, every one off until it
+// is ticked here. Reading can be free; acting never is (decision 116).
 import { LitElement, css, html, nothing } from "lit";
 import { live } from "lit/directives/live.js";
 
@@ -23,6 +27,7 @@ import { t, type Strings } from "../../shared/i18n";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type {
   DeviceConfig,
+  DeviceScope,
   MqttConfig,
   Problem,
   SettingsConfig,
@@ -33,8 +38,37 @@ import {
   activateOnKey,
   revealEditor,
   revealProblems,
+  whenNumber,
 } from "../context";
 import "../delete-button";
+
+// What a new device, or one read from a backend older than scopes, starts
+// with (decision 115): nothing at all, and `status` free should it be ticked.
+function apiDefaults(): Pick<
+  DeviceConfig,
+  | "scopes"
+  | "free_scopes"
+  | "arm_scenario_ids"
+  | "arm_area_ids"
+  | "disarm_area_ids"
+  | "unlock_seconds"
+  | "clear_text_confirmed"
+> {
+  return {
+    scopes: [],
+    free_scopes: ["status"],
+    arm_scenario_ids: null,
+    arm_area_ids: null,
+    disarm_area_ids: null,
+    unlock_seconds: 120,
+    clear_text_confirmed: false,
+  };
+}
+
+const READ_SCOPES: DeviceScope[] = ["status", "zones", "batteries", "health", "log"];
+const ACT_SCOPES: DeviceScope[] = ["arm", "disarm", "exclude", "acknowledge"];
+const MIN_UNLOCK = 30;
+const MAX_UNLOCK = 600;
 
 const EMPTY: DeviceConfig = {
   name: "",
@@ -47,6 +81,7 @@ const EMPTY: DeviceConfig = {
   scenario_id: null,
   enabled: true,
   transport: "mqtt",
+  ...apiDefaults(),
 };
 
 /** The entity domains a tag or a remote can arrive on (§4.4, §9.3). */
@@ -81,7 +116,9 @@ class FoyerPageDevices extends LitElement {
     // Not while a save or a delete is on its way: its answer would land in
     // this editor, closing it or showing the other item's problems here.
     if (this._busy) return;
-    this._draft = device ? structuredClone(device) : structuredClone(EMPTY);
+    this._draft = device
+      ? { ...apiDefaults(), ...structuredClone(device) }
+      : structuredClone(EMPTY);
     this._problems = [];
     this._token = undefined;
     this._tokenProblems = [];
@@ -131,8 +168,31 @@ class FoyerPageDevices extends LitElement {
       // A tag never speaks on the endpoint (decision 99): the connection
       // select is not even shown for one, so it must not carry a hidden
       // `http` the backend would refuse.
-      this._draft = { ...this._draft!, kind, ref: null, transport: "mqtt" };
+      this._draft = { ...this._draft!, kind, ref: null, transport: "mqtt", scopes: [] };
     }
+  }
+
+  private _setTransport(transport: DeviceConfig["transport"]): void {
+    // Scopes live on the endpoint alone (decision 115): on the broker the
+    // device is a name anybody can give, and the backend refuses a scope
+    // there. Back on the endpoint they are chosen again, deliberately.
+    this._draft = {
+      ...this._draft!,
+      transport,
+      ...(transport === "mqtt" ? { scopes: [], clear_text_confirmed: false } : {}),
+    };
+  }
+
+  private _toggle(key: "scopes" | "free_scopes", scope: DeviceScope, on: boolean): void {
+    const draft = this._draft!;
+    const list = draft[key].filter((item) => item !== scope);
+    if (on) list.push(scope);
+    const next = { ...draft, [key]: list };
+    // The confirmation of decision 119 is about the scopes ticked now. With
+    // none beyond `status` left it is dropped, so ticking one again asks for
+    // it again rather than finding it already given.
+    if (!next.scopes.some((item) => item !== "status")) next.clear_text_confirmed = false;
+    this._draft = next;
   }
 
   private async _save(): Promise<void> {
@@ -316,8 +376,7 @@ class FoyerPageDevices extends LitElement {
                     <span class="lbl">${t(s, "field.transport")}</span>
                     <select
                       @change=${(e: Event) =>
-                        this._set(
-                          "transport",
+                        this._setTransport(
                           (e.target as HTMLSelectElement).value as DeviceConfig["transport"],
                         )}
                     >
@@ -337,7 +396,9 @@ class FoyerPageDevices extends LitElement {
                       : nothing}
                   </label>
                 </div>
-                ${draft.transport === "http" ? this._renderToken(s, draft) : nothing}`
+                ${draft.transport === "http"
+                  ? html`${this._renderToken(s, draft)} ${this._renderScopes(s, draft)}`
+                  : nothing}`
             : html`
                 ${this.ctx?.config?.devices.find((d) => d.id === draft.id)?.has_token
                   ? html`<p class="hint warn-text">${t(s, "devices.token_dropped")}</p>`
@@ -597,6 +658,190 @@ class FoyerPageDevices extends LitElement {
     </div>`;
   }
 
+  // What an API device may read and do (§9.2.2). Written for whoever is
+  // deciding what the display in the hall should show a passer-by, so every
+  // line says what it gives away rather than what it is called.
+  private _renderScopes(s: Strings, draft: DeviceConfig) {
+    const config = this.ctx?.config;
+    const granted = (scope: DeviceScope) => draft.scopes.includes(scope);
+    const beyondStatus = draft.scopes.some((scope) => scope !== "status");
+    // The unlock matters only while something is read after a code.
+    const afterCode = READ_SCOPES.some(
+      (scope) => granted(scope) && !draft.free_scopes.includes(scope),
+    );
+    const areas = (config?.areas ?? []).map((a) => ({ id: a.id ?? "", name: a.name }));
+    const scenarios = (config?.scenarios ?? []).map((sc) => ({ id: sc.id ?? "", name: sc.name }));
+    return html`<fieldset class="scopes">
+      <legend>${t(s, "field.scopes")}</legend>
+      <p class="note">${t(s, "devices.scopes_note")}</p>
+      ${draft.scopes.length
+        ? nothing
+        : html`<p class="hint warn-text">${t(s, "devices.scopes_none")}</p>`}
+
+      <h3>${t(s, "devices.scopes_read")}</h3>
+      <p class="hint">${t(s, "devices.scopes_read_hint")}</p>
+      ${READ_SCOPES.map(
+        (scope) => html`<div class="scope-row">
+          <label class="check">
+            <input
+              type="checkbox"
+              .checked=${live(granted(scope))}
+              @change=${(e: Event) =>
+                this._toggle("scopes", scope, (e.target as HTMLInputElement).checked)}
+            />
+            <span>
+              ${t(s, `devices.scope.${scope}`)}
+              <span class="hint">${t(s, `devices.scope_hint.${scope}`)}</span>
+            </span>
+          </label>
+          <label class="check free">
+            <input
+              type="checkbox"
+              ?disabled=${!granted(scope)}
+              .checked=${live(draft.free_scopes.includes(scope))}
+              @change=${(e: Event) =>
+                this._toggle("free_scopes", scope, (e.target as HTMLInputElement).checked)}
+            />
+            <span>${t(s, "field.free_scopes")}</span>
+          </label>
+        </div>`,
+      )}
+      ${granted("log") && draft.free_scopes.includes("log")
+        ? html`<p class="hint">${t(s, "devices.free_log_hint")}</p>`
+        : nothing}
+      ${afterCode
+        ? html`<label class="field unlock">
+            <span class="lbl">${t(s, "field.unlock_seconds")}</span>
+            <input
+              type="number"
+              min=${MIN_UNLOCK}
+              max=${MAX_UNLOCK}
+              step="1"
+              .value=${String(draft.unlock_seconds)}
+              @change=${(e: Event) => whenNumber(e, (n) => this._set("unlock_seconds", n))}
+            />
+            <span class="hint">${t(s, "devices.unlock_hint")}</span>
+          </label>`
+        : nothing}
+
+      <h3>${t(s, "devices.scopes_act")}</h3>
+      <p class="hint">${t(s, "devices.scopes_act_hint")}</p>
+      ${ACT_SCOPES.map(
+        (scope) => html`<label class="check">
+            <input
+              type="checkbox"
+              .checked=${live(granted(scope))}
+              @change=${(e: Event) =>
+                this._toggle("scopes", scope, (e.target as HTMLInputElement).checked)}
+            />
+            <span>
+              ${t(s, `devices.scope.${scope}`)}
+              <span class="hint">${t(s, `devices.scope_hint.${scope}`)}</span>
+            </span>
+          </label>
+          ${scope === "arm" && granted("arm")
+            ? html`<div class="reach">
+                ${this._reach(s, "arm_scenario_ids", "devices.reach_all_scenarios", scenarios, draft)}
+                ${this._reach(s, "arm_area_ids", "devices.reach_whole_house", areas, draft)}
+              </div>`
+            : nothing}
+          ${scope === "disarm" && granted("disarm")
+            ? html`<div class="reach">
+                ${this._reach(s, "disarm_area_ids", "devices.reach_whole_house", areas, draft)}
+              </div>`
+            : nothing}`,
+      )}
+
+      ${beyondStatus
+        ? html`<div class="clear-text">
+            <label class="check">
+              <input
+                type="checkbox"
+                .checked=${live(draft.clear_text_confirmed)}
+                @change=${(e: Event) =>
+                  this._set("clear_text_confirmed", (e.target as HTMLInputElement).checked)}
+              />
+              <span>
+                ${t(s, "field.clear_text_confirmed")}
+                ${this._inClear(draft)
+                  ? html`<span class="pill warn">${t(s, "devices.in_clear_pill")}</span>`
+                  : nothing}
+                <span class="hint">${t(s, "devices.clear_text_hint")}</span>
+                ${this._inClear(draft)
+                  ? html`<span class="hint warn-text">${t(s, "devices.clear_text_now")}</span>`
+                  : nothing}
+              </span>
+            </label>
+          </div>`
+        : nothing}
+    </fieldset>`;
+  }
+
+  // Where an arm or a disarm through the device may reach. Null is
+  // everywhere its code's owner may go — which stays the other limit either
+  // way (§8.3); a list, even an empty one, is exactly what is ticked.
+  private _reach(
+    s: Strings,
+    field: "arm_scenario_ids" | "arm_area_ids" | "disarm_area_ids",
+    everywhere: string,
+    known: { id: string; name: string }[],
+    draft: DeviceConfig,
+  ) {
+    const chosen = draft[field];
+    // An area or a scenario deleted since is still listed, ticked, so that
+    // it can be unticked: the backend refuses the save while it is there.
+    const options = [
+      ...known,
+      ...(chosen ?? [])
+        .filter((id) => !known.some((item) => item.id === id))
+        .map((id) => ({ id, name: id })),
+    ];
+    return html`<div class="field">
+      <span class="lbl">${t(s, `field.${field}`)}</span>
+      <label class="check">
+        <input
+          type="radio"
+          name=${field}
+          .checked=${live(chosen === null)}
+          @change=${() => this._set(field, null)}
+        />
+        <span>${t(s, everywhere)}</span>
+      </label>
+      <label class="check">
+        <input
+          type="radio"
+          name=${field}
+          .checked=${live(chosen !== null)}
+          @change=${() => this._set(field, chosen ?? [])}
+        />
+        <span>${t(s, "devices.reach_only")}</span>
+      </label>
+      ${chosen !== null
+        ? html`<div class="choices">
+              ${options.map(
+                (item) => html`<label class="check">
+                  <input
+                    type="checkbox"
+                    .checked=${live(chosen.includes(item.id))}
+                    @change=${(e: Event) =>
+                      this._set(
+                        field,
+                        (e.target as HTMLInputElement).checked
+                          ? [...chosen, item.id]
+                          : chosen.filter((id) => id !== item.id),
+                      )}
+                  />
+                  <span>${item.name}</span>
+                </label>`,
+              )}
+            </div>
+            ${chosen.length
+              ? nothing
+              : html`<span class="hint warn-text">${t(s, "devices.reach_none")}</span>`}`
+        : nothing}
+    </div>`;
+  }
+
   private _renderMqtt(s: Strings) {
     const mqtt = this._mqttDraft();
     const set = <K extends keyof MqttConfig>(key: K, value: MqttConfig[K]) => {
@@ -773,6 +1018,67 @@ class FoyerPageDevices extends LitElement {
         overflow-wrap: anywhere;
         user-select: all;
         font-size: 13px;
+      }
+      .scopes h3 {
+        font-size: 14px;
+        font-weight: 500;
+        margin: 16px 0 2px;
+      }
+      /* A read scope and its "without a code" beside it, on one line while
+         there is room: the pair is one decision about one piece of the house. */
+      .scope-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 0 24px;
+      }
+      .scope-row > label.check:first-child {
+        flex: 1 1 280px;
+      }
+      .scope-row .free {
+        flex: 0 0 auto;
+        font-size: 13px;
+        color: var(--secondary-text-color);
+      }
+      .reach {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 8px 16px;
+        margin: 0 0 8px 28px;
+      }
+      .reach .field {
+        display: flex;
+        flex-direction: column;
+        font-size: 13px;
+      }
+      .reach .lbl {
+        font-weight: 500;
+      }
+      .reach label.check {
+        padding: 2px 0;
+        font-size: 13px;
+      }
+      .choices {
+        margin-left: 28px;
+      }
+      input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        padding: 0;
+      }
+      /* Beside a long hint a box would otherwise shrink to a dot. */
+      .scopes input[type="checkbox"],
+      .scopes input[type="radio"] {
+        flex: none;
+      }
+      .unlock {
+        max-width: 320px;
+        margin: 8px 0 0;
+      }
+      .clear-text {
+        margin-top: 16px;
+        padding-top: 8px;
+        border-top: 1px solid var(--divider-color);
       }
       .banner {
         display: flex;
