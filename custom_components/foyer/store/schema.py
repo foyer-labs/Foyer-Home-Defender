@@ -20,6 +20,7 @@ from ..core.models import (
     DEFAULT_RF_CONFIRM,
     DEFAULT_RF_WINDOW,
     DEFAULT_RF_ZONES,
+    DEFAULT_UNLOCK_SECONDS,
     DEFAULT_WATCHDOG_FAILURES,
     DEFAULT_WATCHDOG_INTERVAL,
     DEFAULT_WATCHDOG_TIMEOUT,
@@ -208,8 +209,11 @@ from ..core.models import (
 # nothing more than installing an older release. Refusing the file is the
 # only safe downgrade, as it was for decision 58. Both halves travel in the
 # one step so that there is one migration to read and one to test.
+#
+# 8.2 is additive: API devices gain scopes (§9.2.2). An 8.1 build reading it
+# ignores them and serves its keypads as it always did.
 STORAGE_VERSION = 8
-STORAGE_MINOR_VERSION = 1
+STORAGE_MINOR_VERSION = 2
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -479,7 +483,22 @@ def device_from_dict(d: dict[str, Any]) -> ArmingDevice:
         # Only a hex string is a hash: anything else hand-edited into the
         # file would make every request to the endpoint fail on comparison.
         token_hash=_token_hash(d.get("token_hash")),
+        scopes=frozenset(d.get("scopes") or ()),
+        free_scopes=frozenset(
+            d.get("free_scopes") if d.get("free_scopes") is not None else ("status",)
+        ),
+        arm_scenario_ids=_ids_or_none(d.get("arm_scenario_ids")),
+        arm_area_ids=_ids_or_none(d.get("arm_area_ids")),
+        disarm_area_ids=_ids_or_none(d.get("disarm_area_ids")),
+        unlock_seconds=int(d.get("unlock_seconds") or DEFAULT_UNLOCK_SECONDS),
+        clear_text_confirmed=bool(d.get("clear_text_confirmed", False)),
     )
+
+
+def _ids_or_none(value: Any) -> tuple[str, ...] | None:
+    if value is None:
+        return None
+    return tuple(str(v) for v in value)
 
 
 def _token_hash(value: Any) -> str | None:
@@ -507,7 +526,18 @@ def device_to_dict(d: ArmingDevice) -> dict[str, Any]:
         # (api/backup.py, core/dump.py). It is here because this is the
         # document the installation keeps for itself.
         "token_hash": d.token_hash,
+        "scopes": sorted(d.scopes),
+        "free_scopes": sorted(d.free_scopes),
+        "arm_scenario_ids": _list_or_none(d.arm_scenario_ids),
+        "arm_area_ids": _list_or_none(d.arm_area_ids),
+        "disarm_area_ids": _list_or_none(d.disarm_area_ids),
+        "unlock_seconds": d.unlock_seconds,
+        "clear_text_confirmed": d.clear_text_confirmed,
     }
+
+
+def _list_or_none(value: tuple[str, ...] | None) -> list[str] | None:
+    return None if value is None else list(value)
 
 
 def security_from_dict(data: dict[str, Any]) -> SecuritySettings:

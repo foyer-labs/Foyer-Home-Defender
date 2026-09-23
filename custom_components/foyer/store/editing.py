@@ -188,6 +188,15 @@ _DEVICE_DEFAULTS: dict[str, Any] = {
     "command": "toggle",
     "scenario_id": None,
     "enabled": True,
+    # An API device starts with nothing (decision 115): every scope is
+    # switched on deliberately on page 8.
+    "scopes": [],
+    "free_scopes": ["status"],
+    "arm_scenario_ids": None,
+    "arm_area_ids": None,
+    "disarm_area_ids": None,
+    "unlock_seconds": 120,
+    "clear_text_confirmed": False,
 }
 
 

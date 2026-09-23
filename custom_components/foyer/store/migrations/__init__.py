@@ -548,6 +548,27 @@ def _v7_4_to_v8_1(data: Document) -> Document:
     return out
 
 
+def _v8_1_to_v8_2(data: Document) -> Document:
+    """API devices (§9.2.2): scopes, the unlock, the clear-text confirmation.
+
+    A keypad already on the endpoint keeps what it did — it reads the state
+    stream and arms and disarms — spelled out as the scopes that say so
+    (decision 116). Every other device starts with none; scopes mean nothing
+    off the endpoint.
+    """
+    out = copy.deepcopy(data)
+    for device in out.get("devices", []):
+        on_endpoint = device.get("transport") == "http"
+        device.setdefault("scopes", ["arm", "disarm", "status"] if on_endpoint else [])
+        device.setdefault("free_scopes", ["status"])
+        device.setdefault("arm_scenario_ids", None)
+        device.setdefault("arm_area_ids", None)
+        device.setdefault("disarm_area_ids", None)
+        device.setdefault("unlock_seconds", 120)
+        device.setdefault("clear_text_confirmed", False)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -579,6 +600,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (7, 2): (_v7_2_to_v7_3, (7, 3)),
     (7, 3): (_v7_3_to_v7_4, (7, 4)),
     (7, 4): (_v7_4_to_v8_1, (8, 1)),
+    (8, 1): (_v8_1_to_v8_2, (8, 2)),
 }
 
 

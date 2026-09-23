@@ -251,7 +251,11 @@
     "unknown_device": "Quel dispositivo di inserimento non esiste.",
     "config_reloading": "La modifica precedente è ancora in corso di applicazione. Riprova tra un momento.",
     "cancelled": "Annullato — non è stato cambiato nulla.",
-    "code_mismatch": "I due codici non coincidono."
+    "code_mismatch": "I due codici non coincidono.",
+    "unknown_scope": "Quel permesso non esiste.",
+    "scopes_need_endpoint": "I permessi valgono solo per un dispositivo sull'endpoint HTTP.",
+    "free_scope_not_a_read": "Solo una lettura può essere libera: ogni azione richiede un codice.",
+    "unlock_out_of_range": "Lo sblocco dura da 30 secondi a 10 minuti."
   },
   "field": {
     "name": "Nome",
@@ -390,7 +394,14 @@
     "camera_entity_ids": "Telecamere",
     "images": "Immagini",
     "transport": "Collegamento",
-    "directory": "Cartella"
+    "directory": "Cartella",
+    "scopes": "Cosa può leggere e fare",
+    "free_scopes": "Leggibile senza codice",
+    "unlock_seconds": "Sbloccato per (secondi)",
+    "arm_scenario_ids": "Scenari che può inserire",
+    "arm_area_ids": "Aree che può inserire",
+    "disarm_area_ids": "Aree che può disinserire",
+    "clear_text_confirmed": "So che queste letture attraversano la rete senza cifratura"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",

@@ -14,6 +14,7 @@ import re
 
 from .clock import parse_hhmm
 from .models import (
+    ACT_SCOPES,
     ARMED_HA_STATES,
     FAULT_STATES,
     MAX_ARM_HOLD_TIMEOUT,
@@ -38,6 +39,7 @@ from .models import (
     MAX_SIREN_DURATION,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
+    MAX_UNLOCK_SECONDS,
     MAX_VERIFICATION_WINDOW,
     MAX_WALK_TEST_TIMEOUT,
     MAX_WATCHDOG_FAILURES,
@@ -55,6 +57,7 @@ from .models import (
     MIN_RF_WINDOW,
     MIN_RF_ZONES,
     MIN_SUPERVISION_TIMEOUT,
+    MIN_UNLOCK_SECONDS,
     MIN_VERIFICATION_WINDOW,
     MIN_WALK_TEST_TIMEOUT,
     MIN_WATCHDOG_FAILURES,
@@ -62,9 +65,11 @@ from .models import (
     MIN_WATCHDOG_TIMEOUT,
     MQTT_TOPIC_FORBIDDEN,
     NOTIFY_ATTACHMENTS,
+    READ_SCOPES,
     SILENCEABLE,
     ActionKind,
     AreaState,
+    ArmingDevice,
     ArmPolicy,
     Channel,
     ChimeMode,
@@ -691,6 +696,42 @@ def _device_problems(
                     add("unknown_scenario", "scenario_id")
         if device.ref:
             refs.add(device.ref)
+        problems.extend(_scope_problems(config, device, scenario_ids))
+    return problems
+
+
+def _scope_problems(
+    config: FoyerConfig, device: ArmingDevice, scenario_ids: set[str]
+) -> list[Problem]:
+    """What an API device may read and do (§9.2.2).
+
+    Scopes live only on the endpoint (decision 115): anywhere else the device
+    is a name on the broker, and a scope there would be a promise nothing
+    keeps. A free scope must be a read scope the device holds — a free
+    `disarm` is the one thing decision 116 forbids.
+    """
+    problems: list[Problem] = []
+
+    def add(code: str, field: str) -> None:
+        problems.append(Problem(code, "device", device.id, field))
+
+    if device.scopes - (READ_SCOPES | ACT_SCOPES):
+        add("unknown_scope", "scopes")
+    if device.scopes and device.transport is not DeviceTransport.HTTP:
+        add("scopes_need_endpoint", "scopes")
+    if device.free_scopes - READ_SCOPES:
+        add("free_scope_not_a_read", "free_scopes")
+    if not _in_range(device.unlock_seconds, MIN_UNLOCK_SECONDS, MAX_UNLOCK_SECONDS):
+        add("unlock_out_of_range", "unlock_seconds")
+    area_ids = {a.id for a in config.areas}
+    for field, known, code in (
+        ("arm_scenario_ids", scenario_ids, "unknown_scenario"),
+        ("arm_area_ids", area_ids, "unknown_area"),
+        ("disarm_area_ids", area_ids, "unknown_area"),
+    ):
+        chosen = getattr(device, field)
+        if chosen is not None and any(item not in known for item in chosen):
+            add(code, field)
     return problems
 
 

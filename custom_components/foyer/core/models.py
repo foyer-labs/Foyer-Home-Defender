@@ -805,6 +805,53 @@ class DeviceKind(StrEnum):
     TAG = "tag"
 
 
+class DeviceScope(StrEnum):
+    """What an API device may read or do (SPEC §9.2.2, decision 115).
+
+    Every one is off until it is switched on. The read scopes can each be
+    free or after a code (decision 117); the action scopes always need a code
+    (decision 116).
+    """
+
+    STATUS = "status"
+    ZONES = "zones"
+    BATTERIES = "batteries"
+    HEALTH = "health"
+    LOG = "log"
+    ARM = "arm"
+    DISARM = "disarm"
+    EXCLUDE = "exclude"
+    ACKNOWLEDGE = "acknowledge"
+
+
+READ_SCOPES: frozenset[str] = frozenset(
+    {
+        DeviceScope.STATUS,
+        DeviceScope.ZONES,
+        DeviceScope.BATTERIES,
+        DeviceScope.HEALTH,
+        DeviceScope.LOG,
+    }
+)
+ACT_SCOPES: frozenset[str] = frozenset(
+    {
+        DeviceScope.ARM,
+        DeviceScope.DISARM,
+        DeviceScope.EXCLUDE,
+        DeviceScope.ACKNOWLEDGE,
+    }
+)
+# What a keypad declared on the endpoint before scopes existed carries
+# (decision 116): it reads the state stream and arms and disarms, with a code.
+KEYPAD_SCOPES: frozenset[str] = frozenset(
+    {DeviceScope.STATUS, DeviceScope.ARM, DeviceScope.DISARM}
+)
+# How long a device stays unlocked after a code (decision 118).
+MIN_UNLOCK_SECONDS = 30
+MAX_UNLOCK_SECONDS = 600
+DEFAULT_UNLOCK_SECONDS = 120
+
+
 class DeviceTransport(StrEnum):
     """How a keypad reaches the house, one and only one (§9.2.1, decision 98).
 
@@ -919,6 +966,24 @@ class ArmingDevice:
     # API, never in a backup or the diagnostics, never set by a restore — the
     # same treatment as the acknowledgement webhook (§9.2.1).
     token_hash: str | None = None
+    # An API device on the endpoint only (§9.2.2). What it may read and do,
+    # every scope off until switched on (decision 115); which read scopes it
+    # reads with its token alone rather than after a code (decision 117).
+    scopes: frozenset[str] = frozenset()
+    free_scopes: frozenset[str] = frozenset({DeviceScope.STATUS})
+    # Where its `arm` and `disarm` reach; None is everywhere its code's owner
+    # may go, which is always the other limit (§8.3).
+    arm_scenario_ids: tuple[str, ...] | None = None
+    arm_area_ids: tuple[str, ...] | None = None
+    disarm_area_ids: tuple[str, ...] | None = None
+    # How long a code unlocks the after-a-code scopes (decision 118).
+    unlock_seconds: int = DEFAULT_UNLOCK_SECONDS
+    # The owner has said, knowingly, that scopes beyond `status` may cross
+    # the network in the clear (decision 119).
+    clear_text_confirmed: bool = False
+
+    def may(self, scope: str) -> bool:
+        return self.transport is DeviceTransport.HTTP and scope in self.scopes
 
     @property
     def channel(self) -> str:

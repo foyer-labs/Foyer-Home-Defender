@@ -251,7 +251,11 @@
     "unknown_device": "That arming device does not exist.",
     "config_reloading": "The previous change is still being applied. Try again in a moment.",
     "cancelled": "Cancelled — nothing was changed.",
-    "code_mismatch": "The two codes do not match."
+    "code_mismatch": "The two codes do not match.",
+    "unknown_scope": "That permission does not exist.",
+    "scopes_need_endpoint": "Permissions apply only to a device on the HTTP endpoint.",
+    "free_scope_not_a_read": "Only a reading can be free: every action needs a code.",
+    "unlock_out_of_range": "The unlock lasts from 30 seconds to 10 minutes."
   },
   "field": {
     "name": "Name",
@@ -390,7 +394,14 @@
     "camera_entity_ids": "Cameras",
     "images": "Pictures",
     "transport": "Connection",
-    "directory": "Folder"
+    "directory": "Folder",
+    "scopes": "What it may read and do",
+    "free_scopes": "Readable without a code",
+    "unlock_seconds": "Unlocked for (seconds)",
+    "arm_scenario_ids": "Scenarios it may arm",
+    "arm_area_ids": "Areas it may arm",
+    "disarm_area_ids": "Areas it may disarm",
+    "clear_text_confirmed": "I know these readings cross the network unencrypted"
   },
   "ha_state": {
     "armed_home": "Armed home",
