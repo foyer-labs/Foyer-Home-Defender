@@ -1453,7 +1453,7 @@ anything nobody chose, and it does not stay quiet either:
   typed a code for. It excludes only zones that are open **and** bypassable;
   a zone that may not be bypassed, or one in fault or unavailable (INV-4: a
   fault is never "all quiet"), still refuses the arming. What it excludes
-  stays excluded until the house is disarmed, as a forced arming's does, and
+  is watched again the moment it closes, as a forced arming's is, and
   the log records a `forced_arm` with the rule's name. It covers what is open
   when the rule arms and nothing after: a zone that opens during the exit
   delay fails the arming as it always does.

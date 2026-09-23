@@ -482,7 +482,7 @@
     "scenario_hint": "Choosing a scenario arms its areas. Chosen while another is armed, it takes its place: areas not in the new one are disarmed.",
     "disarm_all": "Disarm everything",
     "force_arm": "Arm without these zones",
-    "force_arm_hint": "They are not watched until you disarm; recorded as a forced arming.",
+    "force_arm_hint": "They are not watched until they close; recorded as a forced arming.",
     "area": "Area",
     "memory": "Alarm memory",
     "by_scenario": "Armed by scenario {scenario}",
@@ -1428,7 +1428,7 @@
     },
     "auto_outcome_excluding": {
       "title": "Foyer: armed with zones excluded",
-      "message": "“{rule}” armed {scenario} excluding what was open: {zones}. They stay excluded until you disarm."
+      "message": "“{rule}” armed {scenario} excluding what was open: {zones}. Each is watched again as soon as it closes."
     },
     "auto_outcome_failed": {
       "title": "Foyer: not armed",
@@ -1456,7 +1456,7 @@
     },
     "auto_outcome_hold_expired": {
       "title": "Foyer: not armed",
-      "message": "“{rule}” started arming {scenario}, but {zones} was still open when the exit delay ended: that part of the house is not armed."
+      "message": "“{rule}” started arming {scenario}, but {zones} was still not ready when the exit delay ended: that part of the house is not armed."
     },
     "auto_outcome_not_armed_switch": {
       "title": "Foyer: scenario not changed",
@@ -1472,7 +1472,7 @@
     },
     "auto_outcome_excluding_switch": {
       "title": "Foyer: scenario changed with zones excluded",
-      "message": "“{rule}” switched to {scenario} excluding what was open: {zones}. They stay excluded until you disarm."
+      "message": "“{rule}” switched to {scenario} excluding what was open: {zones}. Each is watched again as soon as it closes."
     },
     "auto_outcome_failed_switch": {
       "title": "Foyer: scenario not changed",
@@ -2656,7 +2656,7 @@
     "block_alarm_in_progress": "An alarm is in progress",
     "block_missed": "Missed: Home Assistant was down",
     "block_unknown_area": "An area it names no longer exists",
-    "exclude_open_hint": "Only zones that are open and may be excluded. A zone in fault, or one that may not be excluded, still stops the arming. What is excluded stays excluded until you disarm.",
+    "exclude_open_hint": "Only zones that are open and may be excluded. A zone in fault, or one that may not be excluded, still stops the arming. An excluded zone is watched again as soon as it closes.",
     "exclude_open_warning": "This is a forced arming nobody types a code for: the house arms with that window uncovered. The countdown and the message afterwards name what was excluded.",
     "exclude_open_no_effect": "With “only if every zone is ready” on, the rule never starts while a zone is open, so this has no effect.",
     "notify_outcome_hint": "They receive the countdown, and a second message when the arming did not go as announced: not armed and why, armed later, or armed with zones excluded. That one reaches them even in their quiet hours."

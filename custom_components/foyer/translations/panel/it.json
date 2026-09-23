@@ -482,7 +482,7 @@
     "scenario_hint": "Scegliere uno scenario ne inserisce le aree. Scelto mentre ne è inserito un altro, lo sostituisce: le aree non incluse nel nuovo si disinseriscono.",
     "disarm_all": "Disinserisci tutto",
     "force_arm": "Inserisci senza queste zone",
-    "force_arm_hint": "Restano scoperte fino al disinserimento; registrato come inserimento forzato.",
+    "force_arm_hint": "Restano scoperte finché non si chiudono; registrato come inserimento forzato.",
     "area": "Area",
     "memory": "Memoria d'allarme",
     "by_scenario": "Inserita dallo scenario {scenario}",
@@ -1428,7 +1428,7 @@
     },
     "auto_outcome_excluding": {
       "title": "Foyer: inserita con zone escluse",
-      "message": "«{rule}» ha inserito {scenario} escludendo ciò che era aperto: {zones}. Restano escluse fino al disinserimento."
+      "message": "«{rule}» ha inserito {scenario} escludendo ciò che era aperto: {zones}. Ognuna torna sorvegliata appena si chiude."
     },
     "auto_outcome_failed": {
       "title": "Foyer: non inserita",
@@ -1456,7 +1456,7 @@
     },
     "auto_outcome_hold_expired": {
       "title": "Foyer: non inserita",
-      "message": "«{rule}» ha iniziato a inserire {scenario}, ma {zones} era ancora aperta alla fine del ritardo di uscita: quella parte della casa non è inserita."
+      "message": "«{rule}» ha iniziato a inserire {scenario}, ma {zones} non era ancora pronta alla fine del ritardo di uscita: quella parte della casa non è inserita."
     },
     "auto_outcome_not_armed_switch": {
       "title": "Foyer: scenario non cambiato",
@@ -1472,7 +1472,7 @@
     },
     "auto_outcome_excluding_switch": {
       "title": "Foyer: scenario cambiato con zone escluse",
-      "message": "«{rule}» è passata a {scenario} escludendo ciò che era aperto: {zones}. Restano escluse fino al disinserimento."
+      "message": "«{rule}» è passata a {scenario} escludendo ciò che era aperto: {zones}. Ognuna torna sorvegliata appena si chiude."
     },
     "auto_outcome_failed_switch": {
       "title": "Foyer: scenario non cambiato",
@@ -2656,7 +2656,7 @@
     "block_alarm_in_progress": "C'è un allarme in corso",
     "block_missed": "Persa: Home Assistant era fermo",
     "block_unknown_area": "Un'area che nomina non esiste più",
-    "exclude_open_hint": "Solo le zone aperte che si possono escludere. Una zona guasta, o una che non si può escludere, blocca comunque l'inserimento. Ciò che viene escluso resta escluso fino al disinserimento.",
+    "exclude_open_hint": "Solo le zone aperte che si possono escludere. Una zona guasta, o una che non si può escludere, blocca comunque l'inserimento. Una zona esclusa torna sorvegliata appena si chiude.",
     "exclude_open_warning": "È un inserimento forzato che nessuno conferma con un codice: la casa si inserisce con quella finestra scoperta. Il conto alla rovescia e il messaggio dopo dicono cosa è stato escluso.",
     "exclude_open_no_effect": "Con «solo se ogni zona è pronta» attivo, la regola non parte mai con una zona aperta, quindi questa opzione non ha effetto.",
     "notify_outcome_hint": "Ricevono il conto alla rovescia, e un secondo messaggio quando l'inserimento non va come annunciato: non inserita e perché, inserita più tardi, o inserita con zone escluse. Quello arriva anche nelle ore di silenzio."

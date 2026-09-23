@@ -287,3 +287,45 @@ def test_an_exclusion_covers_only_what_was_open_when_it_armed():
     (outcome,) = _occurrences(decision, Moment.AUTO_OUTCOME)
     assert outcome.detail["outcome"] == "hold_expired"
     assert outcome.detail["zones"] == "Window"
+
+
+def test_one_rules_exclusion_is_not_told_as_anothers():
+    """Two rules act in one decision: the second excluded nothing, and its
+    contacts must not read that it did."""
+    from custom_components.foyer.core.models import RuleActionKind
+
+    config = house(exclude_open_zones=True, scenario_id="night", grace=0)
+    second = rule(
+        "switch_away",
+        action=RuleActionKind.SWITCH,
+        scenario_id="away",
+        grace=0,
+        notify_contact_ids=("anna",),
+    )
+    config = replace(config, rules=(*config.rules, second))
+    world = World(config)
+    world.set(WINDOW, "on")
+    leave(world)
+    decision = world.advance(30 * 60)
+    told = {
+        o.detail["rule_id"]: o.detail["outcome"]
+        for o in _occurrences(decision, Moment.AUTO_OUTCOME)
+    }
+    assert told.get("empty_house") == "excluding"
+    assert told.get("switch_away") != "excluding_switch"
+
+
+def test_a_presence_rule_refused_keeps_its_word():
+    """It said it would not try again: it does not, when the window shuts."""
+    from custom_components.foyer.core.models import RuleTriggerKind
+
+    world = World(house(kind=RuleTriggerKind.PRESENCE, entity_ids=(LUCA,), grace=0))
+    world.person(LUCA, "not_home")
+    world.advance(1)
+    world.set(WINDOW, "on")
+    decision = world.person(LUCA, "home")
+    (outcome,) = _occurrences(decision, Moment.AUTO_OUTCOME)
+    assert outcome.detail["outcome"] == "not_armed_once"
+    world.set(WINDOW, "off")
+    world.advance(5)
+    assert world.states()["ground"] == "disarmed"

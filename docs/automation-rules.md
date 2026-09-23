@@ -170,13 +170,13 @@ code for, and the house arms with that window uncovered.
 - **It never excludes a zone in fault or unavailable.** A sensor that has
   gone silent is not "all quiet" (INV-4), and nobody chose to leave it
   uncovered: the arming is refused and the contacts are told, as above.
-- **What it excludes stays excluded until the house is disarmed**, as with
-  any forced arming. Closing the window does not bring it back into the
-  armed house.
+- **What it excludes is watched again the moment it closes**, as with any
+  forced arming: shut the window after the house is armed and it is part of
+  the armed house again.
 - **It is logged as a forced arming**: a `forced_arm` row naming the
   excluded zones, on channel `auto_rule` with the rule's name. The contacts
   are told *"“Arm when empty” armed Away excluding what was open: Bathroom
-  window. They stay excluded until you disarm."*
+  window. Each is watched again as soon as it closes."*
 
 It does nothing when **Only if every zone is ready** is on: that guard stops
 the rule before any countdown, so there is never an open zone to exclude.

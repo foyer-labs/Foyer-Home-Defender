@@ -3508,7 +3508,10 @@ class _Run:
         if not faulted and not open_:
             self.rules_runtime[rule.id] = replace(
                 runtime,
-                latched=False,
+                # An instant keeps its latch: unlatched, a presence rule would
+                # take the person still at home for a new arrival and arm in
+                # silence, after saying it would not try again (review).
+                latched=runtime.latched and not rule.trigger.level,
                 blocked=None,
                 # Only a condition tries again; an instant had its one turn
                 # (decision 127), and "armed later" would never come.
@@ -3903,6 +3906,8 @@ class _Run:
             # which is a thing the log has to say out loud (part 2 decision 12).
             self.rule_detail["late"] = "1"
         runtime = self.rules_runtime.get(rule.id, RuleRuntime())
+        # One rule's exclusions are not the next one's (review).
+        self.rule_excluded = []
         try:
             outcome = self.rule_perform(rule, decided)
             if decided.action is not RuleActionKind.DISARM:
