@@ -53,9 +53,9 @@ outbound connection of Foyer's own.
 
 Most people who end up here already have the hardware and do not know it.
 
-You put a contact on the front door because you wanted the hall light to come
-on. You put one on the bedroom window because you wanted to be told you had
-left it open before the rain started. You put a PIR in the corridor for the
+You put a contact sensor on the front door because you wanted the hall light
+to come on. You put one on the bedroom window because you wanted to be told
+you had left it open before the rain started. You put a PIR in the corridor for the
 night light, and another in the kitchen because the extractor fan should
 notice somebody is cooking. Two winters later the house is full of exactly the
 sensors a burglar alarm is made of, and they are being used to switch lamps.
@@ -86,10 +86,13 @@ good result for the money, on a house that is already smart.
 ## What it does
 
 - **Areas that arm on their own.** Each has its own `alarm_control_panel`
-  entity and its own state; a master aggregates them. The ground floor can be
-  armed while you are upstairs.
+  entity and its own state; a *Whole house* panel aggregates them. The ground
+  floor can be armed while you are upstairs.
 - **Arming scenarios you define.** *Night, ground floor only*. *Garage only*.
-  *Dog at home*. Any number of them, not four fixed modes.
+  *Dog at home*. Any number of them, not four fixed modes. The Overview arms
+  one with a button of its own — *Arm “Night”* — and says beside it whether
+  the house is ready or which zones are not; arming a single area outside any
+  scenario is the exception, behind *Just one area…*.
 - **A keypad by the door, a tag in your pocket.** Ring and Zigbee keypads, NFC
   tags, RFID badges and remotes arm and disarm the house through a documented
   service contract and an optional MQTT contract in both directions. A device is
@@ -100,11 +103,14 @@ good result for the money, on a house that is already smart.
 - **A code for each person.** Stored as a hash and checked in the backend
   only — a card is a keypad that transmits a code, never something that
   decides. Which operations ask for one is yours to set, an area or a scenario
-  can ask for more, and every row of the log says who did it. Plus a duress
-  code that disarms normally and raises a silent alarm, and a lockout after
-  repeated wrong codes.
+  can ask for more, and every row of the log says who did it. When the panel
+  asks, it says what the code is for — *Code to disarm Ground floor* — and
+  which area or scenario is asking; it forgets the code after two minutes
+  unused, after every arming or disarming, and when the panel closes. Plus a
+  duress code that disarms normally and raises a silent alarm, and a lockout
+  after repeated wrong codes.
 - **Zones that declare their own trigger.** Normally-closed and normally-open
-  contacts behave in opposite ways, so Foyer proposes a trigger from the
+  contact sensors behave in opposite ways, so Foyer proposes a trigger from the
   entity's device class and then makes you confirm it against the real sensor.
   A wrong guess here is an alarm that never fires, and you find out during the
   burglary.
@@ -144,7 +150,7 @@ good result for the money, on a house that is already smart.
   smoke detector. It ends itself, and it says so on every screen while it
   runs. [Below](#walking-the-house-and-pressing-the-button).
 - **The house can arm itself, and tell you before it does.** Rules on
-  presence, a time of day or an entity's state, with guards that stop them —
+  presence, a time of day or an entity's state, with safety checks that stop them —
   only if disarmed, only if every zone is ready, only if nothing has moved
   inside for N minutes. Each one announces itself first with a push carrying a
   **Cancel** button, and a suspension named "Boiler engineer, 09:00–13:00"
@@ -179,15 +185,20 @@ good result for the money, on a house that is already smart.
 - **Exit and entry delays**, and four things a zone can do when it is open as
   you arm: block, exclude itself, wait for you to close it, or be ignored.
 - **Forced arming** as a distinct, recorded command, and manual exclusion of a
-  zone — with a duration, after which it comes back and says so, because a zone
-  excluded and forgotten is exactly the window somebody comes through.
-- **A siren cutoff with alarm memory**: the sounders stop, the fact that it
+  zone — with a duration, after which it is included again and says so,
+  because a zone excluded and forgotten is exactly the window somebody comes
+  through.
+- **A siren cutoff with alarm memory**: the siren stops, the fact that it
   fired does not.
 - **Verification groups**, N of M within a window, with the members keeping
   their own response: one detector notifies, two sound the siren.
 - **Response profiles**: ten actions — notification, siren, light, camera,
   scene, switch, spoken message, call any Home Assistant service, wait — each
   with up to two conditions, inherited area, then scenario, then default.
+  Two moments come after an alarm: *Alarm over*, when the siren cutoff runs
+  or the area is disarmed during the alarm, and *Alarm memory cleared*, when
+  a disarm clears the memory, even hours later — the one for switching off
+  the lamp that says something happened while you were out.
 - **A picture with the alarm**, and you say which app it is for. The Companion
   app gets a link to the live camera through Home Assistant's authenticated
   proxy, with no file written; Telegram gets a still, because its server does
@@ -201,12 +212,19 @@ good result for the money, on a house that is already smart.
   mid-sounding.
 - **Permissions per person**, enforced on every service and every WebSocket
   command rather than only in the interface, with a validity window for guest
-  codes and a scope limited to chosen areas or scenarios.
+  codes and a scope limited to chosen areas or scenarios. An area or a
+  scenario says whether it asks for a code to arm and to disarm — *Code
+  required*, *No code*, or *As the global policy*, and where the two disagree
+  the one that asks wins — and a scenario can be limited to the people ticked
+  under *Who may use it*. Anything that changes people — a person, a tag, the
+  person a key switch acts as, a scenario's list of people — needs *Manage
+  users and codes* as well as *Edit the configuration*, from any page and in a
+  restored backup.
 - **`skip_exit_delay`**, for the last person out who is already outside. It
   needs no permission of its own, and it is recorded on the arming row, because
   it turns every delayed zone into an instant one.
-- **A panel in English and Italian**, with contextual help on every page, and a
-  card with `full`, `compact`, `keypad` and `badge` layouts — `badge` being
+- **A panel in English and Italian**, with contextual help on every page, a
+  Delete that asks first, in place beside the button, and a card with `full`, `compact`, `keypad` and `badge` layouts — `badge` being
   colour and state only, with nothing to press, for dropping into a dashboard of
   your own.
 
@@ -266,18 +284,18 @@ configuration: [docs/simulator.md](https://github.com/foyer-labs/Foyer-Home-Defe
 
 ## Letting the house arm itself
 
-Every phone leaves. Five minutes later the guards are checked — nothing open,
+Every phone leaves. Five minutes later the safety checks run — nothing open,
 nothing moving inside, the house disarmed — and a push arrives on those
-phones: *"Nobody seems to be in, so **Arm when empty** will arm Away. Cancel
-to stop it."* Two minutes. Press Cancel and it does not; press nothing and it
+phones: *Nobody seems to be in, so “Arm when empty” will arm Away. Cancel
+to stop it.* Two minutes. Press Cancel and it does not; press nothing and it
 does, and the log says which rule armed the house.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-rules-en.png" alt="The Automation rules page: a rule that arms when everybody has been away for ten minutes, with its guards and its two-minute grace period, an expected-visitor window for the boiler engineer, and the automatic disarming card naming the attack it protects against and the perimeter area a rule may never disarm" width="900">
 </p>
 
-The guards are the part worth configuring. A rule blocked by one is written to
-the log under `system`, because *"why did it not arm last night?"* is a
+The safety checks are the part worth configuring. A rule stopped by one is
+written to the log under *System*, because *"why did it not arm last night?"* is a
 question people ask and silence is the worst possible answer. And the morning
 somebody is expected, a named window — "Boiler engineer, 09:00–13:00" — holds
 the rules back, and can put the perimeter alone in place of what they would
@@ -308,7 +326,7 @@ reporting is marked as a fault beside them, which is the one case of the three
 the list can tell apart for you.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the zone that never reacted at the top of the table while the three that did carry the time they first saw somebody" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the zone that never reacted at the top of the table while the four that did carry the time they first saw somebody" width="900">
 </p>
 
 Three things about it that are not optional, because for as long as it runs a
@@ -344,7 +362,7 @@ house looks perfectly quiet: the power goes out, the notification channel
 breaks, the radio goes quiet, or Home Assistant dies.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting every fifteen minutes with an empty payload, and every notification channel with the outcome of its last real send" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting every fifteen minutes with an empty payload, and every notification channel with its last successful send or the fact that it has never been used" width="900">
 </p>
 
 - **Mains power.** Name your UPS sensor and which of its states means failure —
@@ -353,8 +371,7 @@ breaks, the radio goes quiet, or Home Assistant dies.
 - **Notification channels**, checked every quarter of an hour and after every
   real send. A `notify` service somebody removed in an update is found before
   the night it matters, and the warning goes out **over a channel that still
-  works** — warning you about a dead channel over the dead channel is the joke
-  that writes itself.
+  works** — a warning sent over the dead channel would reach nobody.
 - **An external watchdog.** Foyer pings a URL you choose; if Home Assistant
   dies the pings stop and that service raises the alarm, which is the only
   answer to a dead system being unable to report its own death. The heartbeat
@@ -390,24 +407,25 @@ records somebody else**: the cleaner whose arrivals are kept for a month, the
 boiler engineer, the babysitter. And it does not apply at all to the B&B, the
 holiday let or the small office.
 
-So, on page 10, beside the log itself:
+So, on the *Log* page, under *One person's data*:
 
 - **Export one person's rows** as CSV or JSON, in a file named after them.
   Wide on purpose: what they did, plus what the house did to them — their tag
   refused, an escalation that reached them.
-- **Erase one person**, which is not the same as deleting their user. Deleting
+- **Erase their history**, which is not the same as deleting their user. Deleting
   a user leaves the history of what they did, because the name is copied into
   every row precisely so that it does. Erasing empties the name, the account,
   the channel and the device on their rows and leaves every event where it
   was: the log still answers *what happened on the night of the fourteenth*,
   and no longer answers *who*. It is itself recorded, without naming them.
 
-And on page 11:
+And on the *Settings* page, under *Personal data in the log*:
 
 - **A seven-day retention preset** that touches only the categories naming
   people, leaving actions, faults and door states alone — those name nobody and
   are what you read when a sensor did not react three weeks ago.
-- **Timed pseudonymisation**, off by default, which after N days replaces names
+- **Timed pseudonymisation** (*Replace names in older rows*), off by default,
+  which after N days replaces names
   with a stable identifier. The panel says before you switch it on that it
   trades away the answer to *who disarmed that night* for every older row —
   which is the very question the log exists to answer. A real trade, not a
@@ -452,8 +470,9 @@ Assistant service or publish to an MQTT broker can arm this house.
 
 **A device is declared before it may command anything.** An unknown device is
 refused whatever code it brings, and the refusal is logged and raised. This is
-not tidiness: the lockout counts failed codes per channel *and* per device, so a
-caller free to invent a device name is a caller who is never locked out. For the
+not tidiness: the lockout counts failed codes per device — and per Home
+Assistant account on the panel, the card and the services — so a caller free to
+invent a device name is a caller who is never locked out. For the
 same reason `keypad` and `nfc` are properties of a registered device, never a
 word a message can claim about itself.
 
@@ -509,12 +528,12 @@ its code. Where they differ today:
 | | Foyer | Alarmo |
 |---|---|---|
 | **Escalation until somebody answers** | Contacts with channels in priority order, steps at times you choose, stopped by any of four acknowledgements | Notifications and actions with delays; nothing that tries a second person, and nothing to acknowledge |
-| **Arming itself, safely** | Rules with guards and a cancellable countdown; disarming off by default, and never on an area you marked as the perimeter | Arming and disarming on presence, via automations |
+| **Arming itself, safely** | Rules with safety checks and a cancellable countdown; disarming off by default, and never on an area you marked as the perimeter | Arming and disarming on presence, via automations |
 | **Simulator** | Yes: the same engine, a made-up world and a made-up clock, and a trace saying why each action would or would not have run | — |
 | **Walk test** | Yes: really armed, every response held back, and the zones that never reacted listed first. 24h, tamper, technical and panic zones stay live | — |
 | **Action test** | Yes: really sounds the siren or sends the message, with confirmation, and logged as a test | — |
 | **Arming scenarios** | Any number, each arming a chosen set of areas | Home Assistant's four fixed modes |
-| **Areas with independent state** | Yes: one `alarm_control_panel` each, plus a master | One panel, sensors grouped per mode |
+| **Areas with independent state** | Yes: one `alarm_control_panel` each, plus *Whole house* | One panel, sensors grouped per mode |
 | **Smoke, gas, water** | A separate channel, live while disarmed, never `triggered` on an alarm entity | Can be always-on, but on the same panel: smoke puts the alarm entity into `triggered`, which means *burglary* to HomeKit |
 | **A sensor that goes `unavailable`** | A fault: it blocks arming, shows in diagnostics and is in the log. Never read as "all quiet" | Read as whatever state it last had |
 | **State across a restart** | Areas, timers mid-delay, escalation progress and the gap itself, all recorded | Arming state |
@@ -534,7 +553,7 @@ columns above is time.
 
 Nobody with forty configured sensors remaps them by hand to try something new,
 so Foyer can read Alarmo's configuration and bring it in, from **Settings →
-Import from Alarmo** on page 11. Read what it is before you use it.
+Import from Alarmo**. Read what it is before you use it.
 
 **It is a best-effort tool, not a migration.** It reads
 `.storage/alarmo.storage`, which is Alarmo's internal format: its author may
@@ -558,10 +577,10 @@ already here rather than replacing it:
 - **Every zone arrives switched off.** Alarmo reads `on` as alarm for every
   sensor, which is exactly the assumption Foyer is built to refuse, so each
   zone carries Foyer's own proposal and watches nothing until you have
-  confirmed its trigger on page 3.
+  confirmed its trigger on the *Zones* page.
 - **People come across without a code, always.** Alarmo keeps its codes as
   hashes in its own format, and Foyer does not take a credential from another
-  system on trust, so everybody needs a new one on page 7 before they can
+  system on trust, so everybody needs a new one on the *Users* page before they can
   disarm with it. The report says so in its first line.
 - **Sirens and switches** come across into a response profile. Notifications,
   groups and the other things Foyer cannot bring are listed in the report, not
@@ -590,7 +609,8 @@ are structural, and they are why the first three are worth believing.
 - **A name nothing verified is marked as such.** Arming needs no code, and a
   service call may simply state who is acting — so a row could otherwise credit
   a person on nothing but the caller's word. The name is kept, because
-  attribution is worth having, and the row is marked *claimed* beside it. A
+  attribution is worth having, and the row is marked *(not verified)* beside
+  it. A
   code or a tag produces an unmarked row. A wrong answer to "who disarmed at
   03:14?" is worse than no answer.
 - **Every action reports whether it worked.** A siren that did not sound and a
@@ -608,6 +628,10 @@ All three verification tools, and how to read what they tell you:
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-users-en.png" alt="Users and codes: two people with their permissions, scope and validity, and the table of which operations ask for a code" width="900">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-arm-code-en.png" alt="Arming from the Overview: the prompt says what the code is for, Code to arm Away, and which area asks for it, Upstairs" width="900">
 </p>
 
 ## What the codes are for, and what they are not
@@ -665,7 +689,9 @@ connection of Foyer's own.
 2. **Check the trigger against the real sensor.** Open the door, walk past the
    detector, watch the state change. This is the one step worth doing slowly.
 3. **Create yourself a user with a code.** Until somebody holds one, nothing
-   asks for one, and the panel says so where you cannot miss it.
+   asks for one, and the panel says so where you cannot miss it. From then on
+   the panel asks you for it wherever the policy asks for one, administrator
+   or not.
 4. Send the test notification the wizard offers. If it does not arrive, nothing
    else in Foyer matters.
 5. Arm, walk in, let the entry delay run out, and let it fire — once, on
@@ -680,8 +706,10 @@ connection of Foyer's own.
 3. *Settings → Devices & services → Add integration → Foyer Home Defender*.
    Name the first area and scenario, pick the first zone entity, then confirm
    the states in which it counts as triggered.
-4. A **Foyer** entry appears in the sidebar, and a short wizard finishes the
-   setup.
+4. A **Foyer** entry appears in the sidebar, and a wizard of five short steps
+   finishes the setup: *Area*, *Zones*, *Scenario*, *User and code*, *Test
+   notification*. Before *Finish* it lists what the five steps did not cover,
+   each with the page that does.
 
 Since `0.1.0-beta.1`, releases are published normally rather than as GitHub
 pre-releases, so HACS offers them with their version names. If you enabled the
@@ -716,12 +744,24 @@ No dashboard resource needs adding. The card decides nothing by itself: it
 sends a command and renders the answer, including the name of the zone that
 refused it and the way past it.
 
+*Full* and *Compact* open the keypad when a code is asked for; *Keypad*
+always shows it, and an entry delay that will want a code opens it by itself.
+Above the digits it says what they are for — *Code to arm Away*, *Code to
+disarm Ground floor* — and they go only with that command: any other button
+sends without them. Typed digits are forgotten after 30 seconds without a key,
+and when the card leaves the screen. During an entry delay or an alarm the
+scenario buttons step aside, because the one thing left to do is disarm.
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts: every area with its state, the entry delay counting down, and the scenarios to arm" width="620">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts during an entry delay: every area with its state, the countdown, and the keypad that opens by itself because disarming asks for a code" width="620">
 </p>
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-keypad-en.png" alt="The keypad layout for a wall tablet: three digits of a code typed, the entry delay running, and the button that ends it" width="620">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-code-en.png" alt="The keypad waiting for a code: the caption says Code to arm Away, three digits are typed, and the confirm key reads Arm Away" width="620">
 </p>
 
 ## Questions people ask
@@ -748,6 +788,25 @@ Home Assistant can disarm — the panel says so plainly while that lasts. A
 person can be exempted from typing their code on channels that already know who
 they are, such as the Home Assistant interface signed in as them; on a shared
 keypad the code *is* the identity, so the exemption cannot apply there.
+
+Being a Home Assistant administrator identifies nobody, though: the
+unlocked wall tablet is almost always signed in as one, so the panel asks an
+administrator for the code like anybody else, whenever the policy asks for
+one.
+
+</details>
+
+<details>
+<summary>I am the administrator and I have no code</summary>
+
+In a house where others hold one, or when your own Foyer user was disabled or
+ran past its validity window, you recover access from **Settings → Devices &
+services → Foyer → Configure**. It enables your Foyer user, removes its
+validity window and sets a new code; an account with no Foyer user gets one,
+with every permission. Only administrators' accounts are offered. It is never
+quiet: the recovery is written in the log, shown as a Home Assistant
+notification and sent to every contact, naming the account. Anybody else is
+given a way in from the *Users* page.
 
 </details>
 
@@ -781,7 +840,7 @@ the sidebar panel, its repair issues, the notifications it put up and its
 retained MQTT message — a retained message outlives the integration and would
 keep telling whoever connects to that broker next what the house was doing.
 
-The event log database goes only if you said so, with a switch on page 11 that
+The event log database goes only if you said so, with a switch on the *Settings* page that
 is off by default. Home Assistant's own confirmation is the last dialogue
 there is, so the question is asked in advance, and keeping thirty days of
 history is the only answer that cannot destroy something nobody meant to
