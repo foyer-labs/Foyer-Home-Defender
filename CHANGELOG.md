@@ -5,6 +5,65 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.19] — API devices, and a documented contract
+
+The device endpoint of beta.13 was built for a keypad. It is now the way any
+device of your own reads the house and, when it is allowed to, acts on it: a
+touch display in the hall, a relay that lights an "armed" lamp, an ESP32 or
+Arduino module. SPEC §9.2.2, decisions 115–123. The stored configuration
+moves to schema 8.2, additive: an 8.1 build reads it and ignores the new
+fields.
+
+### Changed — read these before you update
+- **A keypad on the endpoint always asks for a code,** arming included, even
+  where your code policy asks none (decision 116). The token alone must
+  never be what arms the house: it crosses the network readable whenever the
+  request is not encrypted.
+- **A keypad on the endpoint can no longer take note of an alarm** until you
+  give it that permission on the *Arming devices* page. Keypads already
+  there keep reading the state, arming and disarming, which is what the
+  update gives them. MQTT keypads are not affected.
+
+### Added
+- **Permissions per device.** On the *Arming devices* page, each device on
+  the endpoint gets its own list of what it may read and do, every item off
+  until you switch it on.
+  - It may read: the state, the zones, batteries and tamper, system health,
+    and the log.
+  - It may do: arm (only the scenarios and areas you choose), disarm (only
+    the areas you choose), exclude or include a zone again, and take note of
+    an alarm.
+- **Reading free or after a code.** Each reading is either free or needs a
+  code typed on the device. A code unlocks it for 30 seconds to 10 minutes,
+  as you choose, and within what the code's owner may see. Every unlock is
+  recorded in the log. By default only the state is free.
+- **Plain HTTP stays accepted.** Readings beyond the state travel
+  unencrypted only if you tick the confirmation for that device.
+- **Sections and notices.** The zones, batteries, health and log are each a
+  small request of their own. The state stream says when one of them has
+  changed, so an ESP32 reads only what it shows.
+- **The contract, written down and tested:**
+  - [`docs/api/openapi.yaml`](docs/api/openapi.yaml) for the endpoint and
+    [`docs/api/asyncapi.yaml`](docs/api/asyncapi.yaml) for MQTT, at contract
+    version `v1`;
+  - a CI test compares both with the code, so they cannot drift;
+  - an *API* page in the panel, for administrators, shows the contract with
+    Swagger UI and lets you try requests with a device token. The library
+    is bundled with the integration, loads only on that page, and nothing
+    is fetched from outside the house;
+  - [`docs/keypads.md`](docs/keypads.md) now documents the endpoint and API
+    devices, with worked requests.
+
+### Fixed before release
+A security review of the feature found five things, each closed and tested:
+- arming a scenario that leaves armed areas out disarmed them without the
+  device's disarm permission;
+- an unlock survived its owner being disabled;
+- the log, the zones, the batteries and the health read after a code were
+  not limited to the permission to view the log and to the person's areas;
+- the stream announced changes a locked device could not read;
+- the health section carried people's names and phone services.
+
 ## [0.1.0-beta.18] — easier to set up, and to arm with a code
 
 A full review of the panel and the card for usability, and of every string
