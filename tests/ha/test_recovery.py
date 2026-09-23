@@ -95,6 +95,9 @@ async def test_an_administrator_with_no_code_gets_back_in_and_everybody_hears(
         },
     )
     assert saved["success"], saved
+    # The save reloads the entry; a reload still running at teardown races
+    # the log fixture that unlinks the database (seen on CI).
+    await hass.async_block_till_done()
 
 
 async def test_a_disabled_user_of_the_administrator_is_enabled_again(

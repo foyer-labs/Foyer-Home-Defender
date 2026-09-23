@@ -505,6 +505,9 @@ async def test_an_administrator_is_asked_for_the_code_like_anybody_else(
 
     saved = await _ws(client, {**save, "code": CODE})
     assert saved["success"], saved
+    # The save reloads the entry; a reload still running at teardown races
+    # the log fixture that unlinks the database (seen on CI).
+    await hass.async_block_till_done()
 
 
 async def test_a_restore_that_changes_people_needs_manage_users(
