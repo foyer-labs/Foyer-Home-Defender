@@ -276,14 +276,14 @@ def test_the_section_answers_match_their_builders():
         "ZonesSection": _keys(tree, "zones_section"),
         "BatteriesSection": _keys(tree, "batteries_section"),
         "LogSection": _keys(tree, "async_log_section"),
-        # The builder drops the clock before it answers.
-        "HealthSection": _keys(_tree(SYSTEM), "_health_status") - {"now"},
+        # What a device may read of it: no names, no services (review).
+        "HealthSection": _keys(tree, "health_section"),
     }
     for schema, built in pairs.items():
         assert _properties(doc, _schema(doc, schema)) - ENVELOPE == built, schema
 
 
-def test_a_refused_section_has_the_three_reasons_of_the_code():
+def test_a_refused_section_has_the_reasons_of_the_code():
     doc = _load(OPENAPI)
     refusal = _schema(doc, "SectionRefusal")["properties"]["reason"]["enum"]
     code = _reasons_used(_function(_device_api()["tree"], "read_refusal"))

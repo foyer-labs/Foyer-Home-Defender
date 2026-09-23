@@ -36,6 +36,7 @@ from ..core.models import (
     AcknowledgeIncident,
     AcknowledgeTechnical,
     Actor,
+    AreaState,
     ArmAreaRequest,
     ArmingDevice,
     ArmModeRequest,
@@ -48,6 +49,7 @@ from ..core.models import (
     FoyerConfig,
     Permission,
     Reason,
+    RuntimeState,
     ZoneType,
 )
 from ..runtime.system import FoyerSystem
@@ -90,20 +92,47 @@ _UNLOCKS = f"{DOMAIN}_device_unlocks"
 class Unlock:
     user_id: str
     until: datetime
+    # The token it was opened under: a new token is a new device as far as
+    # anybody reading it is concerned (review).
+    token_hash: str | None
 
 
 # --- the unlock (decision 118) --------------------------------------------------
 
 
-def unlocked(hass: HomeAssistant, device: ArmingDevice) -> Unlock | None:
-    """The device's unlock, if one is running; stretched by being used."""
-    unlock = hass.data.get(_UNLOCKS, {}).get(device.id)
-    now = dt_util.utcnow()
-    if unlock is None or unlock.until <= now:
+def unlocked(
+    hass: HomeAssistant,
+    system: FoyerSystem,
+    device: ArmingDevice,
+    *,
+    extend: bool = True,
+) -> Unlock | None:
+    """The device's unlock, if one is running and still stands.
+
+    Checked again on every use, not only when it was opened (review): a
+    person disabled, deleted or past their validity window reads nothing
+    more, and neither does a device disabled or given a new token since.
+    ``extend`` counts the use (decision 118: from its last use); the stream
+    only looks, so being connected keeps nothing alive.
+    """
+    unlocks = hass.data.get(_UNLOCKS, {})
+    unlock = unlocks.get(device.id)
+    if unlock is None:
         return None
-    # Counted from its last use (decision 118): a display somebody is still
-    # reading does not lock in their face.
-    unlock.until = now + timedelta(seconds=device.unlock_seconds)
+    now = dt_util.utcnow()
+    user = system.config.user(unlock.user_id)
+    if (
+        unlock.until <= now
+        or not device.enabled
+        or unlock.token_hash != device.token_hash
+        or user is None
+        or not user.enabled
+        or not user.in_window(now)
+    ):
+        unlocks.pop(device.id, None)
+        return None
+    if extend:
+        unlock.until = now + timedelta(seconds=device.unlock_seconds)
     return unlock
 
 
@@ -128,7 +157,9 @@ async def async_unlock(
     if user is None or not user.enabled or not user.in_window(now):
         return Reason.USER_NOT_VALID, None
     until = now + timedelta(seconds=device.unlock_seconds)
-    hass.data.setdefault(_UNLOCKS, {})[device.id] = Unlock(user.id, until)
+    hass.data.setdefault(_UNLOCKS, {})[device.id] = Unlock(
+        user.id, until, device.token_hash
+    )
     # A display that shows the house after a code is a place where somebody
     # read it: which device, whose code, until when.
     system.async_record(
@@ -152,29 +183,60 @@ async def async_unlock(
 
 
 def read_refusal(
-    hass: HomeAssistant, device: ArmingDevice, scope: str, secure: bool
+    hass: HomeAssistant,
+    system: FoyerSystem,
+    device: ArmingDevice,
+    scope: str,
+    secure: bool,
+    *,
+    extend: bool = True,
 ) -> Reason | None:
-    """Why this device may not read this scope now, or None."""
+    """Why this device may not read this scope now, or None.
+
+    After a code, the unlock reads only what the code's owner may read
+    (decision 118): the log is theirs to read with `view_log` or not at all.
+    """
     if not device.may(scope):
         return Reason.SCOPE_NOT_GRANTED
     if scope != DeviceScope.STATUS and not secure and not device.clear_text_confirmed:
         return Reason.PLAIN_HTTP_NOT_CONFIRMED
-    if scope not in device.free_scopes and unlocked(hass, device) is None:
+    if scope in device.free_scopes:
+        return None
+    unlock = unlocked(hass, system, device, extend=extend)
+    if unlock is None:
         return Reason.UNLOCK_REQUIRED
+    if scope == DeviceScope.LOG:
+        person = system.config.user(unlock.user_id)
+        if person is None or not person.may(Permission.VIEW_LOG):
+            return Reason.NOT_PERMITTED
     return None
 
 
 def reader(hass: HomeAssistant, system: FoyerSystem, device: ArmingDevice) -> Any:
     """The person whose code unlocked the device, if any, for what they may read."""
-    unlock = unlocked(hass, device)
+    unlock = unlocked(hass, system, device, extend=False)
     return system.config.user(unlock.user_id) if unlock else None
+
+
+def area_scope(person: Any) -> frozenset[str] | None:
+    """The areas a reading is limited to: the unlocking person's (§8.3)."""
+    if person is None or person.allowed_area_ids is None:
+        return None
+    return frozenset(person.allowed_area_ids)
 
 
 # --- the sections (decision 120) ------------------------------------------------
 
 
-def zones_section(system: FoyerSystem) -> dict[str, Any]:
-    status = system.status()
+def _zones(system: FoyerSystem, areas: frozenset[str] | None) -> list[dict[str, Any]]:
+    return [
+        z for z in system.status()["zones"] if areas is None or z["area_id"] in areas
+    ]
+
+
+def zones_section(
+    system: FoyerSystem, areas: frozenset[str] | None = None
+) -> dict[str, Any]:
     return {
         "zones": [
             {
@@ -187,13 +249,14 @@ def zones_section(system: FoyerSystem) -> dict[str, Any]:
                 "fault": z["fault"],
                 "excluded": z["bypassed"] is not None,
             }
-            for z in status["zones"]
+            for z in _zones(system, areas)
         ]
     }
 
 
-def batteries_section(system: FoyerSystem) -> dict[str, Any]:
-    status = system.status()
+def batteries_section(
+    system: FoyerSystem, areas: frozenset[str] | None = None
+) -> dict[str, Any]:
     return {
         "zones": [
             {
@@ -204,7 +267,7 @@ def batteries_section(system: FoyerSystem) -> dict[str, Any]:
                 # A tamper switch is a zone of its own (§4.2): open is tampered.
                 "tamper": z["open"] if z["type"] == ZoneType.TAMPER.value else None,
             }
-            for z in status["zones"]
+            for z in _zones(system, areas)
             if z["battery"] is not None
             or z["low_battery"]
             or z["type"] == ZoneType.TAMPER.value
@@ -213,11 +276,54 @@ def batteries_section(system: FoyerSystem) -> dict[str, Any]:
 
 
 def health_section(system: FoyerSystem) -> dict[str, Any]:
-    health = dict(system.health_status())
-    # The clock moves every second; a section that changed because time
-    # passed would announce itself on the stream for ever.
-    health.pop("now", None)
-    return health
+    """System health as a device may read it: how each part is doing, and
+    nobody's name, phone or service (review). The page keeps the rest."""
+    health = system.health_status()
+    mains = health.get("mains") or {}
+    watchdog = health.get("watchdog") or {}
+    return {
+        "causes": list(health.get("causes", [])),
+        "mains": {"lost": mains.get("lost"), "since": mains.get("since")},
+        "watchdog": {
+            "enabled": watchdog.get("enabled"),
+            "failures": watchdog.get("failures"),
+            "down_since": watchdog.get("down_since"),
+            "last_ok": watchdog.get("last_ok"),
+            "ever_ok": watchdog.get("ever_ok"),
+        },
+        "channels": [
+            {
+                "kind": channel.get("kind"),
+                "fault": channel.get("fault"),
+                "since": channel.get("since"),
+                "failures": channel.get("failures"),
+                "last_ok": channel.get("last_ok"),
+                "checked": channel.get("checked"),
+            }
+            for channel in health.get("channels", [])
+        ],
+        "radios": [
+            {
+                "name": radio.get("name"),
+                "enabled": radio.get("enabled"),
+                "zones": radio.get("zones"),
+                "quiet": radio.get("quiet"),
+                "suspected_since": radio.get("suspected_since"),
+                "confirmed": radio.get("confirmed"),
+                "coordinator_down_since": radio.get("coordinator_down_since"),
+            }
+            for radio in health.get("radios", [])
+        ],
+        "unreachable_zones": [
+            {
+                "id": zone.get("id"),
+                "name": zone.get("name"),
+                "since": zone.get("since"),
+                "days": zone.get("days"),
+            }
+            for zone in health.get("unreachable_zones", [])
+        ],
+    }
 
 
 async def async_log_section(
@@ -238,8 +344,11 @@ async def async_log_section(
         return {"rows": [], "next": None}
     offset = _offset(cursor)
     limit = max(1, min(limit, MAX_LOG_ROWS))
+    # What the stream announced is written before it is read (review).
+    await system.log.async_flush()
     answer = await system.log.async_query(limit=limit, offset=offset)
     names = person is not None and person.may(Permission.VIEW_LOG)
+    scope = area_scope(person)
     areas = {a.id: a.name for a in config.areas}
     zones = {z.id: z.name for z in config.zones}
     rows = [
@@ -254,31 +363,52 @@ async def async_log_section(
             **({"person": row.get("user_name")} if names else {}),
         }
         for row in answer["rows"]
+        # Rows about an area the unlocking person may not reach are theirs
+        # neither to read; rows about no area (the system's) are.
+        if scope is None or not row.get("area_id") or row["area_id"] in scope
     ]
-    more = offset + len(rows) < int(answer["total"])
-    return {"rows": rows, "next": f"o{offset + len(rows)}" if more else None}
+    more = offset + len(answer["rows"]) < int(answer["total"])
+    following = offset + len(answer["rows"])
+    return {"rows": rows, "next": f"o{following}" if more else None}
 
 
 def _offset(cursor: str | None) -> int:
     if not cursor or not cursor.startswith("o"):
         return 0
     try:
-        return max(0, int(cursor[1:]))
+        # Bounded: an offset past what SQLite holds raises rather than
+        # answering nothing (review).
+        return min(max(0, int(cursor[1:])), 10**9)
     except ValueError:
         return 0
 
 
-def fingerprints(system: FoyerSystem, device: ArmingDevice) -> dict[str, str]:
-    """What each section the device reads looks like now, for the stream to
-    say which one changed (decision 120). Built only for its own scopes."""
+def fingerprints(
+    hass: HomeAssistant, system: FoyerSystem, device: ArmingDevice, secure: bool
+) -> dict[str, str]:
+    """What each section the device may read now looks like, for the stream
+    to say which one changed (decision 120).
+
+    Only a section the device could read at this moment is announced: a
+    notice that the zones moved is itself news about the house, and one sent
+    before the code, or in the clear without the owner's confirmation, would
+    tell it to anybody on the network (review). Looking does not extend the
+    unlock.
+    """
+
+    def may(scope: str) -> bool:
+        return read_refusal(hass, system, device, scope, secure, extend=False) is None
+
+    person = reader(hass, system, device)
+    areas = area_scope(person)
     out: dict[str, str] = {}
-    if device.may(DeviceScope.ZONES):
-        out["zones"] = json.dumps(zones_section(system), sort_keys=True)
-    if device.may(DeviceScope.BATTERIES):
-        out["batteries"] = json.dumps(batteries_section(system), sort_keys=True)
-    if device.may(DeviceScope.HEALTH):
+    if may(DeviceScope.ZONES):
+        out["zones"] = json.dumps(zones_section(system, areas), sort_keys=True)
+    if may(DeviceScope.BATTERIES):
+        out["batteries"] = json.dumps(batteries_section(system, areas), sort_keys=True)
+    if may(DeviceScope.HEALTH):
         out["health"] = json.dumps(health_section(system), sort_keys=True, default=str)
-    if device.may(DeviceScope.LOG):
+    if may(DeviceScope.LOG):
         row = system.last_row
         out["log"] = "" if row is None else f"{row.ts.isoformat()}:{row.event_type}"
     return out
@@ -292,6 +422,7 @@ def command(
     device: ArmingDevice,
     data: dict[str, Any],
     actor: Actor,
+    state: RuntimeState | None = None,
 ) -> tuple[Any | None, Reason | None]:
     """The engine event an action asks for, or why it is refused before it.
 
@@ -308,7 +439,7 @@ def command(
     if actor.code is CodeResult.NONE:
         return None, Reason.CODE_REQUIRED
     if action == "arm":
-        return _arm(config, device, data, actor)
+        return _arm(config, device, data, actor, state)
     if action == "disarm":
         return _disarm(config, device, data, actor)
     if action in ("exclude", "include"):
@@ -328,8 +459,38 @@ def _find(items: Any, ref: Any) -> Any:
     return next((i for i in items if ref in (i.id, i.name)), None)
 
 
+def _drops(
+    config: FoyerConfig,
+    device: ArmingDevice,
+    scenario: Any,
+    state: RuntimeState | None,
+) -> Reason | None:
+    """Arming a scenario while another is armed disarms the areas the new one
+    leaves out (§4.6). That is a disarm, and needs what a disarm needs from
+    this device: its `disarm` scope, within its areas (review)."""
+    if state is None:
+        return None
+    dropped = [
+        area_id
+        for area_id, rt in state.areas.items()
+        if rt.state is not AreaState.DISARMED and area_id not in scenario.areas
+    ]
+    if not dropped:
+        return None
+    if not device.may(DeviceScope.DISARM):
+        return Reason.SCOPE_NOT_GRANTED
+    allowed = device.disarm_area_ids
+    if allowed is not None and any(a not in allowed for a in dropped):
+        return Reason.SCOPE_NOT_GRANTED
+    return None
+
+
 def _arm(
-    config: FoyerConfig, device: ArmingDevice, data: dict[str, Any], actor: Actor
+    config: FoyerConfig,
+    device: ArmingDevice,
+    data: dict[str, Any],
+    actor: Actor,
+    state: RuntimeState | None,
 ) -> tuple[Any | None, Reason | None]:
     force = bool(data.get("force", False))
     skip = bool(data.get("skip_exit_delay", False))
@@ -350,6 +511,9 @@ def _arm(
             # when the device may arm every scenario: a mode names none.
             if device.arm_scenario_ids is not None:
                 return None, Reason.SCOPE_NOT_GRANTED
+            for moded in (s for s in config.scenarios if s.ha_master_state == mode):
+                if (reason := _drops(config, device, moded, state)) is not None:
+                    return None, reason
             return ArmModeRequest(mode, actor, force, skip), None
         return None, Reason.UNKNOWN_SCENARIO
     if (
@@ -357,6 +521,8 @@ def _arm(
         and scenario.id not in device.arm_scenario_ids
     ):
         return None, Reason.SCOPE_NOT_GRANTED
+    if (reason := _drops(config, device, scenario, state)) is not None:
+        return None, reason
     return ArmRequest(scenario.id, actor, force, skip), None
 
 

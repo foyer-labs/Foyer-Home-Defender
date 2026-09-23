@@ -473,7 +473,9 @@ class DeviceCommandView(HomeAssistantView):
                     "until": until.isoformat() if until else None,
                 }
             )
-        event, reason = device_api.command(system.config, device, data, requester.actor)
+        event, reason = device_api.command(
+            system.config, device, data, requester.actor, system.state
+        )
         if event is None:
             assert reason is not None
             last = (
@@ -516,7 +518,9 @@ class DeviceStateView(HomeAssistantView):
             }
         )
         await response.prepare(request)
-        await _async_stream(hass, response, device.id, device.token_hash)
+        await _async_stream(
+            hass, response, device.id, device.token_hash, request.secure
+        )
         return response
 
 
@@ -542,7 +546,7 @@ class DeviceSectionView(HomeAssistantView):
         scope = device_api.SECTIONS.get(section)
         if scope is None:
             return web.Response(status=HTTPStatus.NOT_FOUND)
-        reason = device_api.read_refusal(hass, device, scope, request.secure)
+        reason = device_api.read_refusal(hass, system, device, scope, request.secure)
         if reason is not None:
             # A stable reason and nothing else: which one it is tells the
             # device's owner what to switch on, and a guesser nothing a
@@ -550,10 +554,12 @@ class DeviceSectionView(HomeAssistantView):
             return self.json(
                 {"success": False, "reason": reason.value}, HTTPStatus.FORBIDDEN
             )
+        person = device_api.reader(hass, system, device)
+        areas = device_api.area_scope(person)
         if section == "zones":
-            body = device_api.zones_section(system)
+            body = device_api.zones_section(system, areas)
         elif section == "batteries":
-            body = device_api.batteries_section(system)
+            body = device_api.batteries_section(system, areas)
         elif section == "health":
             body = device_api.health_section(system)
         else:
@@ -564,7 +570,7 @@ class DeviceSectionView(HomeAssistantView):
             body = await device_api.async_log_section(
                 system,
                 system.config,
-                device_api.reader(hass, system, device),
+                person,
                 request.query.get("before"),
                 limit,
             )
@@ -588,6 +594,7 @@ async def _async_stream(
     response: web.StreamResponse,
     device_id: str,
     token_hash: str | None,
+    secure: bool,
 ) -> None:
     """Write the state on connect, on every change, and a comment when quiet."""
     changed = asyncio.Event()
@@ -630,7 +637,7 @@ async def _async_stream(
                     if payload != sent:
                         await response.write(f"data: {payload}\n\n".encode())
                         sent = payload
-                now_seen = device_api.fingerprints(system, device)
+                now_seen = device_api.fingerprints(hass, system, device, secure)
                 if seen is not None:
                     for section, print_ in now_seen.items():
                         if seen.get(section) != print_:

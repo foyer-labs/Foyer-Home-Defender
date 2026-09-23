@@ -201,7 +201,13 @@ async def test_the_stream_says_which_section_changed(
 ):
     """Decision 120: a one-line notice, and the device reads it if it cares."""
     http, token, device_id, _client = endpoint
-    _with(hass, device_id, scopes=frozenset({"status", "zones"}))
+    _with(
+        hass,
+        device_id,
+        scopes=frozenset({"status", "zones"}),
+        free_scopes=frozenset({"status", "zones"}),
+        clear_text_confirmed=True,
+    )
     response = await http.get(
         "/api/foyer/device/state", headers={"Authorization": f"Bearer {token}"}
     )
@@ -217,3 +223,142 @@ async def test_the_stream_says_which_section_changed(
     notice = await asyncio.wait_for(response.content.readline(), 5)
     assert notice.decode().strip() == "data: zones"
     response.close()
+
+
+# --- what the security review found ------------------------------------------------
+
+
+async def test_switching_scenario_disarms_only_with_the_disarm_scope(
+    hass,
+    endpoint,  # noqa: F811
+    freezer,
+):
+    """Arming a scenario while another is armed disarms what the new one
+    leaves out: that is a disarm, and needs the device's `disarm` scope."""
+    from custom_components.foyer.core.models import Scenario
+
+    http, token, device_id, _client = endpoint
+    system = hass.data[DOMAIN]
+    first = system.config.scenarios[0]
+    # A second scenario with no area at all: switching to it drops them all.
+    system.config = replace(
+        system.config,
+        scenarios=(
+            *system.config.scenarios,
+            Scenario(id="empty", name="Empty", areas=(), ha_master_state="armed_night"),
+        ),
+    )
+    armed = await (
+        await _post(
+            http, token, {"action": "arm", "scenario": first.name, "code": CODE}
+        )
+    ).json()
+    assert armed["success"], armed
+    _with(hass, device_id, scopes=frozenset({"status", "arm"}))
+    refused = await (
+        await _post(http, token, {"action": "arm", "scenario": "Empty", "code": CODE})
+    ).json()
+    assert refused["success"] is False
+    assert refused["reason"] == "scope_not_granted"
+
+
+async def test_an_unlock_ends_when_its_owner_is_disabled(
+    hass,
+    endpoint,  # noqa: F811
+):
+    http, token, device_id, _client = endpoint
+    _with(
+        hass,
+        device_id,
+        scopes=frozenset({"status", "zones"}),
+        clear_text_confirmed=True,
+    )
+    await _post(http, token, {"action": "unlock", "code": CODE})
+    assert (await _get(http, token, "zones")).status == 200
+    system = hass.data[DOMAIN]
+    system.config = replace(
+        system.config,
+        users=tuple(replace(u, enabled=False) for u in system.config.users),
+    )
+    response = await _get(http, token, "zones")
+    assert (await response.json())["reason"] == "unlock_required"
+
+
+async def test_the_log_after_a_code_needs_view_log(
+    hass,
+    endpoint,  # noqa: F811
+):
+    http, token, device_id, _client = endpoint
+    _with(
+        hass,
+        device_id,
+        scopes=frozenset({"status", "log"}),
+        clear_text_confirmed=True,
+    )
+    await _post(http, token, {"action": "unlock", "code": CODE})
+    response = await _get(http, token, "log")
+    assert response.status == 403
+    assert (await response.json())["reason"] == "not_permitted"
+
+
+async def test_no_notice_before_the_code_or_in_the_clear(
+    hass,
+    endpoint,  # noqa: F811
+):
+    """A notice that the zones moved is news about the house."""
+    http, token, device_id, _client = endpoint
+    _with(hass, device_id, scopes=frozenset({"status", "zones"}))
+    response = await http.get(
+        "/api/foyer/device/state", headers={"Authorization": f"Bearer {token}"}
+    )
+    await response.content.readline()
+    await response.content.readline()
+    hass.states.async_set(ZONE, "on")
+    await hass.async_block_till_done()
+    lines = []
+    try:
+        while True:
+            line = await asyncio.wait_for(response.content.readline(), 1)
+            lines.append(line.decode().strip())
+    except TimeoutError:
+        pass
+    assert "event: changed" not in lines
+    response.close()
+
+
+async def test_health_names_nobody(
+    hass,
+    endpoint,  # noqa: F811
+):
+    from custom_components.foyer.core.models import (
+        Contact,
+        ContactChannel,
+        ContactChannelKind,
+    )
+
+    http, token, device_id, _client = endpoint
+    system = hass.data[DOMAIN]
+    system.config = replace(
+        system.config,
+        contacts=(
+            Contact(
+                "anna",
+                "Anna Rossi",
+                channels=(
+                    ContactChannel(
+                        "push", ContactChannelKind.PUSH, "notify.mobile_app_anna"
+                    ),
+                ),
+            ),
+        ),
+    )
+    _with(
+        hass,
+        device_id,
+        scopes=frozenset({"status", "health"}),
+        free_scopes=frozenset({"status", "health"}),
+        clear_text_confirmed=True,
+    )
+    body = await (await _get(http, token, "health")).text()
+    assert "Anna" not in body and "mobile_app_anna" not in body
+    assert '"channels"' in body

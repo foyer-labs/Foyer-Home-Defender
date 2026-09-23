@@ -785,8 +785,11 @@ components:
             `plain_http_not_confirmed`: the request arrived unencrypted and
             the owner has not confirmed this scope in the clear.
             `unlock_required`: the scope is after a code and the device is
-            not unlocked.
-          enum: [scope_not_granted, unlock_required, plain_http_not_confirmed]
+            not unlocked, or the person whose code unlocked it is no longer
+            valid.
+            `not_permitted`: the log, after a code, and the code's owner may
+            not read the log (`view_log`).
+          enum: [scope_not_granted, unlock_required, plain_http_not_confirmed, not_permitted]
 
     ZonesSection:
       type: object
@@ -847,33 +850,14 @@ components:
 
     HealthSection:
       type: object
-      description: System health, as page 14 shows it. Times are ISO 8601, UTC.
-      required:
-        - success
-        - reason
-        - unreachable_zones
-        - causes
-        - mains
-        - watchdog
-        - channels
-        - radios
-        - rf
-        - faults
-        - repair_after
+      description: |
+        System health as a device may read it: how each part is doing, and
+        nobody's name, phone number or notify service. Times are ISO 8601,
+        UTC. The panel's System health page shows the rest.
+      required: [success, reason, causes, mains, watchdog, channels, radios, unreachable_zones]
       properties:
         success: {type: boolean, const: true}
         reason: {type: 'null'}
-        unreachable_zones:
-          type: array
-          description: Zones unreadable for long enough to need a repair.
-          items:
-            type: object
-            required: [id, name, since, days]
-            properties:
-              id: {type: string}
-              name: {type: string}
-              since: {type: string, format: date-time}
-              days: {type: integer, minimum: 0}
         causes:
           type: array
           description: Why the system is not healthy; empty when it is.
@@ -882,11 +866,8 @@ components:
             enum: [zone_fault, mains_lost, mains_unknown, channel_down, watchdog_unreachable, rf_interference, coordinator_down]
         mains:
           type: object
-          required: [entity_id, lost_states, state, lost, since]
+          required: [lost, since]
           properties:
-            entity_id: {type: [string, 'null']}
-            lost_states: {type: array, items: {type: string}}
-            state: {type: [string, 'null']}
             lost:
               description: True when mains power is lost, false when it is fine or not configured, null when unreadable.
               type: [boolean, 'null']
@@ -894,35 +875,23 @@ components:
         watchdog:
           type: object
           description: The external watchdog. Never its URL.
-          required: [enabled, url_set, interval, timeout, failures_allowed, payload, failures, down_since, last_ok, last_attempt, last_error, ever_ok]
+          required: [enabled, failures, down_since, last_ok, ever_ok]
           properties:
             enabled: {type: boolean}
-            url_set: {type: boolean}
-            interval: {type: integer, description: Seconds.}
-            timeout: {type: integer, description: Seconds.}
-            failures_allowed: {type: integer}
-            payload: {type: boolean, description: Whether the heartbeat carries a payload.}
             failures: {type: integer}
             down_since: {type: [string, 'null'], format: date-time}
             last_ok: {type: [string, 'null'], format: date-time}
-            last_attempt: {type: [string, 'null'], format: date-time}
-            last_error: {type: [string, 'null']}
             ever_ok: {type: boolean}
         channels:
           type: array
-          description: Each enabled notification channel of each enabled contact.
+          description: Each enabled notification channel, by kind only.
           items:
             type: object
-            required: [key, contact_id, contact_name, channel_id, kind, service, fault, since, failures, last_ok, checked]
+            required: [kind, fault, since, failures, last_ok, checked]
             properties:
-              key: {type: string}
-              contact_id: {type: string}
-              contact_name: {type: string}
-              channel_id: {type: string}
               kind:
                 type: string
                 enum: [push, sms, voice, chat, other]
-              service: {type: string}
               fault:
                 oneOf:
                   - type: string
@@ -936,35 +905,26 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, entry_id, coordinator_entity_id, coordinator_state, enabled, zones, quiet, threshold, window, suspected_since, confirmed, coordinator_down_since]
+            required: [name, enabled, zones, quiet, suspected_since, confirmed, coordinator_down_since]
             properties:
-              id: {type: string}
               name: {type: string}
-              entry_id: {type: string}
-              coordinator_entity_id: {type: [string, 'null']}
-              coordinator_state: {type: [string, 'null']}
               enabled: {type: boolean}
               zones: {type: integer, description: Zones on this radio.}
               quiet: {type: integer, description: 'Of those, how many fell silent together.'}
-              threshold: {type: integer}
-              window: {type: integer, description: Seconds.}
               suspected_since: {type: [string, 'null'], format: date-time}
               confirmed: {type: boolean}
               coordinator_down_since: {type: [string, 'null'], format: date-time}
-        rf:
-          type: object
-          required: [zones, window, confirm]
-          properties:
-            zones: {type: integer}
-            window: {type: integer, description: Seconds.}
-            confirm: {type: integer, description: Seconds.}
-        faults:
+        unreachable_zones:
           type: array
-          description: The ids of the zones recorded in fault.
-          items: {type: string}
-        repair_after:
-          type: integer
-          description: Seconds a zone stays unreadable before it is listed as unreachable.
+          description: Zones unreadable for long enough to need a repair.
+          items:
+            type: object
+            required: [id, name, since, days]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              since: {type: string, format: date-time}
+              days: {type: integer, minimum: 0}
 
     LogSection:
       type: object
