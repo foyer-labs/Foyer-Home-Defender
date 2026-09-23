@@ -754,7 +754,9 @@ def _valid_directory(path: str) -> bool:
     if not path or path.startswith(("/", "\\")) or ":" in path:
         return False
     parts = re.split(r"[\\/]+", path.strip("/"))
-    return bool(parts) and all(parts) and ".." not in parts and parts[0] != "www"
+    return (
+        bool(parts) and all(parts) and ".." not in parts and parts[0].lower() != "www"
+    )
 
 
 def _profile_problems(profile: ResponseProfile) -> list[Problem]:
@@ -851,6 +853,13 @@ def _params_problems(action: ProfileAction, add) -> list[Problem]:
             else "entity_ids"
         )
 
+    if "directory" in params and not _valid_directory(str(params["directory"] or "")):
+        # An action may carry its own folder for the pictures it writes, and
+        # it wins over the setting: checked here as the setting is, or an
+        # action — or a backup somebody prepared — could put photographs of
+        # the inside of the house under `www`, served to anybody (found in
+        # review).
+        add("camera_dir_invalid", "directory")
     if kind is ActionKind.NOTIFY:
         service = str(params.get("service") or "")
         contacts = notify_contacts(action)

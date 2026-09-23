@@ -89,7 +89,8 @@
     "unknown_rule": "That rule does not exist.",
     "unknown_suspension": "That suspension does not exist.",
     "not_loaded": "Foyer was reloading — nothing was done",
-    "bad_token": "The device's token was missing or wrong."
+    "bad_token": "The device's token was missing or wrong.",
+    "walk_test_active": "A walk test is running. End it first, then arm: the walk test disarms every area when it ends."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -381,7 +382,8 @@
     "pseudonymise_after": "Pseudonymisation delay",
     "camera_entity_ids": "Cameras",
     "images": "Pictures",
-    "transport": "Connection"
+    "transport": "Connection",
+    "directory": "Folder"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -2141,8 +2143,9 @@
       "silent": "this zone is silent and suppresses it",
       "already_running": "already running for this incident, not restarted",
       "held_by_delay": "held back by a delay earlier in the sequence",
-      "quiet_hours": "every contact it names is inside their quiet hours, or has no channel left",
-      "walk_test": "A walk test is running, so nothing was executed"
+      "quiet_hours": "every contact it names is inside their quiet hours",
+      "walk_test": "A walk test is running, so nothing was executed",
+      "no_channel": "nobody it names has a channel it may use now"
     },
     "timer": {
       "exit": "exit delay",

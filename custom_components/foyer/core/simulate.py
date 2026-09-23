@@ -534,7 +534,13 @@ def _batch(
     ran = {
         i.action_id: i
         for i in decision.actions
-        if i.profile_id == profile.id and i.moment is moment
+        if i.profile_id == profile.id
+        and i.moment is moment
+        and i.silent == answer.silent
+        and i.incident_id == answer.incident_id
+        # A sequence a delay held back and resumed in this same decision is
+        # its own run, not this batch's.
+        and i.run_id not in before_runs
     }
     held_at = _held_from(held, profile.id, moment)
     actions = []
@@ -579,7 +585,10 @@ def _batch(
                 ran=did_run,
                 skipped=why,
                 conditions=conditions,
-                params={**dict(action.params), **_pictures(ran.get(action.id))},
+                # What the engine built when it ran — the recipients it
+                # reached, the siren capped at the cutoff, the cameras —
+                # rather than what the profile says (found in review).
+                params={**dict(action.params), **_built(ran.get(action.id))},
             )
         )
     return PlannedBatch(
@@ -594,20 +603,14 @@ def _batch(
     )
 
 
-def _pictures(intent: ActionIntent | None) -> dict[str, Any]:
-    """Which cameras a notification that ran would have carried (§6.2.1).
+def _built(intent: ActionIntent | None) -> dict[str, Any]:
+    """The parameters the engine built for an action that ran, or nothing.
 
-    Read off the intent the engine built, never worked out again here: the
-    trace lists them without taking a picture of anything, and it lists the
-    ones the house would have sent.
+    Read off the intent, never worked out again here: the trace shows who a
+    notification reached and which cameras it carried because those are the
+    ones the house would have used.
     """
-    if intent is None:
-        return {}
-    return {
-        key: intent.params[key]
-        for key in ("cameras", "cameras_omitted")
-        if key in intent.params
-    }
+    return dict(intent.params) if intent is not None else {}
 
 
 def _unanswered(occurrence: Occurrence) -> PlannedBatch:
@@ -892,4 +895,14 @@ def inputs(request: SimulationRequest) -> dict[str, Any]:
         ],
         "entities": dict(request.entities),
         "horizon": request.horizon,
+        # A time condition is read in this zone, and the code policy against
+        # this person: without them the row could not run the rehearsal
+        # again (found in review). The code itself is never here — only
+        # whether one was given and what it proved.
+        "timezone": str(request.timezone),
+        "actor": {
+            "user_id": request.actor.user_id,
+            "channel": request.actor.channel,
+            "code": request.actor.code.value,
+        },
     }

@@ -129,6 +129,9 @@
     },
     "rejected_bad_token": {
       "message": "The device's token was missing or wrong."
+    },
+    "rejected_walk_test_active": {
+      "message": "A walk test is running. End it first, then arm."
     }
   },
   "entity": {

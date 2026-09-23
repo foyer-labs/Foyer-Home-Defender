@@ -155,6 +155,37 @@ def is_active(zone: Zone, entity: EntityState, was_active: bool) -> bool:
     return was_active and value < trigger.value + trigger.hysteresis
 
 
+# What an event or tag entity that has never fired says. Not a fault of the
+# restore kind: the entity is there and has simply had nothing to report.
+NEVER_FIRED = "unknown"
+# What an entity is while Home Assistant starts, before it restores the last
+# event: a change out of this is the restore, not an event.
+RESTORED_FROM = "unavailable"
+
+
+def is_new_event(old: EntityState, new: EntityState) -> bool:
+    """Whether an event/tag entity's change is a new event (§4.4).
+
+    Only a change out of ``unavailable`` is Home Assistant restoring the last
+    timestamp at startup. A change out of ``unknown`` is the first event an
+    entity has ever had — the first press of a new panic button — and must
+    not be swallowed (found in review).
+    """
+    if is_unavailable(new) or old.state == new.state:
+        return False
+    return old.state is not None and old.state != RESTORED_FROM
+
+
+def has_baseline(zone: Zone, entity: EntityState) -> bool:
+    """Whether this reading can be a zone's first, baseline reading (§4.7).
+
+    For an event or tag entity, ``unknown`` is a reading: the entity has
+    never fired, and its first event must be able to count."""
+    if isinstance(zone.trigger, EventTrigger) and entity.state == NEVER_FIRED:
+        return True
+    return not is_unavailable(entity)
+
+
 def fires_momentarily(zone: Zone, old: EntityState, new: EntityState) -> bool:
     """Whether an event/tag zone fires on this change.
 
@@ -165,7 +196,7 @@ def fires_momentarily(zone: Zone, old: EntityState, new: EntityState) -> bool:
     trigger = zone.trigger
     if not isinstance(trigger, EventTrigger):
         return False
-    if is_unavailable(old) or is_unavailable(new) or old.state == new.state:
+    if not is_new_event(old, new):
         return False
     if trigger.event_type is None:
         return True
@@ -181,7 +212,7 @@ def scanned(device: ArmingDevice, old: EntityState, new: EntityState) -> bool:
     Home Assistant restoring that timestamp at startup, not somebody at the
     door; and a device that names an ``event_type`` fires only on that button.
     """
-    if is_unavailable(old) or is_unavailable(new) or old.state == new.state:
+    if not is_new_event(old, new):
         return False
     if device.event_type is None:
         return True

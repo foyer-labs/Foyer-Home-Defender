@@ -339,6 +339,9 @@ SKIP_WALK_TEST = "walk_test"
 # Every contact this notification names is inside their quiet hours and what
 # happened is not loud enough to reach them (§7.1, part 1 decision 3).
 SKIP_QUIET_HOURS = "quiet_hours"
+# Nobody it names has a channel it may use now: none enabled, or — for the
+# message about a broken channel — only the broken one (§12.2).
+SKIP_NO_CHANNEL = "no_channel"
 
 
 def reachable(
@@ -406,6 +409,7 @@ def recipients_for(
     testing = moment is Moment.ACTION_TESTED
     loudness = SEVERITY_ORDER.index(severity_of(moment))
     recipients: list[Mapping[str, Any]] = []
+    reached: set[tuple[str, str]] = set()
     quiet: list[str] = []
     for ref in refs:
         contact = config.contact(ref["contact_id"])
@@ -421,13 +425,26 @@ def recipients_for(
             quiet.append(contact.id)
             continue
         channel = contact.channel(ref["channel_id"])
-        if channel is None:
-            continue
-        if f"{contact.id}:{channel.id}" in avoid:
+        if channel is not None and f"{contact.id}:{channel.id}" in avoid:
             # Warning somebody about a dead channel over the dead channel is
-            # the joke that writes itself (§12.2). The caller says when this
-            # applies; it is not a general rule about broken channels.
+            # the joke that writes itself (§12.2) — so the message goes over
+            # the next channel of the same person that is not avoided, in
+            # their order of priority. Skipping the person outright left
+            # somebody with a working SMS untold (found in review). The
+            # caller says when this applies; it is not a general rule.
+            channel = next(
+                (
+                    c
+                    for c in contact.channels
+                    if c.enabled and f"{contact.id}:{c.id}" not in avoid
+                ),
+                None,
+            )
+        if channel is None or (contact.id, channel.id) in reached:
+            # Once per channel: a fall-back can land on a channel the action
+            # also names, and one person must not get the message twice.
             continue
+        reached.add((contact.id, channel.id))
         recipients.append(
             {
                 "contact_id": contact.id,
@@ -486,11 +503,14 @@ def skip_reason(
         return SKIP_ALREADY_RUNNING
     if not evaluate(action, ctx.snapshot, ctx.now, ctx.tz):
         return SKIP_CONDITION
-    if notify_contacts(action) and not reachable(ctx, action, moment)[0]:
-        # Nobody left: every contact named is inside their quiet hours, or
-        # has no channel to reach them by. A notification to nobody is not a
-        # notification, and the trace says which it was.
-        return SKIP_QUIET_HOURS
+    if notify_contacts(action):
+        recipients, quiet = reachable(ctx, action, moment)
+        if not recipients:
+            # Nobody left: every contact named is inside their quiet hours,
+            # or has no channel to reach them by. A notification to nobody is
+            # not a notification, and the trace says which it was — quiet
+            # hours only when somebody was actually held by them.
+            return SKIP_QUIET_HOURS if quiet else SKIP_NO_CHANNEL
     return None
 
 
@@ -523,7 +543,9 @@ def variables(ctx: PlanContext, group: Sequence[Occurrence]) -> dict[str, str]:
         "zone": _names([o.zone_id for o in group], zones) or _names(zone_ids, zones),
         "area": _names([o.area_id for o in group], areas),
         "scenario": _names([o.scenario_id for o in group], scenarios),
-        "user": "",  # identities arrive in Phase 2
+        # Who asked, as the engine established it (§8): the person on
+        # the occurrence, which is empty for a door opening or a timer.
+        "user": _names([o.user_name for o in group], {}),
         "channel": _names([o.channel for o in group], {}),
         "time": local.strftime("%H:%M"),
         "date": local.strftime("%Y-%m-%d"),
@@ -577,9 +599,15 @@ def _params(
         }
     if action.kind is ActionKind.SIREN:
         # Never beyond the siren cutoff: a sounder that outlives the alarm is
-        # what the cutoff exists to prevent (§5.3).
+        # what the cutoff exists to prevent (§5.3). The technical channel
+        # takes the global one: a smoke sounder must not sound for less
+        # because the house is armed for the night (§5.5, found in review).
         area = ctx.areas.get(area_id or "")
-        scenario = ctx.config.scenario(area.scenario_id if area else None)
+        scenario = (
+            None
+            if moment in TECHNICAL_MOMENTS
+            else ctx.config.scenario(area.scenario_id if area else None)
+        )
         cutoff = ctx.config.siren_duration(scenario)
         duration = params.get("duration")
         params["duration"] = cutoff if not duration else min(int(duration), cutoff)
@@ -683,10 +711,13 @@ _NESTED_TARGETS = ("target", "data")
 
 
 def _as_list(value: Any) -> tuple[str, ...]:
+    # An empty string names nothing. Read as a target, it made an action
+    # whose only entity sat on the jammed radio look as if it still had one,
+    # and it ran with an empty entity id (found in review).
     if isinstance(value, str):
-        return (value,)
+        return (value,) if value else ()
     if isinstance(value, list | tuple):
-        return tuple(str(v) for v in value)
+        return tuple(str(v) for v in value if v)
     return ()
 
 
@@ -877,6 +908,9 @@ def run_sequence(
             placeholders=dict(values),
             variant=_variant(moment, values, skipped_variant),
             params=params,
+            run_id=run_id,
+            silent=silent,
+            incident_id=incident_id,
         )
         if why == SKIP_WALK_TEST:
             # Nothing is switched on, so nothing is recorded as running and

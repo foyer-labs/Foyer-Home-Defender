@@ -89,7 +89,8 @@
     "unknown_rule": "Quella regola non esiste.",
     "unknown_suspension": "Quella sospensione non esiste.",
     "not_loaded": "Foyer si stava ricaricando — non è stato fatto niente",
-    "bad_token": "Il token del dispositivo mancava o era sbagliato."
+    "bad_token": "Il token del dispositivo mancava o era sbagliato.",
+    "walk_test_active": "È in corso un walk test. Terminalo prima, poi inserisci: alla fine il walk test disinserisce ogni area."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -381,7 +382,8 @@
     "pseudonymise_after": "Ritardo di pseudonimizzazione",
     "camera_entity_ids": "Telecamere",
     "images": "Immagini",
-    "transport": "Collegamento"
+    "transport": "Collegamento",
+    "directory": "Cartella"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -2141,8 +2143,9 @@
       "silent": "questa zona è silenziosa e la sopprime",
       "already_running": "già in corso per questo incidente, non riavviata",
       "held_by_delay": "trattenuta da un ritardo precedente nella sequenza",
-      "quiet_hours": "ogni contatto che nomina è nelle sue ore di silenzio, o non ha più un canale",
-      "walk_test": "È in corso un walk test, quindi non è stato eseguito niente"
+      "quiet_hours": "ogni contatto indicato è nelle sue ore di silenzio",
+      "walk_test": "È in corso un walk test, quindi non è stato eseguito niente",
+      "no_channel": "nessuno dei destinatari ha adesso un canale utilizzabile"
     },
     "timer": {
       "exit": "ritardo d'uscita",

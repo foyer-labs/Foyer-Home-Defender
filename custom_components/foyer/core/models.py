@@ -478,6 +478,10 @@ class Reason(StrEnum):
     # disarm answered "success" while nothing happened is the one answer an
     # alarm may never give.
     NOT_LOADED = "not_loaded"
+    # A walk test is running (§11.3). Every area is armed by it, and its end
+    # disarms them all, so an arming now would be undone without a word: the
+    # walk test is ended first, then the house is armed.
+    WALK_TEST_ACTIVE = "walk_test_active"
 
 
 # Entity states that mean "we do not know" — a fault, never calm (INV-4).
@@ -2157,6 +2161,11 @@ class RuleRuntime:
     # saved while somebody is already at home has not seen them arrive, and
     # must not disarm the house the moment it is created.
     seen: bool = False
+    # A `time` rule's hour and weekdays as they were when its baseline was
+    # taken. A rule saved, or re-timed, after its hour today waits for the
+    # next occurrence rather than acting at once (found in review) — the same
+    # baseline rule, applied to a change of the rule itself.
+    schedule: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -2852,6 +2861,13 @@ class ActionIntent:
     # scenario, which has no scenario name to show.
     variant: str | None = None
     params: Mapping[str, Any] = field(default_factory=dict)
+    # Which run of a profile produced it, and under which answer — silent or
+    # not, which incident — so the simulator's trace credits each intent to
+    # the batch that built it and never to another batch of the same profile
+    # and moment (found in review). The executor ignores all three.
+    run_id: str = ""
+    silent: bool = False
+    incident_id: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "placeholders", _frozen(self.placeholders))

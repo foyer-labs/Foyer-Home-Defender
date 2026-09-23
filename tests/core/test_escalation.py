@@ -33,6 +33,7 @@ from custom_components.foyer.core.models import (
     ZoneType,
 )
 from custom_components.foyer.core.response import (
+    SKIP_NO_CHANNEL,
     SKIP_QUIET_HOURS,
     PlanContext,
     reachable,
@@ -559,7 +560,9 @@ def test_a_step_that_reaches_nobody_says_so_instead_of_vanishing():
         o for o in world.last.occurrences if o.moment is Moment.ESCALATION_SKIPPED
     ]
     assert skipped and skipped[0].detail["steps"] == "0"
-    assert skipped[0].detail["reasons"] == SKIP_QUIET_HOURS
+    # Nobody was inside quiet hours: they were all switched off, and the row
+    # says which it was (found in the second review).
+    assert skipped[0].detail["reasons"] == SKIP_NO_CHANNEL
 
 
 def test_a_technical_escalation_does_not_outlive_the_zone_that_raised_it():

@@ -131,6 +131,8 @@ from .triggers import (
     fault_cause,
     fires_momentarily,
     is_active,
+    NEVER_FIRED,
+    has_baseline,
     is_unavailable,
     scanned,
     supervision_due,
@@ -857,6 +859,14 @@ class _Run:
             return True, None
         activations = self.record(group, zone)
         if activations is None:
+            if group.suppress and not self.can_satisfy(group):
+                # Too few members left able to count — excluded by hand,
+                # bypassed at arming, or in fault — for the group ever to be
+                # satisfied. Held back now, this activation would be held
+                # for ever: an intruder seen by the one working PIR and
+                # silence. It acts on its own, as it would with no group
+                # watching it (found in review).
+                return True, group.group_id
             return not group.suppress, group.group_id
         held = dict.fromkeys(a.zone_id for a in activations if a.held)
         held.pop(zone.id, None)
@@ -868,6 +878,13 @@ class _Run:
             if rt is not None and self.effect(member, rt) is not None:
                 self.trigger(member.area_id, member, group_id=group.group_id)
         return True, group.group_id
+
+    def can_satisfy(self, group: Verification) -> bool:
+        """Whether enough members are left able to count towards the group."""
+        able = [
+            m for m in group.members if m not in self.bypassed and m not in self.faults
+        ]
+        return len(able) >= group.n
 
     def forget_activations(self, area_id: str) -> None:
         """An area that stops monitoring drops its zones' pending activations:
@@ -1008,9 +1025,14 @@ class _Run:
         previous = self.refresh_active()
         for zone in self.config.zones:
             if not zone.enabled:
+                # Forgotten while it is off, so that switching it back on is
+                # a baseline like saving it new (§4.7): a key zone re-enabled
+                # with its switch on must not disarm the house (found in
+                # review).
+                self.seen.discard(zone.id)
                 continue
             if zone.id not in self.seen:
-                if not is_unavailable(self.entity(zone)):
+                if has_baseline(zone, self.entity(zone)):
                     self.seen.add(zone.id)
                 continue
             fired = zone.entity_id == changed_entity and fires_momentarily(
@@ -1455,10 +1477,14 @@ class _Run:
         """
         for device in self.config.devices:
             if not device.enabled or not device.entity_id:
+                # As for a zone: switched back on, it starts from a baseline.
+                self.seen_devices.discard(device.id)
                 continue
             entity = self.entity_state(device.entity_id)
             if device.id not in self.seen_devices:
-                if not is_unavailable(entity):
+                # `unknown` is a tag never scanned: a reading, so its first
+                # scan can count (§4.4, found in review).
+                if not is_unavailable(entity) or entity.state == NEVER_FIRED:
                     self.seen_devices.add(device.id)
                 continue
             if device.entity_id != changed_entity:
@@ -2942,6 +2968,8 @@ class _Run:
         """
         if scenario is None:
             return _reject(Reason.UNKNOWN_SCENARIO)
+        if self.walk_test is not None:
+            return _reject(Reason.WALK_TEST_ACTIVE)
         current = self.active_scenario_id
         target = [a for a in scenario.areas if a in self.areas]
         dropping = [
@@ -3016,6 +3044,11 @@ class _Run:
         """One area on its own, outside any scenario (decision 5)."""
         if self.config.area(event.area_id) is None:
             return _reject(Reason.UNKNOWN_AREA)
+        if self.walk_test is not None:
+            # Every area is already armed by the walk test, and its end
+            # disarms them all: an arming accepted now would be a house its
+            # owner believes armed that is not (found in review).
+            return _reject(Reason.WALK_TEST_ACTIVE)
         if self.areas[event.area_id].state is not AreaState.DISARMED:
             return _reject(Reason.INVALID_STATE)
         for operation in (
@@ -3251,6 +3284,11 @@ class _Run:
     def evaluate_rules(self) -> None:
         for rule in self.config.rules:
             if not rule.enabled:
+                # Forgotten, so that switching it on again starts from a
+                # baseline: a `presence` rule re-enabled while somebody is
+                # home has not seen them arrive, and a level rule's "for N
+                # minutes" starts again (found in review).
+                self.rules_runtime.pop(rule.id, None)
                 continue
             self.unblock_when_ready(rule)
             runtime, wants, occurrence = self.rule_wants(rule)
@@ -3325,6 +3363,23 @@ class _Run:
                 # arrival can disarm a house (INV-4 applied to people).
                 return runtime, False, None
             return replace(runtime, latched=False), False, None
+        schedule = f"{trigger.at}|{','.join(map(str, sorted(trigger.weekdays)))}"
+        if not runtime.seen or runtime.schedule != schedule:
+            # The baseline (§4.7's rule, applied to a rule): an hour already
+            # past today when the rule was saved, re-enabled or re-timed is
+            # not an occurrence it has missed, and must not arm — or disarm —
+            # the house the moment somebody presses Save.
+            passed = rules_engine.occurrence_due(rule, self.now, self.timezone, None)
+            return (
+                replace(
+                    runtime,
+                    seen=True,
+                    schedule=schedule,
+                    last_occurrence=passed or runtime.last_occurrence,
+                ),
+                False,
+                None,
+            )
         occurrence = rules_engine.occurrence_due(
             rule, self.now, self.timezone, runtime.last_occurrence
         )
@@ -3454,11 +3509,21 @@ class _Run:
                 area_ids=tuple(a for a in dropped if a not in perimeter),
                 refused=perimeter,
             )
+        live = (
+            set(self.incident.area_ids)
+            if self.incident is not None and not self.incident.acknowledged
+            else set()
+        )
         if decided.disarms and any(
             self.areas[area_id].state in (AreaState.ENTRY, AreaState.TRIGGERED)
+            or area_id in live
             for area_id in decided.area_ids
             if area_id in self.areas
         ):
+            # The incident is part of the question, not only the area's
+            # state: after the siren cutoff an area is back to `armed` with
+            # its memory set and the escalation still climbing, and a disarm
+            # there acknowledges it just the same (found in review).
             # §4.6.1 already refuses a scenario switch while an area it would
             # touch is in entry or triggered: changing scenario must never
             # silence an alarm without a disarm. A rule is the same case and

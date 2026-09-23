@@ -129,6 +129,9 @@
     },
     "rejected_bad_token": {
       "message": "Il token del dispositivo mancava o era sbagliato."
+    },
+    "rejected_walk_test_active": {
+      "message": "È in corso un walk test. Terminalo prima, poi inserisci."
     }
   },
   "entity": {

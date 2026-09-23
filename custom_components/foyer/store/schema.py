@@ -1194,6 +1194,10 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "restore": r.restore,
                 "area_id": r.area_id,
                 "incident_id": r.incident_id,
+                # Which channel started it (§5.5). Lost here, a smoke sounder
+                # came back from a restart as an intrusion one, and the next
+                # disarm of its area switched it off (found in review).
+                "technical": r.technical,
             }
             for r in state.running
         ],
@@ -1257,6 +1261,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "blocked": rt.blocked.value if rt.blocked else None,
                 "last_occurrence": _iso(rt.last_occurrence),
                 "seen": rt.seen,
+                "schedule": rt.schedule,
             }
             for rule_id, rt in state.rules.items()
         },
@@ -1566,6 +1571,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     restore=r.get("restore"),
                     area_id=r.get("area_id"),
                     incident_id=r.get("incident_id"),
+                    technical=r.get("technical") is True,
                 )
                 for r in data.get("running", ())
             ),
@@ -1647,6 +1653,9 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     blocked=RuleBlock(rt["blocked"]) if rt.get("blocked") else None,
                     last_occurrence=_dt(rt.get("last_occurrence")),
                     seen=bool(rt.get("seen", False)),
+                    schedule=rt.get("schedule")
+                    if isinstance(rt.get("schedule"), str)
+                    else None,
                 )
                 for rule_id, rt in data.get("rules", {}).items()
                 if rule_id in rule_ids
