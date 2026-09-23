@@ -603,7 +603,10 @@ So an **incident** is the unit, not the zone:
   whoever acknowledged what looked like the cat must hear that a second zone
   went. The history of acknowledgements is kept (decision 54).
 - Actions are the **union**, deduplicated: a siren already sounding is not
-  restarted; a light not yet on comes on.
+  restarted; a light not yet on comes on. A message is not a siren: a
+  notification answering a zone joining goes out again for every zone that
+  joins, because "updating the notification text" is what joining does
+  (decision 100).
 - The escalation policy is the one belonging to the **highest-severity**
   contributing profile. This is what the `severity` field on a response profile
   (an integer the user orders) exists for, and it is used for nothing else.
@@ -658,9 +661,16 @@ A profile can attach actions to three distinct moments, not just alarms:
 
 | Moment | Events |
 |---|---|
-| **Alarm** | `entry_started`, `triggered`, `siren_cutoff`, `alarm_cleared` |
+| **Alarm** | `entry_started`, `triggered`, `siren_cutoff`, `alarm_cleared`, `alarm_ended` |
 | **State change** | `armed`, `disarmed`, `arm_failed`, `forced_arm`, `zone_bypassed`, `code_rejected`, `lockout` |
 | **System** | `zone_fault`, `low_battery`, `ha_restarted`, `walk_test_started`, `walk_test_ended` |
+
+`alarm_ended` belongs to one area and is raised once for each area an
+alarm touched, when that area's siren cutoff runs or when it is disarmed
+with its alarm memory set — and never on an ordinary disarm. It is the
+moment for "switch the light off when the alarm is over", which an area's
+profile can answer; the acknowledgement of the incident belongs to no area
+and cannot serve (decision 105).
 
 ### 6.2 Action catalogue
 
@@ -965,6 +975,11 @@ Two rules the resolution needs that the arrows above do not carry:
   safer. The panel and the card say so plainly while it lasts; from the first
   user created the policy applies in full (decision 78).
 
+**A Home Assistant administrator is asked for the code like anybody else**
+when the policy asks for one (decision 101). Being an administrator is not
+an identification: the unlocked wall tablet INV-6 names is almost always
+signed in as one. What the administrator keeps is §8.4's: never locked out.
+
 **Channels that identify the user:** Home Assistant UI with `ha_user_id` linked,
 a per-user NFC tag, a per-user RFID badge. **Channels that do not:** a shared
 keypad, a generic MQTT device, an automation. On a non-identifying channel the
@@ -981,7 +996,12 @@ otherwise it reads as a bug.
 
 After `N` failed code attempts (default 5) within `W` seconds (default 300), the
 originating channel is locked for `L` seconds (default 300), exponentially
-increasing on repetition. A lockout:
+increasing on repetition. The originating channel is counted per device for a
+declared device, per source address for the device endpoint's tokens
+(§9.2.1), and **per Home Assistant account** for the panel, the card and the
+services: one account guessing codes locks itself out, not the household
+(decision 103). A code offered for somebody else's when saving a person
+counts as a failed attempt (decision 104). A lockout:
 
 - raises a `lockout` event that response profiles can act on (a tamper attempt on
   the keypad is a genuine alarm signal),
@@ -1034,7 +1054,13 @@ Three rules the contract needs that the shape above does not carry:
   `attributed: claimed`, and the log page shows it beside the name. The
   capability stays, because an adapter needs a way to say who acted; what goes
   is the log's silence about the difference. A wrong answer to "who disarmed at
-  03:14?" is worse than no answer.
+  03:14?" is worse than no answer. It grants nothing on any service, those
+  that read the log or the configuration included: a permission comes from a
+  code or a linked account, never from an id somebody typed (decision 102).
+- **A refusal nobody reads is raised.** A caller that does not ask for the
+  response is answered with an error rather than a result it will never look
+  at; one that asks gets the structured result, refusal and all (decision
+  106).
 - **`skip_exit_delay` needs no permission of its own** (decision 85): whoever
   may arm may arm at once, and it uncovers nothing — it closes sooner. It does
   turn every delayed zone into an instant one, so the `armed` row records that
@@ -1479,6 +1505,10 @@ Mandatory safeguards:
 - a notification on start and on end,
 - `always_on` zones (tamper, technical, panic) remain **fully live** — walk test
   must never silence a smoke detector.
+- **No arming while it runs.** Every area is already armed by the test and
+  its end disarms them all, so an arming accepted during it would be undone
+  without a word: it is refused, with its own reason, until the test has
+  ended (decision 107).
 
 ### 11.4 Real action test
 
@@ -2170,3 +2200,11 @@ document should make one of them on purpose.
 | 97 | A device endpoint with a token per keypad; plain HTTP accepted and said, never hidden | The token authenticates the device, which MQTT's claimed name cannot; confidentiality is TLS's job, and refusing keypads that cannot do TLS would take the feature from the people who asked for it |
 | 98 | One transport per keypad: MQTT or the endpoint, never both | A token the broker can route around by using the device's name protects nothing |
 | 99 | Only keypads use the endpoint, never tags | On a keypad the code is still the identity and the token disarms nothing alone; a tag's token would be the key to the house, readable on the wire whenever the request is not encrypted |
+| 100 | A notification answering a zone joining is sent for every zone that joins | The union of §5.6 keeps a siren from restarting; applied to messages it swallowed the patio's notification because the hall's had gone, and §6.2.1 promises the cameras again at each join |
+| 101 | An unlinked Home Assistant administrator is asked for the code when the policy asks | Being an administrator identifies nobody, and the wall tablet INV-6 names is signed in as one; the administrator keeps only §8.4's "never locked out" |
+| 102 | A claimed `user_id` grants nothing, on any service | Decision 88 said so; the configuration and log services had let a typed id carry that person's permissions |
+| 103 | The panel, the card and the services count wrong codes per Home Assistant account | One counter for the whole channel let any account, with no permission at all, lock the household out by typing five wrong codes |
+| 104 | A code that is somebody else's, offered when saving a person, counts as a wrong code | Otherwise the uniqueness check of §8.1 is a way of testing codes against the household without limit |
+| 105 | `alarm_ended` is a per-area moment: siren cutoff or a disarm with alarm memory, never an ordinary disarm | "Switch it off when the alarm is over" needs a moment an area's profile hears; the incident's acknowledgement belongs to no area, and `disarmed` fires every evening |
+| 106 | A refused service raises when the caller does not ask for its response | An automation that does not read the result took a wrong code for success and carried on as if the house were disarmed |
+| 107 | Arming is refused while a walk test runs | The test arms every area and its end disarms them all; an arming accepted in between was undone without a word |
