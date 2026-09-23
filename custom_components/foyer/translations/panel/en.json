@@ -1074,7 +1074,7 @@
         },
         "webhook": {
           "term": "Acknowledgement webhook",
-          "text": "An unauthenticated URL that stops an alarm. Off until you switch it on, and worth giving to nothing but the voice provider."
+          "text": "An unauthenticated URL that stops an alarm. Off until you switch it on, shown once when it is generated, and worth giving to nothing but the voice provider."
         },
         "test": {
           "term": "Test channels",
@@ -1130,7 +1130,7 @@
         },
         "watchdog": {
           "term": "External watchdog",
-          "text": "If Home Assistant dies the pings stop and the service you chose raises the alarm. Foyer also reports when it cannot reach it."
+          "text": "If Home Assistant dies the pings stop and the service you chose raises the alarm. Foyer also reports when it cannot reach it. Its URL is never shown again once saved."
         },
         "payload": {
           "term": "Ping payload",
@@ -1788,7 +1788,9 @@
     "tokens_rejected": "Keypad tokens refused",
     "access_recovered": "Access recovered by an administrator",
     "device_unlocked": "Device unlocked with a code",
-    "auto_outcome": "Automatic rule outcome told"
+    "auto_outcome": "Automatic rule outcome told",
+    "config_new_webhook": "Acknowledgement webhook address generated",
+    "config_forget_webhook": "Acknowledgement webhook switched off"
   },
   "log": {
     "filters": "Filters",
@@ -2551,10 +2553,19 @@
     "webhook_enable": "Accept an acknowledgement from a webhook",
     "webhook_warning": "This URL stops an alarm, and nothing authenticates it.",
     "webhook_warning_hint": "Home Assistant webhooks are open to whoever holds the address: anybody who has it, or intercepts it, can stop the escalation on its way to your neighbour. Switch it on only if a voice provider needs it, and give the address to nothing else.",
-    "webhook_hint": "Post to this path from the voice provider when the key is pressed. Switching this off forgets the address: switching it on again gives out a new one.",
+    "webhook_hint": "The voice provider posts to the webhook's address when the key is pressed: give it to the provider and to nothing else. Switching the webhook off forgets the address; switching it on again gives out a new one.",
     "no_quiet_hours": "Always reachable",
     "actionable_entity": "This is a notify entity: it carries a message and a title and nothing else, so no button, no target and no extra data reach the phone. Use the notify service behind it if this channel should be able to acknowledge.",
-    "step_offset": "+{n} s"
+    "step_offset": "+{n} s",
+    "webhook_once": "The address, shown this once",
+    "webhook_once_hint": "Copy it into the voice provider now. Foyer cannot show it again; if it is lost, generate a new one.",
+    "webhook_path_hint": "Home Assistant knows no external address, so this is the path alone: put in front of it the address your Home Assistant is reached at from the internet.",
+    "webhook_exists": "The webhook is on. Its address cannot be shown again: a new one replaces it at once.",
+    "webhook_regenerate": "Generate a new address",
+    "webhook_confirm": "The address the voice provider holds stops working at once, and it will need the new one.",
+    "webhook_copy": "Copy",
+    "webhook_copied": "Copied",
+    "webhook_copy_failed": "This browser would not copy it: select the address and copy it by hand."
   },
   "rules": {
     "title": "Automatic rules",
@@ -2735,7 +2746,9 @@
     "diagnostics_open": "Open integration page",
     "diagnostics_where": "The download button is Home Assistant's own, on the integration's page, and it is available to administrators.",
     "no_zones": "No zones on it",
-    "last_result": "Last result"
+    "last_result": "Last result",
+    "url_set_placeholder": "Set — type a new URL to replace it",
+    "url_set_hint": "A URL is saved. Foyer never shows it again, because whoever holds it can keep the check green for ever; leave this empty to keep it."
   },
   "images": {
     "zone": "The cameras of the zones behind the alarm",

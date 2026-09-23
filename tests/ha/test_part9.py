@@ -34,13 +34,13 @@ def _system(hass):
 
 
 async def _save_health(hass, client, **overrides) -> dict:
-    """The health block as page 14 saves it."""
+    """The health block as page 14 saves it: no URL unless one was typed,
+    because nothing reads the stored one back (decision 130)."""
     health = {
         "mains_entity_id": None,
         "mains_lost_states": ["on"],
         "watchdog": {
             "enabled": False,
-            "url": "",
             "interval": 900,
             "timeout": 30,
             "failures": 3,
@@ -314,7 +314,6 @@ async def test_a_radio_with_no_coordinator_is_refused(hass, loaded, hass_ws_clie
                 "mains_lost_states": ["on"],
                 "watchdog": {
                     "enabled": False,
-                    "url": "",
                     "interval": 900,
                     "timeout": 30,
                     "failures": 3,
@@ -499,7 +498,8 @@ async def test_the_watchdog_url_never_reaches_the_read_path(
     hass, loaded, hass_ws_client
 ):
     """core/dump.py states the position: the ping URL is the credential.
-    This page is open to anyone holding view_log."""
+    This page is open to anyone holding view_log, and the configuration to
+    anyone holding edit_config without a code (decision 128)."""
     client = await hass_ws_client(hass)
     await _save_health(
         hass,
@@ -517,6 +517,10 @@ async def test_the_watchdog_url_never_reaches_the_read_path(
     assert status["watchdog"]["url_set"] is True
     assert "url" not in status["watchdog"]
     assert PING not in str(status)
+    config = (await _ws(client, {"type": "foyer/config"}))["config"]
+    assert config["health"]["watchdog"]["url_set"] is True
+    assert "url" not in config["health"]["watchdog"]
+    assert PING not in str(config)
 
 
 async def test_the_url_is_stripped_out_of_the_error_it_appears_in(

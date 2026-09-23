@@ -16,7 +16,8 @@
 // And the DTMF webhook is a URL that stops an alarm. Home Assistant webhooks
 // are not authenticated, so it does not exist until somebody switches it on,
 // and the sentence saying why is next to the switch rather than in a document
-// nobody opens (INV-6).
+// nobody opens (INV-6). Its address is shown once, when it is generated, and
+// never again (decisions 128, 129): this page reads only whether it is on.
 import { LitElement, css, html, nothing } from "lit";
 import { live } from "lit/directives/live.js";
 
@@ -40,6 +41,37 @@ import {
   revealProblems,
 } from "../context";
 import "../delete-button";
+
+/** Put text on the clipboard, and say whether it got there.
+ *
+ * The clipboard API exists only in a secure context, and a Home Assistant
+ * reached as http://homeassistant.local:8123 is not one; the older command
+ * still works there. Where neither does, the answer is false and the page
+ * says to copy by hand — the address is selectable in one click. */
+async function copyText(root: Node, text: string): Promise<boolean> {
+  try {
+    if (window.isSecureContext && navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // refused: try the older way
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  root.appendChild(area);
+  try {
+    area.select();
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    area.remove();
+  }
+}
 
 const EMPTY: ContactConfig = {
   name: "",
@@ -104,6 +136,9 @@ class FoyerPageContacts extends LitElement {
     _busy: { state: true },
     _tested: { state: true },
     _webhookProblems: { state: true },
+    _webhookShown: { state: true },
+    _confirmWebhook: { state: true },
+    _copied: { state: true },
     _health: { state: true },
   };
 
@@ -114,6 +149,16 @@ class FoyerPageContacts extends LitElement {
   /** The result of the last channel test, by channel id: what §11.4 is for. */
   private _tested: Record<string, { ok: boolean; error?: string | null }> = {};
   private _webhookProblems: Problem[] = [];
+  /** The webhook's address just generated, shown once and then forgotten:
+   * leaving the page loses it for good, as a keypad's token does (§7.2,
+   * decision 129). `path` says it is the path alone, because Home Assistant
+   * knows no external address to put in front of it. */
+  private _webhookShown?: { address: string; path: boolean };
+  /** Asking before a new address replaces the one the voice provider holds. */
+  private _confirmWebhook = false;
+  /** Whether the copy button worked, so it can say so — or say to copy by
+   * hand where the browser refuses (plain HTTP has no clipboard API). */
+  private _copied?: boolean;
   /** Which channels are broken right now (§12.2). The health page owns the
    * detail; here it is one word beside the channel, because this is the page
    * somebody is on when they are thinking about who gets told. */
@@ -122,6 +167,17 @@ class FoyerPageContacts extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     void this._loadHealth();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._forgetWebhook();
+  }
+
+  private _forgetWebhook(): void {
+    this._webhookShown = undefined;
+    this._confirmWebhook = false;
+    this._copied = undefined;
   }
 
   private async _loadHealth(): Promise<void> {
@@ -271,19 +327,33 @@ class FoyerPageContacts extends LitElement {
     return Boolean(service && this.ctx?.hass.states[service]);
   }
 
+  /** Switch the webhook on or off. On is also "generate a new address":
+   * the backend mints a new id every time, and the answer is the one moment
+   * the address can be read. */
   private async _toggleWebhook(enabled: boolean): Promise<void> {
     if (!this.ctx) return;
     this._busy = true;
     this._webhookProblems = [];
+    // Whatever was on screen is about to stop being the address: replaced,
+    // forgotten, or — refused — no longer the one this page just asked for.
+    this._forgetWebhook();
     try {
       const result = await this.ctx.setAckWebhook(enabled);
       // Refused or abandoned, the box goes back to what is stored (live())
       // and says why, rather than showing a webhook that is not there.
       if (!result.success) this._webhookProblems = result.problems;
+      else if (enabled && result.url) this._webhookShown = { address: result.url, path: false };
+      else if (enabled && result.path) this._webhookShown = { address: result.path, path: true };
     } finally {
       this._busy = false;
       this.requestUpdate();
     }
+  }
+
+  private async _copyWebhook(): Promise<void> {
+    const address = this._webhookShown?.address;
+    if (!address) return;
+    this._copied = await copyText(this.renderRoot, address);
   }
 
   override render() {
@@ -684,7 +754,8 @@ class FoyerPageContacts extends LitElement {
 
   private _renderAcknowledgement(s: Strings) {
     const ctx = this.ctx!;
-    const webhookId = ctx.config?.settings.ack_webhook_id ?? null;
+    const enabled = ctx.config?.settings.ack_webhook_enabled ?? false;
+    const shown = this._webhookShown;
     return html`
       <div class="card">
         <div class="card-hd">
@@ -706,7 +777,7 @@ class FoyerPageContacts extends LitElement {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${live(webhookId !== null)}
+              .checked=${live(enabled)}
               ?disabled=${this._busy}
               @change=${(e: Event) =>
                 this._toggleWebhook((e.target as HTMLInputElement).checked)}
@@ -718,9 +789,51 @@ class FoyerPageContacts extends LitElement {
                 ${this._webhookProblems.map((p) => html`<li>${problemText(s, p)}</li>`)}
               </ul>`
             : nothing}
-          ${webhookId
-            ? html`<p class="sample">/api/webhook/${webhookId}</p>
-                <p class="note">${t(s, "contacts.webhook_hint")}</p>`
+          ${shown
+            ? html`<div class="once" role="status">
+                <span class="lbl">${t(s, "contacts.webhook_once")}</span>
+                <code class="secret">${shown.address}</code>
+                <div class="copy">
+                  <button class="btn" @click=${() => this._copyWebhook()}>
+                    ${t(s, "contacts.webhook_copy")}
+                  </button>
+                  ${this._copied === undefined
+                    ? nothing
+                    : html`<span class="hint">
+                        ${t(s, this._copied ? "contacts.webhook_copied" : "contacts.webhook_copy_failed")}
+                      </span>`}
+                </div>
+                ${shown.path
+                  ? html`<span class="hint">${t(s, "contacts.webhook_path_hint")}</span>`
+                  : nothing}
+                <span class="hint">${t(s, "contacts.webhook_once_hint")}</span>
+              </div>`
+            : enabled
+              ? html`<p class="hint">${t(s, "contacts.webhook_exists")}</p>`
+              : nothing}
+          ${enabled
+            ? html`<p class="note">${t(s, "contacts.webhook_hint")}</p>
+                <div class="actions">
+                  ${this._confirmWebhook
+                    ? html`<span class="hint">${t(s, "contacts.webhook_confirm")}</span>
+                        <button
+                          class="btn danger"
+                          ?disabled=${this._busy}
+                          @click=${() => this._toggleWebhook(true)}
+                        >
+                          ${t(s, "contacts.webhook_regenerate")}
+                        </button>
+                        <button class="btn" @click=${() => (this._confirmWebhook = false)}>
+                          ${t(s, "common.cancel")}
+                        </button>`
+                    : html`<button
+                        class="btn"
+                        ?disabled=${this._busy}
+                        @click=${() => (this._confirmWebhook = true)}
+                      >
+                        ${t(s, "contacts.webhook_regenerate")}
+                      </button>`}
+                </div>`
             : nothing}
         </div>
       </div>
@@ -800,14 +913,32 @@ class FoyerPageContacts extends LitElement {
         font-size: 12px;
         color: var(--secondary-text-color);
       }
-      .sample {
-        margin: 8px 0 0;
-        padding: 10px 12px;
+      /* The address, the one time it is shown: set apart from the page so
+         it reads as something to copy now rather than something that stays. */
+      .once {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 16px;
+        margin: 12px 0;
         border-radius: 8px;
+        border: 1px solid var(--primary-color);
         background: var(--secondary-background-color);
+      }
+      .once .lbl {
+        font-weight: 500;
+      }
+      .secret {
         font-family: var(--code-font-family, monospace);
-        font-size: 12px;
-        overflow-x: auto;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+        user-select: all;
+      }
+      .copy {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
       }
       /* The sentence that has to stop somebody: a Home Assistant webhook is
          not authenticated, and this one stops an alarm (INV-6). */

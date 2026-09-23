@@ -58,8 +58,13 @@ export interface PanelContext {
   saveChime(chime: ChimeConfig): Promise<EditResult>;
   saveSettings(settings: Partial<SettingsConfig>): Promise<EditResult>;
   /** Switch the DTMF acknowledgement webhook on or off (§7.2). The id is
-   * the backend's to generate and this never sends one. */
-  setAckWebhook(enabled: boolean): Promise<EditResult>;
+   * the backend's to generate and this never sends one. Switching it on
+   * always generates a new address, and its answer is the only time the
+   * address is shown: the path, and the full URL when Home Assistant knows
+   * its external address (decision 129). Nothing reads it back. */
+  setAckWebhook(
+    enabled: boolean,
+  ): Promise<EditResult & { path?: string; url?: string | null }>;
   /** Generate an endpoint keypad's token, or revoke it (§9.2.1). The token is
    * the backend's to generate, and this answer is the only time it is ever
    * shown: it is stored as a hash nothing can read back. */

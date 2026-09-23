@@ -1074,7 +1074,7 @@
         },
         "webhook": {
           "term": "Webhook di presa d'atto",
-          "text": "Un URL non autenticato che ferma un allarme. Disattivato finché non lo attivi, e da non dare a nessuno tranne al provider vocale."
+          "text": "Un URL non autenticato che ferma un allarme. Disattivato finché non lo attivi, mostrato una sola volta quando viene generato, e da non dare a nessuno tranne al provider vocale."
         },
         "test": {
           "term": "Prova i canali",
@@ -1130,7 +1130,7 @@
         },
         "watchdog": {
           "term": "Watchdog esterno",
-          "text": "Se Home Assistant si ferma, i ping si fermano e il servizio che hai scelto dà l'allarme. Foyer segnala anche quando non lo raggiunge."
+          "text": "Se Home Assistant si ferma, i ping si fermano e il servizio che hai scelto dà l'allarme. Foyer segnala anche quando non lo raggiunge. Una volta salvato, il suo URL non viene più mostrato."
         },
         "payload": {
           "term": "Payload del ping",
@@ -1788,7 +1788,9 @@
     "tokens_rejected": "Token di tastierino rifiutati",
     "access_recovered": "Accesso recuperato da un amministratore",
     "device_unlocked": "Dispositivo sbloccato con un codice",
-    "auto_outcome": "Esito della regola automatica comunicato"
+    "auto_outcome": "Esito della regola automatica comunicato",
+    "config_new_webhook": "Indirizzo del webhook di presa d'atto generato",
+    "config_forget_webhook": "Webhook di presa d'atto disattivato"
   },
   "log": {
     "filters": "Filtri",
@@ -2551,10 +2553,19 @@
     "webhook_enable": "Accetta una presa d'atto da un webhook",
     "webhook_warning": "Questo URL ferma un allarme e nulla lo autentica.",
     "webhook_warning_hint": "I webhook di Home Assistant sono aperti a chi ne conosce l'indirizzo: chiunque lo abbia, o lo intercetti, può fermare l'escalation mentre sta andando dal vicino. Attivalo solo se serve a un provider vocale e non darlo a nient'altro.",
-    "webhook_hint": "Il provider vocale fa una POST su questo percorso quando il tasto viene premuto. Disattivandolo l'indirizzo viene dimenticato: riattivandolo ne viene dato uno nuovo.",
+    "webhook_hint": "Il provider vocale fa una POST sull'indirizzo del webhook quando il tasto viene premuto: dallo al provider e a nient'altro. Disattivando il webhook l'indirizzo viene dimenticato; riattivandolo ne viene dato uno nuovo.",
     "no_quiet_hours": "Sempre raggiungibile",
     "actionable_entity": "Questa è un'entità notify: porta un messaggio e un titolo e nient'altro, quindi al telefono non arrivano né il pulsante, né il destinatario, né i dati aggiuntivi. Usa il servizio notify che ci sta dietro se da questo canale si deve poter prendere atto.",
-    "step_offset": "+{n} s"
+    "step_offset": "+{n} s",
+    "webhook_once": "L'indirizzo, mostrato questa sola volta",
+    "webhook_once_hint": "Copialo adesso nel provider vocale. Foyer non può mostrarlo di nuovo; se va perso, generane uno nuovo.",
+    "webhook_path_hint": "Home Assistant non conosce un indirizzo esterno, quindi questo è solo il percorso: mettici davanti l'indirizzo con cui il tuo Home Assistant si raggiunge da internet.",
+    "webhook_exists": "Il webhook è attivo. Il suo indirizzo non può essere mostrato di nuovo: uno nuovo lo sostituisce subito.",
+    "webhook_regenerate": "Genera un nuovo indirizzo",
+    "webhook_confirm": "L'indirizzo che ha il provider vocale smette subito di funzionare, e dovrai dargli quello nuovo.",
+    "webhook_copy": "Copia",
+    "webhook_copied": "Copiato",
+    "webhook_copy_failed": "Questo browser non l'ha copiato: seleziona l'indirizzo e copialo a mano."
   },
   "rules": {
     "title": "Regole automatiche",
@@ -2735,7 +2746,9 @@
     "diagnostics_open": "Apri l'integrazione",
     "diagnostics_where": "Il pulsante di download è quello di Home Assistant, sulla pagina dell'integrazione, ed è riservato agli amministratori.",
     "no_zones": "Nessuna zona",
-    "last_result": "Ultimo esito"
+    "last_result": "Ultimo esito",
+    "url_set_placeholder": "Impostato — scrivi un nuovo URL per sostituirlo",
+    "url_set_hint": "Un URL è salvato. Foyer non lo mostra più, perché chi lo possiede può tenere il controllo verde per sempre; lascia vuoto per tenerlo."
   },
   "images": {
     "zone": "Le telecamere delle zone che hanno dato l'allarme",

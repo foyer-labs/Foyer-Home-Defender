@@ -386,7 +386,9 @@ breaks, the radio goes quiet, or Home Assistant dies.
   dies the pings stop and that service raises the alarm, which is the only
   answer to a dead system being unable to report its own death. The heartbeat
   **carries nothing**: a ping saying "armed, nobody home" would tell a third
-  party exactly when to come.
+  party exactly when to come. And the URL is kept as a credential — whoever
+  holds it can keep the check green for ever — so once saved it is never
+  shown again: a new one is typed over it.
 - **Radio interference**, *suspected* and never claimed. Many zones on one
   radio going quiet within seconds is its signature — and also the signature
   of a coordinator crash, a firmware update, a channel change and a power cut
@@ -692,7 +694,9 @@ during a call. Home Assistant webhooks are open to whoever holds the address,
 so anybody who has it — or intercepts it — can acknowledge an alarm in
 progress, which stops the escalation on its way to the next person. It cannot
 arm, disarm, read the log or change anything. It does not exist until you
-switch it on, the id is generated and random, and switching it off forgets it.
+switch it on, the id is generated and random, the panel shows its address
+once — when it is generated — and switching it off forgets it; to see it
+again, you generate a new one.
 [The details](docs/notification-channels.md#twilio-voice-call).
 
 **And it is not a fire alarm system.** The technical channel is genuinely

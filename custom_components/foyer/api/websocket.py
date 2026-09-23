@@ -16,6 +16,7 @@ import uuid
 from homeassistant.components import webhook, websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.network import NoURLAvailableError
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 import voluptuous as vol
@@ -312,7 +313,8 @@ def _me(
 
 
 def _public_config(config) -> dict[str, Any]:
-    """The configuration as the panel may see it: no hashes, ever (§8.1).
+    """The configuration as the panel may see it: no hashes and no
+    credentials, ever (§8.1, decision 128).
 
     Built where every other caller builds it (api/backup), so what the panel
     is shown and what a backup contains can never drift apart.
@@ -833,11 +835,16 @@ async def ws_config(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """The whole configuration, minus every hash in it (§8.1).
+    """The whole configuration, minus every hash and every credential in it
+    (§8.1, decision 128).
 
     Reading needs the permission but no code: §8.2 asks for a code to change
     the configuration, and a panel that demanded one to open a page would
     teach the household to keep the code on a sticky note by the tablet.
+    That is exactly why the webhook's address and the watchdog URL are not
+    in it: the permission alone, with nobody asked for a code, would be
+    enough to copy the URL that stops an alarm or the one that keeps a dead
+    house looking alive. It says whether each is set, never what it is.
     """
     if (system := _system(hass, connection, msg["id"])) is None:
         return
@@ -1092,6 +1099,11 @@ async def ws_ack_webhook(
     "foyer". Switching it off forgets the id, so switching it on again hands
     out a new one rather than reviving a URL somebody may still hold.
 
+    Switching it on always mints a new id, so it is also how a lost address
+    is replaced: the answer to it is the one place the address is ever
+    shown, as the keypad token's is (decisions 128, 129). Nothing reads it
+    back afterwards; to see it again, generate a new one.
+
     An ordinary configuration edit, with the permission and the code §8.2
     asks for — and the panel says, beside the switch, what the URL can do.
     """
@@ -1119,9 +1131,39 @@ async def ws_ack_webhook(
         settings_to_dict(system.config.settings),
         webhook_id=webhook_id,
     )
-    await _apply(
-        hass, connection, msg["id"], system, result, operation="save", kind="settings"
+    me = system.config.user_of_ha(connection.user.id)
+    answer = await async_write(
+        hass,
+        system,
+        result,
+        operation="new_webhook" if webhook_id else "forget_webhook",
+        kind="settings",
+        channel=CHANNEL_HA_UI,
+        user_id=me.id if me else connection.user.id,
+        user_name=me.name if me else connection.user.name,
     )
+    if answer.get("success") and webhook_id:
+        answer = {**answer, **_webhook_address(hass, webhook_id)}
+    connection.send_result(msg["id"], answer)
+
+
+def _webhook_address(hass: HomeAssistant, webhook_id: str) -> dict[str, Any]:
+    """Where the voice provider has to post, as something it can be given.
+
+    The path always; the full URL too when Home Assistant knows its own
+    external address (decision 129). Never the internal one: a voice
+    provider calls from the internet, and an address on the household's
+    network pasted into it would acknowledge nothing the night it was
+    needed. With no external address the panel shows the path and says to
+    put the household's own address in front of it.
+    """
+    try:
+        url: str | None = webhook.async_generate_url(
+            hass, webhook_id, allow_internal=False, prefer_external=True
+        )
+    except NoURLAvailableError:
+        url = None
+    return {"path": webhook.async_generate_path(webhook_id), "url": url}
 
 
 @websocket_api.websocket_command(
@@ -1261,6 +1303,10 @@ async def ws_health_save(
     Configuration, so ``edit_config`` and its code policy — the page itself
     is open to anyone who may read the log, and changing the watchdog's URL
     or which entity is the mains is not reading.
+
+    The watchdog URL is written and never read back (§12.3, decision 130):
+    nothing returns it, so a block without one — the panel's, unless
+    somebody typed a new URL — keeps the one stored.
     """
     if (system := _system(hass, connection, msg["id"])) is None:
         return

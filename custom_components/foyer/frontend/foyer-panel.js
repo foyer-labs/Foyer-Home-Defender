@@ -6776,7 +6776,21 @@ function sn(e, t) {
 customElements.get("foyer-page-test") || customElements.define("foyer-page-test", on);
 //#endregion
 //#region src/panel/pages/contacts.ts
-var cn = {
+async function cn(e, t) {
+	try {
+		if (window.isSecureContext && navigator.clipboard) return await navigator.clipboard.writeText(t), !0;
+	} catch {}
+	let n = document.createElement("textarea");
+	n.value = t, n.setAttribute("readonly", ""), n.style.position = "fixed", n.style.opacity = "0", e.appendChild(n);
+	try {
+		return n.select(), document.execCommand("copy");
+	} catch {
+		return !1;
+	} finally {
+		n.remove();
+	}
+}
+var ln = {
 	name: "",
 	channels: [],
 	quiet_start: null,
@@ -6784,20 +6798,20 @@ var cn = {
 	quiet_min_severity: "alarm",
 	linked_user_id: null,
 	enabled: !0
-}, ln = {
+}, un = {
 	kind: "push",
 	service: "",
 	target: "",
 	data: {},
 	actionable: !1,
 	enabled: !0
-}, un = [
+}, dn = [
 	"push",
 	"disarm",
 	"dtmf",
 	"service"
 ];
-function dn(e) {
+function fn(e) {
 	let t = /* @__PURE__ */ new Map();
 	for (let n of e) {
 		let e = n.actions.filter((e) => e.enabled && e.escalation_offset !== null).sort((e, t) => (e.escalation_offset ?? 0) - (t.escalation_offset ?? 0)).map((e, t) => ({
@@ -6809,16 +6823,16 @@ function dn(e) {
 	}
 	return t;
 }
-function fn(e) {
+function pn(e) {
 	let t = e.params.contacts;
 	return Array.isArray(t) ? t.map((e) => typeof e == "string" ? {
 		contact_id: e,
 		channel_id: null
 	} : e).filter((e) => e && e.contact_id) : [];
 }
-var pn = class extends j {
+var mn = class extends j {
 	constructor(...e) {
-		super(...e), this._problems = [], this._busy = !1, this._tested = {}, this._webhookProblems = [], this._health = {};
+		super(...e), this._problems = [], this._busy = !1, this._tested = {}, this._webhookProblems = [], this._confirmWebhook = !1, this._health = {};
 	}
 	static {
 		this.properties = {
@@ -6828,11 +6842,20 @@ var pn = class extends j {
 			_busy: { state: !0 },
 			_tested: { state: !0 },
 			_webhookProblems: { state: !0 },
+			_webhookShown: { state: !0 },
+			_confirmWebhook: { state: !0 },
+			_copied: { state: !0 },
 			_health: { state: !0 }
 		};
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._loadHealth();
+	}
+	disconnectedCallback() {
+		super.disconnectedCallback(), this._forgetWebhook();
+	}
+	_forgetWebhook() {
+		this._webhookShown = void 0, this._confirmWebhook = !1, this._copied = void 0;
 	}
 	async _loadHealth() {
 		if (this.ctx) try {
@@ -6844,8 +6867,8 @@ var pn = class extends j {
 	}
 	_edit(e) {
 		this._busy || (this._draft = e ? structuredClone(e) : {
-			...structuredClone(cn),
-			channels: [structuredClone(ln)]
+			...structuredClone(ln),
+			channels: [structuredClone(un)]
 		}, this._problems = [], L(this));
 	}
 	_set(e, t) {
@@ -6885,7 +6908,7 @@ var pn = class extends j {
 	_addChannel() {
 		this._draft &&= {
 			...this._draft,
-			channels: [...this._draft.channels, structuredClone(ln)]
+			channels: [...this._draft.channels, structuredClone(un)]
 		};
 	}
 	_removeChannel(e) {
@@ -6949,14 +6972,24 @@ var pn = class extends j {
 	}
 	async _toggleWebhook(e) {
 		if (this.ctx) {
-			this._busy = !0, this._webhookProblems = [];
+			this._busy = !0, this._webhookProblems = [], this._forgetWebhook();
 			try {
 				let t = await this.ctx.setAckWebhook(e);
-				t.success || (this._webhookProblems = t.problems);
+				t.success ? e && t.url ? this._webhookShown = {
+					address: t.url,
+					path: !1
+				} : e && t.path && (this._webhookShown = {
+					address: t.path,
+					path: !0
+				}) : this._webhookProblems = t.problems;
 			} finally {
 				this._busy = !1, this.requestUpdate();
 			}
 		}
+	}
+	async _copyWebhook() {
+		let e = this._webhookShown?.address;
+		e && (this._copied = await cn(this.renderRoot, e));
 	}
 	render() {
 		let e = this.ctx;
@@ -7218,7 +7251,7 @@ var pn = class extends j {
     `;
 	}
 	_renderPolicies(e) {
-		let t = this.ctx, n = t.config?.contacts ?? [], r = dn(t.config?.profiles ?? []);
+		let t = this.ctx, n = t.config?.contacts ?? [], r = fn(t.config?.profiles ?? []);
 		return C`
       <div class="card">
         <div class="card-hd">
@@ -7237,7 +7270,7 @@ var pn = class extends j {
                         >
                         <div>
                           <div class="who">
-                            ${fn(t).map((t) => {
+                            ${pn(t).map((t) => {
 			let r = n.find((e) => e.id === t.contact_id), i = r?.channels.find((e) => e.id === t.channel_id);
 			return i ? `${r?.name} · ${N(e, `channel_kind.${i.kind}`)}` : r?.name ?? N(e, "problem.unknown_contact");
 		}).join(" · ") || String(t.params.service ?? "")}
@@ -7256,7 +7289,7 @@ var pn = class extends j {
     `;
 	}
 	_renderAcknowledgement(e) {
-		let t = this.ctx.config?.settings.ack_webhook_id ?? null;
+		let t = this.ctx.config?.settings.ack_webhook_enabled ?? !1, n = this._webhookShown;
 		return C`
       <div class="card">
         <div class="card-hd">
@@ -7264,7 +7297,7 @@ var pn = class extends j {
         </div>
         <div class="card-bd">
           <p class="note">${N(e, "contacts.ack_stops")}</p>
-          ${un.map((t) => C`<div class="path">
+          ${dn.map((t) => C`<div class="path">
               <div class="who">${N(e, `contacts.ack_${t}`)}</div>
               <div class="mono">${N(e, `contacts.ack_${t}_how`)}</div>
             </div>`)}
@@ -7276,7 +7309,7 @@ var pn = class extends j {
           <label class="check">
             <input
               type="checkbox"
-              .checked=${U(t !== null)}
+              .checked=${U(t)}
               ?disabled=${this._busy}
               @change=${(e) => this._toggleWebhook(e.target.checked)}
             />
@@ -7285,8 +7318,40 @@ var pn = class extends j {
           ${this._webhookProblems.length ? C`<ul class="problems">
                 ${this._webhookProblems.map((t) => C`<li>${z(e, t)}</li>`)}
               </ul>` : T}
-          ${t ? C`<p class="sample">/api/webhook/${t}</p>
-                <p class="note">${N(e, "contacts.webhook_hint")}</p>` : T}
+          ${n ? C`<div class="once" role="status">
+                <span class="lbl">${N(e, "contacts.webhook_once")}</span>
+                <code class="secret">${n.address}</code>
+                <div class="copy">
+                  <button class="btn" @click=${() => this._copyWebhook()}>
+                    ${N(e, "contacts.webhook_copy")}
+                  </button>
+                  ${this._copied === void 0 ? T : C`<span class="hint">
+                        ${N(e, this._copied ? "contacts.webhook_copied" : "contacts.webhook_copy_failed")}
+                      </span>`}
+                </div>
+                ${n.path ? C`<span class="hint">${N(e, "contacts.webhook_path_hint")}</span>` : T}
+                <span class="hint">${N(e, "contacts.webhook_once_hint")}</span>
+              </div>` : t ? C`<p class="hint">${N(e, "contacts.webhook_exists")}</p>` : T}
+          ${t ? C`<p class="note">${N(e, "contacts.webhook_hint")}</p>
+                <div class="actions">
+                  ${this._confirmWebhook ? C`<span class="hint">${N(e, "contacts.webhook_confirm")}</span>
+                        <button
+                          class="btn danger"
+                          ?disabled=${this._busy}
+                          @click=${() => this._toggleWebhook(!0)}
+                        >
+                          ${N(e, "contacts.webhook_regenerate")}
+                        </button>
+                        <button class="btn" @click=${() => this._confirmWebhook = !1}>
+                          ${N(e, "common.cancel")}
+                        </button>` : C`<button
+                        class="btn"
+                        ?disabled=${this._busy}
+                        @click=${() => this._confirmWebhook = !0}
+                      >
+                        ${N(e, "contacts.webhook_regenerate")}
+                      </button>`}
+                </div>` : T}
         </div>
       </div>
     `;
@@ -7365,14 +7430,32 @@ var pn = class extends j {
         font-size: 12px;
         color: var(--secondary-text-color);
       }
-      .sample {
-        margin: 8px 0 0;
-        padding: 10px 12px;
+      /* The address, the one time it is shown: set apart from the page so
+         it reads as something to copy now rather than something that stays. */
+      .once {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 16px;
+        margin: 12px 0;
         border-radius: 8px;
+        border: 1px solid var(--primary-color);
         background: var(--secondary-background-color);
+      }
+      .once .lbl {
+        font-weight: 500;
+      }
+      .secret {
         font-family: var(--code-font-family, monospace);
-        font-size: 12px;
-        overflow-x: auto;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+        user-select: all;
+      }
+      .copy {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
       }
       /* The sentence that has to stop somebody: a Home Assistant webhook is
          not authenticated, and this one stops an alarm (INV-6). */
@@ -7390,10 +7473,10 @@ var pn = class extends j {
 		];
 	}
 };
-customElements.define("foyer-page-contacts", pn);
+customElements.define("foyer-page-contacts", mn);
 //#endregion
 //#region src/panel/pages/rules.ts
-var mn = [
+var hn = [
 	0,
 	1,
 	2,
@@ -7408,7 +7491,7 @@ function J(e, t) {
 		timeStyle: "short"
 	}) : "";
 }
-function hn() {
+function gn() {
 	return {
 		name: "",
 		trigger: {
@@ -7438,7 +7521,7 @@ function hn() {
 		exclude_open_zones: !1
 	};
 }
-var gn = class extends j {
+var _n = class extends j {
 	constructor(...e) {
 		super(...e), this._visitor = {
 			name: "",
@@ -7461,7 +7544,7 @@ var gn = class extends j {
 		return this.ctx?.status?.auto;
 	}
 	_edit(e) {
-		this._busy || (this._draft = e ? structuredClone(e) : hn(), this._problems = [], L(this));
+		this._busy || (this._draft = e ? structuredClone(e) : gn(), this._problems = [], L(this));
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -7940,7 +8023,7 @@ var gn = class extends j {
 	}
 	_renderDays(e, t, n) {
 		return C`<div class="chips days">
-      ${mn.map((r) => C`<label class="chip">
+      ${hn.map((r) => C`<label class="chip">
           <input
             type="checkbox"
             .checked=${U(t.includes(r))}
@@ -8210,10 +8293,10 @@ var gn = class extends j {
 		];
 	}
 };
-customElements.get("foyer-page-rules") || customElements.define("foyer-page-rules", gn);
+customElements.get("foyer-page-rules") || customElements.define("foyer-page-rules", _n);
 //#endregion
 //#region src/panel/pages/log.ts
-var Y = 50, _n = class extends j {
+var Y = 50, vn = class extends j {
 	constructor(...e) {
 		super(...e), this._rows = [], this._total = 0, this._offset = 0, this._filters = {}, this._busy = !1, this._confirmClear = !1, this._loaded = !1, this._person = "", this._keepPseudonym = !1, this._confirmErase = !1;
 	}
@@ -8606,14 +8689,14 @@ var Y = 50, _n = class extends j {
  @keydown=${B} aria-selected=${a ? "true" : "false"} @click=${() => this._open = a ? void 0 : t.id}>
         <td class="mono">${new Date(t.ts).toLocaleString(n.hass.language, I(n.hass))}</td>
         <td>
-          <span class="state ${bn(t.severity)}">
-            ${vn(e, t.event_type)}
+          <span class="state ${xn(t.severity)}">
+            ${yn(e, t.event_type)}
           </span>
         </td>
         <td><span class="tag">${N(e, `category.${t.category}`)}</span></td>
         <td>${o}</td>
         <td>
-          ${t.user_name ?? (t.channel ? yn(e, t.channel) : "")}
+          ${t.user_name ?? (t.channel ? bn(e, t.channel) : "")}
           ${t.detail?.attributed === "claimed" ? C`<span class="claimed">${N(e, "log.claimed")}</span>` : T}
         </td>
         <td class="detail">${this._summary(e, t)}</td>
@@ -8635,7 +8718,7 @@ var Y = 50, _n = class extends j {
                 ${t.outcome ? C`<dt>${N(e, "log.outcome")}</dt>
                       <dd>${N(e, `outcome.${t.outcome}`)}</dd>` : T}
                 ${t.channel ? C`<dt>${N(e, "log.channel")}</dt>
-                      <dd>${yn(e, t.channel)}</dd>` : T}
+                      <dd>${bn(e, t.channel)}</dd>` : T}
                 ${this._changeLines(e, t).map((t, n) => C`<dt>${n ? "" : N(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
                 ${this._plainDetail(t).map(([t, n]) => C`<dt>${this._detailLabel(e, t)}</dt>
@@ -8776,23 +8859,23 @@ var Y = 50, _n = class extends j {
 		];
 	}
 };
-function vn(e, t) {
+function yn(e, t) {
 	let n = N(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
 	let r = N(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-function yn(e, t) {
+function bn(e, t) {
 	let n = N(e, `log_channel.${t}`);
 	return n.startsWith("log_channel.") ? t : n;
 }
-function bn(e) {
+function xn(e) {
 	return e === "alarm" ? "triggered" : e === "warning" ? "arming" : "disarmed";
 }
-customElements.get("foyer-page-log") || customElements.define("foyer-page-log", _n);
+customElements.get("foyer-page-log") || customElements.define("foyer-page-log", vn);
 //#endregion
 //#region src/panel/pages/settings.ts
-var xn = 30, Sn = {
+var Sn = 30, Cn = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -8801,7 +8884,7 @@ var xn = 30, Sn = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, Cn = class extends j {
+}, wn = class extends j {
 	constructor(...e) {
 		super(...e), this._problems = [], this._backupProblems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1, this._languages = [], this._alarmoDone = !1;
 	}
@@ -8825,7 +8908,7 @@ var xn = 30, Sn = {
 		super.connectedCallback(), this.ctx?.hass.callWS({ type: "foyer/languages" }).then((e) => this._languages = e.languages ?? []).catch(() => this._languages = []);
 	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Sn);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? Cn);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -9030,7 +9113,7 @@ var xn = 30, Sn = {
                   <button
                     class="btn danger"
                     @click=${() => {
-			this._confirmPseudonymise = !1, o({ pseudonymise_after: xn });
+			this._confirmPseudonymise = !1, o({ pseudonymise_after: Sn });
 		}}
                   >
                     ${N(e, "settings.pseudonymise_yes")}
@@ -9527,13 +9610,13 @@ var xn = 30, Sn = {
     `];
 	}
 };
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", Cn);
+customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", wn);
 //#endregion
 //#region src/panel/pages/health.ts
-function wn(e, t) {
+function Tn(e, t) {
 	return t ? new Date(t).toLocaleString(e.hass.language) : "—";
 }
-var Tn = class extends j {
+var En = class extends j {
 	constructor(...e) {
 		super(...e), this._candidates = [], this._problems = [], this._busy = !1, this._error = "";
 	}
@@ -9695,7 +9778,7 @@ var Tn = class extends j {
                         ${t.fault ? N(e, `health.fault_${t.fault}`) : t.checked ? N(e, "health.healthy") : N(e, "health.untested")}
                       </span>
                     </td>
-                    <td>${wn(this.ctx, t.since ?? t.last_ok)}</td>
+                    <td>${Tn(this.ctx, t.since ?? t.last_ok)}</td>
                   </tr>`)}
               </tbody>
             </table>
@@ -9839,10 +9922,12 @@ var Tn = class extends j {
             <label class="field wide">
               <span class="lbl">${N(e, "field.url")}</span>
               <input
-                .value=${t.watchdog.url}
-                placeholder=${N(e, "health.url_placeholder")}
+                autocomplete="off"
+                .value=${U(t.watchdog.url ?? "")}
+                placeholder=${N(e, t.watchdog.url_set ? "health.url_set_placeholder" : "health.url_placeholder")}
                 @input=${(e) => this._setWatchdog("url", e.target.value)}
               />
+              ${t.watchdog.url_set ? C`<span class="hint">${N(e, "health.url_set_hint")}</span>` : T}
               <span class="hint">${N(e, "health.url_hint")}</span>
             </label>
             <label class="field">
@@ -10072,10 +10157,10 @@ var Tn = class extends j {
 		];
 	}
 };
-customElements.get("foyer-page-health") || customElements.define("foyer-page-health", Tn);
+customElements.get("foyer-page-health") || customElements.define("foyer-page-health", En);
 //#endregion
 //#region src/panel/pages/api.ts
-var En = class extends j {
+var Dn = class extends j {
 	constructor(...e) {
 		super(...e), this._state = "loading", this._attempt = 0;
 	}
@@ -10154,7 +10239,7 @@ var En = class extends j {
     `];
 	}
 };
-customElements.define("foyer-page-api", En);
+customElements.define("foyer-page-api", Dn);
 //#endregion
 //#region src/panel/wizard.ts
 var X = [
@@ -10163,7 +10248,7 @@ var X = [
 	"scenario",
 	"user",
 	"test"
-], Z = 3, Dn = class extends j {
+], Z = 3, On = class extends j {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._userRepeat = "", this._zoneType = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -10774,15 +10859,15 @@ var X = [
     `];
 	}
 };
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", Dn);
+customElements.get("foyer-wizard") || customElements.define("foyer-wizard", On);
 //#endregion
 //#region src/panel/foyer-panel.ts
-var On = [
+var kn = [
 	"overview",
 	"log",
 	"test",
 	"health"
-], kn = [
+], An = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -10793,7 +10878,7 @@ var On = [
 	"devices",
 	"rules",
 	"settings"
-], An = {
+], jn = {
 	overview: [
 		"area",
 		"master",
@@ -10921,15 +11006,15 @@ var On = [
 		"try",
 		"internal"
 	]
-}, jn = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", Mn = {
+}, Mn = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", Nn = {
 	devices: "keypads.md",
 	contacts: "notification-channels.md",
 	rules: "automation-rules.md",
 	test: "simulator.md",
 	log: "privacy.md",
 	health: "system-health.md"
-}, Nn = 12e4;
-function Pn(e) {
+}, Pn = 12e4;
+function Fn(e) {
 	let t = {
 		...e,
 		reason: "cancelled"
@@ -10947,7 +11032,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var Fn = class extends j {
+var In = class extends j {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._focusCode = !1, this._offset = 0, this._retryAt = 0;
 	}
@@ -10999,7 +11084,7 @@ var Fn = class extends j {
 		this._asking = void 0, this.requestUpdate(), t?.resolve(e);
 	}
 	_rememberCode(e) {
-		this._code = e, window.clearTimeout(this._codeTimer), this._codeTimer = window.setTimeout(() => this._forgetCode(), Nn);
+		this._code = e, window.clearTimeout(this._codeTimer), this._codeTimer = window.setTimeout(() => this._forgetCode(), Pn);
 	}
 	_forgetCode() {
 		this._code = void 0, window.clearTimeout(this._codeTimer), this._codeTimer = void 0;
@@ -11009,7 +11094,7 @@ var Fn = class extends j {
 		for (let o = 0; o < 3 && !(a.success || a.reason !== "code_required" && a.reason !== "bad_code"); o++) {
 			a.reason === "bad_code" && this._forgetCode(), i = a.code_required_by ?? i;
 			let o = await this._askForCode(r && a.reason === "bad_code", t, i);
-			if (o === void 0) return Pn(a);
+			if (o === void 0) return Fn(a);
 			n = o, r = !0, a = await e(n);
 		}
 		return a.success && n && this.isConnected && this._rememberCode(n), (a.reason === "bad_code" || a.reason === "locked_out") && this._forgetCode(), a;
@@ -11076,10 +11161,16 @@ var Fn = class extends j {
 				chime: e
 			}),
 			health: () => e.callWS({ type: "foyer/health" }),
-			saveHealth: (e) => this._edit("health", {
-				type: "foyer/config/health",
-				health: e
-			}),
+			saveHealth: (e) => {
+				let t = { ...e.watchdog };
+				return delete t.url_set, e.watchdog.url?.trim() || delete t.url, this._edit("health", {
+					type: "foyer/config/health",
+					health: {
+						...e,
+						watchdog: t
+					}
+				});
+			},
 			radioCandidates: async () => (await e.callWS({ type: "foyer/health/radios" })).radios,
 			setAckWebhook: (e) => this._edit("settings", {
 				type: "foyer/ack_webhook",
@@ -11111,13 +11202,17 @@ var Fn = class extends j {
 				suspension_id: t,
 				...Q(n)
 			})),
-			saveSettings: async (e) => (await this._loadConfig().catch(() => void 0), this._edit("settings", {
-				type: "foyer/config/settings",
-				settings: {
+			saveSettings: async (e) => {
+				await this._loadConfig().catch(() => void 0);
+				let t = {
 					...this._config?.settings,
 					...e
-				}
-			})),
+				};
+				return delete t.ack_webhook_enabled, this._edit("settings", {
+					type: "foyer/config/settings",
+					settings: t
+				});
+			},
 			queryLog: (t) => e.callWS({
 				type: "foyer/log/query",
 				...$(t)
@@ -11380,11 +11475,11 @@ var Fn = class extends j {
     `;
 		return this._canConfigure ? C`
       <nav class="tabs" role="tablist">
-        ${On.map(t)}
+        ${kn.map(t)}
         <span class="tab-group" role="presentation">${N(e, "nav.group_setup")}</span>
-        ${kn.map(t)} ${this._isAdmin ? t("api") : T}
+        ${An.map(t)} ${this._isAdmin ? t("api") : T}
       </nav>
-    ` : C`<nav class="tabs" role="tablist">${On.map(t)}</nav>`;
+    ` : C`<nav class="tabs" role="tablist">${kn.map(t)}</nav>`;
 	}
 	_renderBody(e) {
 		if (this._error) return C`<p class="error">${this._error}</p>`;
@@ -11436,14 +11531,14 @@ var Fn = class extends j {
         ${r ? C`<div class="help-body">
               <p>${N(e, `${n}.intro`)}</p>
               <dl>
-                ${An[t].map((t) => C`
+                ${jn[t].map((t) => C`
                     <dt>${N(e, `${n}.items.${t}.term`)}</dt>
                     <dd>${N(e, `${n}.items.${t}.text`)}</dd>
                   `)}
               </dl>
-              ${Mn[t] ? C`<a
+              ${Nn[t] ? C`<a
                     class="learn-more"
-                    href=${`${jn}/${Mn[t]}`}
+                    href=${`${Mn}/${Nn[t]}`}
                     target="_blank"
                     rel="noreferrer noopener"
                     >${N(e, "help.learn_more")}</a
@@ -11726,5 +11821,5 @@ var Fn = class extends j {
 		];
 	}
 };
-customElements.get("foyer-panel") || customElements.define("foyer-panel", Fn);
+customElements.get("foyer-panel") || customElements.define("foyer-panel", In);
 //#endregion

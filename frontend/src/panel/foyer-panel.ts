@@ -485,8 +485,18 @@ class FoyerPanel extends LitElement {
         ),
       saveChime: (chime) => this._edit("chime", { type: "foyer/config/chime", chime }),
       health: () => hass.callWS({ type: "foyer/health" }),
-      saveHealth: (health) =>
-        this._edit("health", { type: "foyer/config/health", health }),
+      // The watchdog URL is written and never read back (decision 130):
+      // `url_set` is the backend's to report, and a URL goes only when
+      // somebody typed a new one — absent, the backend keeps the stored one.
+      saveHealth: (health) => {
+        const watchdog: Record<string, unknown> = { ...health.watchdog };
+        delete watchdog.url_set;
+        if (!health.watchdog.url?.trim()) delete watchdog.url;
+        return this._edit("health", {
+          type: "foyer/config/health",
+          health: { ...health, watchdog },
+        });
+      },
       radioCandidates: async () =>
         (
           await hass.callWS<{ radios: RadioCandidate[] }>({
@@ -495,7 +505,8 @@ class FoyerPanel extends LitElement {
         ).radios,
       // The URL itself is never sent from here: the backend generates it,
       // because what protects an unauthenticated webhook is that nobody can
-      // guess it (§7.2, part 1 decision 6).
+      // guess it (§7.2, part 1 decision 6). The answer carries the address,
+      // and is handed to the page as it came: it is the only time it is shown.
       setAckWebhook: (enabled) =>
         this._edit("settings", { type: "foyer/ack_webhook", enabled }),
       // Never sends a token, only asks for one: the backend generates it,
@@ -543,10 +554,11 @@ class FoyerPanel extends LitElement {
       // (third review).
       saveSettings: async (settings) => {
         await this._loadConfig().catch(() => undefined);
-        return this._edit("settings", {
-          type: "foyer/config/settings",
-          settings: { ...this._config?.settings, ...settings },
-        });
+        const merged: Record<string, unknown> = { ...this._config?.settings, ...settings };
+        // Whether the webhook is on is the backend's to say (decision 128),
+        // and only foyer/ack_webhook changes it: not echoed back.
+        delete merged.ack_webhook_enabled;
+        return this._edit("settings", { type: "foyer/config/settings", settings: merged });
       },
       queryLog: (query) =>
         hass.callWS({ type: "foyer/log/query", ...prune(query) }),

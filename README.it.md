@@ -428,7 +428,10 @@ canale di notifica, la radio ammutolisce, oppure Home Assistant muore.
   Assistant muore i ping si fermano e quel servizio dà l'allarme, che è
   l'unica risposta al fatto che un sistema morto non può annunciare la propria
   morte. Il battito **non porta niente**: un ping che dicesse «inserito, non
-  c'è nessuno» racconterebbe a terzi esattamente quando venire.
+  c'è nessuno» racconterebbe a terzi esattamente quando venire. E l'URL è
+  trattato come una credenziale — chi lo possiede può tenere il controllo
+  verde per sempre — quindi, una volta salvato, non viene più mostrato: se ne
+  scrive uno nuovo sopra.
 - **Interferenza radio**, *sospetta* e mai dichiarata. Molte zone di una stessa
   radio che ammutoliscono in pochi secondi sono la sua firma — e anche quella
   di un crash del coordinatore, di un aggiornamento firmware, di un cambio di
@@ -743,8 +746,9 @@ chiamata. I webhook di Home Assistant sono aperti a chi ne conosce
 l'indirizzo: chiunque lo abbia, o lo intercetti, può prendere atto di un
 allarme in corso, cioè fermare l'escalation mentre sta andando dalla persona
 successiva. Non può inserire, disinserire, leggere il registro o cambiare
-niente. Non esiste finché non lo accendi, l'id è generato a caso, e
-spegnendolo viene dimenticato.
+niente. Non esiste finché non lo accendi, l'id è generato a caso, il pannello
+ne mostra l'indirizzo una sola volta — quando viene generato — e spegnendolo
+viene dimenticato; per rivederlo se ne genera uno nuovo.
 [I dettagli](docs/notification-channels.md#twilio-voice-call) (in inglese).
 
 **E non è un sistema antincendio.** Il canale tecnico è davvero utile — è

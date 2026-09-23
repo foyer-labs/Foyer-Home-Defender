@@ -73,15 +73,25 @@ def public_user(user: User) -> dict[str, Any]:
 
 
 def public_config(config: FoyerConfig) -> dict[str, Any]:
-    """The configuration as the panel may see it: no hashes, ever (§8.1).
+    """The configuration as the panel may see it: no hashes and no
+    credentials, ever (§8.1, §7.2, §12.3, decision 128).
 
     A keypad's token hash goes the same way as a code's (§9.2.1): the panel
-    is told whether one exists, never which.
+    is told whether one exists, never which. So do the acknowledgement
+    webhook and the watchdog URL. Reading this needs `edit_config` and no
+    code, so whoever held it could otherwise copy the address that stops an
+    alarm, or the one that keeps a dead house looking alive; the webhook's
+    address is shown once, in the answer that generates it, and the URL is
+    written and never read back.
     """
     document = config_to_dict(config)
     document["users"] = [public_user(u) for u in config.users]
     for device in document.get("devices", []):
         device["has_token"] = bool(device.pop("token_hash", None))
+    settings = document["settings"]
+    settings["ack_webhook_enabled"] = bool(settings.pop("ack_webhook_id", None))
+    watchdog = document["health"]["watchdog"]
+    watchdog["url_set"] = bool(watchdog.pop("url", ""))
     return document
 
 
@@ -95,13 +105,23 @@ CREDENTIAL_SETTINGS = ("ack_webhook_id",)
 
 
 def _without_credentials(document: dict[str, Any]) -> dict[str, Any]:
+    """The public document in the stored shape a backup has always had.
+
+    `public_config` already replaced both credentials with whether each is
+    set (decision 128). A backup keeps the shape of every file written
+    before that — the keys present, empty — so a file from this version
+    and one from beta.21 read the same, and the flags, which describe this
+    installation rather than configure one, stay out of it.
+    """
     settings = dict(document.get("settings") or {})
+    settings.pop("ack_webhook_enabled", None)
     for key in CREDENTIAL_SETTINGS:
         settings[key] = None
     document["settings"] = settings
     health = dict(document.get("health") or {})
     watchdog = dict(health.get("watchdog") or {})
     if watchdog:
+        watchdog.pop("url_set", None)
         watchdog["url"] = ""
         health["watchdog"] = watchdog
         document["health"] = health

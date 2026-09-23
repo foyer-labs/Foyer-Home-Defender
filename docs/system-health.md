@@ -148,6 +148,17 @@ that the alarm has gone deaf.
 "It has never worked" is reported as a different thing from "it has stopped
 working", because it is almost always a mistyped URL.
 
+### The URL is a credential
+
+Whoever holds a ping URL can keep the check green for ever, which silences the
+one thing that reports Foyer's own death. So once it is saved, Foyer never
+shows it again — not on page 14, not in the configuration any page reads, not
+in a backup or the diagnostics download. Page 14 says only that a URL is set,
+and to change it you type a new one over it. Saving the page with the field
+left empty keeps the one stored, and so does switching the watchdog off:
+switching it back on needs nothing typed again. If the watchdog cannot be
+reached, the error it reports is stored with the URL taken out of it.
+
 ### Two limits, stated so they do not arrive as surprises
 
 - **A watchdog hosted on the same infrastructure dies with it** and protects
@@ -317,10 +328,11 @@ zones, which arm policies, which moments each profile answers, how many
 contacts and of what kind, every threshold, and what is currently wrong.
 
 What it does not contain, by construction: names of people, names of areas and
-zones, codes, code hashes, the watchdog URL, phone numbers, chat ids, message
-text, MQTT topics, and real entity ids. It is built as an allow-list rather
-than a redaction list, so a field added to Foyer in six months cannot walk
-into your issue thread by being forgotten.
+zones, codes, code hashes, the watchdog URL, the acknowledgement webhook's id,
+a keypad's token, phone numbers, chat ids, message text, MQTT topics, and real
+entity ids. It is built as an allow-list rather than a redaction list, so a
+field added to Foyer in six months cannot walk into your issue thread by being
+forgotten.
 
 Entity ids become placeholders — `binary_sensor.zone_3`, `cover.zone_8` —
 numbered from the order of Foyer's own configuration. They are stable across

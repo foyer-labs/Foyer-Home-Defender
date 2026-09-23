@@ -652,10 +652,12 @@ export interface SettingsConfig {
   /** How long a walk test runs without a detection before it ends itself
    * (§5.3, §11.3). Bounded in code: the auto-exit cannot be switched off. */
   walk_test_timeout: number;
-  /** The DTMF acknowledgement webhook's id, or null when it is off (§7.2).
-   * A Home Assistant webhook is not authenticated, so this URL is a way of
-   * stopping an alarm: it exists only while somebody wants it to. */
-  ack_webhook_id: string | null;
+  /** Whether the DTMF acknowledgement webhook is on (§7.2) — never its
+   * address. A Home Assistant webhook is not authenticated, so this URL is a
+   * way of stopping an alarm: it exists only while somebody wants it to, and
+   * its address is shown once, in the answer to foyer/ack_webhook that
+   * generates it (decisions 128, 129). Read only: never sent back. */
+  ack_webhook_enabled: boolean;
   /** Whether an automatic rule may disarm anything at all (§9.4 point 2).
    * Off until somebody turns it on, having read what it costs. */
   allow_auto_disarm: boolean;
@@ -699,7 +701,13 @@ export interface RadioConfig {
 
 export interface WatchdogConfig {
   enabled: boolean;
-  url: string;
+  /** Whether a URL is stored — never the URL itself, which is a credential:
+   * whoever holds a ping URL can keep the check green for ever (§12.3,
+   * decision 130). Read only: never sent back. */
+  url_set: boolean;
+  /** A new URL typed over the stored one. Write only: nothing returns it,
+   * and a save without it, or with it empty, keeps the one stored. */
+  url?: string;
   interval: number;
   timeout: number;
   failures: number;
@@ -741,8 +749,8 @@ export interface HealthStatus {
     enabled: boolean;
     /** Whether a URL is configured — never the URL itself. A healthchecks.io
      * ping URL is the credential, and this payload is open to anyone holding
-     * view_log; the editor reads the real value through foyer/config, which
-     * is edit_config. */
+     * view_log; nothing else returns it either, foyer/config included
+     * (decision 128). */
     url_set: boolean;
     interval: number;
     timeout: number;

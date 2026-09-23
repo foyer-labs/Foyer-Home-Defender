@@ -242,21 +242,26 @@ async def test_the_webhook_does_not_exist_until_somebody_switches_it_on(
     await hass.async_block_till_done()
     webhook_id = _system(hass).config.settings.ack_webhook_id
     assert webhook_id and len(webhook_id) >= 32
-    assert webhook.async_generate_path(webhook_id).endswith(webhook_id)
+    # The answer that generates it is the one place the address is shown
+    # (decision 129).
+    assert result["path"] == webhook.async_generate_path(webhook_id)
+    assert result["path"].endswith(webhook_id)
 
 
 async def test_switching_it_off_forgets_the_url(hass, hass_ws_client, loaded):
     client = await hass_ws_client(hass)
-    await _ws(client, {"type": "foyer/ack_webhook", "enabled": True})
+    first = await _ws(client, {"type": "foyer/ack_webhook", "enabled": True})
     await hass.async_block_till_done()
-    first = _system(hass).config.settings.ack_webhook_id
-    await _ws(client, {"type": "foyer/ack_webhook", "enabled": False})
+    first_id = _system(hass).config.settings.ack_webhook_id
+    off = await _ws(client, {"type": "foyer/ack_webhook", "enabled": False})
     await hass.async_block_till_done()
     assert _system(hass).config.settings.ack_webhook_id is None
-    await _ws(client, {"type": "foyer/ack_webhook", "enabled": True})
+    assert off["success"] and "path" not in off and "url" not in off
+    again = await _ws(client, {"type": "foyer/ack_webhook", "enabled": True})
     await hass.async_block_till_done()
     # A new one, rather than reviving a URL somebody may still hold.
-    assert _system(hass).config.settings.ack_webhook_id != first
+    assert _system(hass).config.settings.ack_webhook_id != first_id
+    assert again["path"] != first["path"]
 
 
 async def test_a_keypress_on_the_webhook_acknowledges(
@@ -436,17 +441,41 @@ async def test_the_webhook_id_cannot_be_chosen_through_the_settings(
     """An id a client could choose would eventually be one somebody could
     guess, and this URL stops an alarm."""
     client = await hass_ws_client(hass)
-    settings = {**_public_settings(hass), "ack_webhook_id": "foyer"}
+    settings = {**await _public_settings(client), "ack_webhook_id": "foyer"}
     result = await _ws(client, {"type": "foyer/config/settings", "settings": settings})
     assert result["success"], result
     await hass.async_block_till_done()
     assert _system(hass).config.settings.ack_webhook_id is None
 
 
-def _public_settings(hass) -> dict:
-    from custom_components.foyer.store.schema import settings_to_dict
+async def test_a_settings_save_leaves_the_webhook_as_it_is(
+    hass, hass_ws_client, loaded
+):
+    """Page 11 saves the whole block merged over what foyer/config says,
+    which carries whether the webhook is on and never its id (decision 128).
+    Neither the flag nor a missing id may switch it off or change it."""
+    client = await hass_ws_client(hass)
+    await _ws(client, {"type": "foyer/ack_webhook", "enabled": True})
+    await hass.async_block_till_done()
+    held = _system(hass).config.settings.ack_webhook_id
+    settings = await _public_settings(client)
+    assert settings["ack_webhook_enabled"] is True
+    for flag in (True, False):
+        result = await _ws(
+            client,
+            {
+                "type": "foyer/config/settings",
+                "settings": {**settings, "ack_webhook_enabled": flag},
+            },
+        )
+        assert result["success"], result
+        await hass.async_block_till_done()
+        assert _system(hass).config.settings.ack_webhook_id == held
 
-    return settings_to_dict(_system(hass).config.settings)
+
+async def _public_settings(client) -> dict:
+    """The settings block as the panel holds it: foyer/config's."""
+    return (await _ws(client, {"type": "foyer/config"}))["config"]["settings"]
 
 
 async def test_a_notify_entity_still_gets_the_title(hass, hass_ws_client, loaded):

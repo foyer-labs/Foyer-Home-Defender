@@ -32,6 +32,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.util import dt as dt_util
+from yarl import URL
 
 from .. import i18n, repairs
 from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
@@ -124,6 +125,37 @@ _QUIET_CATEGORIES = frozenset(
 
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
+
+
+def _without_url(error: str, url: str) -> str:
+    """An error message with the watchdog URL taken out of it (§12.3).
+
+    Not only as it was typed: aiohttp and yarl write it back normalised — a
+    lower-case host, a default port dropped, a path percent-encoded — and
+    some messages carry the path and query alone, which is where a
+    healthchecks.io or Uptime Kuma token lives. The error reaches page 14,
+    the log row and the repair issue, all of them read without the code
+    that setting the URL needed.
+    """
+    forms = {url}
+    try:
+        parsed = URL(url)
+    except (TypeError, ValueError):
+        parsed = None
+    if parsed is not None:
+        forms |= {str(parsed), parsed.human_repr()}
+        # The path alone only when it can carry something: "/" would take
+        # every slash out of the message and hide nothing.
+        forms |= {
+            tail
+            for tail in (parsed.raw_path_qs, parsed.path_qs)
+            if tail and tail != "/"
+        }
+    # Longest first, so the whole URL goes as one "<url>" before its path is
+    # looked for in what is left.
+    for form in sorted(forms, key=len, reverse=True):
+        error = error.replace(form, "<url>")
+    return error
 
 
 def _suspension_dict(suspension: Suspension) -> dict[str, Any]:
@@ -595,7 +627,7 @@ class FoyerSystem:
             # ping URL can keep the check green for ever, which is to say
             # silence the one thing that reports Foyer's own death. aiohttp
             # puts it in the message; the log and page 14 must not.
-            error = error.replace(settings.url, "<url>")
+            error = _without_url(error, settings.url)
         await self.async_handle(HealthReport(watchdog=ok, watchdog_error=error))
 
     @callback
@@ -1135,8 +1167,9 @@ class FoyerSystem:
                 "enabled": config.watchdog.enabled,
                 # Never the URL, for the reason core/dump.py states about
                 # the diagnostics dump: it is the credential. This page is
-                # open to anyone holding view_log; editing the URL goes
-                # through foyer/config, which is edit_config.
+                # open to anyone holding view_log, and no other read path
+                # returns it either: foyer/config says only `url_set`
+                # (decision 128), and a new URL is typed over the old one.
                 "url_set": bool(config.watchdog.url),
                 "interval": config.watchdog.interval,
                 "timeout": config.watchdog.timeout,

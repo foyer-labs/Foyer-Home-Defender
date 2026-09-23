@@ -482,7 +482,10 @@ def update_settings(
                 # The DTMF webhook's id (§7.2). Deliberately NOT read from
                 # ``settings``: an id a client could choose would eventually
                 # be one somebody could guess, and this URL stops an alarm.
-                # It changes only through the command that generates it.
+                # It changes only through the command that generates it. The
+                # `ack_webhook_enabled` that foyer/config carries in its place
+                # (decision 128) is not a setting either, and is ignored like
+                # any other unknown key.
                 ack_webhook_id=(
                     current.ack_webhook_id
                     if webhook_id is KEEP_WEBHOOK
@@ -941,9 +944,28 @@ def update_health(
     not a list of things a household creates and deletes. The radios inside
     it are a list because there can be two, and a Zigbee outage says nothing
     about Z-Wave.
+
+    The watchdog URL is written and never read back (§12.3, decision 130),
+    so the panel has none to send: a block that leaves it out, sends null
+    or sends it blank keeps the stored one, and only a URL somebody typed
+    replaces it. Switching the watchdog off keeps it too. Clearing it here
+    would stop the heartbeat quietly, which is the failure §12.3 exists to
+    report. Settled before anything compares the two configurations, so the
+    log row and the armed guard see an unchanged URL as unchanged.
     """
+    watchdog = health.get("watchdog")
+    if watchdog is not None and not isinstance(watchdog, dict):
+        return _fail(Problem("invalid", "health"))
+    watchdog = dict(watchdog or {})
+    url = watchdog.get("url")
+    if url is None or (isinstance(url, str) and not url.strip()):
+        # Not left to health_from_dict: it would read null as the string
+        # "None", which is a URL that is set and pings nothing.
+        watchdog["url"] = config.health.watchdog.url
+    elif isinstance(url, str):
+        watchdog["url"] = url.strip()
     try:
-        new = replace(config, health=health_from_dict(health))
+        new = replace(config, health=health_from_dict({**health, "watchdog": watchdog}))
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "health"))
     return _check(config, new, state, None)

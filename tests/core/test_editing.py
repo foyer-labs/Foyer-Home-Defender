@@ -407,3 +407,103 @@ def test_validation_refuses_an_enabled_unconfirmed_zone_on_every_path(config):
     assert ("trigger_not_confirmed", "window") in {
         (p.code, p.ref) for p in validate(bad)
     }
+
+
+# --- the watchdog URL: written, never read back (§12.3, decision 130) --------------
+
+PING = "https://hc-ping.example/9f8c-secret-token"
+
+
+def _watched(config):
+    """An installation whose watchdog is on and pings PING."""
+    from dataclasses import replace
+
+    from custom_components.foyer.core.models import WatchdogSettings
+
+    return replace(
+        config,
+        health=replace(
+            config.health, watchdog=WatchdogSettings(enabled=True, url=PING)
+        ),
+    )
+
+
+def _panel_health(config, **watchdog):
+    """The block as page 14 sends it: no URL, unless somebody typed one."""
+    from custom_components.foyer.store.schema import health_to_dict
+
+    health = health_to_dict(config.health)
+    health["watchdog"].pop("url")
+    health["watchdog"].update(watchdog)
+    return health
+
+
+def test_a_health_save_without_a_url_keeps_the_stored_one(config):
+    """The panel has no URL to send back: nothing returns it. A save that
+    cleared it would stop the heartbeat quietly."""
+    from custom_components.foyer.store.editing import config_diff, update_health
+
+    config = _watched(config)
+    for sent in ({}, {"url": None}, {"url": ""}, {"url": "   "}):
+        result = update_health(
+            config, RuntimeState(), _panel_health(config, interval=600, **sent)
+        )
+        assert result.config is not None, (sent, result.problems)
+        watchdog = result.config.health.watchdog
+        # Null in particular: read as-is it became the string "None", a URL
+        # that is set and pings nothing.
+        assert watchdog.url == PING, sent
+        assert watchdog.enabled and watchdog.interval == 600
+        # Kept before anything compares the two: the log row does not say
+        # the URL changed when it did not.
+        assert "watchdog.url" not in config_diff(config, result.config).get(
+            "health", {}
+        )
+
+
+def test_a_new_url_replaces_the_stored_one(config):
+    from custom_components.foyer.store.editing import config_diff, update_health
+
+    config = _watched(config)
+    result = update_health(
+        config,
+        RuntimeState(),
+        _panel_health(config, url="  https://uptime.example/api/push/other  "),
+    )
+    assert result.config.health.watchdog.url == "https://uptime.example/api/push/other"
+    assert config_diff(config, result.config)["health"]["watchdog.url"] == []
+
+
+def test_switching_the_watchdog_off_keeps_its_url(config):
+    from custom_components.foyer.store.editing import update_health
+
+    config = _watched(config)
+    off = update_health(config, RuntimeState(), _panel_health(config, enabled=False))
+    assert off.config.health.watchdog.enabled is False
+    assert off.config.health.watchdog.url == PING
+    # And back on without typing it again: the stored URL passes validation.
+    on = update_health(
+        off.config, RuntimeState(), _panel_health(off.config, enabled=True)
+    )
+    assert on.config is not None, on.problems
+    assert on.config.health.watchdog.enabled is True
+
+
+def test_a_watchdog_switched_on_with_no_url_anywhere_is_still_refused(config):
+    """Keeping means keeping what there is: on a fresh installation there is
+    nothing, and a watchdog with nowhere to ping is refused as before."""
+    from custom_components.foyer.store.editing import update_health
+
+    result = update_health(config, RuntimeState(), _panel_health(config, enabled=True))
+    assert result.config is None
+    assert result.problems[0].code == "watchdog_url_required"
+
+
+def test_a_watchdog_block_that_is_not_a_map_is_refused_not_a_traceback(config):
+    from custom_components.foyer.store.editing import update_health
+
+    health = _panel_health(config)
+    health["watchdog"] = "on"
+    result = update_health(config, RuntimeState(), health)
+    assert result.config is None
+    assert result.problems[0].code == "invalid"

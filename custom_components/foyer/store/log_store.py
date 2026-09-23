@@ -191,6 +191,49 @@ def _stored_to_dict(record: sqlite3.Row) -> dict[str, Any]:
     }
 
 
+def _scrub_webhook_ids(connection: sqlite3.Connection) -> int:
+    """Take the acknowledgement webhook's id out of the `config` rows that
+    printed it, and say how many there were.
+
+    Up to beta.12 a row recording a change of the webhook carried the id
+    before and after, in full: `changes.settings.ack_webhook_id: [old,
+    new]`. Since beta.13 it carries `[]` — the field changed, never to what
+    — and a row is read with `view_log`, less than it takes to read the
+    configuration the id is no longer returned from (decision 128). Those
+    rows are rewritten to the shape written since, once, when the log
+    opens; a row already in that shape is left alone, so opening the log
+    again changes nothing. A copy already exported, or on Home Assistant's
+    bus as `foyer_event`, is out of reach: only a new address makes that
+    one worthless.
+    """
+    records = connection.execute(
+        "SELECT id, detail FROM events WHERE category = ? AND detail LIKE ?",
+        (str(LogCategory.CONFIG), "%ack_webhook_id%"),
+    ).fetchall()
+    rewritten = []
+    for record in records:
+        try:
+            detail = json.loads(record["detail"])
+        except ValueError:  # pragma: no cover - written by this module
+            continue
+        settings = (
+            (detail.get("changes") or {}).get("settings")
+            if isinstance(detail, dict)
+            else None
+        )
+        if not isinstance(settings, dict) or settings.get("ack_webhook_id") in (
+            None,
+            [],
+        ):
+            continue
+        settings["ack_webhook_id"] = []
+        rewritten.append((json.dumps(detail, default=str), record["id"]))
+    if rewritten:
+        connection.executemany("UPDATE events SET detail = ? WHERE id = ?", rewritten)
+        connection.commit()
+    return len(rewritten)
+
+
 async def async_delete_database(hass: HomeAssistant, path: str | None = None) -> bool:
     """Delete the log database, with the two files SQLite keeps beside it.
 
@@ -293,6 +336,11 @@ class LogStore:
         connection.execute("PRAGMA secure_delete=ON")
         connection.executescript(_SCHEMA)
         connection.commit()
+        if _scrub_webhook_ids(connection):
+            # Folded into the file at once, as after an erasure: until the
+            # write-ahead log is checkpointed, the page in the database file
+            # is still the old one, id and all.
+            connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         self._connection = connection
 
     def _close(self) -> None:

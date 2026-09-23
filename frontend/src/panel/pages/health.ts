@@ -78,6 +78,10 @@ class FoyerPageHealth extends LitElement {
   private _editConfig(): void {
     const health = this.ctx?.config?.health;
     if (!health) return;
+    // The watchdog URL is written and never read back (§12.3, decision 130):
+    // the configuration says only whether one is set, so the field starts
+    // empty whatever is stored, and what is typed there replaces it. Left
+    // empty, the stored one stays.
     this._draft = structuredClone(health);
     this._problems = [];
     void this._loadCandidates();
@@ -489,11 +493,18 @@ class FoyerPageHealth extends LitElement {
             <label class="field wide">
               <span class="lbl">${t(s, "field.url")}</span>
               <input
-                .value=${draft.watchdog.url}
-                placeholder=${t(s, "health.url_placeholder")}
+                autocomplete="off"
+                .value=${live(draft.watchdog.url ?? "")}
+                placeholder=${t(
+                  s,
+                  draft.watchdog.url_set ? "health.url_set_placeholder" : "health.url_placeholder",
+                )}
                 @input=${(e: Event) =>
                   this._setWatchdog("url", (e.target as HTMLInputElement).value)}
               />
+              ${draft.watchdog.url_set
+                ? html`<span class="hint">${t(s, "health.url_set_hint")}</span>`
+                : nothing}
               <span class="hint">${t(s, "health.url_hint")}</span>
             </label>
             <label class="field">

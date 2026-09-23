@@ -185,6 +185,11 @@ change the configuration. Foyer's position is stated rather than implied:
   protecting the URL;
 - switching it off forgets the id, so switching it on again hands out a new
   one rather than reviving an address somebody may still hold;
+- the address is shown once, when it is generated — the whole URL when Home
+  Assistant knows its external address, the path otherwise, for you to put
+  that address in front of — and Foyer cannot show it again. Copy it into the
+  voice provider then. To see it again, generate a new one on page 6, which
+  stops the old one at once;
 - give the address to the voice provider and to nothing else, over HTTPS.
 
 If that trade is not worth it — and for many households it is not — leave it

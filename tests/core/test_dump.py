@@ -184,3 +184,16 @@ def test_the_dump_still_says_what_is_wrong():
     assert faulted and faulted[0]["entity"].startswith("binary_sensor.zone_")
     assert document["health"]["watchdog"]["enabled"] is True
     assert document["health"]["radios"][0]["coordinator_set"] is True
+
+
+def test_the_webhook_id_never_travels():
+    """The other configuration credential (decision 128): an unauthenticated
+    URL that stops an alarm. The dump says whether it is on, never where."""
+    world = furnished()
+    webhook_id = "5f0c1d2e3b4a69788796a5b4c3d2e1f0"
+    config = replace(
+        world.config, settings=replace(world.config.settings, ack_webhook_id=webhook_id)
+    )
+    document = anonymised(config, world.state, world.snapshot())
+    assert document["settings"]["ack_webhook_enabled"] is True
+    assert webhook_id not in json.dumps(document)

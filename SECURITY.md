@@ -30,8 +30,10 @@ diagnostics download is anonymised and is usually enough.
   suppressed from outside, a notification that can be stopped by somebody who
   should not be able to stop it, a way to disarm a **perimeter** area from an
   automatic rule;
-- **reading what should not be readable**: a code or its hash in an API
-  response, a log row, an event, the diagnostics download or a backup;
+- **reading what should not be readable**: a code or its hash, or a
+  credential — a keypad's token, the acknowledgement webhook's address, the
+  watchdog URL — in an API response, a log row, an event, the diagnostics
+  download or a backup;
 - defeating the **lockout** of repeated wrong codes, or the rule that a device
   must be declared before it may command anything;
 - anything that lets a **non-administrator** Home Assistant user do what the
@@ -53,8 +55,9 @@ in it:
 - **The acknowledgement webhook, when you have switched it on.** It is an
   unauthenticated URL by design — that is how a voice provider feeds a DTMF
   keypress back — so whoever holds it can acknowledge an alarm in progress.
-  It is off by default, the id is long and random, and the trade is stated
-  where you switch it on and in `docs/notification-channels.md`.
+  It is off by default, the id is long and random, its address is shown
+  once, when it is generated, and the trade is stated where you switch it on
+  and in `docs/notification-channels.md`.
 - **An automatic rule acting without a code.** A rule is authorised when
   somebody with `edit_config` saves it, not when it fires;
   `docs/automation-rules.md` says so plainly, and what restrains it is the

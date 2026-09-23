@@ -1320,6 +1320,11 @@ class WatchdogSettings:
     panel states the reason where the switch is (P-1, decision 29): a ping
     saying "armed, Night, nobody home" tells whoever holds the other end
     exactly when to come. The default heartbeat carries nothing at all.
+
+    ``url`` is a credential, written and never read back (decision 130):
+    whoever holds a ping URL can keep the check green for ever, which
+    silences the one thing that reports Foyer's own death. No API returns
+    it, and a save that does not carry one keeps it.
     """
 
     enabled: bool = False
@@ -1759,9 +1764,10 @@ class Settings:
     # taste: a Home Assistant webhook is not authenticated, so whoever holds
     # the URL can acknowledge an alarm in progress — which is to say, stop
     # the escalation that was on its way to the neighbour. It is one id,
-    # long and random, generated when the feature is enabled and shown once;
-    # the threat is written beside the switch and in
-    # docs/notification-channels.md (part 1 decision 6).
+    # long and random, generated when the feature is enabled and shown once,
+    # in the answer that generates it, and never returned by any API
+    # afterwards (decisions 128, 129); the threat is written beside the
+    # switch and in docs/notification-channels.md (part 1 decision 6).
     ack_webhook_id: str | None = None
     # Whether an automatic rule may leave the house less protected (§9.4
     # point 2). Off until somebody turns it on, and turning it on is where
