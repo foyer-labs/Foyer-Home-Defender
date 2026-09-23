@@ -1426,7 +1426,32 @@ drawn in §6.3 applies.
 | **Active window** | weekdays plus a time range; the rule simply does not exist outside it |
 | **Guards** | only if currently disarmed · only if every zone is ready · only if no interior zone has detected motion for N minutes |
 | **Grace period** | an actionable notification with a countdown and a **Cancel** button before the action runs (default 120 s for arming, 0 for disarming) |
+| **Open zones** | off by default: arming fails while a zone is open, and the rule arms by itself the moment it closes · on: arm anyway, **excluding the open zones that are bypassable** (decision 126) |
 | **Suspension** | until a date and time · skip the next occurrence only · a global switch |
+
+#### When the house is not ready
+
+Everybody has left and the bathroom window is open. The rule does not force
+anything nobody chose, and it does not stay quiet either:
+
+- **The countdown names the open zones** (decision 125): "Empty house: arming
+  Away in 2 minutes — Bathroom window is open, and it cannot arm until it is
+  closed", or "…and it will be excluded" when the rule excludes open zones.
+  Zone names already leave the house in every alarm notification; this adds
+  nothing new to what a phone receives.
+- **The rule's contacts are told the outcome** (decision 124), through quiet
+  hours, because the house is uncovered: "not armed — Bathroom window is
+  open; it will arm by itself when you close it", then "armed now —
+  Bathroom window was closed" when it does; or "armed, excluding Bathroom
+  window" when the rule excludes open zones. The words follow what actually
+  happened, never what was planned.
+- **Excluding open zones is the rule's own opt-in** (decision 126), off by
+  default and warned about when switched on: it is a forced arming nobody
+  typed a code for. It excludes only zones that are open **and** bypassable;
+  a zone that may not be bypassed, or one in fault or unavailable (INV-4: a
+  fault is never "all quiet"), still refuses the arming. What it excludes
+  stays excluded until the house is disarmed, as a forced arming's does, and
+  the log records a `forced_arm` with the rule's name.
 
 #### The asymmetry between arming and disarming
 
@@ -2390,3 +2415,6 @@ document should make one of them on purpose.
 | 121 | `docs/api/openapi.yaml` and `asyncapi.yaml`, contract `v1`, checked against the code in CI | A document nobody checks is false within two releases; the panel's WebSocket commands are internal and stay out |
 | 122 | Swagger UI on an administrators' page of the panel, bundled, loaded only there | Trying the contract from a browser helps whoever builds a device; a public page would advertise the alarm to a scanner |
 | 123 | API devices land in Phase 5, before the documentation | So the documents describe them rather than being rewritten for them |
+| 124 | A rule's contacts are told the outcome of its arming — not armed and why, armed later, or armed excluding zones — through quiet hours | The household had left; a rule that could not arm told nobody who was not looking at Home Assistant |
+| 125 | The countdown names the open zones and says what will happen to them | "It will arm in two minutes" was a promise the open window was about to break, sent to the only people who could still shut it |
+| 126 | A rule may arm excluding open zones — opt-in, bypassable zones only, never a fault | Some households want the house armed with the window open; a forced arming nobody chose must be the rule's owner's deliberate choice, and a silent sensor is never excluded by it |
