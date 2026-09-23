@@ -940,6 +940,14 @@ class _Run:
             zone_ids=rt.causes,
         )
         self.stop_running(area_id, Moment.SIREN_CUTOFF)
+        # After the stop, so that what it switches is not switched back.
+        self.occur(
+            Moment.ALARM_ENDED,
+            area_id=area_id,
+            scenario_id=rt.scenario_id,
+            zone_ids=rt.causes,
+            detail={"cause": "siren_cutoff"},
+        )
         # And what a delay was still holding for this alarm. §6.2 says a
         # siren never sounds beyond the cutoff and that the cutoff stops what
         # it started — a sequence whose `delay` outlasted the cutoff started
@@ -1173,30 +1181,9 @@ class _Run:
         not for the permission this operation maps to — so it stays with the
         caller, and this stays the one place a wrong code is counted.
         """
-        actor = self.actor
-        if (until := authz.locked_until(self.lockouts, actor, self.now)) is not None:
-            self.occur(
-                Moment.CODE_REJECTED,
-                channel=actor.channel,
-                detail={
-                    "operation": event.operation.value if event.operation else "",
-                    "reason": Reason.LOCKED_OUT.value,
-                    "until": until.isoformat(),
-                },
-            )
-            return _reject(Reason.LOCKED_OUT)
-        if actor.code is CodeResult.INVALID:
-            self.code_failed(event.operation)
-            return _reject(Reason.BAD_CODE)
-        if actor.code_verified:
-            # A correct code ends the run of failures on this channel, as it
-            # does on every other path (`authorize`).
-            key = authz.lockout_key(actor)
-            cleared = authz.clear_failures(self.lockouts.get(key))
-            if cleared is None:
-                self.lockouts.pop(key, None)
-            else:
-                self.lockouts[key] = cleared
+        if (reason := self.check_code(event.operation)) is not None:
+            return _reject(reason)
+        self.code_cleared()
         return _ACCEPTED
 
     def walk_test_request(self, event: WalkTestRequest) -> _Outcome:
@@ -1511,36 +1498,9 @@ class _Run:
             ),
         )
         try:
-            self.device_act(device)
+            self.token_act(device.command, device.scenario_id, device.channel)
         finally:
             self.actor = previous
-
-    def device_act(self, device: ArmingDevice) -> None:
-        command = device.command
-        if command is KeyCommand.TOGGLE:
-            armed = any(
-                rt.state is not AreaState.DISARMED for rt in self.areas.values()
-            )
-            command = KeyCommand.DISARM if armed else KeyCommand.ARM
-        if command is KeyCommand.DISARM:
-            outcome = self.disarm(None)
-            if outcome.reason is Reason.INVALID_STATE:
-                return  # nothing was armed: a tag presented twice is not a failure
-        else:
-            outcome = self.arm_scenario(
-                self.config.scenario(device.scenario_id), force=False
-            )
-        if not outcome.accepted:
-            # Never silent: a tag that did nothing must say why, or the person
-            # walks away believing the house is armed (§4.7 says the same of a
-            # key, and for the same reason).
-            self.occur(
-                Moment.ARM_FAILED,
-                scenario_id=device.scenario_id,
-                zone_ids=outcome.blocking,
-                channel=device.channel,
-                detail={"reason": outcome.reason.value if outcome.reason else ""},
-            )
 
     def key_command(self, zone: Zone, command: KeyCommand) -> None:
         """A key zone acts as a user would, on every area (decision 13)."""
@@ -1560,12 +1520,30 @@ class _Run:
             ),
         )
         try:
-            self.key_act(zone, command)
+            self.token_act(
+                command,
+                zone.key.scenario_id,
+                KEY_ZONE_CHANNEL,
+                area_id=zone.area_id,
+                zone_id=zone.id,
+            )
         finally:
             self.actor = previous
 
-    def key_act(self, zone: Zone, command: KeyCommand) -> None:
-        assert zone.key is not None
+    def token_act(
+        self,
+        command: KeyCommand,
+        scenario_id: str | None,
+        channel: str,
+        *,
+        area_id: str | None = None,
+        zone_id: str | None = None,
+    ) -> None:
+        """What a tag or a key does: the credential is the thing itself.
+
+        ``area_id`` and ``zone_id`` are the key zone's, for the row; a tag
+        has neither.
+        """
         if command is KeyCommand.TOGGLE:
             armed = any(
                 rt.state is not AreaState.DISARMED for rt in self.areas.values()
@@ -1574,19 +1552,19 @@ class _Run:
         if command is KeyCommand.DISARM:
             outcome = self.disarm(None)
             if outcome.reason is Reason.INVALID_STATE:
-                return  # nothing was armed: a key turned twice is not a failure
+                return  # nothing was armed: presented twice is not a failure
         else:
-            outcome = self.arm_scenario(
-                self.config.scenario(zone.key.scenario_id), force=False
-            )
+            outcome = self.arm_scenario(self.config.scenario(scenario_id), force=False)
         if not outcome.accepted:
+            # Never silent: a tag or a key that did nothing must say why, or
+            # the person walks away believing the house is armed (§4.7).
             self.occur(
                 Moment.ARM_FAILED,
-                area_id=zone.area_id,
-                zone_id=zone.id,
-                scenario_id=zone.key.scenario_id,
+                area_id=area_id,
+                zone_id=zone_id,
+                scenario_id=scenario_id,
                 zone_ids=outcome.blocking,
-                channel=KEY_ZONE_CHANNEL,
+                channel=channel,
                 detail={"reason": outcome.reason.value if outcome.reason else ""},
             )
 
@@ -2666,20 +2644,8 @@ class _Run:
         an attempt and counts, a missing code is not an attempt at all.
         """
         actor = self.actor
-        if (until := authz.locked_until(self.lockouts, actor, self.now)) is not None:
-            self.occur(
-                Moment.CODE_REJECTED,
-                channel=actor.channel,
-                detail={
-                    "operation": operation.value,
-                    "reason": Reason.LOCKED_OUT.value,
-                    "until": until.isoformat(),
-                },
-            )
-            return Reason.LOCKED_OUT
-        if actor.code is CodeResult.INVALID:
-            self.code_failed(operation)
-            return Reason.BAD_CODE
+        if (reason := self.check_code(operation)) is not None:
+            return reason
         if (
             reason := authz.check_user(
                 self.config,
@@ -2714,16 +2680,44 @@ class _Run:
             and not actor.code_verified
         ):
             return Reason.CODE_REQUIRED
-        if actor.code_verified:
-            # A correct code ends the run of failures on this channel. It does
-            # not end a lockout already in force: that is what waiting is for.
-            key = authz.lockout_key(actor)
-            cleared = authz.clear_failures(self.lockouts.get(key))
-            if cleared is None:
-                self.lockouts.pop(key, None)
-            else:
-                self.lockouts[key] = cleared
+        self.code_cleared()
         return None
+
+    def check_code(self, operation: Operation | None) -> Reason | None:
+        """The lockout half of §8.4, the same on every path.
+
+        A channel already shut is answered without another attempt counting
+        against it; a wrong code is an attempt and counts; a missing code is
+        not an attempt at all, and is left to the caller.
+        """
+        actor = self.actor
+        if (until := authz.locked_until(self.lockouts, actor, self.now)) is not None:
+            self.occur(
+                Moment.CODE_REJECTED,
+                channel=actor.channel,
+                detail={
+                    "operation": operation.value if operation else "",
+                    "reason": Reason.LOCKED_OUT.value,
+                    "until": until.isoformat(),
+                },
+            )
+            return Reason.LOCKED_OUT
+        if actor.code is CodeResult.INVALID:
+            self.code_failed(operation)
+            return Reason.BAD_CODE
+        return None
+
+    def code_cleared(self) -> None:
+        """A correct code ends the run of failures on this channel. It does
+        not end a lockout already in force: that is what waiting is for."""
+        if not self.actor.code_verified:
+            return
+        key = authz.lockout_key(self.actor)
+        cleared = authz.clear_failures(self.lockouts.get(key))
+        if cleared is None:
+            self.lockouts.pop(key, None)
+        else:
+            self.lockouts[key] = cleared
 
     def code_failed(self, operation: Operation | None) -> None:
         """A wrong code: count it, and shut the channel if it is one too many.
@@ -3129,6 +3123,18 @@ class _Run:
             # abandon (found in review).
             if r.area_id != area_id or r.moment in TECHNICAL_MOMENTS
         ]
+        if rt.memory and rt.state is AreaState.TRIGGERED:
+            # The alarm ends here rather than at a cutoff that will not run
+            # now. An area in memory but no longer triggered has had its
+            # cutoff, and its alarm_ended with it (decision 105).
+            self.occur(
+                Moment.ALARM_ENDED,
+                area_id=area_id,
+                scenario_id=rt.scenario_id,
+                zone_ids=rt.causes,
+                channel=channel,
+                detail={"cause": "disarmed"},
+            )
         self.clear_area(area_id)
 
     def clear_area(self, area_id: str) -> None:

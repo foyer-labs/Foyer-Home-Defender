@@ -270,8 +270,10 @@ async def async_report_unknown_device(
                 event_type="device_rejected",
                 channel=channel,
                 device_id=ref,
-                outcome=Reason.DEVICE_NOT_REGISTERED.value,
+                # The default, `blocked`: an outcome the log's filter and words
+                # know. Why is the row's event type.
                 detail={
+                    "reason": Reason.DEVICE_NOT_REGISTERED.value,
                     "device": ref or "",
                     "channel": channel,
                     **({"wrong_transport": "true"} if wrong_transport else {}),
@@ -502,10 +504,9 @@ def async_register(hass: HomeAssistant) -> None:
 
         The state-changing services are gated by the engine, which is the one
         place §8.2 and §8.3 are resolved for them (part 1). These three never
-        reach the engine, so they ask the same questions here — and, unlike
-        the panel, an administrator is not part of the question: a service
-        call carries no Home Assistant account to be an administrator of, so
-        the permission bites in full.
+        reach the engine, so they ask core/authz the panel's question — with
+        no administrator in it: a service call is not the admin path of §8.4,
+        so the permission bites in full.
         """
         from ..core import authz
 
@@ -534,39 +535,20 @@ def async_register(hass: HomeAssistant) -> None:
         )
         if attempt.reason is not None:
             return {"success": False, "reason": attempt.reason.value}
-        # A claimed `user_id` resolves to that person here, which is what
-        # lets an adapter say who acted — and, because this is also where the
-        # permission is read, what lets a caller who names somebody borrow
-        # their `view_log`. Decision 88 says a claim "grants nothing"; this
-        # path and the test that pins it say otherwise. Raised in the report
-        # rather than changed: the id is a uuid nobody can guess, and which
-        # of the two is meant is a decision, not a defect.
-        user = system.config.user(actor.user_id)
-        if user is None:
-            # Nobody is behind this call. Before the first code exists that is
-            # every call, and the policy is inert (decision 78); once codes
-            # are in force, a caller who cannot be named may not read or
-            # rewrite the configuration.
-            if authz.enforced(system.config, now):
-                return {"success": False, "reason": Reason.NOT_PERMITTED.value}
-            return None
-        if not user.enabled or not user.in_window(now):
-            return {"success": False, "reason": Reason.USER_NOT_VALID.value}
-        if not user.may(permission):
-            return {"success": False, "reason": Reason.NOT_PERMITTED.value}
-        if (
-            need_code
-            and authz.code_required(
-                system.config,
-                operation,
-                now=now,
-                user=user,
-                identified=actor.identified,
-                channel=actor.channel,
-            )
-            and not actor.code_verified
-        ):
-            return {"success": False, "reason": Reason.CODE_REQUIRED.value}
+        # core/authz decides, as it does for the panel. A claimed `user_id`
+        # grants nothing here (decision 102); before the first code exists
+        # an automation may read and write the configuration (decision 78).
+        reason = authz.may_configure(
+            system.config,
+            actor,
+            operation,
+            permission,
+            now,
+            need_code=need_code,
+            open_while_inert=True,
+        )
+        if reason is not None:
+            return {"success": False, "reason": reason.value}
         return None
 
     for name, handler, schema in (

@@ -304,16 +304,21 @@ async def test_reading_the_log_asks_for_the_permission_and_not_the_code(
     """Page 10 asks for no code either, and two answers to one question is how
     one of them ends up being the wrong one.
 
-    Saying **who** is asking is still required: a service call carries no
-    signed-in account to fall back on, so a caller that names nobody while
-    codes are in force is refused — with `not_permitted`, not
-    `code_required`, because the code is not what was missing.
+    Saying **who** is asking is still required, and naming somebody is not
+    saying it: a claimed `user_id` grants nothing (decision 102), so the
+    person has to be established by their code. A caller that is not is
+    refused with `not_permitted`, not `code_required`, because the code is
+    not what the permission asked for.
     """
     user_id = hass.data[DOMAIN].config.users[0].id
 
-    named = await _call(hass, "export_log", user_id=user_id, categories=["config"])
+    named = await _call(hass, "export_log", code=CODE, categories=["config"])
     assert named["success"], named
     assert named["rows"] >= 1
+
+    claimed = await _call(hass, "export_log", user_id=user_id, categories=["config"])
+    assert claimed["success"] is False
+    assert claimed["reason"] == "not_permitted"
 
     anonymous = await _call(hass, "export_log", categories=["config"])
     assert anonymous["success"] is False

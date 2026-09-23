@@ -26,6 +26,10 @@ from .test_part2 import _set, _ws
 from .test_phase2 import CODE, _make_user
 
 CLEANER = "Ana Cleaner"
+# Whoever runs the panel. Somebody else's code than the cleaner's, so that
+# the rows the erasure writes are not the cleaner's own (decision 101: an
+# administrator is asked for a code like anybody else).
+OWNER_CODE = "864200"
 
 
 async def _exists(hass, path: str) -> bool:
@@ -58,6 +62,14 @@ async def with_cleaner(hass, hass_ws_client, loaded):
         name=CLEANER,
         new_code=CODE,
         permissions=["arm", "disarm", "view_log"],
+    )
+    await _make_user(
+        hass,
+        client,
+        name="Owner",
+        new_code=OWNER_CODE,
+        code=CODE,
+        permissions=["arm", "disarm", "view_log", "manage_users", "edit_config"],
     )
     scenario_id = hass.data[DOMAIN].config.scenarios[0].id
     await _ws(client, {"type": "foyer/arm", "scenario_id": scenario_id, "code": CODE})
@@ -122,7 +134,9 @@ async def test_erasing_a_person_keeps_every_event(hass, with_cleaner):
     disarms = [r for r in await _rows(hass) if r["event_type"] == "disarmed"]
     assert disarms
 
-    result = await _ws(client, {"type": "foyer/privacy/erase", "user_id": user_id})
+    result = await _ws(
+        client, {"type": "foyer/privacy/erase", "user_id": user_id, "code": OWNER_CODE}
+    )
     assert result["success"], result
     assert result["removed"] > 0
 
@@ -146,7 +160,9 @@ async def test_erasing_a_person_is_not_deleting_a_user(hass, with_cleaner):
     """The two operations are separate on purpose: ``user_name`` is
     denormalised so that deleting a user does not erase the history."""
     client, user_id = with_cleaner
-    await _ws(client, {"type": "foyer/privacy/erase", "user_id": user_id})
+    await _ws(
+        client, {"type": "foyer/privacy/erase", "user_id": user_id, "code": OWNER_CODE}
+    )
     await hass.async_block_till_done()
     # The person is still a user of this installation, with their code.
     assert hass.data[DOMAIN].config.user(user_id) is not None
@@ -156,7 +172,9 @@ async def test_the_erasure_is_recorded_and_does_not_name_the_person(hass, with_c
     """Deleting the log is logged (§10.3) and so is this — but the row that
     records an erasure must not carry the name it just removed."""
     client, user_id = with_cleaner
-    await _ws(client, {"type": "foyer/privacy/erase", "user_id": user_id})
+    await _ws(
+        client, {"type": "foyer/privacy/erase", "user_id": user_id, "code": OWNER_CODE}
+    )
     rows = await _rows(hass, categories=["config"])
     erasures = [r for r in rows if r["event_type"] == "config_history_erased"]
     assert erasures, rows
@@ -170,7 +188,12 @@ async def test_erasing_with_a_pseudonym_keeps_the_shape(hass, with_cleaner):
     client, user_id = with_cleaner
     await _ws(
         client,
-        {"type": "foyer/privacy/erase", "user_id": user_id, "pseudonymise": True},
+        {
+            "type": "foyer/privacy/erase",
+            "user_id": user_id,
+            "pseudonymise": True,
+            "code": OWNER_CODE,
+        },
     )
     rows = [r for r in await _rows(hass) if r["event_type"] == "disarmed"]
     pseudonym = hass.data[DOMAIN].config.user(user_id).pseudonym
@@ -235,12 +258,16 @@ async def test_the_sweep_does_nothing_until_it_is_switched_on(hass, with_cleaner
     assert any(row["user_name"] == CLEANER for row in await _rows(hass))
 
 
-async def _switch_on(hass, client, days: int = 1) -> dict:
+async def _switch_on(hass, client, days: int = 1, code: str = OWNER_CODE) -> dict:
     settings = (await _ws(client, {"type": "foyer/config"}))["config"]["settings"]
     log = {**settings["log"], "pseudonymise_after": days}
     result = await _ws(
         client,
-        {"type": "foyer/config/settings", "settings": {**settings, "log": log}},
+        {
+            "type": "foyer/config/settings",
+            "settings": {**settings, "log": log},
+            "code": code,
+        },
     )
     await hass.async_block_till_done()
     return result
@@ -447,7 +474,9 @@ async def test_erasing_a_person_does_not_blank_whoever_edited_their_account(
     before = await _config_row_about(hass, user_id)
     assert before["user_name"]
 
-    await _ws(client, {"type": "foyer/privacy/erase", "user_id": user_id})
+    await _ws(
+        client, {"type": "foyer/privacy/erase", "user_id": user_id, "code": OWNER_CODE}
+    )
 
     rows = await _rows(hass, categories=["config"])
     # The row is still there, still says who did the editing, and no longer
@@ -481,7 +510,7 @@ async def test_two_people_with_one_name_are_not_merged(hass, hass_ws_client, loa
     under whichever pseudonym came first."""
     client = await hass_ws_client(hass)
     first = await _make_user(hass, client, name="Luca", new_code=CODE)
-    second = await _make_user(hass, client, name="Luca", new_code="135790")
+    second = await _make_user(hass, client, name="Luca", new_code="135790", code=CODE)
     system = hass.data[DOMAIN]
     # A row for each of them, written the way a keypad writes one.
     system.async_record(
@@ -493,7 +522,9 @@ async def test_two_people_with_one_name_are_not_merged(hass, hass_ws_client, loa
     )
     await system.log.async_flush()
 
-    result = await _ws(client, {"type": "foyer/privacy/erase", "user_id": first})
+    result = await _ws(
+        client, {"type": "foyer/privacy/erase", "user_id": first, "code": "135790"}
+    )
     assert result["success"], result
     rows = await _rows(hass)
     # The other Luca's row is untouched.
@@ -511,7 +542,9 @@ async def test_a_person_can_still_be_erased_after_a_sweep(hass, with_cleaner, fr
     pseudonym = hass.data[DOMAIN].config.user(user_id).pseudonym
     assert any(r["user_name"] == pseudonym for r in await _rows(hass))
 
-    result = await _ws(client, {"type": "foyer/privacy/erase", "user_id": user_id})
+    result = await _ws(
+        client, {"type": "foyer/privacy/erase", "user_id": user_id, "code": OWNER_CODE}
+    )
     assert result["success"] and result["removed"] > 0
     rows = await _rows(hass)
     assert not any(r["user_name"] == pseudonym for r in rows)
@@ -540,7 +573,7 @@ async def test_the_sweep_takes_the_name_out_of_the_detail_too(
         )
     )
     await system.log.async_flush()
-    assert (await _switch_on(hass, client, days=1))["success"]
+    assert (await _switch_on(hass, client, days=1, code=CODE))["success"]
 
     freezer.tick(2 * 24 * 3600)
     await hass.data[DOMAIN]._async_pseudonymise()
@@ -557,7 +590,11 @@ async def test_saving_one_log_setting_keeps_the_other_two(hass, with_cleaner):
     log = {"enabled": settings["log"]["enabled"], "retention_days": {"arming": 7}}
     result = await _ws(
         client,
-        {"type": "foyer/config/settings", "settings": {**settings, "log": log}},
+        {
+            "type": "foyer/config/settings",
+            "settings": {**settings, "log": log},
+            "code": OWNER_CODE,
+        },
     )
     assert result["success"], result
     await hass.async_block_till_done()
@@ -580,6 +617,7 @@ async def test_a_client_cannot_choose_somebody_else_pseudonym(hass, with_cleaner
                 "pseudonym": "person-chosen",
                 "enabled": True,
             },
+            "code": OWNER_CODE,
         },
     )
     assert result["success"], result

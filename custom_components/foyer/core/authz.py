@@ -30,6 +30,7 @@ from .models import (
     MAX_LOCKOUT_BACKOFF,
     Actor,
     Area,
+    CodeResult,
     FoyerConfig,
     Lockout,
     Operation,
@@ -176,6 +177,66 @@ def check_user(
         listed = scenario.allowed_user_ids
         if listed is not None and user.id not in listed:
             return Reason.SCENARIO_NOT_ALLOWED
+    return None
+
+
+def may_configure(
+    config: FoyerConfig,
+    actor: Actor,
+    operation: Operation,
+    permission: Permission,
+    now: datetime,
+    *,
+    need_code: bool = True,
+    open_while_inert: bool = False,
+) -> Reason | None:
+    """The gate in front of the configuration and the log (§8.2, §8.3).
+
+    One function for the panel's commands and for the services that read or
+    write the configuration, which never reach ``decide()``: two copies of
+    this had drifted apart once already.
+
+    * A wrong code is refused before anything else.
+    * The person is the one a code or a linked account established. A
+      ``user_id`` the request merely claimed grants nothing here (decision
+      102): a permission comes from a code or a linked account, never from an
+      id somebody typed.
+    * A Home Assistant **administrator** is never refused for want of a
+      permission. INV-6 already says they can read .storage and disable the
+      integration, so refusing them buys nothing — and would lock out the
+      owner who linked their own account and left ``manage_users`` unticked.
+      The code still applies to them, linked or not (decision 101): it is
+      what protects the configuration from their unlocked tablet.
+    * Nobody named and no administrator: refused, except while the policy is
+      inert (decision 78) on a path that is ``open_while_inert`` — the
+      services, which an automation calls before any code exists.
+    """
+    if actor.code is CodeResult.INVALID:
+        return Reason.BAD_CODE
+    user = None if actor.claimed else config.user(actor.user_id)
+    if user is None:
+        if not actor.is_admin:
+            if open_while_inert and not enforced(config, now):
+                return None
+            return Reason.NOT_PERMITTED
+    else:
+        if not user.enabled or not user.in_window(now):
+            return Reason.USER_NOT_VALID
+        if not user.may(permission) and not actor.is_admin:
+            return Reason.NOT_PERMITTED
+    if (
+        need_code
+        and code_required(
+            config,
+            operation,
+            now=now,
+            user=user,
+            identified=actor.identified,
+            channel=actor.channel,
+        )
+        and not actor.code_verified
+    ):
+        return Reason.CODE_REQUIRED
     return None
 
 

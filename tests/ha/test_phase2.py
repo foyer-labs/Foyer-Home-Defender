@@ -48,6 +48,9 @@ async def _make_user(hass, client, **fields) -> str:
                 **({"id": fields["id"]} if "id" in fields else {}),
             },
             **{k: v for k, v in fields.items() if k.startswith("new_")},
+            # The code of whoever is saving, once codes are in force: an
+            # administrator is asked for one like anybody else (decision 101).
+            **({"code": fields["code"]} if "code" in fields else {}),
         },
     )
     assert result["success"], result
@@ -254,11 +257,13 @@ async def test_a_restored_backup_cannot_set_a_code(hass, with_user):
     """A file can add people; it can never hand somebody a code of its own
     choosing, and the people it brings back keep the codes already here."""
     client = with_user
-    backup = await _ws(client, {"type": "foyer/config/export"})
+    backup = await _ws(client, {"type": "foyer/config/export", "code": CODE})
     document = backup["document"]
     document["config"]["users"][0]["code_hash"] = "$2b$10$" + "x" * 53
 
-    result = await _ws(client, {"type": "foyer/config/import", "document": document})
+    result = await _ws(
+        client, {"type": "foyer/config/import", "document": document, "code": CODE}
+    )
     assert result["success"], result
     await hass.async_block_till_done()
     users = hass.data[DOMAIN].config.users
@@ -275,6 +280,7 @@ async def test_a_code_that_belongs_to_somebody_else_is_refused(hass, with_user):
             "type": "foyer/user/save",
             "user": {"name": "Anna", "permissions": ["arm", "disarm"]},
             "new_code": CODE,
+            "code": CODE,
         },
     )
     assert not result["success"]
@@ -480,3 +486,22 @@ async def test_the_acknowledge_button_exists_and_acknowledges(hass, loaded):
         {"entity_id": "button.foyer_acknowledge"},
         blocking=True,
     )
+
+
+async def test_an_administrator_is_asked_for_the_code_like_anybody_else(
+    hass, with_user
+):
+    """Decision 101: being an administrator identifies nobody — the wall
+    tablet is signed in as one. What they keep is never being locked out."""
+    client = with_user
+    save = {
+        "type": "foyer/user/save",
+        "user": {"name": "Anna", "permissions": ["arm", "disarm"]},
+        "new_code": OTHER,
+    }
+    refused = await _ws(client, save)
+    assert refused["success"] is False
+    assert refused["reason"] == "code_required"
+
+    saved = await _ws(client, {**save, "code": CODE})
+    assert saved["success"], saved

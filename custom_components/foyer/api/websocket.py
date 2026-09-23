@@ -202,7 +202,6 @@ async def _actor(
 
 def _may_configure(
     system: FoyerSystem,
-    connection: websocket_api.ActiveConnection,
     actor: Actor,
     operation: Operation,
     permission: Permission,
@@ -211,53 +210,19 @@ def _may_configure(
 ) -> Reason | None:
     """The gate in front of every configuration and log command (§8.3).
 
-    Foyer knows this person, or it does not. A Foyer user linked to their
-    Home Assistant account is subject to Foyer's rules; with none linked, the
-    rule is the one this integration has used since Phase 0 — a Home
-    Assistant administrator, and nobody else.
-
-    With one exception, deliberate and stated where it is implemented: a Home
-    Assistant **administrator** is never refused the configuration for want of
-    a permission. INV-6 already says they can read .storage, call any service
-    and disable the integration, so refusing them here buys no security — and
-    it would buy a real failure: the owner who links their own account, leaves
-    manage_users unticked and can never tick it again.
-
-    The code is a different matter and still applies to them: it is what
-    protects the configuration from somebody using their unlocked tablet,
-    which is exactly the threat INV-6 says codes are for.
+    core/authz decides; see ``may_configure`` there. The panel is not open to
+    an account nobody linked, even before the first code exists: that has
+    been its rule since Phase 0 — a Home Assistant administrator, and nobody
+    else.
     """
-    user = system.config.user(actor.user_id)
-    if actor.code is CodeResult.INVALID:
-        return Reason.BAD_CODE
-    if user is None:
-        # An account this installation has not linked to a Foyer user. The
-        # docstring above says the code still applies to an administrator,
-        # and this returns before ever asking for one — so in practice an
-        # unlinked administrator, which is what every account is until
-        # somebody links it, is never asked. Raised in the report rather than
-        # changed here: asking would mean a code on every configuration save
-        # for the owner of a house where only they hold one, and that is a
-        # decision about how the product feels, not a defect to fix quietly.
-        return None if connection.user.is_admin else Reason.NOT_PERMITTED
-    if not user.enabled or not user.in_window(dt_util.utcnow()):
-        return Reason.USER_NOT_VALID
-    if not user.may(permission) and not connection.user.is_admin:
-        return Reason.NOT_PERMITTED
-    if (
-        need_code
-        and authz.code_required(
-            system.config,
-            operation,
-            now=dt_util.utcnow(),
-            user=user,
-            identified=actor.identified,
-            channel=actor.channel,
-        )
-        and not actor.code_verified
-    ):
-        return Reason.CODE_REQUIRED
-    return None
+    return authz.may_configure(
+        system.config,
+        actor,
+        operation,
+        permission,
+        dt_util.utcnow(),
+        need_code=need_code,
+    )
 
 
 async def _gate(
@@ -285,7 +250,7 @@ async def _gate(
     # over the whole code space (found in review).
     attempt = await system.async_handle(CodeAttempt(operation=operation, actor=actor))
     reason = attempt.reason or _may_configure(
-        system, connection, actor, operation, permission, need_code=need_code
+        system, actor, operation, permission, need_code=need_code
     )
     if reason is None:
         return actor
@@ -2175,7 +2140,6 @@ async def ws_alarmo_apply(
     if result.counts["people"] and (
         reason := _may_configure(
             system,
-            connection,
             actor,
             Operation.EDIT_CONFIG,
             Permission.MANAGE_USERS,
