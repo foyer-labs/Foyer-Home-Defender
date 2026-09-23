@@ -188,7 +188,7 @@ def test_siren_cutoff_rearms_and_keeps_alarm_memory():
     assert rt.state is AreaState.ARMED
     assert rt.memory
     assert rt.causes == ("window",)
-    assert decision.moments == (Moment.SIREN_CUTOFF,)
+    assert decision.moments == (Moment.SIREN_CUTOFF, Moment.ALARM_ENDED)
 
 
 def test_later_triggers_join_without_restarting_the_siren():

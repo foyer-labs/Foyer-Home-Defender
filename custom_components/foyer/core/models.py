@@ -348,6 +348,12 @@ class Moment(StrEnum):
     ENTRY_STARTED = "entry_started"
     TRIGGERED = "triggered"
     SIREN_CUTOFF = "siren_cutoff"
+    # One area's alarm is over: its siren cutoff ran, or it was disarmed with
+    # its alarm memory set and the cutoff had not run yet. Raised once per
+    # alarm per area, and never on an ordinary disarm (decision 105): the
+    # moment for "switch the light off when the alarm is over", which the
+    # incident's acknowledgement — belonging to no area — cannot serve.
+    ALARM_ENDED = "alarm_ended"
     ZONE_FAULT = "zone_fault"
     HA_RESTARTED = "ha_restarted"
     TECHNICAL_RAISED = "technical_raised"

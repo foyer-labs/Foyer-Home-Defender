@@ -707,18 +707,15 @@ def read(document: Any) -> Alarmo:
 # Alarmo's automation events, as the moments of §6.1 that mean the same thing.
 # `arming` has no moment of its own in Foyer (an exit delay starting is not a
 # moment a profile answers), and `untriggered` — leaving `triggered`, by a
-# disarm or by the siren time running out — is the two moments that end an
-# alarm: the siren cutoff, and the disarm. Foyer's own acknowledgement is not
-# answered by an area's profile, which is where an imported action lives, so
-# the disarm it is: that includes every ordinary disarm, and the report says
-# so rather than leaving a relay that never drops (second review). A switch
-# turned off at either is what Alarmo users write to pair with the one they
-# turned on.
+# disarm or by the siren time running out — is `alarm_ended`, which is
+# exactly that and is heard by an area's profile, where an imported action
+# lives (decision 105). A switch turned off at it is what Alarmo users write
+# to pair with the one they turned on.
 _MOMENTS: Mapping[str, frozenset[Moment]] = {
     "armed": frozenset({Moment.ARMED}),
     "disarmed": frozenset({Moment.DISARMED}),
     "triggered": frozenset({Moment.TRIGGERED}),
-    "untriggered": frozenset({Moment.SIREN_CUTOFF, Moment.DISARMED}),
+    "untriggered": frozenset({Moment.ALARM_ENDED}),
     "arm_failure": frozenset({Moment.ARM_FAILED}),
     "pending": frozenset({Moment.ENTRY_STARTED}),
 }
@@ -1296,8 +1293,6 @@ def _profiles(
         if not actions:
             continue
         note("automation_imported", automation=label)
-        if any(t.event == "untriggered" for t in automation.triggers):
-            note("automation_untriggered", automation=label)
         for area_id in sorted(scope):
             wanted.setdefault(area_id, []).extend(actions)
 

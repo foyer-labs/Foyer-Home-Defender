@@ -554,11 +554,9 @@ def test_a_switch_off_on_untriggered_ends_with_the_alarm():
         if a.kind is ActionKind.SWITCH
     )
     assert action.params["state"] == "off"
-    # The siren cutoff and the disarm — an area's profile does not answer
-    # Foyer's own acknowledgement — and the report says it runs at every
-    # disarm (second review).
-    assert action.moments == frozenset({Moment.SIREN_CUTOFF, Moment.DISARMED})
-    assert "automation_untriggered" in [line.code for line in result.lines]
+    # The moment that is exactly Alarmo's: the alarm is over, by the cutoff
+    # or by a disarm, and never an ordinary disarm (decision 105).
+    assert action.moments == frozenset({Moment.ALARM_ENDED})
 
 
 @pytest.mark.parametrize(
