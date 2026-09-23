@@ -68,6 +68,7 @@ function emptyRule(): RuleConfig {
     grace_seconds: 120,
     notify_contact_ids: [],
     enabled: true,
+    exclude_open_zones: false,
   };
 }
 
@@ -644,6 +645,30 @@ class FoyerPageRules extends LitElement {
               <span class="hint">${t(s, "rules.guard_ready_hint")}</span>
             </span>
           </label>
+          ${draft.action === "disarm"
+            ? nothing
+            : html`<label class="check">
+                  <input
+                    type="checkbox"
+                    .checked=${live(Boolean(draft.exclude_open_zones))}
+                    @change=${(e: Event) =>
+                      this._set("exclude_open_zones", (e.target as HTMLInputElement).checked)}
+                  />
+                  <span>
+                    ${t(s, "field.exclude_open_zones")}
+                    <span class="hint">${t(s, "rules.exclude_open_hint")}</span>
+                  </span>
+                </label>
+                ${draft.exclude_open_zones
+                  ? html`<div class="notice">
+                      ${t(
+                        s,
+                        draft.guards.only_when_ready
+                          ? "rules.exclude_open_no_effect"
+                          : "rules.exclude_open_warning",
+                      )}
+                    </div>`
+                  : nothing}`}
           <label class="field">
             <span class="lbl">${t(s, "rules.guard_quiet_label")}</span>
             <input
@@ -679,6 +704,7 @@ class FoyerPageRules extends LitElement {
           </div>
           <div class="block">
             <div class="lbl strong">${t(s, "field.notify_contact_ids")}</div>
+            <p class="hint">${t(s, "rules.notify_outcome_hint")}</p>
             <div class="chips">
               ${(ctx.config?.contacts ?? []).map((contact) => {
                 const on = draft.notify_contact_ids.includes(contact.id ?? "");

@@ -7437,7 +7437,8 @@ function hn() {
 		},
 		grace_seconds: 120,
 		notify_contact_ids: [],
-		enabled: !0
+		enabled: !0,
+		exclude_open_zones: !1
 	};
 }
 var gn = class extends j {
@@ -7853,6 +7854,20 @@ var gn = class extends j {
               <span class="hint">${N(e, "rules.guard_ready_hint")}</span>
             </span>
           </label>
+          ${t.action === "disarm" ? T : C`<label class="check">
+                  <input
+                    type="checkbox"
+                    .checked=${U(!!t.exclude_open_zones)}
+                    @change=${(e) => this._set("exclude_open_zones", e.target.checked)}
+                  />
+                  <span>
+                    ${N(e, "field.exclude_open_zones")}
+                    <span class="hint">${N(e, "rules.exclude_open_hint")}</span>
+                  </span>
+                </label>
+                ${t.exclude_open_zones ? C`<div class="notice">
+                      ${N(e, t.guards.only_when_ready ? "rules.exclude_open_no_effect" : "rules.exclude_open_warning")}
+                    </div>` : T}`}
           <label class="field">
             <span class="lbl">${N(e, "rules.guard_quiet_label")}</span>
             <input
@@ -7881,6 +7896,7 @@ var gn = class extends j {
           </div>
           <div class="block">
             <div class="lbl strong">${N(e, "field.notify_contact_ids")}</div>
+            <p class="hint">${N(e, "rules.notify_outcome_hint")}</p>
             <div class="chips">
               ${(n.config?.contacts ?? []).map((e) => C`<label class="chip">
                   <input

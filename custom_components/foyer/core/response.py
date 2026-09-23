@@ -395,6 +395,7 @@ def recipients_for(
     ack: bool = False,
     cancel: str | None = None,
     avoid: frozenset[str] = frozenset(),
+    loud: bool = False,
 ) -> tuple[tuple[Mapping[str, Any], ...], tuple[str, ...]]:
     """The contacts a message actually reaches now, and who quiet hours held.
 
@@ -410,7 +411,9 @@ def recipients_for(
     # prevents is discovering during the emergency that the channel was
     # misconfigured. Quiet hours are a rule about alarms, not about whether
     # the phone rings when somebody presses "test".
-    testing = moment is Moment.ACTION_TESTED
+    # `loud`: through quiet hours, whatever the severity — a house the
+    # household believes armed and is not (decision 124).
+    testing = moment is Moment.ACTION_TESTED or loud
     loudness = SEVERITY_ORDER.index(severity_of(moment))
     recipients: list[Mapping[str, Any]] = []
     reached: set[tuple[str, str]] = set()

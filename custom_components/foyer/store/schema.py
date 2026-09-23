@@ -212,8 +212,9 @@ from ..core.models import (
 #
 # 8.2 is additive: API devices gain scopes (§9.2.2). An 8.1 build reading it
 # ignores them and serves its keypads as it always did.
+# 8.3 is additive too: a rule may exclude open zones (decision 126).
 STORAGE_VERSION = 8
-STORAGE_MINOR_VERSION = 2
+STORAGE_MINOR_VERSION = 3
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -1008,6 +1009,7 @@ def rule_from_dict(r: dict[str, Any]) -> AutoRule:
         grace_seconds=int(r["grace_seconds"]),
         notify_contact_ids=tuple(r.get("notify_contact_ids", ())),
         enabled=bool(r["enabled"]),
+        exclude_open_zones=bool(r.get("exclude_open_zones", False)),
     )
 
 
@@ -1039,6 +1041,7 @@ def rule_to_dict(r: AutoRule) -> dict[str, Any]:
         "grace_seconds": r.grace_seconds,
         "notify_contact_ids": list(r.notify_contact_ids),
         "enabled": r.enabled,
+        "exclude_open_zones": r.exclude_open_zones,
     }
 
 
@@ -1296,6 +1299,7 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 "last_occurrence": _iso(rt.last_occurrence),
                 "seen": rt.seen,
                 "schedule": rt.schedule,
+                "retrying": rt.retrying,
             }
             for rule_id, rt in state.rules.items()
         },
@@ -1690,6 +1694,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     schedule=rt.get("schedule")
                     if isinstance(rt.get("schedule"), str)
                     else None,
+                    retrying=bool(rt.get("retrying", False)),
                 )
                 for rule_id, rt in data.get("rules", {}).items()
                 if rule_id in rule_ids

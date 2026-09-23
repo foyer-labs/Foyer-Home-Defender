@@ -406,7 +406,8 @@
     "arm_scenario_ids": "Scenari che può inserire",
     "arm_area_ids": "Aree che può inserire",
     "disarm_area_ids": "Aree che può disinserire",
-    "clear_text_confirmed": "So che queste letture attraversano la rete senza cifratura"
+    "clear_text_confirmed": "So che queste letture attraversano la rete senza cifratura",
+    "exclude_open_zones": "Inserisci comunque, escludendo le zone aperte"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -1412,6 +1413,42 @@
     "access_recovered": {
       "title": "Foyer: accesso recuperato",
       "message": "Un amministratore ha usato Home Assistant per recuperare l'accesso a Foyer per l'account {account} e gli ha impostato un nuovo codice. Se nessuno in casa l'ha fatto, controlla chi ha accesso da amministratore a Home Assistant."
+    },
+    "auto_outcome": {
+      "title": "Foyer: «{rule}»",
+      "message": "La regola «{rule}» ha terminato."
+    },
+    "auto_outcome_not_armed": {
+      "title": "Foyer: non inserita",
+      "message": "«{rule}» non ha potuto inserire {scenario}: non pronte — {zones}. Si inserirà da sola appena lo saranno."
+    },
+    "auto_outcome_armed_later": {
+      "title": "Foyer: inserimento in corso",
+      "message": "«{rule}» sta inserendo {scenario} ora: le zone che non erano pronte ora lo sono."
+    },
+    "auto_outcome_excluding": {
+      "title": "Foyer: inserita con zone escluse",
+      "message": "«{rule}» ha inserito {scenario} escludendo ciò che era aperto: {zones}. Restano escluse fino al disinserimento."
+    },
+    "auto_outcome_failed": {
+      "title": "Foyer: non inserita",
+      "message": "«{rule}» non ha potuto inserire {scenario}. Il registro dice perché."
+    },
+    "auto_pending_arm_open": {
+      "title": "Foyer: inserisce fra {seconds} s — non pronta",
+      "message": "Non sembra esserci nessuno, quindi «{rule}» inserirà {scenario} — ma {zones} non è pronta, e non potrà inserire finché non lo sarà. Annulla per fermarla."
+    },
+    "auto_pending_arm_open_exclude": {
+      "title": "Foyer: inserisce fra {seconds} s, escludendo",
+      "message": "Non sembra esserci nessuno, quindi «{rule}» inserirà {scenario} — {zones} è aperta e verrà esclusa. Annulla per fermarla."
+    },
+    "auto_pending_switch_open": {
+      "title": "Foyer: cambia scenario fra {seconds} s — non pronta",
+      "message": "La regola «{rule}» passerà a {scenario} — ma {zones} non è pronta, e non potrà finché non lo sarà. Annulla per fermarla."
+    },
+    "auto_pending_switch_open_exclude": {
+      "title": "Foyer: cambia scenario fra {seconds} s, escludendo",
+      "message": "La regola «{rule}» passerà a {scenario} — {zones} è aperta e verrà esclusa. Annulla per fermarla."
     }
   },
   "chime_mode": {
@@ -1568,7 +1605,8 @@
     "auto_arming_switched": "Regole automatiche attivate o disattivate",
     "alarm_ended": "Fine dell'allarme",
     "alarm_cleared": "Memoria d'allarme azzerata",
-    "access_recovered": "Accesso recuperato"
+    "access_recovered": "Accesso recuperato",
+    "auto_outcome": "Esito di una regola automatica"
   },
   "condition": {
     "add": "Aggiungi una condizione",
@@ -1721,7 +1759,8 @@
     "config_revoke_token": "Token del tastierino revocato",
     "tokens_rejected": "Token di tastierino rifiutati",
     "access_recovered": "Accesso recuperato da un amministratore",
-    "device_unlocked": "Dispositivo sbloccato con un codice"
+    "device_unlocked": "Dispositivo sbloccato con un codice",
+    "auto_outcome": "Esito della regola automatica comunicato"
   },
   "log": {
     "filters": "Filtri",
@@ -2588,7 +2627,11 @@
     "because": " · {name}",
     "block_alarm_in_progress": "C'è un allarme in corso",
     "block_missed": "Persa: Home Assistant era fermo",
-    "block_unknown_area": "Un'area che nomina non esiste più"
+    "block_unknown_area": "Un'area che nomina non esiste più",
+    "exclude_open_hint": "Solo le zone aperte che si possono escludere. Una zona guasta, o una che non si può escludere, blocca comunque l'inserimento. Ciò che viene escluso resta escluso fino al disinserimento.",
+    "exclude_open_warning": "È un inserimento forzato che nessuno conferma con un codice: la casa si inserisce con quella finestra scoperta. Il conto alla rovescia e il messaggio dopo dicono cosa è stato escluso.",
+    "exclude_open_no_effect": "Con «solo se ogni zona è pronta» attivo, la regola non parte mai con una zona aperta, quindi questa opzione non ha effetto.",
+    "notify_outcome_hint": "Ricevono il conto alla rovescia, e un secondo messaggio quando l'inserimento non va come annunciato: non inserita e perché, inserita più tardi, o inserita con zone escluse. Quello arriva anche nelle ore di silenzio."
   },
   "health": {
     "settings": "Impostazioni dello stato del sistema",

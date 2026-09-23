@@ -138,6 +138,7 @@ CATEGORY: dict[Moment, LogCategory] = {
     # ask". The countdown and its cancellation are there too, so the whole of
     # one rule's evening reads in one place.
     Moment.AUTO_PENDING: LogCategory.SYSTEM,
+    Moment.AUTO_OUTCOME: LogCategory.SYSTEM,
     Moment.AUTO_CANCELLED: LogCategory.SYSTEM,
     Moment.AUTO_BLOCKED: LogCategory.SYSTEM,
     Moment.AUTO_SUSPENSION_SET: LogCategory.SYSTEM,
@@ -212,6 +213,7 @@ SEVERITY: dict[Moment, LogSeverity] = {
     # moment at which somebody can still stop the house arming itself, and
     # a contact's quiet hours let a warning through at a threshold they set.
     Moment.AUTO_PENDING: LogSeverity.WARNING,
+    Moment.AUTO_OUTCOME: LogSeverity.WARNING,
     Moment.AUTO_CANCELLED: LogSeverity.INFO,
     # "Why did it not arm last night?" — the row that answers it. A warning,
     # because a house that did not arm when it was meant to is not routine.

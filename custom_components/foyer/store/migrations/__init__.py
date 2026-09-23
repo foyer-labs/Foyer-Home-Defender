@@ -569,6 +569,15 @@ def _v8_1_to_v8_2(data: Document) -> Document:
     return out
 
 
+def _v8_2_to_v8_3(data: Document) -> Document:
+    """A rule may arm excluding open zones (decision 126). Every rule stored
+    before keeps refusing an open zone, as it always has."""
+    out = copy.deepcopy(data)
+    for rule in out.get("rules", []):
+        rule.setdefault("exclude_open_zones", False)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -601,6 +610,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (7, 3): (_v7_3_to_v7_4, (7, 4)),
     (7, 4): (_v7_4_to_v8_1, (8, 1)),
     (8, 1): (_v8_1_to_v8_2, (8, 2)),
+    (8, 2): (_v8_2_to_v8_3, (8, 3)),
 }
 
 

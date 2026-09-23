@@ -176,6 +176,7 @@ _RULE_DEFAULTS: dict[str, Any] = {
     "grace_seconds": 120,
     "notify_contact_ids": [],
     "enabled": True,
+    "exclude_open_zones": False,
 }
 
 

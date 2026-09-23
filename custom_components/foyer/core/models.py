@@ -418,6 +418,9 @@ class Moment(StrEnum):
     # that the log can answer "why did it not arm last night?", which is the
     # one question §9.4 says silence must never be the answer to.
     AUTO_PENDING = "auto_pending"  # the countdown started
+    # What came of it, told to the rule's own contacts (decision 124): not
+    # armed and why, armed later, armed excluding zones.
+    AUTO_OUTCOME = "auto_outcome"
     AUTO_CANCELLED = "auto_cancelled"  # somebody pressed Cancel
     AUTO_BLOCKED = "auto_blocked"  # a guard, a suspension, the switch
     AUTO_SUSPENSION_SET = "auto_suspension_set"
@@ -1531,6 +1534,9 @@ class AutoRule:
     grace_seconds: int = DEFAULT_GRACE_SECONDS
     notify_contact_ids: tuple[str, ...] = ()
     enabled: bool = True
+    # Arm anyway, excluding the open zones that are bypassable (decision
+    # 126). Off by default: a forced arming nobody typed a code for.
+    exclude_open_zones: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -2259,6 +2265,10 @@ class RuleRuntime:
     # next occurrence rather than acting at once (found in review) — the same
     # baseline rule, applied to a change of the rule itself.
     schedule: str | None = None
+    # The rule was refused by a zone that was not ready and is trying again
+    # now that it is: its arming is "armed now", not a plain arming (decision
+    # 124).
+    retrying: bool = False
 
 
 @dataclass(frozen=True, slots=True)

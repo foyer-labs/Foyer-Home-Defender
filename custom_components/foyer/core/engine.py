@@ -24,7 +24,7 @@ records what the areas did but decides nothing for them.
 
 from __future__ import annotations
 
-from collections.abc import Container
+from collections.abc import Container, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
@@ -445,6 +445,15 @@ def next_wakeup(
 
 
 # --- one decide() call -------------------------------------------------------------
+
+
+def _countdown_variant(detail: Mapping[str, str]) -> str | None:
+    """Which countdown message: the action's own, or the one that names open
+    zones and says what becomes of them (decision 125)."""
+    action = detail.get("action")
+    if not detail.get("open") or action == RuleActionKind.DISARM.value:
+        return action
+    return f"{action}_open_exclude" if detail.get("excluding") else f"{action}_open"
 
 
 @dataclass(frozen=True, slots=True)
@@ -3404,8 +3413,16 @@ class _Run:
         return replace(runtime, seen=True), occurrence is not None, occurrence
 
     # What a zone can put right by closing, and what it cannot.
+    # Refusals a zone can put right: the rule tries again once it has. A zone
+    # that may not be bypassed, open when the rule excludes open zones, is
+    # one of them — the message of decision 124 promises it (review).
     _ZONE_REFUSALS = frozenset(
-        {Reason.ZONE_OPEN, Reason.ZONE_FAULT, Reason.ARM_HOLD_EXPIRED}
+        {
+            Reason.ZONE_OPEN,
+            Reason.ZONE_FAULT,
+            Reason.ARM_HOLD_EXPIRED,
+            Reason.ZONE_NOT_BYPASSABLE,
+        }
     )
 
     def refused(self, rule: AutoRule, reason: Reason | None) -> None:
@@ -3435,7 +3452,9 @@ class _Run:
         scenario = self.config.scenario(rule.scenario_id)
         faulted, open_ = self.blockers(tuple(scenario.areas) if scenario else ())
         if not faulted and not open_:
-            self.rules_runtime[rule.id] = replace(runtime, latched=False, blocked=None)
+            self.rules_runtime[rule.id] = replace(
+                runtime, latched=False, blocked=None, retrying=True
+            )
 
     def spend(self, rule: AutoRule) -> None:
         """After a countdown was stopped at the last moment by a guard.
@@ -3671,6 +3690,7 @@ class _Run:
                 "due": pending.due.isoformat(),
                 "areas": ",".join(decided.area_ids),
                 "contacts": ",".join(rule.notify_contact_ids),
+                **self.not_ready_detail(rule, decided),
             },
         )
 
@@ -3819,11 +3839,18 @@ class _Run:
             # It fell due while nothing was running and it is happening now,
             # which is a thing the log has to say out loud (part 2 decision 12).
             self.rule_detail["late"] = "1"
+        runtime = self.rules_runtime.get(rule.id, RuleRuntime())
         try:
-            outcome = self.rule_perform(decided)
+            outcome = self.rule_perform(rule, decided)
+            if decided.action is not RuleActionKind.DISARM:
+                self.tell_outcome(rule, decided, outcome, runtime.retrying)
         finally:
             self.actor = previous
             self.rule_detail = {}
+        if runtime.retrying:
+            self.rules_runtime[rule.id] = replace(
+                self.rules_runtime.get(rule.id, runtime), retrying=False
+            )
         if outcome.accepted:
             return
         if decided.action is RuleActionKind.DISARM:
@@ -3864,12 +3891,23 @@ class _Run:
             },
         )
 
-    def rule_perform(self, decided: _RuleDecision) -> _Outcome:
+    def rule_perform(self, rule: AutoRule, decided: _RuleDecision) -> _Outcome:
         if decided.action is RuleActionKind.DISARM:
             return self.disarm(decided.area_ids)
+        scenario = self.config.scenario(decided.scenario_id)
+        force = False
+        if rule.exclude_open_zones and scenario is not None:
+            # Open zones only, and only bypassable ones (decision 126): the
+            # forced arming refuses a zone that may not be bypassed, and a
+            # fault is refused here, because a silent sensor is never
+            # "all quiet" (INV-4) and nobody chose to leave it uncovered.
+            faulted, _open = self.blockers(tuple(scenario.areas))
+            if faulted:
+                return _reject(Reason.ZONE_FAULT, tuple(z.id for z in faulted))
+            force = True
         return self.arm_scenario(
-            self.config.scenario(decided.scenario_id),
-            force=False,
+            scenario,
+            force=force,
             # A switch never disarms a perimeter area: those stay armed,
             # outside any scenario, and the master then reports
             # armed_custom_bypass (§13, part 2 decision 6).
@@ -3959,6 +3997,7 @@ class _Run:
         )
         chime, chime_inhibited = self.chime_intents(occurrences)
         countdown = self.countdown_intents(occurrences)
+        told = self.outcome_intents(occurrences)
         return Decision(
             at=self.now,
             accepted=outcome.accepted,
@@ -3973,7 +4012,14 @@ class _Run:
                 else None
             ),
             occurrences=occurrences,
-            actions=(*self.extra, *steps, *plan.intents, *chime, *countdown),
+            actions=(
+                *self.extra,
+                *steps,
+                *plan.intents,
+                *chime,
+                *countdown,
+                *told,
+            ),
             inhibited=(*plan.inhibited, *chime_inhibited),
             # What is still to come, read off the state this decision
             # produced: never a second prediction of it (§11.2, INV-1).
@@ -4033,13 +4079,123 @@ class _Run:
                         "rule": occurrence.detail.get("rule", ""),
                         "scenario": scenario.name if scenario else "",
                         "seconds": occurrence.detail.get("seconds", ""),
+                        "zones": occurrence.detail.get("open", ""),
                     },
-                    variant=occurrence.detail.get("action"),
+                    # "…— Bathroom window is open" (decision 125), with the
+                    # tail that says what will happen to it.
+                    variant=_countdown_variant(occurrence.detail),
                     params={
                         "recipients": recipients,
                         "quiet": ",".join(quiet),
                         "pending_id": pending_id,
                     },
+                )
+            )
+        return tuple(intents)
+
+    def not_ready_detail(
+        self, rule: AutoRule, decided: _RuleDecision
+    ) -> dict[str, str]:
+        """What the countdown says about zones that are not ready (decision
+        125): their names, and whether the rule will exclude them."""
+        if decided.action is RuleActionKind.DISARM:
+            return {}
+        scenario = self.config.scenario(decided.scenario_id)
+        if scenario is None:
+            return {}
+        faulted, open_ = self.blockers(tuple(scenario.areas))
+        if not faulted and not open_:
+            return {}
+        names = ", ".join(z.name for z in (*open_, *faulted))
+        excluding = (
+            rule.exclude_open_zones and not faulted and all(z.bypassable for z in open_)
+        )
+        return {"open": names, "excluding": "1" if excluding else ""}
+
+    def tell_outcome(
+        self,
+        rule: AutoRule,
+        decided: _RuleDecision,
+        outcome: _Outcome,
+        retrying: bool,
+    ) -> None:
+        """Tell the rule's contacts what came of its arming (decision 124).
+
+        Only when there is something to say: an arming that went as the
+        countdown announced needs no second message. The words follow what
+        happened — refused and why, armed now that the zone is shut, or
+        armed with zones excluded — never what was planned.
+        """
+        names = {z.id: z.name for z in self.config.zones}
+        if outcome.accepted:
+            if self.new_bypasses:
+                kind = "excluding"
+                zones = [names.get(z, z) for z in self.new_bypasses]
+            elif retrying:
+                kind = "armed_later"
+                zones = []
+            else:
+                return
+        elif outcome.reason in self._ZONE_REFUSALS:
+            kind = "not_armed"
+            zones = [names.get(z, z) for z in outcome.blocking]
+        elif outcome.reason is Reason.INVALID_STATE:
+            return
+        else:
+            kind = "failed"
+            zones = []
+        self.occur(
+            Moment.AUTO_OUTCOME,
+            channel=AUTO_RULE_CHANNEL,
+            scenario_id=decided.scenario_id,
+            zone_ids=tuple(outcome.blocking),
+            detail={
+                "rule": rule.name,
+                "rule_id": rule.id,
+                "outcome": kind,
+                "zones": ", ".join(zones),
+                "reason": outcome.reason.value if outcome.reason else "",
+                "contacts": ",".join(rule.notify_contact_ids),
+            },
+        )
+
+    def outcome_intents(
+        self, occurrences: tuple[Occurrence, ...]
+    ) -> tuple[ActionIntent, ...]:
+        """The message of decision 124, to the rule's own contacts, through
+        quiet hours: the house they believe armed may not be."""
+        intents: list[ActionIntent] = []
+        for occurrence in occurrences:
+            if occurrence.moment is not Moment.AUTO_OUTCOME:
+                continue
+            contact_ids = [
+                c for c in occurrence.detail.get("contacts", "").split(",") if c
+            ]
+            if not contact_ids:
+                continue
+            recipients, quiet = recipients_for(
+                self.config,
+                [{"contact_id": c, "channel_id": None} for c in contact_ids],
+                self.now,
+                self.timezone,
+                Moment.AUTO_OUTCOME,
+                loud=True,
+            )
+            if not recipients:
+                continue
+            scenario = self.config.scenario(occurrence.scenario_id)
+            intents.append(
+                ActionIntent(
+                    action_id=f"auto_outcome:{occurrence.detail.get('rule_id', '')}",
+                    kind=ActionKind.NOTIFY.value,
+                    moment=Moment.AUTO_OUTCOME,
+                    placeholders={
+                        "rule": occurrence.detail.get("rule", ""),
+                        "scenario": scenario.name if scenario else "",
+                        "zones": occurrence.detail.get("zones", ""),
+                    },
+                    variant=occurrence.detail.get("outcome"),
+                    params={"recipients": recipients, "quiet": ",".join(quiet)},
                 )
             )
         return tuple(intents)

@@ -327,3 +327,28 @@ async def test_the_status_the_card_reads_carries_the_countdown(
     assert pending["action"] == "arm"
     assert pending["seconds"] == 120
     assert auto["next"]["pending_id"] == pending["id"]
+
+
+async def test_an_open_zone_is_named_ahead_and_the_outcome_reaches_the_phone(
+    hass, loaded, hass_ws_client, freezer
+):
+    """Decisions 124 and 125, end to end: the countdown names the open zone,
+    and the phone hears that the house did not arm, in words."""
+    client = await hass_ws_client(hass)
+    await _set(hass, PERSON, "home")
+    await _rule(hass, client)
+    calls = await _notify_recorder(hass)
+    await _set(hass, ZONE, "on")
+    zone_name = _system(hass).config.zones[0].name
+
+    await _set(hass, PERSON, "not_home")
+    await _advance(hass, freezer, 11 * 60)
+    assert calls and zone_name in calls[-1]["message"], calls
+
+    await _advance(hass, freezer, 125)
+    outcome = calls[-1]
+    assert "Empty house" in outcome["message"]
+    assert zone_name in outcome["message"]
+    # No Cancel button: there is nothing left to cancel.
+    assert "actions" not in (outcome.get("data") or {})
+    assert hass.states.get("alarm_control_panel.foyer_casa").state == "disarmed"

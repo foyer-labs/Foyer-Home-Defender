@@ -293,6 +293,8 @@ export interface RuleConfig {
   grace_seconds: number;
   notify_contact_ids: string[];
   enabled: boolean;
+  /** Arm anyway, excluding open zones that are bypassable (decision 126). */
+  exclude_open_zones: boolean;
 }
 
 /** A suspension, or an expected-visitor window (§9.4). Runtime state, not

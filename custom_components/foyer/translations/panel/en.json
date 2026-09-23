@@ -406,7 +406,8 @@
     "arm_scenario_ids": "Scenarios it may arm",
     "arm_area_ids": "Areas it may arm",
     "disarm_area_ids": "Areas it may disarm",
-    "clear_text_confirmed": "I know these readings cross the network unencrypted"
+    "clear_text_confirmed": "I know these readings cross the network unencrypted",
+    "exclude_open_zones": "Arm anyway, excluding open zones"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -1412,6 +1413,42 @@
     "access_recovered": {
       "title": "Foyer: access recovered",
       "message": "An administrator used Home Assistant to recover access to Foyer for the account {account}, and set a new code for it. If nobody in the house did this, check who has administrator access to Home Assistant."
+    },
+    "auto_outcome": {
+      "title": "Foyer: «{rule}»",
+      "message": "Rule “{rule}” has finished."
+    },
+    "auto_outcome_not_armed": {
+      "title": "Foyer: not armed",
+      "message": "“{rule}” could not arm {scenario}: not ready — {zones}. It will arm by itself as soon as they are."
+    },
+    "auto_outcome_armed_later": {
+      "title": "Foyer: arming now",
+      "message": "“{rule}” is arming {scenario} now: the zones that were not ready are ready."
+    },
+    "auto_outcome_excluding": {
+      "title": "Foyer: armed with zones excluded",
+      "message": "“{rule}” armed {scenario} excluding what was open: {zones}. They stay excluded until you disarm."
+    },
+    "auto_outcome_failed": {
+      "title": "Foyer: not armed",
+      "message": "“{rule}” could not arm {scenario}. The log says why."
+    },
+    "auto_pending_arm_open": {
+      "title": "Foyer: arming in {seconds} s — not ready",
+      "message": "Nobody seems to be in, so “{rule}” will arm {scenario} — but {zones} is not ready, and it cannot arm until it is. Cancel to stop it."
+    },
+    "auto_pending_arm_open_exclude": {
+      "title": "Foyer: arming in {seconds} s, excluding",
+      "message": "Nobody seems to be in, so “{rule}” will arm {scenario} — {zones} is open and will be excluded. Cancel to stop it."
+    },
+    "auto_pending_switch_open": {
+      "title": "Foyer: switching scenario in {seconds} s — not ready",
+      "message": "Rule “{rule}” will switch to {scenario} — but {zones} is not ready, and it cannot until it is. Cancel to stop it."
+    },
+    "auto_pending_switch_open_exclude": {
+      "title": "Foyer: switching scenario in {seconds} s, excluding",
+      "message": "Rule “{rule}” will switch to {scenario} — {zones} is open and will be excluded. Cancel to stop it."
     }
   },
   "chime_mode": {
@@ -1568,7 +1605,8 @@
     "auto_arming_switched": "Automatic rules switched on or off",
     "alarm_ended": "Alarm over",
     "alarm_cleared": "Alarm memory cleared",
-    "access_recovered": "Access recovered"
+    "access_recovered": "Access recovered",
+    "auto_outcome": "Automatic rule outcome"
   },
   "condition": {
     "add": "Add a condition",
@@ -1721,7 +1759,8 @@
     "config_revoke_token": "Keypad token revoked",
     "tokens_rejected": "Keypad tokens refused",
     "access_recovered": "Access recovered by an administrator",
-    "device_unlocked": "Device unlocked with a code"
+    "device_unlocked": "Device unlocked with a code",
+    "auto_outcome": "Automatic rule outcome told"
   },
   "log": {
     "filters": "Filters",
@@ -2588,7 +2627,11 @@
     "because": " · {name}",
     "block_alarm_in_progress": "An alarm is in progress",
     "block_missed": "Missed: Home Assistant was down",
-    "block_unknown_area": "An area it names no longer exists"
+    "block_unknown_area": "An area it names no longer exists",
+    "exclude_open_hint": "Only zones that are open and may be excluded. A zone in fault, or one that may not be excluded, still stops the arming. What is excluded stays excluded until you disarm.",
+    "exclude_open_warning": "This is a forced arming nobody types a code for: the house arms with that window uncovered. The countdown and the message afterwards name what was excluded.",
+    "exclude_open_no_effect": "With “only if every zone is ready” on, the rule never starts while a zone is open, so this has no effect.",
+    "notify_outcome_hint": "They receive the countdown, and a second message when the arming did not go as announced: not armed and why, armed later, or armed with zones excluded. That one reaches them even in their quiet hours."
   },
   "health": {
     "settings": "System health settings",
