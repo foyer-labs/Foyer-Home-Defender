@@ -40,7 +40,10 @@ def async_watch_zones(system: FoyerSystem) -> CALLBACK_TYPE:
 
     @callback
     def _changed(event: Event[EventStateChangedData]) -> None:
-        # eager_start: decide() runs synchronously, here, in event order.
+        # eager_start: decide() runs synchronously, here, in event order —
+        # unless this change was written by Foyer's own _notify() while
+        # another decision was still being made. It then waits for that one
+        # to finish (FoyerSystem.async_handle).
         system.hass.async_create_task(
             system.async_zone_changed(
                 event.data["entity_id"],

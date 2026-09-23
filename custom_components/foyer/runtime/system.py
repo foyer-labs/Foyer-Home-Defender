@@ -7,7 +7,9 @@ hands the actions to the executor.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+import asyncio
+from collections import deque
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from datetime import datetime, timedelta
 import logging
@@ -167,6 +169,39 @@ def _ok(row: LogRow) -> bool:
     return row.outcome == Outcome.OK.value
 
 
+def _answers_sends(event: Event) -> bool:
+    """Whether this event reports what sends did (§12.2).
+
+    Where a decision came from, worked out from the event the runtime already
+    holds, so ``core`` needs to know nothing about it (INV-1). A decision made
+    on such a report may send in turn — that is how a broken channel is
+    announced over one that still works — and those sends are held for the
+    next report rather than reported at once (``_async_execute``).
+    """
+    return isinstance(event, HealthReport) and bool(event.channel_sends)
+
+
+def _send_reports(batches: Sequence[Mapping[str, bool]]) -> list[dict[str, bool]]:
+    """What sends did, oldest first, as few reports as keep each one counted.
+
+    Each batch is what one decision's actions did, one outcome per channel:
+    the engine counts a decision's sends over a channel as one attempt. Two
+    batches that name the same channel are two attempts, and folded into one
+    report the older would be lost — the engine counts failures in a row, so
+    a second channel failing twice would be counted once and stay "working"
+    past its threshold. Batches naming different channels travel together.
+    """
+    reports: list[dict[str, bool]] = []
+    for sends in batches:
+        if not sends:
+            continue
+        if reports and not reports[-1].keys() & sends.keys():
+            reports[-1].update(sends)
+        else:
+            reports.append(dict(sends))
+    return reports
+
+
 def _action_rows(decision: Decision, results: list[ActionResult]) -> tuple[LogRow, ...]:
     """How each action went, filed against what asked for it.
 
@@ -250,15 +285,23 @@ class FoyerSystem:
         self._unsub_wakeup: CALLBACK_TYPE | None = None
         self._unsubs: list[CALLBACK_TYPE] = []
         self._started = False
-        # Guards the one-level recursion of _async_report_sends, and holds
-        # what that recursion could not carry.
-        self._reporting = False
-        self._pending_sends: dict[str, bool] = {}
-        # Set by async_stop. Anything that was awaiting when the entry
-        # unloaded checks it before touching state: a reload while a
-        # watchdog ping is in flight would otherwise leave the old instance
-        # writing its own state over the new one's, pushing updates to
-        # removed entities and arming a wake-up nothing will ever cancel
+        # What sends did that the engine has not been told yet, one batch per
+        # decision, oldest first: those of a decision that was itself the
+        # answer to a report of sends (§12.2, _async_execute). They travel
+        # with the next report, or with the next channel sweep.
+        self._held_sends: list[dict[str, bool]] = []
+        # True while one call holds the turn to decide: its synchronous half
+        # is running, or it has just handed the turn to the first call in
+        # the queue. A call that arrives meanwhile waits in the queue, in
+        # arrival order (async_handle).
+        self._deciding = False
+        self._queue: deque[asyncio.Future[None]] = deque()
+        # Set by async_stop before its first await. From then on nothing is
+        # decided, rescheduled or saved, except async_stop's own final save:
+        # a reload while a watchdog ping is in flight, or a door that opens
+        # while the last save is writing, would otherwise leave the old
+        # instance writing its own state over the new one's, pushing updates
+        # to removed entities and arming a wake-up nothing will ever cancel
         # (INV-3).
         self._stopped = False
         # Memoisation for the read model, invalidated on every change.
@@ -336,6 +379,14 @@ class FoyerSystem:
 
     async def async_stop(self) -> None:
         """Unload: timers stop here, their state is on disk for the next start."""
+        # First, before anything awaits. Set after the save, it left a window
+        # the length of that save: a zone that changed meanwhile ran a whole
+        # decision, its actions went out, its own save queued behind this
+        # one, and the next system could read the file before that write
+        # landed (third review). A door opened here is not lost: the file says
+        # it was closed, and the next start finds it open, as it finds a door
+        # opened while Home Assistant was down.
+        self._stopped = True
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
@@ -346,17 +397,15 @@ class FoyerSystem:
             if (unsub := getattr(self, name)) is not None:
                 unsub()
                 setattr(self, name, None)
-        # The last save, and only then the flag that refuses every later one:
-        # set first, it made this save return at once, and the restart gap
-        # after a reload was measured from a stale `alive_at` (second review).
-        await self._async_save()
-        self._stopped = True
-        # After the save: a zone that changed while it was writing ran a
-        # decision, and that decision may have set a wake-up nothing else
-        # would ever cancel.
         if self._unsub_wakeup:
             self._unsub_wakeup()
             self._unsub_wakeup = None
+        # The one save a stopping system makes. Its `alive_at` is the moment
+        # decisions stopped, which is where the reload gap honestly begins
+        # (second review). Every save started before it is ahead of it on
+        # the store's write lock, which is first come first served, so when
+        # it returns the file is final.
+        await self._async_save(final=True)
 
     @callback
     def _on_registry_updated(self, _event: HassEvent) -> None:
@@ -565,8 +614,24 @@ class FoyerSystem:
             key: self._service_exists(service)
             for key, service in health_engine.configured_channels(self.config).items()
         }
-        if present:
-            await self.async_handle(HealthReport(channels_present=present))
+        # And what the sends held since the last report did. On a quiet house
+        # the next real send may be the alarm itself, and a held failure is
+        # exactly the evidence that a second channel is going too: until it
+        # is counted, the alarm is planned over that channel as if it worked.
+        # The sweep that carries it is a report of sends like any other, so
+        # its own sends are held in turn, and what a warning's send sets off
+        # can never run faster than one step per sweep.
+        reports = _send_reports(self._held_sends)
+        self._held_sends = []
+        if present or reports:
+            await self.async_handle(
+                HealthReport(
+                    channels_present=present or None,
+                    channel_sends=reports[0] if reports else None,
+                )
+            )
+        for sends in reports[1:]:
+            await self.async_handle(HealthReport(channel_sends=sends))
 
     def _service_exists(self, service: str) -> bool:
         """Whether a channel's ``notify`` target is there to be called.
@@ -600,23 +665,94 @@ class FoyerSystem:
         overrides: Mapping[str, EntityState] | None = None,
         old_state: str | None = None,
     ) -> Decision:
-        """Decide, store, persist, execute, record. Returns the Decision."""
-        if self._stopped:
-            # This instance has been unloaded. Whatever was awaiting is
-            # finishing after the fact, and the house belongs to whoever
-            # replaced it.
-            #
-            # Refused, rather than an accepted Tick (found in review): a
-            # disarm arriving in that gap would otherwise be answered
-            # `success: true` — to the keypad, to the service caller and to
-            # the panel — while nothing at all had happened.
-            return replace(
-                decide(self._snapshot(), Tick(), self.config, dt_util.utcnow()),
-                accepted=False,
-                reason=Reason.NOT_LOADED,
-            )
-        # No await between snapshot and store: on the event loop this block is
-        # atomic, so two events can never interleave their decisions.
+        """Decide, store, announce, record and execute; then persist.
+
+        One decision at a time, in the order the calls arrived. A call that
+        arrives while another holds the turn waits for it: usually one that
+        was started from inside another decision — ``_notify()`` wrote one of
+        Foyer's own entities that a zone, a rule or a condition watches, and
+        the watcher's eager task, or an eager automation calling a Foyer
+        service, got here before the first decision had dispatched its
+        actions or recorded its rows. Deciding it there and then put the
+        consequence in the log and in front of the executor before its cause
+        (third review).
+        """
+        if self._deciding:
+            await self._async_wait_turn()
+        else:
+            self._deciding = True
+        try:
+            if self._stopped:
+                # This instance is stopping or has been unloaded. Whatever was
+                # awaiting is finishing after the fact, and the house belongs
+                # to whoever replaces it.
+                #
+                # Refused, rather than an accepted Tick (found in review): a
+                # disarm arriving in that gap would otherwise be answered
+                # `success: true` — to the keypad, to the service caller and
+                # to the panel — while nothing at all had happened. Checked
+                # after the wait, because a stop may have begun during it.
+                return replace(
+                    decide(self._snapshot(), Tick(), self.config, dt_util.utcnow()),
+                    accepted=False,
+                    reason=Reason.NOT_LOADED,
+                )
+            decision, changed = self._apply(event, overrides, old_state)
+        finally:
+            self._next_turn()
+        if changed:
+            # Only when something about the alarm moved: an attribute a
+            # sensor reports every few seconds wrote the whole state file
+            # each time, which on a Raspberry Pi's card is wear for nothing
+            # (second review). The alive tick still saves every five minutes.
+            await self._async_save()
+        return decision
+
+    async def _async_wait_turn(self) -> None:
+        """Queue behind the call that holds the turn, and take it when handed.
+
+        One call is woken at a time, each on its own turn of the loop, and it
+        holds the turn from the moment it is handed: a call that arrives in
+        between queues behind it rather than slipping in front. A Foyer
+        entity that changes on every update and is watched by Foyer is then
+        a busy loop, visible and interruptible, rather than a recursion that
+        ends in a RecursionError or an event loop that never returns.
+        """
+        waiter: asyncio.Future[None] = self.hass.loop.create_future()
+        self._queue.append(waiter)
+        try:
+            await waiter
+        except asyncio.CancelledError:
+            if waiter.done() and not waiter.cancelled():
+                # Handed the turn and cancelled before taking it (an
+                # automation restarted): pass it on, or nobody would ever
+                # decide anything again. A waiter cancelled while still in
+                # the queue is simply skipped by _next_turn.
+                self._next_turn()
+            raise
+
+    def _next_turn(self) -> None:
+        """Hand the turn to the first call still waiting, or give it up."""
+        while self._queue:
+            waiter = self._queue.popleft()
+            if not waiter.done():
+                waiter.set_result(None)
+                return
+        self._deciding = False
+
+    def _apply(
+        self,
+        event: Event,
+        overrides: Mapping[str, EntityState] | None,
+        old_state: str | None,
+    ) -> tuple[Decision, bool]:
+        """The synchronous half of a decision; says whether it needs saving.
+
+        No await between snapshot and store: on the event loop this is
+        atomic, and everything that fixes the decision's place in the order —
+        the state, the entities, the rows recorded and the actions dispatched
+        — happens here, before the turn passes to the next call.
+        """
         was_active = self.state.active_zones
         previous = self.state
         decision = decide(
@@ -631,29 +767,19 @@ class FoyerSystem:
             self._reschedule()
         except Exception:
             _LOGGER.exception("Foyer could not schedule its next wake-up")
+        # Before the rows: `foyer_event` must not fire before Foyer's own
+        # entities show the state it describes, or an automation reading them
+        # on that event would read the state before it.
         self._notify()
-        if decision.state != previous or decision.occurrences or decision.actions:
-            if decision.actions:
-                # The sirens first, the file second: a save that blocks —
-                # a full card, a slow disk — must not stand between a
-                # decision and its executor (§10, third review). Run beside
-                # the caller, not inside it: a keypad, a service call or the
-                # panel must not wait for a notification's transport to
-                # learn that its disarm was accepted; nor may a caller that
-                # is cancelled — an automation restarted, a script stopped —
-                # cancel a notification half-sent and lose its log row and
-                # its retry (second review).
-                self.hass.async_create_task(
-                    self._async_execute(decision), f"foyer actions {decision.at}"
-                )
-            # Only when something about the alarm moved: an attribute a
-            # sensor reports every few seconds wrote the whole state file
-            # each time, which on a Raspberry Pi's card is wear for nothing
-            # (second review). The alive tick still saves every five minutes.
-            await self._async_save()
-        # The log is written before the actions run and again after them: what
-        # happened is on record even if an action hangs, and how each action
-        # went is recorded when it is known (§10.2, category ``action``).
+        # The log is written before the actions run and again once they have:
+        # what happened is on record even if an action hangs, and how each
+        # action went is recorded when it is known (§10.2, category
+        # ``action``). Before the dispatch, because an action can finish
+        # without ever waiting — a persistent notification does — and its row
+        # would then have been filed before the row of what caused it. And
+        # here, not after the save: the file's slowness must not decide when
+        # the log hears of a decision, and a caller cancelled while the file
+        # was writing lost the rows.
         try:
             self.async_record(
                 rows_for(
@@ -666,41 +792,65 @@ class FoyerSystem:
             )
         except Exception:
             _LOGGER.exception("Foyer could not record a decision in its log")
-        return decision
+        if decision.actions:
+            # The sirens first, the file second: a save that blocks — a full
+            # card, a slow disk — must not stand between a decision and its
+            # executor (§10, third review). Run beside the caller, not inside
+            # it: a keypad, a service call or the panel must not wait for a
+            # notification's transport to learn that its disarm was accepted;
+            # nor may a caller that is cancelled — an automation restarted, a
+            # script stopped — cancel a notification half-sent and lose its
+            # log row and its retry (second review).
+            self.hass.async_create_task(
+                self._async_execute(decision, report=not _answers_sends(event)),
+                f"foyer actions {decision.at}",
+            )
+        changed = (
+            decision.state != previous
+            or bool(decision.occurrences)
+            or bool(decision.actions)
+        )
+        return decision, changed
 
-    async def _async_execute(self, decision: Decision) -> None:
+    async def _async_execute(self, decision: Decision, *, report: bool) -> None:
+        """Run a decision's actions, record how they went, and say what the
+        sends did (§12.2).
+
+        ``report`` is False when the decision answered a report of sends. Its
+        actions are then the warning that a channel broke, said over one that
+        still works, and their sends are held for the next report instead of
+        becoming one: fed straight back, a warning that failed would mark the
+        channel it went over as broken, and that channel's own warning would
+        be fed back in turn, through the whole address book. Held, not
+        dropped, because each is evidence about a real send. No default, so
+        no caller can forget to say.
+        """
         results = await self._executor.async_run(decision)
         self.async_record(_action_rows(decision, results))
-        await self._async_report_sends(results)
-
-    async def _async_report_sends(self, results: list[ActionResult]) -> None:
-        """Tell the engine how each notification channel actually did (§12.2).
-
-        One level deep and no further. The report itself may produce a
-        notification — that is the whole of "announce a broken channel over
-        a channel that still works" — and feeding *its* sends back in turn
-        would be a loop that runs until something fails differently. What is
-        lost is one cycle's evidence about the channel that carried the
-        warning, which the next sweep or the next real send says again.
-        """
         sends: dict[str, bool] = {}
         for result in results:
             sends.update(result.sends)
-        if self._reporting:
-            # Held rather than discarded: this is evidence about a real
-            # send, and the alternative is losing what a dead channel did
-            # while Foyer was busy saying another one was dead.
-            self._pending_sends.update(sends)
+        if not report:
+            if sends:
+                self._held_sends.append(sends)
             return
-        sends = {**self._pending_sends, **sends}
-        self._pending_sends = {}
-        if not sends:
-            return
-        self._reporting = True
-        try:
-            await self.async_handle(HealthReport(channel_sends=sends))
-        finally:
-            self._reporting = False
+        await self._async_report_sends(sends)
+
+    async def _async_report_sends(self, sends: Mapping[str, bool]) -> None:
+        """Tell the engine how each notification channel actually did (§12.2).
+
+        With it goes whatever was held since the last report, older first.
+        One level deep and no further, by where a decision came from rather
+        than by timing: every decision made here answers a report of sends,
+        so what its own sends did is held (``_async_execute``). A flag raised
+        for the length of this call used to guard it, and was down again by
+        the time the report's actions had run and come back to report (third
+        review).
+        """
+        batches = [*self._held_sends, sends]
+        self._held_sends = []
+        for report in _send_reports(batches):
+            await self.async_handle(HealthReport(channel_sends=report))
 
     async def async_zone_changed(
         self, entity_id: str, old: State | None, new: State | None
@@ -764,6 +914,10 @@ class FoyerSystem:
         if self._unsub_wakeup:
             self._unsub_wakeup()
             self._unsub_wakeup = None
+        if self._stopped:
+            # A stopping system arms nothing: a wake-up set now would fire on
+            # an instance nobody holds any more, with nothing to cancel it.
+            return
         now = dt_util.utcnow()
         due = next_wakeup(self._snapshot(), self.config, now)
         if due is None:
@@ -794,12 +948,12 @@ class FoyerSystem:
 
     # --- persistence ---------------------------------------------------------
 
-    async def _async_save(self) -> None:
-        if self._stopped:
-            # A save started before the unload and finishing after it would
-            # write this instance's state over the one that replaced it
-            # (found in review) — the hole `_remember_acknowledged` already
-            # closed for its own task.
+    async def _async_save(self, *, final: bool = False) -> None:
+        if self._stopped and not final:
+            # Once stopping has begun, the one save left is async_stop's own.
+            # Any other could land after the next system had read the file,
+            # or over what it wrote since (found in review) — the hole
+            # `_remember_acknowledged` already closed for its own task.
             return
         try:
             await self._state_store.async_save(self.state, dt_util.utcnow())
@@ -1187,7 +1341,9 @@ class FoyerSystem:
 
     @property
     def stopped(self) -> bool:
-        """Stopping, or stopped: its log is closing or closed."""
+        """Stopping, or stopped: set as async_stop begins. Nothing is decided
+        or saved after it except the final save, and its log is closing or
+        closed."""
         return self._stopped
 
     @callback
