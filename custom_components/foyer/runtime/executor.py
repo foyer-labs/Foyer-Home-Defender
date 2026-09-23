@@ -802,7 +802,9 @@ class Executor:
         try:
             await self._async_notify_call(notifier, {"message": zone})
         except Exception:
-            _LOGGER.warning("Foyer: %s did not accept the chime", notifier, exc_info=True)
+            _LOGGER.warning(
+                "Foyer: %s did not accept the chime", notifier, exc_info=True
+            )
 
     # --- plumbing -------------------------------------------------------------
 

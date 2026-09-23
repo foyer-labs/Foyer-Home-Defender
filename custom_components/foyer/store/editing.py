@@ -675,6 +675,19 @@ def _without_credentials(document: dict[str, Any]) -> dict[str, Any]:
             if user.get(key):
                 user[key] = _REDACTED
         user.pop("pseudonym", None)
+        # Nor their name: a config row is written by whoever made the change
+        # and is not one the sweep of §10.4 rewrites, so a name here would
+        # outlive the pseudonymisation of everything the person did. The row
+        # names them by id, which the erasure does reach.
+        user.pop("name", None)
+    for contact in document.get("contacts", []):
+        # The same for somebody in the address book: a name, and the phone
+        # numbers and chat ids in their channels, are not what a row about
+        # who changed the configuration needs to carry.
+        contact.pop("name", None)
+        for channel in contact.get("channels") or ():
+            channel.pop("target", None)
+            channel.pop("data", None)
     settings = document.get("settings") or {}
     if settings.get("ack_webhook_id"):
         settings["ack_webhook_id"] = _REDACTED
@@ -723,11 +736,20 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
         "users": {
             u.id: {
                 key
-                for key in ("code_hash", "duress_code_hash")
+                for key in ("code_hash", "duress_code_hash", "name")
                 if getattr(o, key) != getattr(u, key)
             }
             for u in new.users
             if (o := old.user(u.id)) is not None
+        },
+        "contacts": {
+            c.id: {
+                key
+                for key in ("name", "channels")
+                if getattr(o, key) != getattr(c, key)
+            }
+            for c in new.contacts
+            if (o := old.contact(c.id)) is not None
         },
     }
     changes: dict[str, Any] = {}
