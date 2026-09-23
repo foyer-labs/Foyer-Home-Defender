@@ -5,6 +5,48 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.16] — a way back in, and what a restore may touch
+
+Beta.15 asked an administrator for the code like anybody else and left four
+questions open. They are settled in SPEC §21 (decisions 108–111) and built
+here. The stored configuration stays at schema 8.1.
+
+### Changed — read these before you update
+- **Restoring a backup that changes people needs `manage_users`** as well as
+  `edit_config`. That means a backup that adds, removes or changes a person,
+  a tag, or the person a key switch acts as. `edit_config` alone was a way to
+  give yourself every permission through a file, or to hand somebody's tag
+  to somebody else. A restore that leaves people alone still needs
+  `edit_config` only. This applies to the panel and to
+  `foyer.import_config`.
+
+### Added
+- **Recovering access, from Home Assistant.** An administrator who holds no
+  code, in a house where others do, could change nothing after beta.15. The
+  same was true of one whose own Foyer user had been disabled or had run past
+  its validity window. **Settings → Devices & services → Foyer → Configure**
+  now recovers access for an administrator's account:
+  - it enables that account's Foyer user, removes its validity window and
+    sets a new code;
+  - an account with no Foyer user gets one, with every permission.
+
+  It is never quiet. Once the change is written, it is recorded in the
+  `security` log, shown as a Home Assistant notification and sent to every
+  contact, through quiet hours, naming the account. Home Assistant does not
+  tell an integration who opened the step, so the step asks which account;
+  only administrators' accounts are offered.
+- **`alarm_cleared`**, a moment raised when a disarm clears an area's alarm
+  memory, even hours after the siren stopped. It is the moment for switching
+  off a lamp that says an alarm happened while you were out.
+  `alarm_ended` still marks the end of the alarm itself.
+
+### Fixed
+- **Downloading a backup without a code seemed to do nothing.** Beta.15 asks
+  for the code, but a refusal went to a list the backup card never showed.
+  The card now says it, beside its buttons.
+- The settings page no longer stops drawing when the list of message
+  languages does not arrive.
+
 ## [0.1.0-beta.15] — what the second review left to decide
 
 No new features beyond one moment. Beta.14 fixed what the second full review
