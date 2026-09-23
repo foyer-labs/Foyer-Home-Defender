@@ -488,6 +488,14 @@ alone never arms or disarms anything. The contract is written down in
 as version v1, and a test in CI compares it with the code; administrators can
 read it and try it with a device's token on the panel's *API* page.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-api-device-en.png" alt="A device on the endpoint and what it may read and do: the state readable without a code, the zones, batteries and log only after a code, arming and disarming allowed, excluding zones and taking note not, and the confirmation that these readings cross the network unencrypted" width="900">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-api-en.png" alt="The API page for administrators: the device contract, version v1, rendered with Swagger UI, with the Authorize button for a device token and the three routes of the endpoint" width="900">
+</p>
+
 **A device is declared before it may command anything.** An unknown device is
 refused whatever code it brings, and the refusal is logged and raised. This is
 not tidiness: the lockout counts failed codes per device — and per Home

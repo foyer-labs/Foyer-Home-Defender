@@ -560,6 +560,14 @@ versione v1, e un test in CI lo confronta con il codice; gli amministratori
 possono leggerlo e provarlo con il token di un dispositivo nella pagina *API*
 del pannello.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-api-device-it.png" alt="Un dispositivo sull'endpoint e cosa può leggere e fare: lo stato leggibile senza codice, zone, batterie e registro solo dopo un codice, inserire e disinserire permessi, escludere zone e prendere atto no, e la conferma che queste letture attraversano la rete senza cifratura" width="900">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-api-it.png" alt="La pagina API per gli amministratori: il contratto dei dispositivi, versione v1, mostrato con Swagger UI, con il pulsante Authorize per il token di un dispositivo e i tre percorsi dell'endpoint" width="900">
+</p>
+
 Ogni blueprint si importa sul tuo Home Assistant con un pulsante, da
 [docs/keypads.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/keypads.md),
 che contiene anche il contratto completo (servizi, MQTT, l'endpoint e i
