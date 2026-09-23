@@ -1142,14 +1142,14 @@ def _health_from(
 
 
 def health_channels(config: FoyerConfig) -> dict[str, str]:
-    """Every enabled channel key. Spelled out here rather than imported from
+    """Every channel key the configuration holds, disabled ones included: a
+    fault survives the switch that disabled the channel, as a radio's does
+    (third review). Spelled out here rather than imported from
     ``core.health``, because a store module must not depend on the engine."""
     return {
         channel_key(contact.id, channel.id): channel.service
         for contact in config.contacts
-        if contact.enabled
         for channel in contact.channels
-        if channel.enabled
     }
 
 

@@ -71,7 +71,8 @@ MAX_PSEUDONYMISE_DAYS = 365
 # restarts and door states, which name nobody and are what somebody is reading
 # when they ask why a sensor did not react three weeks ago (part 2 decision 8).
 SHORT_RETENTION_DAYS = 7
-NAMED_CATEGORIES: tuple[str, ...] = ("arming", "alarm", "security", "config")
+# `action` names who acknowledged (§7.2), so it is one of them (third review).
+NAMED_CATEGORIES: tuple[str, ...] = ("arming", "alarm", "action", "security", "config")
 
 
 @dataclass(frozen=True, slots=True)

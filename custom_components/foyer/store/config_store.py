@@ -39,10 +39,16 @@ class ConfigStore:
     """Loads and saves the Foyer configuration."""
 
     def __init__(self, hass: HomeAssistant) -> None:
+        # Private and atomic, as Home Assistant keeps its own auth store: this
+        # file holds the code hashes, the keypad token's hash and the
+        # webhook id (§8.1), and a power cut must find the previous version
+        # whole rather than a half-written one (INV-3, third review).
         self._store = _VersionedStore(
             hass,
             STORAGE_VERSION,
             STORAGE_KEY,
+            private=True,
+            atomic_writes=True,
             minor_version=STORAGE_MINOR_VERSION,
         )
 

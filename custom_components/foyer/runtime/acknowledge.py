@@ -112,6 +112,11 @@ def async_listen_push(hass: HomeAssistant, system) -> Any:
         # required — an answer with nothing but the action name still
         # acknowledges, because the person pressed the button.
         extra = {**dict(data.get("action_data") or {}), **data}
+        if not _pending(system):
+            # The same rule as the webhook: a button pressed on a stale
+            # notification, with the house quiet, is not a refusal to log
+            # (third review).
+            return
         for ack in _events_for(
             str(extra.get("foyer_kind") or ""),
             ACK_VIA_PUSH,
@@ -153,6 +158,10 @@ def async_listen_cancel(hass: HomeAssistant, system) -> Any:
         # Android echoes the extra keys beside the action; iOS carries them
         # under `action_data`. Both are read, and neither is required.
         extra = {**dict(data.get("action_data") or {}), **data}
+        if not system.state.pending_rules:
+            # No countdown is running: the button belongs to one that has
+            # ended, and there is nothing to refuse (third review).
+            return
         await system.async_handle(
             CancelAutoAction(
                 pending_id=str(extra.get(CANCEL_PENDING_KEY) or "") or None,

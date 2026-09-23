@@ -294,10 +294,15 @@ def upsert(
             obj = zone_from_dict({**_ZONE_DEFAULTS, **preset(zone_type), **data})
             previous = config.zone(obj.id)
             # INV-5: a trigger is never saved unless the user confirmed it,
-            # whatever the client claims to have shown. Enforced here.
-            if (previous is None or previous.trigger != obj.trigger) and not (
-                trigger_confirmed
-            ):
+            # whatever the client claims to have shown. Enforced here. The
+            # entity is part of what was confirmed: the same trigger on a
+            # different entity is a trigger nobody has read against that
+            # entity's states (third review).
+            if (
+                previous is None
+                or previous.trigger != obj.trigger
+                or previous.entity_id != obj.entity_id
+            ) and not trigger_confirmed:
                 return _fail(
                     Problem("trigger_not_confirmed", "zone", obj.id, "trigger")
                 )
@@ -871,11 +876,18 @@ def touches_people(old: FoyerConfig, new: FoyerConfig) -> bool:
             for s in config.scenarios
         }
 
+    def linked(config: FoyerConfig) -> dict[str, str | None]:
+        # A contact's acknowledgement is attributed to the person it is
+        # linked to (§7.2): re-linking it makes somebody else's button count
+        # as that person — a credential, like a tag (third review).
+        return {c.id: c.linked_user_id for c in config.contacts}
+
     return (
         people(old) != people(new)
         or tags(old) != tags(new)
         or keys(old) != keys(new)
         or allowed(old) != allowed(new)
+        or linked(old) != linked(new)
     )
 
 

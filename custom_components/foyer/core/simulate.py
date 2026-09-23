@@ -50,6 +50,7 @@ from .models import (
     Moment,
     Occurrence,
     PendingRun,
+    ProfileAction,
     RuntimeState,
     SystemHealth,
     SystemSnapshot,
@@ -60,10 +61,12 @@ from .response import (
     FROM_NONE,
     SKIP_CONDITION,
     SKIP_HELD_BY_DELAY,
+    SKIP_IMPAIRED_RADIO,
     Answer,
     PlanContext,
     answer_for,
     condition_summary,
+    entity_ids,
     sequence,
     skip_reason,
 )
@@ -507,6 +510,14 @@ def _action_name(action) -> str:
     return action.name or action.kind.value
 
 
+def _on_jammed_radio(action: ProfileAction, ctx: PlanContext) -> bool:
+    """Every target of this action sits on a suspected radio (§12.5)."""
+    targets = entity_ids(action.params)
+    return bool(targets) and all(
+        ctx.snapshot.radio_of(entity_id) in ctx.impaired for entity_id in targets
+    )
+
+
 def _batch(
     config: FoyerConfig,
     answer: Answer,
@@ -573,6 +584,11 @@ def _batch(
                     # explain a skip the engine did not make.
                     inhibited=answer.inhibited,
                 )
+                if why is None and _on_jammed_radio(action, ctx):
+                    # The engine ran the sequence and found nothing left to
+                    # act on (§12.5); without this line the trace said the
+                    # action was skipped for no reason (third review).
+                    why = SKIP_IMPAIRED_RADIO
                 if why == SKIP_CONDITION:
                     conditions = condition_summary(action, ctx)
         actions.append(
@@ -708,6 +724,7 @@ def _report(
     request: SimulationRequest,
     radios: Mapping[str, str],
 ) -> SimStep:
+    health = decision.state.health
     ctx = PlanContext(
         config=config,
         snapshot=SystemSnapshot(
@@ -717,6 +734,14 @@ def _report(
         areas=decision.state.areas,
         incident=decision.state.incident,
         active_zones=decision.state.active_zones,
+        # The same context the engine planned with (`Engine.decision`): a
+        # trace read against a narrower one explained a walk test's or a
+        # jammed radio's skip as something else (third review).
+        walk_test=decision.state.walk_test is not None,
+        impaired=health.impaired_radios,
+        broken_channels=frozenset(
+            key for key, ch in health.channels.items() if ch.fault is not None
+        ),
         technical=decision.state.technical,
     )
     # Grouped exactly as the engine grouped them, by response.answer_for.

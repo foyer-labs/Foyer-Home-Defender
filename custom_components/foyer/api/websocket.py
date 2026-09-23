@@ -249,9 +249,16 @@ async def _gate(
     # `code_rejected` row, the same `lockout` moment a profile can answer.
     # These commands verify their own code and never reach `decide()`, so
     # before this they counted nothing at all — an unlimited, silent oracle
-    # over the whole code space (found in review).
-    attempt = await system.async_handle(CodeAttempt(operation=operation, actor=actor))
-    reason = attempt.reason or _may_configure(
+    # over the whole code space (found in review). A request carrying no
+    # code offers nothing to count, and the engine is not woken for it: a
+    # page opened is not an attempt (third review).
+    reason = None
+    if actor.code is not CodeResult.NONE:
+        attempt = await system.async_handle(
+            CodeAttempt(operation=operation, actor=actor)
+        )
+        reason = attempt.reason
+    reason = reason or _may_configure(
         system, actor, operation, permission, need_code=need_code
     )
     if reason is None:
@@ -1506,14 +1513,33 @@ async def ws_security_save(
         vol.Required("entity_id"): str,
     }
 )
-@websocket_api.require_admin
-@callback
-def ws_propose_zone(
+@websocket_api.async_response
+async def ws_propose_zone(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """The zone wizard's starting point (§4.4). The user must still confirm it."""
+    """The zone wizard's starting point (§4.4). The user must still confirm it.
+
+    Open to whoever may edit the configuration (§8.3), like the save it
+    prepares: gated on the administrator alone, a person holding edit_config
+    could open the Zones page and never add a zone (third review).
+    """
+    if (system := _system(hass, connection, msg["id"])) is None:
+        return
+    if (
+        await _gate(
+            hass,
+            system,
+            connection,
+            msg,
+            operation=Operation.EDIT_CONFIG,
+            permission=Permission.EDIT_CONFIG,
+            need_code=False,
+        )
+        is None
+    ):
+        return
     state = hass.states.get(msg["entity_id"])
     attributes = dict(state.attributes) if state else {}
     proposal = propose_zone(
@@ -1584,7 +1610,11 @@ async def ws_prefs_get(
     {
         vol.Required("type"): "foyer/prefs/set",
         vol.Required("prefs"): {
-            vol.Optional("help"): {str: bool},
+            # One flag per help page: bounded, because this is written to
+            # a store file by whoever holds any account (third review).
+            vol.Optional("help"): vol.All(
+                {vol.All(str, vol.Length(max=64)): bool}, vol.Length(max=64)
+            ),
             vol.Optional("help_hidden"): bool,
         },
     }

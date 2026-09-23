@@ -338,6 +338,9 @@ SKIP_QUIET_HOURS = "quiet_hours"
 # Nobody it names has a channel it may use now: none enabled, or — for the
 # message about a broken channel — only the broken one (§12.2).
 SKIP_NO_CHANNEL = "no_channel"
+# Every entity it would act on sits on a radio suspected of being jammed
+# (§12.5): announcing a Zigbee blackout through a Zigbee siren is nothing.
+SKIP_IMPAIRED_RADIO = "impaired_radio"
 
 
 def reachable(
@@ -432,6 +435,12 @@ def recipients_for(
             quiet.append(contact.id)
             continue
         channel = contact.channel(ref["channel_id"])
+        if channel is None and ref["channel_id"] is not None:
+            # The profile names a channel the person has since switched
+            # off: the message goes over their first enabled one rather
+            # than to nobody — a disabled SMS is no reason to leave the
+            # push untold (third review).
+            channel = contact.channel(None)
         if channel is not None and f"{contact.id}:{channel.id}" in avoid:
             # Warning somebody about a dead channel over the dead channel is
             # the joke that writes itself (§12.2) — so the message goes over

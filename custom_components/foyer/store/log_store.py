@@ -343,7 +343,16 @@ class LogStore:
 
     async def _async_insert(self, rows: Sequence[LogRow]) -> None:
         try:
-            await self.hass.async_add_executor_job(self._insert, rows)
+            # Shielded: `async_close` cancels the writer, and a cancellation
+            # that landed while the executor still held these rows dropped
+            # them silently — the row recording a configuration save, on
+            # the reload that save causes (third review). The insert
+            # finishes on its own; the close then flushes what is left.
+            await asyncio.shield(self.hass.async_add_executor_job(self._insert, rows))
+        except asyncio.CancelledError:
+            # The rows are with the executor and will be written; the
+            # cancellation is the worker's to honour.
+            raise
         except Exception:
             # Never raised at the caller: the alarm path put these rows here
             # and has long since moved on. Say it loudly and keep running.
@@ -895,13 +904,23 @@ def export_csv(rows: Sequence[Mapping[str, Any]]) -> str:
     for row in rows:
         writer.writerow(
             [
-                json.dumps(row.get("detail") or {}, default=str, sort_keys=True)
-                if column == "detail"
-                else (row.get(column) if row.get(column) is not None else "")
+                _cell(
+                    json.dumps(row.get("detail") or {}, default=str, sort_keys=True)
+                    if column == "detail"
+                    else (row.get(column) if row.get(column) is not None else "")
+                )
                 for column in CSV_COLUMNS
             ]
         )
     return out.getvalue()
+
+
+def _cell(value: Any) -> Any:
+    """A text cell a spreadsheet will not run: a zone named `=HYPERLINK(...)`
+    is a name, not a formula (third review)."""
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{value}"
+    return value
 
 
 def export_json(rows: Sequence[Mapping[str, Any]]) -> str:

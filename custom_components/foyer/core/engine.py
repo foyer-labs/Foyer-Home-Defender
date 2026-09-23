@@ -92,6 +92,7 @@ from .models import (
     RuleBlock,
     RuleRuntime,
     RuleTriggerKind,
+    RunningAction,
     RuntimeState,
     Scenario,
     ScheduledStep,
@@ -673,7 +674,11 @@ class _Run:
         # removed is dropped here rather than carried for ever, the same rule
         # every other map in this constructor follows.
         health = state.health
-        known_channels = set(health_engine.configured_channels(config))
+        # Every channel the configuration still has, disabled ones included:
+        # a fault a channel was in when it was switched off is not proven
+        # gone by the switch, and it must be there again when the channel is
+        # switched back on (third review). Only a deleted channel is dropped.
+        known_channels = set(health_engine.all_channels(config))
         radio_ids = {r.id for r in config.health.radios}
         self.mains_lost_since = health.mains_lost_since
         self.channels = {
@@ -893,6 +898,12 @@ class _Run:
             # Unable only when its own entity cannot report: a supervision
             # or battery fault leaves a detector that still counts.
             and not is_unavailable(self.entity(zone))
+            # And only while its own area watches it (§4.8): a member in a
+            # disarmed area never records an activation, so a group spanning
+            # an armed and a disarmed area was held for ever by the half
+            # that could not count (third review).
+            and (rt := self.areas.get(zone.area_id)) is not None
+            and self.effect(zone, rt) is not None
         ]
         return len(able) >= group.n
 
@@ -1245,7 +1256,13 @@ class _Run:
         armed: list[str] = []
         low: list[str] = []
         for area_id in self.areas:
-            if self.areas[area_id].state is not AreaState.DISARMED:
+            rt = self.areas[area_id]
+            # Nor an area still holding alarm memory: armed by the test, its
+            # memory read as "in alarm" when the test ended, and the house
+            # came out of a walk test armed with somebody inside (third
+            # review). Its zones are still detected — a detection is recorded
+            # whatever the area is doing — and a disarm clears the memory.
+            if rt.state is not AreaState.DISARMED or rt.memory:
                 continue
             outcome, _ = self.check_arming((area_id,), False)
             # check_arming answers one area at a time and records that area's
@@ -1605,6 +1622,26 @@ class _Run:
         for running in done:
             self.extra.append(revert_intent(running, Moment.SIREN_CUTOFF))
         self.running = list(without(self.running, done))
+        self.forget_started(done)
+
+    def forget_started(self, reverted: list[RunningAction]) -> None:
+        """What was switched off is no longer "already running" (§5.6).
+
+        The incident remembers what it started so a second zone does not
+        restart a siren that is sounding. Once the cutoff or a disarm has
+        switched it off, a zone that trips later must sound it again; left on
+        the list, the siren stayed silent for the rest of the incident
+        (third review).
+        """
+        if self.incident is None or not reverted:
+            return
+        gone = {r.action_id for r in reverted}
+        self.incident = replace(
+            self.incident,
+            actions_started=tuple(
+                a for a in self.incident.actions_started if a not in gone
+            ),
+        )
 
     def stop_running(self, area_id: str, moment: Moment) -> None:
         """Stop this area's sounders, and the incident's if it shares one.
@@ -1633,6 +1670,7 @@ class _Run:
         for running in stopped:
             self.extra.append(revert_intent(running, moment))
         self.running = list(without(self.running, stopped))
+        self.forget_started(stopped)
 
     def bypass_zone(self, event: BypassZone) -> _Outcome:
         """Exclude a zone by hand, or let it back in (SPEC §5.4, §16).
@@ -2961,6 +2999,14 @@ class _Run:
             },
         )
         self.clear_area(area_id)
+        if rt.memory:
+            # §5.2: alarm memory stays until a disarm. An arming the cutoff
+            # resumed and that then failed on an open zone is not one —
+            # nobody disarmed, and the card must still say an alarm happened
+            # (third review).
+            self.areas[area_id] = replace(
+                self.areas[area_id], memory=True, causes=rt.causes
+            )
 
     def bypass(self, zones: list[Zone], reason: BypassReason) -> None:
         for zone in zones:
@@ -3132,7 +3178,15 @@ class _Run:
         ]
         if not targets:
             return _reject(Reason.INVALID_STATE)
-        scenario = self.config.scenario(self.active_scenario_id)
+        # The scenario has a say only over the areas it armed: a garage armed
+        # on its own while Night runs is disarmed on the area's own terms, not
+        # refused because Night is not on the person's list (third review).
+        active = self.active_scenario_id
+        scenario = (
+            self.config.scenario(active)
+            if any(self.areas[a].scenario_id == active for a in targets)
+            else None
+        )
         reason = self.authorize(
             Operation.DISARM, area_ids=tuple(targets), scenario=scenario
         )

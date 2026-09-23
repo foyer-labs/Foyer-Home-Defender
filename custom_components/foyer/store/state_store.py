@@ -37,8 +37,15 @@ class StoredState:
 
 class StateStore:
     def __init__(self, hass: HomeAssistant) -> None:
+        # Atomic: INV-3's case is a crash, and a crash mid-write must leave
+        # the previous state whole, not a truncated file (third review).
         self._store: Store[dict[str, Any]] = Store(
-            hass, STATE_VERSION, STATE_KEY, minor_version=STATE_MINOR_VERSION
+            hass,
+            STATE_VERSION,
+            STATE_KEY,
+            private=True,
+            atomic_writes=True,
+            minor_version=STATE_MINOR_VERSION,
         )
 
     async def async_load(self, config: FoyerConfig) -> StoredState | None:

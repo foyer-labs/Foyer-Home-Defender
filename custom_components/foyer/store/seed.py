@@ -39,6 +39,11 @@ SEED_MOMENTS = frozenset(
         Moment.ZONE_BYPASSED,
         Moment.TECHNICAL_RAISED,
         Moment.TRIGGERED,
+        # A second zone tripping during an alarm is the intruder moving
+        # through the house (§5.6); a profile that announced the first and
+        # nothing after left the household with half the story (third
+        # review).
+        Moment.INCIDENT_JOINED,
         # §11.3 requires a notification on the start and the end of a walk
         # test, among the safeguards it calls mandatory. A safeguard that
         # only reaches whoever configured it is not one.

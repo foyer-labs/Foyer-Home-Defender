@@ -371,6 +371,10 @@ def rejection_row(
         # The same note the engine puts on every row a request in the clear
         # causes (§9.2.1).
         detail["encrypted"] = "false"
+    if actor.claimed:
+        # The same note as every accepted row: the name came with the
+        # request and was not established by it (decision 88).
+        detail["attributed"] = "claimed"
     return LogRow(
         ts=decision.at,
         category=category,

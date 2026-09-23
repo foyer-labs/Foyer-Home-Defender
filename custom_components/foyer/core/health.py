@@ -134,6 +134,16 @@ def configured_channels(config: FoyerConfig) -> dict[str, str]:
     }
 
 
+def all_channels(config: FoyerConfig) -> frozenset[str]:
+    """Every channel key the configuration holds, enabled or not: what the
+    stored health may still speak of (see ``Engine.__init__``)."""
+    return frozenset(
+        channel_key(contact.id, channel.id)
+        for contact in config.contacts
+        for channel in contact.channels
+    )
+
+
 def channel_after(
     current: ChannelHealth,
     now: datetime,

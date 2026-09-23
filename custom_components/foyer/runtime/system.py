@@ -633,6 +633,19 @@ class FoyerSystem:
             _LOGGER.exception("Foyer could not schedule its next wake-up")
         self._notify()
         if decision.state != previous or decision.occurrences or decision.actions:
+            if decision.actions:
+                # The sirens first, the file second: a save that blocks —
+                # a full card, a slow disk — must not stand between a
+                # decision and its executor (§10, third review). Run beside
+                # the caller, not inside it: a keypad, a service call or the
+                # panel must not wait for a notification's transport to
+                # learn that its disarm was accepted; nor may a caller that
+                # is cancelled — an automation restarted, a script stopped —
+                # cancel a notification half-sent and lose its log row and
+                # its retry (second review).
+                self.hass.async_create_task(
+                    self._async_execute(decision), f"foyer actions {decision.at}"
+                )
             # Only when something about the alarm moved: an attribute a
             # sensor reports every few seconds wrote the whole state file
             # each time, which on a Raspberry Pi's card is wear for nothing
@@ -653,16 +666,6 @@ class FoyerSystem:
             )
         except Exception:
             _LOGGER.exception("Foyer could not record a decision in its log")
-        if decision.actions:
-            # Run beside the caller, not inside it. A notification now waits
-            # for its transport's answer, and a keypad, a service call or
-            # the panel must not wait for that answer to learn that its
-            # disarm was accepted; nor may a caller that is cancelled — an
-            # automation restarted, a script stopped — cancel a notification
-            # half-sent and lose its log row and its retry (second review).
-            self.hass.async_create_task(
-                self._async_execute(decision), f"foyer actions {decision.at}"
-            )
         return decision
 
     async def _async_execute(self, decision: Decision) -> None:

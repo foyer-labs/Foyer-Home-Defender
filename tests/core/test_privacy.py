@@ -127,7 +127,8 @@ def test_cutoff_is_the_moment_rows_become_old_enough():
 def test_the_short_preset_touches_only_what_names_people():
     """§10.4's preset for installations with domestic staff (decision 8)."""
     assert SHORT_RETENTION_DAYS == 7
-    assert set(NAMED_CATEGORIES) == {"arming", "alarm", "security", "config"}
+    # `action` names who acknowledged (third review).
+    assert set(NAMED_CATEGORIES) == {"arming", "alarm", "action", "security", "config"}
     # The diagnostic categories are left alone: they name nobody, and they
     # are what somebody reads when a sensor did not react three weeks ago.
     assert "system" not in NAMED_CATEGORIES

@@ -137,6 +137,8 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
     """
     if document.get("foyer") != BACKUP_MAGIC or "config" not in document:
         return EditResult(None, (Problem("not_a_foyer_backup", "config"),))
+    if not isinstance(document["config"], dict):
+        return EditResult(None, (Problem("invalid", "config"),))
     version = document.get("version") or [STORAGE_VERSION, STORAGE_MINOR_VERSION]
     try:
         data = migrate(
@@ -147,7 +149,10 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
         config = config_from_dict(data)
     except MigrationError:
         return EditResult(None, (Problem("backup_version_unsupported", "config"),))
-    except (ConfigError, KeyError, TypeError, ValueError, IndexError):
+    except (ConfigError, KeyError, TypeError, ValueError, IndexError, AttributeError):
+        # A hand-edited file puts a string where a list was, or a number
+        # where a map was; any of these is "not a configuration", never a
+        # traceback in the panel (third review).
         return EditResult(None, (Problem("invalid", "config"),))
 
     config = replace(
@@ -181,7 +186,14 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
         health=replace(
             config.health,
             watchdog=replace(
-                config.health.watchdog, url=system.config.health.watchdog.url
+                config.health.watchdog,
+                url=system.config.health.watchdog.url,
+                # The file says "enabled" and the URL stayed behind: on a
+                # fresh install the restore was refused for a URL nobody
+                # could type before restoring (third review). The watchdog
+                # comes back once its URL is entered again.
+                enabled=config.health.watchdog.enabled
+                and bool(system.config.health.watchdog.url),
             ),
         ),
     )

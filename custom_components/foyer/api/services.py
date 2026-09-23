@@ -601,6 +601,13 @@ def _raising(hass: HomeAssistant, handler):
             return result
         if result.get("success") is False:
             reason = str(result.get("reason") or "")
+            if not reason:
+                # A configuration edit refused by validation answers with
+                # problems and no reason; the first problem's code is the
+                # reason, not "?" (third review).
+                problems = result.get("problems") or ()
+                first = next((p for p in problems if isinstance(p, dict)), None)
+                reason = str((first or {}).get("code") or "")
             names = [
                 str(z.get("name") or z.get("id"))
                 for z in result.get("blocking_zones") or ()

@@ -51,11 +51,32 @@ def test_new_zone_takes_its_preset_and_needs_a_confirmed_trigger(config):
 
 
 def test_editing_a_zone_without_touching_its_trigger_needs_no_confirmation(config):
-    item = {"id": "window", **ZONE_ITEM, "area_id": "ground", "name": "Kitchen"}
+    item = {
+        "id": "window",
+        **ZONE_ITEM,
+        "entity_id": config.zone("window").entity_id,
+        "area_id": "ground",
+        "name": "Kitchen",
+    }
     item["trigger"] = {"kind": "state", "states": ["on"]}
     result = upsert(config, RuntimeState(), "zone", item)
     assert result.config is not None
     assert result.config.zone("window").name == "Kitchen"
+
+
+def test_swapping_the_entity_needs_the_trigger_confirmed_again(config):
+    """INV-5 (third review): the same trigger on another entity is a trigger
+    nobody read against that entity's states — a lock's `locked/unlocked`
+    never matches `on`, and the alarm never fires."""
+    item = {"id": "window", **ZONE_ITEM, "area_id": "ground"}
+    item["entity_id"] = "lock.front"
+    item["trigger"] = {"kind": "state", "states": ["on"]}
+    assert upsert(config, RuntimeState(), "zone", item).problems[0].code == (
+        "trigger_not_confirmed"
+    )
+    confirmed = upsert(config, RuntimeState(), "zone", item, trigger_confirmed=True)
+    assert confirmed.config is not None
+    assert confirmed.config.zone("window").entity_id == "lock.front"
 
 
 def test_changing_a_trigger_needs_confirmation_again(config):
@@ -118,7 +139,13 @@ def test_a_zone_in_a_group_cannot_be_deleted_first(config):
 
 
 def test_a_cross_zone_partner_cannot_be_deleted_first(config):
-    item = {"id": "window", **ZONE_ITEM, "area_id": "ground", "cross_zone_id": "patio"}
+    item = {
+        "id": "window",
+        **ZONE_ITEM,
+        "entity_id": config.zone("window").entity_id,
+        "area_id": "ground",
+        "cross_zone_id": "patio",
+    }
     item["trigger"] = {"kind": "state", "states": ["on"]}
     paired = upsert(config, RuntimeState(), "zone", item)
     assert paired.problems == ()

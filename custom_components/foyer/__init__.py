@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
+    from .runtime.system import FoyerSystem
+
 _LOGGER = logging.getLogger(__name__)
 _WS_KEY = f"{DOMAIN}_websocket_registered"
 
@@ -39,9 +41,7 @@ PLATFORMS = (
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from homeassistant.exceptions import ConfigEntryError
 
-    from .api import endpoint, services, websocket
-    from .panel import async_register_frontend
-    from .runtime import acknowledge, mqtt
+    from .api import services, websocket
     from .runtime.system import FoyerSystem
     from .runtime.watcher import async_watch_zones
     from .store.config_store import ConfigStore
@@ -109,10 +109,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # outlives the integration answers callers with a stale system.
     services.async_register(hass)
 
+    # The log is closed last of all, after the system and every listener
+    # registered below have stopped: rows they write while stopping belong
+    # in it, and a close that ran before them dropped what came after
+    # (third review). `async_on_unload` callbacks run in reverse order.
+    if log is not None:
+        entry.async_on_unload(log.async_close)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _async_remove_stale_entities(hass, entry)
     entry.async_on_unload(async_watch_zones(system))
     system.async_start()
+    try:
+        await _async_setup_transports(hass, entry, system)
+    except Exception:
+        # A transport that fails to start must not leave a system running
+        # with its timers and listeners behind a failed setup, which Home
+        # Assistant will not unload (third review).
+        await system.async_stop()
+        raise
+    return True
+
+
+async def _async_setup_transports(
+    hass: HomeAssistant, entry: ConfigEntry, system: FoyerSystem
+) -> None:
+    """Everything that talks to the outside once the system runs."""
+    from .api import endpoint
+    from .panel import async_register_frontend
+    from .runtime import acknowledge, mqtt
+
     # The broker, if this installation wants one (§9.2). Started beside this
     # setup and not inside it: a broker that does not answer must not keep the
     # alarm from loading. The install id keeps two houses on one broker apart;
@@ -131,7 +156,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(acknowledge.async_listen_cancel(hass, system))
     entry.async_on_unload(acknowledge.async_register_webhook(hass, system))
     await async_register_frontend(hass)
-    return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -141,8 +165,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         await system.async_stop()
-        if system.log is not None:
-            await system.log.async_close()
         # The sidebar panel is not removed here. Every configuration save
         # reloads the entry, a reload unloads it first, and a panel that
         # disappears from `hass.panels` for even a moment sends whoever is

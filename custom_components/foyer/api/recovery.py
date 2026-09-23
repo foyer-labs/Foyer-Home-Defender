@@ -23,7 +23,7 @@ from functools import partial
 from homeassistant.core import HomeAssistant
 
 from .. import i18n
-from ..core.models import Permission
+from ..core.models import Actor, CodeAttempt, CodeResult, Permission
 from ..runtime.system import FoyerSystem
 from ..security import codes
 from ..store.editing import upsert
@@ -78,13 +78,29 @@ async def async_recover(
             code,
             ignore_user_id=linked.id if linked else None,
         )
+    ) or (
+        # Nor the person's own duress code: the ordinary hash would match
+        # first and the silent alarm could never fire.
+        linked is not None
+        and await hass.async_add_executor_job(
+            codes.matches, code, linked.duress_code_hash
+        )
     ):
-        return CODE_IN_USE
-    # Nor the person's own duress code: the ordinary hash would match first
-    # and the silent alarm could never fire.
-    if linked is not None and await hass.async_add_executor_job(
-        codes.matches, code, linked.duress_code_hash
-    ):
+        # A collision is an oracle over somebody else's code (§8.1), so it
+        # is spent like a wrong one: the same counter, the same row, the
+        # same moment a profile can answer (second review decision 5, third
+        # review). The admin path is never locked out, but it is counted.
+        await system.async_handle(
+            CodeAttempt(
+                operation=None,
+                actor=Actor(
+                    channel="ha_config",
+                    code=CodeResult.INVALID,
+                    is_admin=True,
+                    account=account.id,
+                ),
+            )
+        )
         return CODE_IN_USE
     hashed = await hass.async_add_executor_job(codes.hash_code, code)
     if linked is not None:
