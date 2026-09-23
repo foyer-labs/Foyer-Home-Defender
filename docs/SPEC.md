@@ -1234,6 +1234,124 @@ GET  /api/foyer/device/state                Authorization: Bearer <token>
 - **The channel is `keypad`**, as for an MQTT keypad: nothing about the
   transport makes it a channel that identifies a person (§8.2).
 
+### 9.2.2 API devices: reading the house, and acting on it
+
+The endpoint of §9.2.1 was built for a keypad. It is widened into the one way
+a device of the household's own — a touch display in the hall, a relay that
+lights an "armed" lamp, an ESP32 or Arduino module — reads what Foyer knows
+and, when it is allowed to, acts on it. Every such device is an **API
+device**: declared on page 8 with `transport: http`, holding a token of its
+own (§9.2.1), and allowed exactly what its **scopes** say (decision 115).
+
+**Scopes are the device's own, and every one is off until it is switched
+on.** A device never goes beyond them, whatever code is typed on it.
+
+| Scope | Kind | What it gives |
+|---|---|---|
+| `status` | read | the state message of §9.2: armed or not, which scenario, countdowns, ready to arm, alarm |
+| `zones` | read | every zone with its state: open, closed, in fault, excluded |
+| `batteries` | read | battery levels and tamper, per zone and per device |
+| `health` | read | the system health of §12: mains, notification channels, watchdog, radios |
+| `log` | read | the log, paged, newest first |
+| `arm` | act | arm, restricted to the scenarios and areas chosen on the device |
+| `disarm` | act | disarm, restricted to the areas chosen on the device |
+| `exclude` | act | exclude a zone from the next arming, and include it again |
+| `acknowledge` | act | take note of an alarm or a technical alarm (§7.2) |
+
+**Without a code, a device only reads** (decision 116). Every action needs a
+code, arming included, even where the policy of §8.2 asks none: a device on
+the network has no way of being the person standing in front of the panel,
+and the token alone must never be what arms or disarms the house — it
+crosses the network readable whenever the request is not encrypted (decision
+99). The code is the identity, as on a keypad: the action is attributed to
+its owner, checked against their permissions and scope, counted against the
+device's lockout when it is wrong (§8.4), and refused beyond the device's own
+scopes even when its owner could do more. A relay that only lights a lamp
+holds `status` and nothing else. The keypads already on the endpoint keep
+working as they do, under the same rule: they carry `status`, `arm` and
+`disarm`, and always ask for a code.
+
+**Each read scope is `free` or `after a code`, per device** (decision 117).
+A free scope is read with the token alone. A scope after a code is read only
+while the device is **unlocked**: somebody typed a valid code on it. The
+default is `status` free and everything else after a code, because a device
+in the hall is read by whoever walks past it, and "the back window is open"
+is the sentence a burglar wants.
+
+**The unlock** (decision 118):
+- lasts as long as the device says — **from 30 seconds to 10 minutes,**
+  chosen per device, two minutes by default — counted from its last use,
+  and ends at once with every arming or disarming made through the device;
+- is a `POST` with `action: unlock` and the code, and a wrong code counts
+  against the device's lockout like any other (§8.4);
+- reads only what the person whose code it was may read: `log` needs their
+  `view_log`, and the names in it appear only then. A free `log` scope shows
+  events with no person's name in them;
+- leaves a row under `security` — which device, whose code, until when —
+  because a display that shows the house after a code is a place where
+  somebody read it.
+
+**Plain HTTP stays accepted and said** (decision 119), as decision 97 does:
+a module that cannot do TLS keeps working, the warning on page 8 stays, and
+every row records that the request was not encrypted. Switching on any scope
+beyond `status` on a device that talks in the clear takes an explicit
+confirmation on page 8 — what that scope says about the house crosses the
+network readable — and the confirmation is recorded in the log.
+
+**How the data travels** (decision 120). A microcontroller has little memory,
+so nothing large is pushed:
+
+```
+GET  /api/foyer/device/state                 (§9.2.1, unchanged)
+→ text/event-stream: the state message on connect and on every change,
+  plus one-line notices:  event: changed   data: zones | batteries | health | log
+
+POST /api/foyer/device                       Authorization: Bearer <token>
+{ "action": "arm", "scenario": "night", "code": "…" }
+{ "action": "arm", "area": "garage", "code": "…" }
+{ "action": "disarm", "areas": ["ground"], "code": "…" }
+{ "action": "exclude" | "include", "zone": "kitchen_window", "code": "…" }
+{ "action": "acknowledge", "target": "incident" | "technical", "code": "…" }
+{ "action": "unlock", "code": "…" }  → { "success", "reason", "until" }
+{ "action": "lock" }                 → ends the unlock at once
+
+GET  /api/foyer/device/zones                 Authorization: Bearer <token>
+GET  /api/foyer/device/batteries
+GET  /api/foyer/device/health
+GET  /api/foyer/device/log?before=<cursor>&limit=<≤50>
+```
+
+- The state keeps arriving on the stream, so a lamp lights the instant the
+  house arms. A section is read with its own small request; the stream says
+  when one has changed, and a device that does not show it ignores the
+  notice.
+- A section the device may not read answers `403` with a stable reason:
+  `scope_not_granted`, `unlock_required`, or `plain_http_not_confirmed`. The
+  §9.1 result, `last_result` and `last_reason` of §9.2 are unchanged for
+  every action.
+- Zone names follow the detail level of decision 83 in the stream, as they
+  always have. The sections themselves carry names — they are read only by a
+  device given that scope, and after a code unless the owner chose otherwise.
+- The log is paged by an opaque cursor, at most fifty rows a request, and is
+  the same rows the log page shows (§10), after the privacy sweeps of §10.4.
+
+**The contract is written down, versioned and tested** (decision 121). The
+endpoint and the stream are described in `docs/api/openapi.yaml`, the MQTT
+contract of §9.2 in `docs/api/asyncapi.yaml`, both at contract version `v1`.
+A change that would break a device written against `v1` is a new version,
+and says so in the changelog. A test in CI compares both documents with the
+code — every action, field, reason and scope — so the documents cannot drift
+from what the endpoint answers. What is documented is only what a device may
+rely on: the panel's WebSocket commands are internal and are not.
+
+**An API page in the panel, for administrators** (decision 122) renders
+`openapi.yaml` with Swagger UI, so the contract can be read and tried from
+the browser with a device token pasted in. The library is bundled with the
+frontend and loaded only when that page opens: nothing is fetched from the
+internet, and nothing is served unauthenticated — a public documentation page
+would tell a scanner that an alarm lives on this host, which §9.2.1 already
+refuses to do when no keypad uses the endpoint.
+
 ### 9.3 Arming devices, and the adapters
 
 Every device that commands the alarm is **declared before it may** (decision
@@ -1921,6 +2039,9 @@ rely on.
 - **Zone cameras and the device endpoint** (§6.2.1, §9.2.1), added after the
   third part and before the documentation, so that the documents describe
   them rather than being rewritten for them.
+- **API devices and the API contract** (§9.2.2): scopes, reading the house,
+  the unlock, `docs/api/`, and the API page. Before the documentation, for
+  the same reason (decision 123).
 - **The disclaimers, last of all** (§20.4). The wording that says what this is
   and what it is not, everywhere somebody meets it rather than only in the
   licence. **Still to be agreed** — it is a conversation, not a task with a
@@ -2259,3 +2380,12 @@ document should make one of them on purpose.
 | 112 | Every change that touches people — a person, a tag, a key switch's person, a scenario's allowed people — needs `manage_users`, however it is made | Decision 111 closed the restore; the editor still let `edit_config` alone give a key switch to somebody or put somebody on a scenario's list |
 | 113 | The Overview's help panel starts collapsed | It is the page opened to arm or disarm in a hurry; on a phone the help pushed the controls off the screen |
 | 114 | The panel forgets a typed code after two minutes unused, after every arming or disarming, and when it closes | Kept for the whole visit, it let whoever came to the unlocked wall tablet next disarm or reconfigure without typing it |
+| 115 | A device on the endpoint is allowed what its own scopes say, all off until switched on | A display, a relay and an ESP32 module need different things; one fixed set would give each of them too much or too little |
+| 116 | Without a code an API device only reads; every action needs a code, arming included | The token crosses the network readable when the request is not encrypted, and must never be what arms or disarms the house; a relay that lights a lamp needs no more than reading |
+| 117 | Each read scope is free or after a code, per device; `status` free and the rest after a code by default | A device in the hall is read by whoever walks past it; the lamp's relay must still read the state with no keypad at all |
+| 118 | The unlock lasts 30 s to 10 min, chosen per device, ends with every arming or disarming, reads only what its code's owner may, and leaves a row | The same reasoning as decision 114, with a length that fits a display on a wall and a module that polls |
+| 119 | Plain HTTP stays accepted; any scope beyond `status` on a device in the clear needs an explicit, logged confirmation | Decision 97 kept the modules that cannot do TLS; what those scopes say about the house is worth one deliberate tick |
+| 120 | The state is streamed; each section is a small request, announced on the stream when it changes | A microcontroller has little memory; a lamp must still light at once |
+| 121 | `docs/api/openapi.yaml` and `asyncapi.yaml`, contract `v1`, checked against the code in CI | A document nobody checks is false within two releases; the panel's WebSocket commands are internal and stay out |
+| 122 | Swagger UI on an administrators' page of the panel, bundled, loaded only there | Trying the contract from a browser helps whoever builds a device; a public page would advertise the alarm to a scanner |
+| 123 | API devices land in Phase 5, before the documentation | So the documents describe them rather than being rewritten for them |
