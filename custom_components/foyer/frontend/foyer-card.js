@@ -256,34 +256,34 @@ var v = class extends HTMLElement {
 v.elementStyles = [], v.shadowRootOptions = { mode: "open" }, v[m("elementProperties")] = /* @__PURE__ */ new Map(), v[m("finalized")] = /* @__PURE__ */ new Map(), ie?.({ ReactiveElement: v }), (f.reactiveElementVersions ??= []).push("2.1.2");
 //#endregion
 //#region node_modules/lit-html/lit-html.js
-var y = globalThis, ae = (e) => e, b = y.trustedTypes, oe = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, x = "$lit$", S = `lit$${Math.random().toFixed(9).slice(2)}$`, C = "?" + S, se = `<${C}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, ce = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", O = "[ 	\n\f\r]", k = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, le = /-->/g, A = />/g, j = RegExp(`>|${O}(?:([^\\s"'>=/]+)(${O}*=${O}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), M = /'/g, N = /"/g, P = /^(?:script|style|textarea|title)$/i, F = ((e) => (t, ...n) => ({
+var y = globalThis, ae = (e) => e, b = y.trustedTypes, oe = b ? b.createPolicy("lit-html", { createHTML: (e) => e }) : void 0, x = "$lit$", S = `lit$${Math.random().toFixed(9).slice(2)}$`, C = "?" + S, se = `<${C}>`, w = document, T = () => w.createComment(""), E = (e) => e === null || typeof e != "object" && typeof e != "function", D = Array.isArray, O = (e) => D(e) || typeof e?.[Symbol.iterator] == "function", k = "[ 	\n\f\r]", A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, j = /-->/g, ce = />/g, M = RegExp(`>|${k}(?:([^\\s"'>=/]+)(${k}*=${k}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`, "g"), le = /'/g, ue = /"/g, de = /^(?:script|style|textarea|title)$/i, N = ((e) => (t, ...n) => ({
 	_$litType$: e,
 	strings: t,
 	values: n
-}))(1), I = Symbol.for("lit-noChange"), L = Symbol.for("lit-nothing"), R = /* @__PURE__ */ new WeakMap(), z = w.createTreeWalker(w, 129);
-function B(e, t) {
+}))(1), P = Symbol.for("lit-noChange"), F = Symbol.for("lit-nothing"), I = /* @__PURE__ */ new WeakMap(), L = w.createTreeWalker(w, 129);
+function R(e, t) {
 	if (!D(e) || !e.hasOwnProperty("raw")) throw Error("invalid template strings array");
 	return oe === void 0 ? t : oe.createHTML(t);
 }
-var V = (e, t) => {
-	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = k;
+var z = (e, t) => {
+	let n = e.length - 1, r = [], i, a = t === 2 ? "<svg>" : t === 3 ? "<math>" : "", o = A;
 	for (let t = 0; t < n; t++) {
 		let n = e[t], s, c, l = -1, u = 0;
-		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === k ? c[1] === "!--" ? o = le : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = j) : (P.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = j) : o = A : o === j ? c[0] === ">" ? (o = i ?? k, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? j : c[3] === "\"" ? N : M) : o === N || o === M ? o = j : o === le || o === A ? o = k : (o = j, i = void 0);
-		let d = o === j && e[t + 1].startsWith("/>") ? " " : "";
-		a += o === k ? n + se : l >= 0 ? (r.push(s), n.slice(0, l) + x + n.slice(l) + S + d) : n + S + (l === -2 ? t : d);
+		for (; u < n.length && (o.lastIndex = u, c = o.exec(n), c !== null);) u = o.lastIndex, o === A ? c[1] === "!--" ? o = j : c[1] === void 0 ? c[2] === void 0 ? c[3] !== void 0 && (o = M) : (de.test(c[2]) && (i = RegExp("</" + c[2], "g")), o = M) : o = ce : o === M ? c[0] === ">" ? (o = i ?? A, l = -1) : c[1] === void 0 ? l = -2 : (l = o.lastIndex - c[2].length, s = c[1], o = c[3] === void 0 ? M : c[3] === "\"" ? ue : le) : o === ue || o === le ? o = M : o === j || o === ce ? o = A : (o = M, i = void 0);
+		let d = o === M && e[t + 1].startsWith("/>") ? " " : "";
+		a += o === A ? n + se : l >= 0 ? (r.push(s), n.slice(0, l) + x + n.slice(l) + S + d) : n + S + (l === -2 ? t : d);
 	}
-	return [B(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
-}, H = class e {
+	return [R(e, a + (e[n] || "<?>") + (t === 2 ? "</svg>" : t === 3 ? "</math>" : "")), r];
+}, B = class e {
 	constructor({ strings: t, _$litType$: n }, r) {
 		let i;
 		this.parts = [];
-		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = V(t, n);
-		if (this.el = e.createElement(l, r), z.currentNode = this.el.content, n === 2 || n === 3) {
+		let a = 0, o = 0, s = t.length - 1, c = this.parts, [l, u] = z(t, n);
+		if (this.el = e.createElement(l, r), L.currentNode = this.el.content, n === 2 || n === 3) {
 			let e = this.el.content.firstChild;
 			e.replaceWith(...e.childNodes);
 		}
-		for (; (i = z.nextNode()) !== null && c.length < s;) {
+		for (; (i = L.nextNode()) !== null && c.length < s;) {
 			if (i.nodeType === 1) {
 				if (i.hasAttributes()) for (let e of i.getAttributeNames()) if (e.endsWith(x)) {
 					let t = u[o++], n = i.getAttribute(e).split(S), r = /([.?@])?(.*)/.exec(t);
@@ -292,17 +292,17 @@ var V = (e, t) => {
 						index: a,
 						name: r[2],
 						strings: n,
-						ctor: r[1] === "." ? de : r[1] === "?" ? fe : r[1] === "@" ? pe : G
+						ctor: r[1] === "." ? fe : r[1] === "?" ? G : r[1] === "@" ? pe : W
 					}), i.removeAttribute(e);
 				} else e.startsWith(S) && (c.push({
 					type: 6,
 					index: a
 				}), i.removeAttribute(e));
-				if (P.test(i.tagName)) {
+				if (de.test(i.tagName)) {
 					let e = i.textContent.split(S), t = e.length - 1;
 					if (t > 0) {
 						i.textContent = b ? b.emptyScript : "";
-						for (let n = 0; n < t; n++) i.append(e[n], T()), z.nextNode(), c.push({
+						for (let n = 0; n < t; n++) i.append(e[n], T()), L.nextNode(), c.push({
 							type: 2,
 							index: ++a
 						});
@@ -330,12 +330,12 @@ var V = (e, t) => {
 		return n.innerHTML = e, n;
 	}
 };
-function U(e, t, n = e, r) {
-	if (t === I) return t;
+function V(e, t, n = e, r) {
+	if (t === P) return t;
 	let i = r === void 0 ? n._$Cl : n._$Co?.[r], a = E(t) ? void 0 : t._$litDirective$;
-	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = U(e, i._$AS(e, t.values), i, r)), t;
+	return i?.constructor !== a && (i?._$AO?.(!1), a === void 0 ? i = void 0 : (i = new a(e), i._$AT(e, n, r)), r === void 0 ? n._$Cl = i : (n._$Co ??= [])[r] = i), i !== void 0 && (t = V(e, i._$AS(e, t.values), i, r)), t;
 }
-var ue = class {
+var H = class {
 	constructor(e, t) {
 		this._$AV = [], this._$AN = void 0, this._$AD = e, this._$AM = t;
 	}
@@ -347,27 +347,27 @@ var ue = class {
 	}
 	u(e) {
 		let { el: { content: t }, parts: n } = this._$AD, r = (e?.creationScope ?? w).importNode(t, !0);
-		z.currentNode = r;
-		let i = z.nextNode(), a = 0, o = 0, s = n[0];
+		L.currentNode = r;
+		let i = L.nextNode(), a = 0, o = 0, s = n[0];
 		for (; s !== void 0;) {
 			if (a === s.index) {
 				let t;
-				s.type === 2 ? t = new W(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new me(i, this, e)), this._$AV.push(t), s = n[++o];
+				s.type === 2 ? t = new U(i, i.nextSibling, this, e) : s.type === 1 ? t = new s.ctor(i, s.name, s.strings, this, e) : s.type === 6 && (t = new me(i, this, e)), this._$AV.push(t), s = n[++o];
 			}
-			a !== s?.index && (i = z.nextNode(), a++);
+			a !== s?.index && (i = L.nextNode(), a++);
 		}
-		return z.currentNode = w, r;
+		return L.currentNode = w, r;
 	}
 	p(e) {
 		let t = 0;
 		for (let n of this._$AV) n !== void 0 && (n.strings === void 0 ? n._$AI(e[t]) : (n._$AI(e, n, t), t += n.strings.length - 2)), t++;
 	}
-}, W = class e {
+}, U = class e {
 	get _$AU() {
 		return this._$AM?._$AU ?? this._$Cv;
 	}
 	constructor(e, t, n, r) {
-		this.type = 2, this._$AH = L, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
+		this.type = 2, this._$AH = F, this._$AN = void 0, this._$AA = e, this._$AB = t, this._$AM = n, this.options = r, this._$Cv = r?.isConnected ?? !0;
 	}
 	get parentNode() {
 		let e = this._$AA.parentNode, t = this._$AM;
@@ -380,7 +380,7 @@ var ue = class {
 		return this._$AB;
 	}
 	_$AI(e, t = this) {
-		e = U(this, e, t), E(e) ? e === L || e == null || e === "" ? (this._$AH !== L && this._$AR(), this._$AH = L) : e !== this._$AH && e !== I && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? ce(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
+		e = V(this, e, t), E(e) ? e === F || e == null || e === "" ? (this._$AH !== F && this._$AR(), this._$AH = F) : e !== this._$AH && e !== P && this._(e) : e._$litType$ === void 0 ? e.nodeType === void 0 ? O(e) ? this.k(e) : this._(e) : this.T(e) : this.$(e);
 	}
 	O(e) {
 		return this._$AA.parentNode.insertBefore(e, this._$AB);
@@ -389,19 +389,19 @@ var ue = class {
 		this._$AH !== e && (this._$AR(), this._$AH = this.O(e));
 	}
 	_(e) {
-		this._$AH !== L && E(this._$AH) ? this._$AA.nextSibling.data = e : this.T(w.createTextNode(e)), this._$AH = e;
+		this._$AH !== F && E(this._$AH) ? this._$AA.nextSibling.data = e : this.T(w.createTextNode(e)), this._$AH = e;
 	}
 	$(e) {
-		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = H.createElement(B(n.h, n.h[0]), this.options)), n);
+		let { values: t, _$litType$: n } = e, r = typeof n == "number" ? this._$AC(e) : (n.el === void 0 && (n.el = B.createElement(R(n.h, n.h[0]), this.options)), n);
 		if (this._$AH?._$AD === r) this._$AH.p(t);
 		else {
-			let e = new ue(r, this), n = e.u(this.options);
+			let e = new H(r, this), n = e.u(this.options);
 			e.p(t), this.T(n), this._$AH = e;
 		}
 	}
 	_$AC(e) {
-		let t = R.get(e.strings);
-		return t === void 0 && R.set(e.strings, t = new H(e)), t;
+		let t = I.get(e.strings);
+		return t === void 0 && I.set(e.strings, t = new B(e)), t;
 	}
 	k(t) {
 		D(this._$AH) || (this._$AH = [], this._$AR());
@@ -418,7 +418,7 @@ var ue = class {
 	setConnected(e) {
 		this._$AM === void 0 && (this._$Cv = e, this._$AP?.(e));
 	}
-}, G = class {
+}, W = class {
 	get tagName() {
 		return this.element.tagName;
 	}
@@ -426,41 +426,41 @@ var ue = class {
 		return this._$AM._$AU;
 	}
 	constructor(e, t, n, r, i) {
-		this.type = 1, this._$AH = L, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = L;
+		this.type = 1, this._$AH = F, this._$AN = void 0, this.element = e, this.name = t, this._$AM = r, this.options = i, n.length > 2 || n[0] !== "" || n[1] !== "" ? (this._$AH = Array(n.length - 1).fill(/* @__PURE__ */ new String()), this.strings = n) : this._$AH = F;
 	}
 	_$AI(e, t = this, n, r) {
 		let i = this.strings, a = !1;
-		if (i === void 0) e = U(this, e, t, 0), a = !E(e) || e !== this._$AH && e !== I, a && (this._$AH = e);
+		if (i === void 0) e = V(this, e, t, 0), a = !E(e) || e !== this._$AH && e !== P, a && (this._$AH = e);
 		else {
 			let r = e, o, s;
-			for (e = i[0], o = 0; o < i.length - 1; o++) s = U(this, r[n + o], t, o), s === I && (s = this._$AH[o]), a ||= !E(s) || s !== this._$AH[o], s === L ? e = L : e !== L && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
+			for (e = i[0], o = 0; o < i.length - 1; o++) s = V(this, r[n + o], t, o), s === P && (s = this._$AH[o]), a ||= !E(s) || s !== this._$AH[o], s === F ? e = F : e !== F && (e += (s ?? "") + i[o + 1]), this._$AH[o] = s;
 		}
 		a && !r && this.j(e);
 	}
 	j(e) {
-		e === L ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
+		e === F ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
 	}
-}, de = class extends G {
+}, fe = class extends W {
 	constructor() {
 		super(...arguments), this.type = 3;
 	}
 	j(e) {
-		this.element[this.name] = e === L ? void 0 : e;
+		this.element[this.name] = e === F ? void 0 : e;
 	}
-}, fe = class extends G {
+}, G = class extends W {
 	constructor() {
 		super(...arguments), this.type = 4;
 	}
 	j(e) {
-		this.element.toggleAttribute(this.name, !!e && e !== L);
+		this.element.toggleAttribute(this.name, !!e && e !== F);
 	}
-}, pe = class extends G {
+}, pe = class extends W {
 	constructor(e, t, n, r, i) {
 		super(e, t, n, r, i), this.type = 5;
 	}
 	_$AI(e, t = this) {
-		if ((e = U(this, e, t, 0) ?? L) === I) return;
-		let n = this._$AH, r = e === L && n !== L || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== L && (n === L || r);
+		if ((e = V(this, e, t, 0) ?? F) === P) return;
+		let n = this._$AH, r = e === F && n !== F || e.capture !== n.capture || e.once !== n.once || e.passive !== n.passive, i = e !== F && (n === F || r);
 		r && this.element.removeEventListener(this.name, this, n), i && this.element.addEventListener(this.name, this, e), this._$AH = e;
 	}
 	handleEvent(e) {
@@ -474,30 +474,30 @@ var ue = class {
 		return this._$AM._$AU;
 	}
 	_$AI(e) {
-		U(this, e);
+		V(this, e);
 	}
 }, he = {
 	M: x,
 	P: S,
 	A: C,
 	C: 1,
-	L: V,
-	R: ue,
-	D: ce,
-	V: U,
-	I: W,
-	H: G,
-	N: fe,
+	L: z,
+	R: H,
+	D: O,
+	V,
+	I: U,
+	H: W,
+	N: G,
 	U: pe,
-	B: de,
+	B: fe,
 	F: me
 }, ge = y.litHtmlPolyfillSupport;
-ge?.(H, W), (y.litHtmlVersions ??= []).push("3.3.3");
+ge?.(B, U), (y.litHtmlVersions ??= []).push("3.3.3");
 var _e = (e, t, n) => {
 	let r = n?.renderBefore ?? t, i = r._$litPart$;
 	if (i === void 0) {
 		let e = n?.renderBefore ?? null;
-		r._$litPart$ = i = new W(t.insertBefore(T(), e), e, void 0, n ?? {});
+		r._$litPart$ = i = new U(t.insertBefore(T(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
 }, K = globalThis, q = class extends v {
@@ -519,7 +519,7 @@ var _e = (e, t, n) => {
 		super.disconnectedCallback(), this._$Do?.setConnected(!1);
 	}
 	render() {
-		return I;
+		return P;
 	}
 };
 q._$litElement$ = !0, q.finalized = !0, K.litElementHydrateSupport?.({ LitElement: q });
@@ -560,13 +560,13 @@ var J = {
 		return e;
 	}
 	update(e, [t]) {
-		if (t === I || t === L) return t;
+		if (t === P || t === F) return t;
 		let n = e.element, r = e.name;
 		if (e.type === J.PROPERTY) {
-			if (t === n[r]) return I;
+			if (t === n[r]) return P;
 		} else if (e.type === J.BOOLEAN_ATTRIBUTE) {
-			if (!!t === n.hasAttribute(r)) return I;
-		} else if (e.type === J.ATTRIBUTE && n.getAttribute(r) === t + "") return I;
+			if (!!t === n.hasAttribute(r)) return P;
+		} else if (e.type === J.ATTRIBUTE && n.getAttribute(r) === t + "") return P;
 		return we(e), t;
 	}
 }), X = /* @__PURE__ */ new Map();
@@ -882,7 +882,14 @@ o`
 `;
 //#endregion
 //#region src/shared/time.ts
-function De(e) {
+function De(e, t = {}) {
+	let n = e?.config?.time_zone;
+	return n ? {
+		...t,
+		timeZone: n
+	} : t;
+}
+function Oe(e) {
 	let t = Math.max(0, Math.round(e));
 	return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 }
@@ -891,7 +898,20 @@ function Q(e, t = 0) {
 }
 //#endregion
 //#region src/card/foyer-card.ts
-var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", ke = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ae = /* @__PURE__ */ new Set(["code_required", "bad_code"]), je = class extends q {
+var ke = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master";
+function Ae(e) {
+	let t = e.entities;
+	return Object.keys(e.states).filter((e) => e.startsWith("alarm_control_panel.")).filter((e) => t?.[e] ? t[e].platform === "foyer" : e.startsWith(ke)).sort();
+}
+function je(e) {
+	let t = e.entities;
+	return t ? Object.values(t).find((e) => e.platform === "foyer" && e.translation_key === "master")?.entity_id ?? (e.states[$] ? $ : void 0) : e.states[$] ? $ : void 0;
+}
+var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__ */ new Set(["code_required", "bad_code"]), Pe = 3e4, Fe = /* @__PURE__ */ new Set([
+	"foyer/auto/cancel",
+	"foyer/acknowledge",
+	"foyer/walk_test"
+]), Ie = class extends q {
 	constructor(...e) {
 		super(...e), this._busy = !1, this._code = "", this._padOpen = !1, this._tick = 0, this._offset = 0;
 	}
@@ -910,10 +930,10 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		};
 	}
 	static getStubConfig(e) {
-		let t = Object.keys(e.states).filter((e) => e.startsWith(Oe));
+		let t = Ae(e), n = je(e);
 		return {
 			type: "custom:foyer-card",
-			entity: t.includes($) ? $ : t[0],
+			entity: n && t.includes(n) ? n : t[0],
 			layout: "full"
 		};
 	}
@@ -937,15 +957,30 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		return !!this._status?.security.enforced;
 	}
 	_press(e) {
-		this._code.length >= this._codeLength || (this._code += e, this._feedback = void 0);
+		this._code.length >= this._codeLength || (this._code += e, this._feedback = void 0, this._touch());
+	}
+	_touch() {
+		window.clearTimeout(this._idle), this._idle = window.setTimeout(() => this._forget(), Pe);
+	}
+	_forget() {
+		window.clearTimeout(this._idle), this._idle = void 0, this._code = "", this._pending = void 0;
+	}
+	_padKey(e) {
+		if (!(this._busy || e.ctrlKey || e.metaKey || e.altKey)) {
+			if (/^[0-9]$/.test(e.key)) this._press(e.key);
+			else if (e.key === "Backspace") this._code = this._code.slice(0, -1), this._touch();
+			else if (e.key === "Enter" && this._pending && this._code) this._run(this._pending);
+			else return;
+			e.preventDefault();
+		}
 	}
 	connectedCallback() {
 		super.connectedCallback(), this._timer = window.setInterval(() => {
-			(this._area?.timer || this._status?.areas.some((e) => e.timer) || this._status?.walk_test || this._pendingAuto) && (this._tick += 1);
+			(this._area?.timer || this._status?.areas.some((e) => e.timer) || this._status?.walk_test || this._pendingAuto || this._status?.security.locked_until) && (this._tick += 1);
 		}, 1e3);
 	}
 	disconnectedCallback() {
-		super.disconnectedCallback(), this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0, window.clearInterval(this._timer);
+		super.disconnectedCallback(), this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0, window.clearInterval(this._timer), this._forget(), this._padOpen = !1, this._feedback = void 0;
 	}
 	willUpdate(e) {
 		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, Te(this.hass).then((e) => this._strings = e).catch(() => {
@@ -955,7 +990,8 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		}, { type: "foyer/subscribe" }), this._unsubscribe.catch(() => this._unsubscribe = void 0)));
 	}
 	get _isMaster() {
-		return this._config?.entity === $;
+		let e = this._config?.entity, t = this._status?.master.entity_id;
+		return t ? e === t : e === $;
 	}
 	get _area() {
 		return this._status?.areas.find((e) => e.entity_id === this._config?.entity);
@@ -963,33 +999,33 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 	async _run(e) {
 		if (!this.hass) return;
 		this._busy = !0, this._feedback = void 0;
-		let t = this._code;
-		this._code = "";
+		let t = Fe.has(String(e.type)) && e !== this._pending, n = t ? "" : this._code;
+		t || this._forget();
 		try {
-			let n = await this.hass.callWS({
+			let r = await this.hass.callWS({
 				...e,
-				...t ? { code: t } : {}
+				...n ? { code: n } : {}
 			});
-			if (this._pending = void 0, n.success && n.low_battery_zones.length && (this._feedback = {
-				text: Z(this._strings, "card.low_battery", { zones: n.low_battery_zones.map((e) => e.name).join(", ") }),
+			if (!this.isConnected || (t || (this._pending = void 0), r.success && r.low_battery_zones.length && (this._feedback = {
+				text: Z(this._strings, "card.low_battery", { zones: r.low_battery_zones.map((e) => e.name).join(", ") }),
 				warning: !0
-			}), !n.success && n.reason === "nothing_to_cancel" && e.type === "foyer/auto/cancel") return;
-			n.success || (Ae.has(n.reason ?? "") && (this._padOpen = !0, this._pending = e), this._feedback = {
-				text: Z(this._strings, `reason.${n.reason ?? "unknown"}`, { zones: n.blocking_zones.map((e) => e.name).join(", ") }),
-				retry: e.type === "foyer/arm" && !e.force && ke.has(n.reason ?? "") ? {
+			}), !r.success && r.reason === "nothing_to_cancel" && e.type === "foyer/auto/cancel")) return;
+			r.success || (Ne.has(r.reason ?? "") && (t && (this._code = ""), this._padOpen = !0, this._pending = e, this._touch()), this._feedback = {
+				text: Z(this._strings, `reason.${r.reason ?? "unknown"}`, { zones: r.blocking_zones.map((e) => e.name).join(", ") }),
+				retry: e.type === "foyer/arm" && !e.force && Me.has(r.reason ?? "") ? {
 					...e,
 					force: !0
 				} : void 0
 			});
-		} catch (e) {
-			this._feedback = { text: String(e?.message ?? e) };
+		} catch {
+			this._feedback = { text: Z(this._strings, "card.not_sent") };
 		} finally {
 			this._busy = !1;
 		}
 	}
 	render() {
 		let e = this._strings;
-		if (!e || !this.hass) return L;
+		if (!e || !this.hass) return F;
 		this._tick;
 		let t = this._config?.entity;
 		return t ? this.hass.states[t] ? this._layout === "badge" ? this._renderBadge(e) : this._layout === "compact" ? this._renderCompact(e) : this._layout === "keypad" ? this._renderKeypadLayout(e) : this._isMaster ? this._renderMaster(e) : this._renderArea(e) : this._message(Z(e, "card.entity_missing", { entity: t })) : this._message(Z(e, "card.no_entity"));
@@ -998,7 +1034,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
 		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n, l = this._pendingAuto, u = c?.timer, d = u && u.kind !== "siren" ? Z(e, `timer.${u.kind}`, { seconds: Math.max(0, Math.round((Date.parse(u.due) - (Date.now() + this._offset)) / 1e3)) }) : Z(e, `state.${i}`);
-		return F`
+		return N`
       <div
         class="badge"
         role="button"
@@ -1006,24 +1042,24 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
         title=${`${s} — ${Z(e, `state.${i}`)}`}
         @click=${this._openMore}
         @keydown=${(e) => {
-			(e.key === "Enter" || e.key === " ") && this._openMore();
+			(e.key === "Enter" || e.key === " ") && (e.preventDefault(), this._openMore());
 		}}
       >
         <span class="badge-name">${s}</span>
         <span class="state ${i}">${d}</span>
-        ${a ? F`<span class="state memory">${Z(e, "overview.memory")}</span>` : L}
-        ${t.walk_test ? F`<span class="state walk-chip" title=${Z(e, "walk.badge_title")}
+        ${a ? N`<span class="state memory">${Z(e, "overview.memory")}</span>` : F}
+        ${t.walk_test ? N`<span class="state walk-chip" title=${Z(e, "walk.badge_title")}
               >${Z(e, "walk.badge")}</span
-            >` : L}
-        ${l ? F`<span
+            >` : F}
+        ${l ? N`<span
               class="state auto-chip"
               title=${Z(e, `rules.counting_${l.action}`, {
 			rule: l.rule_name,
 			scenario: t.scenarios.find((e) => e.id === l.scenario_id)?.name ?? "",
 			seconds: Q(l.due, this._offset)
 		})}
-              >${Z(e, "card.auto_badge", { seconds: Q(l.due, this._offset) })}</span
-            >` : L}
+              >${Z(e, `card.auto_badge_${l.action}`, { seconds: Q(l.due, this._offset) })}</span
+            >` : F}
       </div>
     `;
 	}
@@ -1039,19 +1075,19 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
 		let n = this._area, r = this._isMaster || !n, i = r ? t.master.state : n.state, a = r ? t.areas.some((e) => e.memory) : n.memory, o = t.scenarios.find((e) => e.id === t.active_scenario_id), s = r ? o?.name ?? Z(e, "overview.master") : n.name, c = r ? t.areas.some((e) => e.state !== "disarmed" || e.memory) : n.state !== "disarmed" || n.memory, l = r ? t.areas.find((e) => e.timer && e.timer.kind !== "siren") : n;
-		return F`
+		return N`
       <ha-card>
         <div class="content compact">
           ${this._walkBanner(e)} ${this._autoBanner(e)}
           <div class="head">
             <div class="name">${s}</div>
             <span class="state ${i}">${Z(e, `state.${i}`)}</span>
-            ${a ? F`<span class="state memory">${Z(e, "overview.memory")}</span>` : L}
+            ${a ? N`<span class="state memory">${Z(e, "overview.memory")}</span>` : F}
           </div>
-          ${l ? this._countdown(e, l) : L}
+          ${l ? this._countdown(e, l) : F}
           ${this._renderInlinePad(e)}
           <div class="buttons">
-            ${r ? F`<select
+            ${r ? N`<select
                   ?disabled=${this._busy}
                   aria-label=${Z(e, "card.scenario")}
                   @change=${(e) => {
@@ -1063,10 +1099,10 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		}}
                 >
                   <option value="" .selected=${Y(!o)}>${Z(e, "card.pick_scenario")}</option>
-                  ${t.scenarios.map((e) => F`<option .value=${e.id} .selected=${Y(e.id === o?.id)}>
+                  ${t.scenarios.map((e) => N`<option .value=${e.id} .selected=${Y(e.id === o?.id)}>
                       ${e.name}
                     </option>`)}
-                </select>` : n.state === "disarmed" ? F`<button
+                </select>` : n.state === "disarmed" ? N`<button
                     class="primary"
                     ?disabled=${this._busy}
                     @click=${() => this._run({
@@ -1075,8 +1111,8 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                   >
                     ${Z(e, "card.arm")}
-                  </button>` : L}
-            ${c ? F`<button
+                  </button>` : F}
+            ${c ? N`<button
                   ?disabled=${this._busy}
                   @click=${() => this._run(r ? { type: "foyer/disarm" } : {
 			type: "foyer/disarm",
@@ -1084,7 +1120,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                 >
                   ${Z(e, "card.disarm")}
-                </button>` : L}
+                </button>` : F}
           </div>
           ${this._renderFeedback()}
         </div>
@@ -1095,14 +1131,14 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		let t = this._area;
 		if (!t) return this._message(Z(e, "common.loading"));
 		let n = t.state !== "disarmed" || t.memory;
-		return F`
+		return N`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)} ${this._head(t.name, t.state, t.memory)}
           ${this._countdown(e, t)} ${this._renderBlocking(e, t)}
           ${this._renderInlinePad(e)}
           <div class="buttons">
-            ${t.state === "disarmed" ? F`<button
+            ${t.state === "disarmed" ? N`<button
                   class="primary"
                   ?disabled=${this._busy}
                   @click=${() => this._run({
@@ -1111,8 +1147,8 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                 >
                   ${Z(e, "card.arm")}
-                </button>` : L}
-            ${n ? F`<button
+                </button>` : F}
+            ${n ? N`<button
                   ?disabled=${this._busy}
                   @click=${() => this._run({
 			type: "foyer/disarm",
@@ -1120,7 +1156,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                 >
                   ${Z(e, "card.disarm")}
-                </button>` : L}
+                </button>` : F}
           </div>
           ${this._renderFeedback()}
         </div>
@@ -1128,13 +1164,13 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
     `;
 	}
 	_renderBlocking(e, t) {
-		if (t.state !== "disarmed" || t.ready) return L;
+		if (t.state !== "disarmed" || t.ready) return F;
 		let n = this._status?.zones ?? [], r = [...t.blocking.fault, ...t.blocking.open].map((e) => n.find((t) => t.id === e)).filter((e) => !!e);
-		return r.length ? F`
+		return r.length ? N`
       <div class="blocking">
-        ${r.map((t) => F`<div class="row">
+        ${r.map((t) => N`<div class="row">
             <span>${t.name}</span>
-            ${t.bypassable ? F`<button
+            ${t.bypassable ? N`<button
                   class="link"
                   ?disabled=${this._busy}
                   @click=${() => this._run({
@@ -1144,31 +1180,31 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                 >
                   ${Z(e, "zones.bypass")}
-                </button>` : L}
+                </button>` : F}
           </div>`)}
       </div>
-    ` : L;
+    ` : F;
 	}
 	_renderMaster(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
 		let n = t.areas.some((e) => e.memory), r = t.scenarios.find((e) => e.id === t.active_scenario_id), i = t.areas.some((e) => e.state !== "disarmed" || e.memory);
-		return F`
+		return N`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)}
           ${this._head(r?.name ?? Z(e, "overview.master"), t.master.state, n)}
           <div class="areas">
-            ${t.areas.map((t) => F`<div class="row">
+            ${t.areas.map((t) => N`<div class="row">
                 <span class="area-name">${t.name}</span>
                 <span class="state ${t.state}">${Z(e, `state.${t.state}`)}</span>
-                ${t.memory ? F`<span class="state memory">${Z(e, "overview.memory")}</span>` : L}
+                ${t.memory ? N`<span class="state memory">${Z(e, "overview.memory")}</span>` : F}
                 ${this._countdown(e, t)}
               </div>`)}
           </div>
           ${this._renderNotReady(e)} ${this._renderInlinePad(e)}
           <div class="buttons">
-            ${t.scenarios.map((e) => F`<button
+            ${t.scenarios.map((e) => N`<button
                 class=${e.id === t.active_scenario_id ? "primary" : ""}
                 ?disabled=${this._busy}
                 @click=${() => this._run({
@@ -1178,12 +1214,12 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
               >
                 ${e.name}
               </button>`)}
-            ${i ? F`<button
+            ${i ? N`<button
                   ?disabled=${this._busy}
                   @click=${() => this._run({ type: "foyer/disarm" })}
                 >
                   ${Z(e, "card.disarm")}
-                </button>` : L}
+                </button>` : F}
           </div>
           ${this._renderFeedback()}
         </div>
@@ -1192,20 +1228,20 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 	}
 	_renderNotReady(e) {
 		let t = this._status;
-		if (!t) return L;
+		if (!t) return F;
 		let n = /* @__PURE__ */ new Map();
 		for (let e of t.areas) if (!(e.state !== "disarmed" || e.ready)) for (let t of [...e.blocking.fault, ...e.blocking.open]) n.set(t, [...n.get(t) ?? [], e.name]);
-		return n.size ? F`
+		return n.size ? N`
       <div class="blocking">
         <div class="blocking-hd">${Z(e, "card.not_ready")}</div>
         ${[...n.entries()].map(([n, r]) => {
 			let i = t.zones.find((e) => e.id === n);
-			return i ? F`<div class="row">
+			return i ? N`<div class="row">
             <span>${Z(e, "card.zone_in", {
 				zone: i.name,
 				areas: r.join(", ")
 			})}</span>
-            ${i.bypassable && !i.bypassed ? F`<button
+            ${i.bypassable && !i.bypassed ? N`<button
                   class="link"
                   ?disabled=${this._busy}
                   @click=${() => this._run({
@@ -1215,21 +1251,21 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 			})}
                 >
                   ${Z(e, "zones.bypass")}
-                </button>` : L}
-          </div>` : L;
+                </button>` : F}
+          </div>` : F;
 		})}
       </div>
-    ` : L;
+    ` : F;
 	}
 	_walkBanner(e) {
 		let t = this._status?.walk_test;
-		if (!t) return L;
+		if (!t) return F;
 		let n = Q(t.deadline, this._offset);
-		return F`
+		return N`
       <div class="alert walk" role="alert">
         <span>
           <strong>${Z(e, "walk.banner_title")}</strong>
-          ${Z(e, "walk.card_banner", { time: De(n) })}
+          ${Z(e, "walk.card_banner", { time: Oe(n) })}
         </span>
         <button
           ?disabled=${this._busy}
@@ -1248,9 +1284,9 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 	}
 	_autoBanner(e) {
 		let t = this._pendingAuto;
-		if (!t) return L;
+		if (!t) return F;
 		let n = this._status?.scenarios.find((e) => e.id === t.scenario_id), r = Q(t.due, this._offset);
-		return F`
+		return N`
       <div class="alert auto" role="alert">
         <span>
           ${Z(e, `rules.counting_${t.action}`, {
@@ -1258,7 +1294,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 			scenario: n?.name ?? "",
 			seconds: r
 		})}
-          ${t.suspension_name ? F`<em>${Z(e, "rules.because", { name: t.suspension_name })}</em>` : L}
+          ${t.suspension_name ? N`<em>${Z(e, "rules.because", { name: t.suspension_name })}</em>` : F}
         </span>
         <button
           ?disabled=${this._busy}
@@ -1274,13 +1310,13 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 	}
 	_renderAlerts(e) {
 		let t = this._status;
-		if (!t) return L;
+		if (!t) return F;
 		let n = new Map(t.zones.map((e) => [e.id, e.name])), r = t.technical ?? [], i = t.incident;
-		return F`
+		return N`
       ${this._walkBanner(e)} ${this._autoBanner(e)}
-      ${r.length ? F`<div class="alert technical" role="alert">
+      ${r.length ? N`<div class="alert technical" role="alert">
             <span>${Z(e, "card.technical", { zones: r.map((e) => e.name).join(", ") })}</span>
-            ${r.some((e) => !e.acknowledged) ? F`<button
+            ${r.some((e) => !e.acknowledged) ? N`<button
                   ?disabled=${this._busy}
                   @click=${() => this._run({
 			type: "foyer/acknowledge",
@@ -1288,13 +1324,13 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                 >
                   ${Z(e, "common.acknowledge")}
-                </button>` : L}
-          </div>` : L}
-      ${i ? F`<div class="alert incident" role="alert">
+                </button>` : F}
+          </div>` : F}
+      ${i ? N`<div class="alert incident" role="alert">
             <span>
               ${Z(e, "card.incident", { zones: i.zone_ids.map((e) => n.get(e) ?? e).join(", ") })}
             </span>
-            ${i.acknowledged ? L : F`<button
+            ${i.acknowledged ? F : N`<button
                   ?disabled=${this._busy}
                   @click=${() => this._run({
 			type: "foyer/acknowledge",
@@ -1303,23 +1339,23 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
                 >
                   ${Z(e, "common.acknowledge")}
                 </button>`}
-          </div>` : L}
+          </div>` : F}
     `;
 	}
 	_head(e, t, n) {
 		let r = this._strings;
-		return F`
+		return N`
       <div class="head">
         <div class="name">${e}</div>
         <span class="state ${t}">${Z(r, `state.${t}`)}</span>
-        ${n ? F`<span class="state memory">${Z(r, "overview.memory")}</span>` : L}
+        ${n ? N`<span class="state memory">${Z(r, "overview.memory")}</span>` : F}
       </div>
     `;
 	}
 	_countdown(e, t, n = !1) {
-		if (!t.timer || t.timer.kind === "siren") return L;
+		if (!t.timer || t.timer.kind === "siren") return F;
 		let r = Math.max(0, Math.round((Date.parse(t.timer.due) - (Date.now() + this._offset)) / 1e3)), i = Z(e, `timer.${t.timer.kind}`, { seconds: r });
-		return F`<div class="countdown">
+		return N`<div class="countdown">
       ${n ? Z(e, "card.area_countdown", {
 			area: t.name,
 			countdown: i
@@ -1331,15 +1367,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		return t ? t.type === "foyer/disarm" ? Z(e, "card.disarm") : t.type === "foyer/bypass" ? Z(e, "zones.bypass") : t.type === "foyer/arm" ? t.force ? Z(e, "overview.force_arm") : Z(e, "card.arm") : Z(e, "card.code_confirm") : Z(e, "card.code_confirm");
 	}
 	_renderPad(e) {
-		return F`
-      <div class="pad">
-        <div class="display" aria-live="polite" aria-label=${Z(e, "card.code_entered")}>
-          ${this._code ? "•".repeat(this._code.length) : F`<span class="placeholder"
-                >${Z(e, "card.code_hint", { n: this._codeLength })}</span
-              >`}
-        </div>
-        <div class="keys">
-          ${[
+		let t = [
 			"1",
 			"2",
 			"3",
@@ -1349,7 +1377,22 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 			"7",
 			"8",
 			"9"
-		].map((e) => F`<button
+		], n = this._lockedUntil;
+		return N`
+      <div class="pad" tabindex="0" @keydown=${(e) => this._padKey(e)}>
+        ${n ? N`<div class="locked" role="status">
+              ${Z(e, "card.locked_until", { time: n.toLocaleTimeString(this.hass?.language, De(this.hass, {
+			hour: "2-digit",
+			minute: "2-digit"
+		})) })}
+            </div>` : F}
+        <div class="display" aria-live="polite" aria-label=${Z(e, "card.code_entered")}>
+          ${this._code ? "•".repeat(this._code.length) : N`<span class="placeholder"
+                >${Z(e, "card.code_hint", { n: this._codeLength })}</span
+              >`}
+        </div>
+        <div class="keys">
+          ${t.map((e) => N`<button
               class="key"
               ?disabled=${this._busy}
               @click=${() => this._press(e)}
@@ -1359,37 +1402,43 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
           <button
             class="key word"
             ?disabled=${this._busy || !this._code}
-            @click=${() => this._code = ""}
+            @click=${() => this._forget()}
           >
             ${Z(e, "card.code_clear")}
           </button>
           <button class="key" ?disabled=${this._busy} @click=${() => this._press("0")}>
             0
           </button>
-          ${this._pending ? F`<button
+          ${this._pending ? N`<button
                 class="key word confirm"
                 ?disabled=${this._busy || !this._code}
                 @click=${() => this._run(this._pending)}
               >
                 ${this._pendingLabel(e)}
-              </button>` : L}
+              </button>` : F}
         </div>
       </div>
     `;
+	}
+	get _lockedUntil() {
+		let e = this._status?.security.locked_until;
+		if (!e) return;
+		let t = new Date(e);
+		return t.getTime() > Date.now() + this._offset ? t : void 0;
 	}
 	_renderKeypadLayout(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
 		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = this._isMaster ? t.scenarios : [], s = t.scenarios.find((e) => e.id === t.active_scenario_id);
-		return F`
+		return N`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)}
           ${this._head(this._isMaster ? s?.name ?? Z(e, "overview.master") : n?.name ?? "", r, i)}
-          ${n ? this._countdown(e, n) : L}
+          ${this._isMaster ? t.areas.filter((e) => e.timer && e.timer.kind !== "siren").map((t) => this._countdown(e, t, !0)) : n ? this._countdown(e, n) : F}
           ${this._renderPad(e)}
           <div class="buttons">
-            ${a ? L : o.length ? o.map((e) => F`<button
+            ${a ? F : o.length ? o.map((e) => N`<button
                       ?disabled=${this._busy}
                       @click=${() => this._run({
 			type: "foyer/arm",
@@ -1397,7 +1446,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                     >
                       ${e.name}
-                    </button>`) : F`<button
+                    </button>`) : N`<button
                     ?disabled=${this._busy}
                     @click=${() => this._run({
 			type: "foyer/arm",
@@ -1406,7 +1455,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
                   >
                     ${Z(e, "card.arm")}
                   </button>`}
-            ${a ? F`<button
+            ${a ? N`<button
                   class="primary"
                   ?disabled=${this._busy}
                   @click=${() => this._run({
@@ -1415,7 +1464,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		})}
                 >
                   ${Z(e, "card.disarm")}
-                </button>` : L}
+                </button>` : F}
           </div>
           ${this._renderFeedback()}
         </div>
@@ -1423,7 +1472,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
     `;
 	}
 	_renderInlinePad(e) {
-		return this._codeUsed ? this._padOpen ? F`${this._renderPad(e)}
+		return this._codeUsed ? this._padOpen ? N`${this._renderPad(e)}
       <button
         class="link pad-toggle"
         @click=${() => {
@@ -1431,28 +1480,28 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
 		}}
       >
         ${Z(e, "card.code_hide")}
-      </button>` : F`<button class="link pad-toggle" @click=${() => this._padOpen = !0}>
+      </button>` : N`<button class="link pad-toggle" @click=${() => this._padOpen = !0}>
         ${Z(e, "card.code_show")}
-      </button>` : L;
+      </button>` : F;
 	}
 	_renderFeedback() {
 		let e = this._feedback;
-		if (!e) return L;
+		if (!e) return F;
 		let t = this._strings;
-		return F`<div class="feedback ${e.warning ? "warning" : ""}" role="alert">
+		return N`<div class="feedback ${e.warning ? "warning" : ""}" role="alert">
       <div>${e.text}</div>
-      ${e.retry ? F`<button
+      ${e.retry ? N`<button
               class="force"
               ?disabled=${this._busy}
               @click=${() => this._run(e.retry)}
             >
               ${Z(t, "overview.force_arm")}
             </button>
-            <span class="force-hint">${Z(t, "overview.force_arm_hint")}</span>` : L}
+            <span class="force-hint">${Z(t, "overview.force_arm_hint")}</span>` : F}
     </div>`;
 	}
 	_message(e) {
-		return F`<ha-card><div class="content">${e}</div></ha-card>`;
+		return N`<ha-card><div class="content">${e}</div></ha-card>`;
 	}
 	static {
 		this.styles = [Ee, o`
@@ -1510,6 +1559,16 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
       }
       .pad-toggle {
         align-self: flex-start;
+      }
+      .pad:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 4px;
+        border-radius: 8px;
+      }
+      .locked {
+        color: var(--error-color);
+        font-size: 14px;
+        font-weight: 500;
       }
       .content {
         padding: 16px;
@@ -1576,6 +1635,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
          chips. */
       .badge {
         display: inline-flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 8px;
         max-width: 100%;
@@ -1591,6 +1651,10 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
         outline-offset: 2px;
       }
       .badge-name {
+        /* Never squeezed to nothing by the chips beside it: a badge that
+           does not say which area it is says nothing. */
+        flex: 1 0 auto;
+        min-width: 4em;
         font-size: 13px;
         color: var(--secondary-text-color);
         overflow: hidden;
@@ -1678,7 +1742,7 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
         border-left-color: var(--warning-color, #c77700);
       }
       .alert span {
-        flex: 1;
+        flex: 1 1 12em;
       }
       .alert button {
         padding: 6px 12px;
@@ -1708,8 +1772,8 @@ var Oe = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master", k
     `];
 	}
 };
-customElements.get("foyer-card") || customElements.define("foyer-card", je);
-var Me = class extends q {
+customElements.get("foyer-card") || customElements.define("foyer-card", Ie);
+var Le = class extends q {
 	constructor(...e) {
 		super(...e), this._config = { type: "custom:foyer-card" };
 	}
@@ -1724,7 +1788,7 @@ var Me = class extends q {
 		this._config = e;
 	}
 	willUpdate(e) {
-		e.has("hass") && this.hass && this.hass.language !== this._language && (this._language = this.hass.language, Te(this.hass).then((e) => this._strings = e));
+		e.has("hass") && this.hass && this.hass.language !== this._language && (this._language = this.hass.language, Te(this.hass).then((e) => this._strings = e).catch(() => this._language = void 0));
 	}
 	_emit(e) {
 		this._config = {
@@ -1738,17 +1802,17 @@ var Me = class extends q {
 	}
 	render() {
 		let e = this._strings;
-		if (!e || !this.hass) return L;
-		let t = Object.keys(this.hass.states).filter((e) => e.startsWith(Oe)).sort();
-		return F`
+		if (!e || !this.hass) return F;
+		let t = Ae(this.hass);
+		return !this._config.entity && t.length && queueMicrotask(() => this._emit({ entity: t[0] })), N`
       <div class="editor">
         <label>
           <span>${Z(e, "card.editor_entity")}</span>
           <select
             @change=${(e) => this._emit({ entity: e.target.value })}
           >
-            ${t.map((t) => F`<option .value=${t} .selected=${Y(t === this._config.entity)}>
-                ${t === $ ? Z(e, "card.editor_master") : String(this.hass.states[t]?.attributes.friendly_name ?? t)}
+            ${t.map((t) => N`<option .value=${t} .selected=${Y(t === this._config.entity)}>
+                ${t === $ || t === je(this.hass) ? Z(e, "card.editor_master") : String(this.hass.states[t]?.attributes.friendly_name ?? t)}
               </option>`)}
           </select>
         </label>
@@ -1762,7 +1826,7 @@ var Me = class extends q {
 			"compact",
 			"badge",
 			"keypad"
-		].map((t) => F`<option
+		].map((t) => N`<option
                 .value=${t}
                 .selected=${Y(t === (this._config.layout ?? "full"))}
               >
@@ -1807,7 +1871,7 @@ var Me = class extends q {
   `;
 	}
 };
-customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", Me), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
+customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", Le), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
 	type: "foyer-card",
 	name: "Foyer Home Defender",
 	preview: !0

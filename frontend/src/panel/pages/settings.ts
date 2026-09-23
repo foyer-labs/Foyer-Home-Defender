@@ -420,6 +420,14 @@ class FoyerPageSettings extends LitElement {
     this._busy = true;
     try {
       const result = await this.ctx.exportConfig();
+      if (!result.success || !result.filename || !result.document) {
+        // Refused — no code given, or a wrong one: said on the page, never a
+        // file with nothing in it.
+        this._problems = result.problems?.length
+          ? result.problems
+          : [{ code: result.reason ?? "request_failed", kind: "code", ref: null, field: null }];
+        return;
+      }
       download(
         result.filename,
         JSON.stringify(result.document, null, 2),

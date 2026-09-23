@@ -18,7 +18,7 @@ import { live } from "lit/directives/live.js";
 
 import { loadStrings, t, type Strings } from "../shared/i18n";
 import { stateStyles } from "../shared/styles";
-import { mmss, secondsUntil } from "../shared/time";
+import { inHouseZone, mmss, secondsUntil } from "../shared/time";
 import type {
   AreaState,
   CommandResult,
@@ -39,6 +39,30 @@ interface FoyerCardConfig {
 const ENTITY_PREFIX = "alarm_control_panel.foyer_";
 const MASTER = "alarm_control_panel.foyer_master";
 
+/** Foyer's panels, renamed ones included: the entity registry says which
+ * integration an entity belongs to, and the prefix is only the fallback for
+ * a frontend that does not carry it. */
+function foyerPanels(hass: HomeAssistant): string[] {
+  const registry = hass.entities;
+  return Object.keys(hass.states)
+    .filter((id) => id.startsWith("alarm_control_panel."))
+    .filter((id) =>
+      registry?.[id] ? registry[id].platform === "foyer" : id.startsWith(ENTITY_PREFIX),
+    )
+    .sort();
+}
+
+/** The master's entity id as it is now, by the unique id it was created with. */
+function masterOf(hass: HomeAssistant): string | undefined {
+  const registry = hass.entities;
+  if (!registry) return hass.states[MASTER] ? MASTER : undefined;
+  return (
+    Object.values(registry).find(
+      (e) => e.platform === "foyer" && e.translation_key === "master",
+    )?.entity_id ?? (hass.states[MASTER] ? MASTER : undefined)
+  );
+}
+
 // A refusal a forced arm could override (§5.4): zones open, or in fault. The
 // card offers it for the same reason the panel does — the alternative is
 // excluding the zones one by one, from the thing on the wall, while leaving.
@@ -47,6 +71,22 @@ const FORCEABLE = new Set(["zone_open", "zone_fault"]);
 // Refusals the keypad answers: the first asks for a code, the second says the
 // one typed was wrong. Both clear the pad and leave it open.
 const WANTS_CODE = new Set(["code_required", "bad_code"]);
+
+// How long typed digits wait for the key that sends them. A code typed on a
+// wall tablet and walked away from must not go out with whatever the next
+// person presses — refused as a wrong code, counted towards the lockout, or,
+// when it was right, acting in its owner's name (card review).
+const CODE_IDLE_MS = 30_000;
+
+// The commands of the banners — cancel a countdown, acknowledge, end the walk
+// test. They are pressed without the pad in mind, so the digits on it are not
+// theirs to take: sent without a code, and if the engine wants one, the pad
+// opens on that command as it does for any other.
+const BANNER_COMMANDS = new Set([
+  "foyer/auto/cancel",
+  "foyer/acknowledge",
+  "foyer/walk_test",
+]);
 
 interface Feedback {
   text: string;
@@ -91,14 +131,16 @@ class FoyerCard extends LitElement {
   private _language?: string;
   private _unsubscribe?: Promise<() => Promise<void>>;
   private _timer?: number;
+  private _idle?: number;
 
   static getStubConfig(hass: HomeAssistant): FoyerCardConfig {
     // The master if it exists: a card that shows the whole house is the one
     // most people want first.
-    const entities = Object.keys(hass.states).filter((id) => id.startsWith(ENTITY_PREFIX));
+    const entities = foyerPanels(hass);
+    const master = masterOf(hass);
     return {
       type: "custom:foyer-card",
-      entity: entities.includes(MASTER) ? MASTER : entities[0],
+      entity: master && entities.includes(master) ? master : entities[0],
       layout: "full",
     };
   }
@@ -136,6 +178,38 @@ class FoyerCard extends LitElement {
     if (this._code.length >= this._codeLength) return;
     this._code += digit;
     this._feedback = undefined;
+    this._touch();
+  }
+
+  /** Forget the typed digits after a while without a key, and with them the
+   * command they were waiting to confirm. */
+  private _touch(): void {
+    window.clearTimeout(this._idle);
+    this._idle = window.setTimeout(() => this._forget(), CODE_IDLE_MS);
+  }
+
+  private _forget(): void {
+    window.clearTimeout(this._idle);
+    this._idle = undefined;
+    this._code = "";
+    this._pending = undefined;
+  }
+
+  /** The pad from a physical keyboard: digits, Backspace, and Enter for the
+   * key that sends. */
+  private _padKey(e: KeyboardEvent): void {
+    if (this._busy || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^[0-9]$/.test(e.key)) {
+      this._press(e.key);
+    } else if (e.key === "Backspace") {
+      this._code = this._code.slice(0, -1);
+      this._touch();
+    } else if (e.key === "Enter" && this._pending && this._code) {
+      void this._run(this._pending);
+    } else {
+      return;
+    }
+    e.preventDefault();
   }
 
   override connectedCallback(): void {
@@ -147,7 +221,8 @@ class FoyerCard extends LitElement {
         this._area?.timer ||
         this._status?.areas.some((a) => a.timer) ||
         this._status?.walk_test ||
-        this._pendingAuto
+        this._pendingAuto ||
+        this._status?.security.locked_until
       ) {
         this._tick += 1;
       }
@@ -159,6 +234,11 @@ class FoyerCard extends LitElement {
     this._unsubscribe?.then((unsub) => unsub()).catch(() => undefined);
     this._unsubscribe = undefined;
     window.clearInterval(this._timer);
+    // A card taken off the screen keeps no code: coming back to the view
+    // hours later must not find the digits, or the command, still there.
+    this._forget();
+    this._padOpen = false;
+    this._feedback = undefined;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -187,8 +267,11 @@ class FoyerCard extends LitElement {
     }
   }
 
+  /** The master, by the id it has now: a household may rename it. */
   private get _isMaster(): boolean {
-    return this._config?.entity === MASTER;
+    const entity = this._config?.entity;
+    const current = this._status?.master.entity_id;
+    return current ? entity === current : entity === MASTER;
   }
 
   private get _area(): StatusArea | undefined {
@@ -199,14 +282,20 @@ class FoyerCard extends LitElement {
     if (!this.hass) return;
     this._busy = true;
     this._feedback = undefined;
-    const typed = this._code;
-    this._code = "";
+    const banner = BANNER_COMMANDS.has(String(command.type)) && command !== this._pending;
+    const typed = banner ? "" : this._code;
+    if (!banner) this._forget();
     try {
       const result = await this.hass.callWS<CommandResult>({
         ...command,
         ...(typed ? { code: typed } : {}),
       });
-      this._pending = undefined;
+      // Taken off the screen while the answer travelled: nothing to show,
+      // and no pad to reopen on a view somebody has left.
+      if (!this.isConnected) return;
+      // A banner press leaves the pad's own command alone: the digits on it
+      // were typed for that one, not for this.
+      if (!banner) this._pending = undefined;
       if (result.success && result.low_battery_zones.length) {
         // Not a failure, and never shown as one — but the warning belongs on
         // every arming, on every channel, so it reaches whoever arms from
@@ -233,8 +322,12 @@ class FoyerCard extends LitElement {
         // it open, and keep the command so the pad's confirm key can repeat
         // it. The card never decides that a code is needed — the backend did.
         if (WANTS_CODE.has(result.reason ?? "")) {
+          // The pad now waits for this command, so digits typed for another
+          // one must not confirm it: they are cleared first.
+          if (banner) this._code = "";
           this._padOpen = true;
           this._pending = command;
+          this._touch();
         }
         this._feedback = {
           text: t(this._strings, `reason.${result.reason ?? "unknown"}`, {
@@ -250,8 +343,11 @@ class FoyerCard extends LitElement {
               : undefined,
         };
       }
-    } catch (err) {
-      this._feedback = { text: String((err as Error)?.message ?? err) };
+    } catch {
+      // What Home Assistant says when a command does not arrive — a
+      // connection dropped, Foyer reloading — is English and technical; the
+      // card says, in the reader's language, that nothing happened.
+      this._feedback = { text: t(this._strings, "card.not_sent") };
     } finally {
       this._busy = false;
     }
@@ -322,7 +418,10 @@ class FoyerCard extends LitElement {
         title=${`${name} — ${t(s, `state.${state}`)}`}
         @click=${this._openMore}
         @keydown=${(e: KeyboardEvent) => {
-          if (e.key === "Enter" || e.key === " ") this._openMore();
+          if (e.key !== "Enter" && e.key !== " ") return;
+          // Space would scroll the page as well as open the dialog.
+          e.preventDefault();
+          this._openMore();
         }}
       >
         <span class="badge-name">${name}</span>
@@ -344,7 +443,7 @@ class FoyerCard extends LitElement {
                   status.scenarios.find((sc) => sc.id === auto.scenario_id)?.name ?? "",
                 seconds: secondsUntil(auto.due, this._offset),
               })}
-              >${t(s, "card.auto_badge", {
+              >${t(s, `card.auto_badge_${auto.action}`, {
                 seconds: secondsUntil(auto.due, this._offset),
               })}</span
             >`
@@ -770,8 +869,19 @@ class FoyerCard extends LitElement {
    * layout around it, because what is armable differs per card. */
   private _renderPad(s: Strings) {
     const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    const locked = this._lockedUntil;
     return html`
-      <div class="pad">
+      <div class="pad" tabindex="0" @keydown=${(e: KeyboardEvent) => this._padKey(e)}>
+        ${locked
+          ? html`<div class="locked" role="status">
+              ${t(s, "card.locked_until", {
+                time: locked.toLocaleTimeString(
+                  this.hass?.language,
+                  inHouseZone(this.hass, { hour: "2-digit", minute: "2-digit" }),
+                ),
+              })}
+            </div>`
+          : nothing}
         <div class="display" aria-live="polite" aria-label=${t(s, "card.code_entered")}>
           ${this._code
             ? "•".repeat(this._code.length)
@@ -792,7 +902,7 @@ class FoyerCard extends LitElement {
           <button
             class="key word"
             ?disabled=${this._busy || !this._code}
-            @click=${() => (this._code = "")}
+            @click=${() => this._forget()}
           >
             ${t(s, "card.code_clear")}
           </button>
@@ -811,6 +921,17 @@ class FoyerCard extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  /** When this account may try a code again, while a lockout runs (§8.4).
+   * The pad still takes digits — the lockout is the backend's to enforce,
+   * and it ends by itself — but it says until when, rather than letting
+   * somebody type into a refusal. */
+  private get _lockedUntil(): Date | undefined {
+    const until = this._status?.security.locked_until;
+    if (!until) return undefined;
+    const at = new Date(until);
+    return at.getTime() > Date.now() + this._offset ? at : undefined;
   }
 
   /** Layout `keypad`: the wall tablet. State, pad, and what can be done. */
@@ -840,7 +961,13 @@ class FoyerCard extends LitElement {
             state,
             memory,
           )}
-          ${area ? this._countdown(s, area) : nothing}
+          ${this._isMaster
+            ? status.areas
+                .filter((a) => a.timer && a.timer.kind !== "siren")
+                .map((a) => this._countdown(s, a, true))
+            : area
+              ? this._countdown(s, area)
+              : nothing}
           ${this._renderPad(s)}
           <div class="buttons">
             ${armed
@@ -984,6 +1111,16 @@ class FoyerCard extends LitElement {
       .pad-toggle {
         align-self: flex-start;
       }
+      .pad:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 4px;
+        border-radius: 8px;
+      }
+      .locked {
+        color: var(--error-color);
+        font-size: 14px;
+        font-weight: 500;
+      }
       .content {
         padding: 16px;
         display: flex;
@@ -1049,6 +1186,7 @@ class FoyerCard extends LitElement {
          chips. */
       .badge {
         display: inline-flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 8px;
         max-width: 100%;
@@ -1064,6 +1202,10 @@ class FoyerCard extends LitElement {
         outline-offset: 2px;
       }
       .badge-name {
+        /* Never squeezed to nothing by the chips beside it: a badge that
+           does not say which area it is says nothing. */
+        flex: 1 0 auto;
+        min-width: 4em;
         font-size: 13px;
         color: var(--secondary-text-color);
         overflow: hidden;
@@ -1151,7 +1293,7 @@ class FoyerCard extends LitElement {
         border-left-color: var(--warning-color, #c77700);
       }
       .alert span {
-        flex: 1;
+        flex: 1 1 12em;
       }
       .alert button {
         padding: 6px 12px;
@@ -1211,7 +1353,9 @@ class FoyerCardEditor extends LitElement {
     if (!changed.has("hass") || !this.hass) return;
     if (this.hass.language !== this._language) {
       this._language = this.hass.language;
-      loadStrings(this.hass).then((strings) => (this._strings = strings));
+      loadStrings(this.hass)
+        .then((strings) => (this._strings = strings))
+        .catch(() => (this._language = undefined));
     }
   }
 
@@ -1229,9 +1373,13 @@ class FoyerCardEditor extends LitElement {
   override render() {
     const s = this._strings;
     if (!s || !this.hass) return nothing;
-    const panels = Object.keys(this.hass.states)
-      .filter((id) => id.startsWith(ENTITY_PREFIX))
-      .sort();
+    const panels = foyerPanels(this.hass);
+    // Nothing chosen yet: the first entry is what the select shows, so it is
+    // what the configuration says — otherwise the editor looks set while the
+    // card says "set an entity".
+    if (!this._config.entity && panels.length) {
+      queueMicrotask(() => this._emit({ entity: panels[0] }));
+    }
     return html`
       <div class="editor">
         <label>
@@ -1241,7 +1389,7 @@ class FoyerCardEditor extends LitElement {
           >
             ${panels.map(
               (id) => html`<option .value=${id} .selected=${live(id === this._config.entity)}>
-                ${id === MASTER
+                ${id === MASTER || id === masterOf(this.hass!)
                   ? t(s, "card.editor_master")
                   : String(this.hass!.states[id]?.attributes.friendly_name ?? id)}
               </option>`,

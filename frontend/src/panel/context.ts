@@ -119,7 +119,15 @@ export interface PanelContext {
   saveHealth(health: HealthConfig): Promise<EditResult>;
   radioCandidates(): Promise<RadioCandidate[]>;
   /** Configuration backup and restore (§15.1). */
-  exportConfig(): Promise<{ filename: string; document: ConfigBackup }>;
+  /** The backup, or the refusal: once codes exist it asks for one, as any
+   * change to the configuration does (decision 101). */
+  exportConfig(): Promise<{
+    success?: boolean;
+    reason?: string | null;
+    problems?: Problem[];
+    filename?: string;
+    document?: ConfigBackup;
+  }>;
   importConfig(document: unknown): Promise<EditResult>;
   /** The Alarmo importer (§20.2): a preview that reads and writes nothing,
    * then an apply that stores exactly what the preview showed — refused, by

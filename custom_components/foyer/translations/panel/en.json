@@ -606,7 +606,7 @@
     "editor_layout": "Layout",
     "layout_full": "Full — areas, scenarios, countdown and what blocks arming",
     "layout_compact": "Compact — state and one action",
-    "editor_hint": "The keypad and badge layouts need a code to be useful; the keypad appears once somebody holds one.",
+    "editor_hint": "The keypad layout always shows the pad, for a wall tablet. Full and compact open it when a code is asked for. The badge has nothing to press.",
     "layout_badge": "Badge — state only, for a dashboard of your own",
     "layout_keypad": "Keypad",
     "code_hint": "{n} digits",
@@ -616,7 +616,11 @@
     "code_show": "Enter a code",
     "code_hide": "Hide the keypad",
     "low_battery": "Low battery: {zones}",
-    "auto_badge": "arming in {seconds} s"
+    "auto_badge_arm": "arming in {seconds} s",
+    "auto_badge_disarm": "disarming in {seconds} s",
+    "auto_badge_switch": "switching in {seconds} s",
+    "not_sent": "The command did not reach Foyer. Nothing changed: try again.",
+    "locked_until": "Too many wrong codes: locked until {time}."
   },
   "help": {
     "toggle": "About this section",
@@ -1318,6 +1322,10 @@
     "token_lockout": {
       "title": "Foyer: device endpoint locked for one address",
       "message": "Too many requests with a wrong or missing token came from {address}. That address is refused for the lockout period. A keypad configured with an old token does this too; so does somebody guessing."
+    },
+    "alarm_ended": {
+      "title": "Foyer: alarm over",
+      "message": "The alarm in {area} is over."
     }
   },
   "chime_mode": {
@@ -1471,7 +1479,8 @@
     "auto_blocked": "Automatic rule did not act",
     "auto_suspension_set": "Automatic rules suspended",
     "auto_suspension_cleared": "Suspension over",
-    "auto_arming_switched": "Automatic rules switched"
+    "auto_arming_switched": "Automatic rules switched",
+    "alarm_ended": "Alarm over"
   },
   "condition": {
     "add": "Add a condition",
@@ -1621,7 +1630,8 @@
     "simulation_run": "Simulation run",
     "config_refused": "Configuration change refused",
     "config_new_token": "Keypad token generated",
-    "config_revoke_token": "Keypad token revoked"
+    "config_revoke_token": "Keypad token revoked",
+    "tokens_rejected": "Keypad tokens refused"
   },
   "log": {
     "filters": "Filters",
@@ -1679,7 +1689,8 @@
     "person_erase_confirm_pseudonym": "This replaces the name on every row found — {rows} of them — with a stable identifier, for good. The log will still say that the same person acted on two different nights, which is not the same as forgetting them. The erasure itself is recorded, without naming them.",
     "person_keep_pseudonym": "Keep a stable identifier instead of forgetting",
     "person_keep_pseudonym_hint": "Off, the rows lose the person entirely. On, they keep an opaque identifier that says nothing about them but still links their rows to each other. Somebody asking to be forgotten is usually asking for the first.",
-    "person_erased": "Rows that no longer name anybody: {rows}."
+    "person_erased": "Rows that no longer name anybody: {rows}.",
+    "tokens_rejected": "{count} wrong tokens from {addresses} addresses while the endpoint was locked"
   },
   "language": {
     "self": "English"
@@ -1791,7 +1802,6 @@
       "group_not_imported": "The group “{group}” ({n} of {members} within {seconds} s) was not made: a group needs its members switched on, and every zone brought in starts switched off. Make it on page 13 once they are confirmed.",
       "setting_not_imported": "Alarmo's setting “{setting}” was not brought across; Foyer's own settings were left as they are.",
       "unknown_field": "The file has a field this importer does not know: {field}. It was written by a newer Alarmo than the one this was checked against, and whatever that field does was not brought across.",
-      "automation_untriggered": "“{automation}” ran when an alarm ended. It now runs at the siren cutoff and at every disarm, ordinary ones included: check that is what you want.",
       "scenario_overrides": "“{scenario}” has its own exit delay or siren time, and it now applies to the imported areas too, whatever Alarmo had. Check it on page 4."
     }
   },
@@ -1908,7 +1918,9 @@
     "entity_id": "Entity",
     "test": "Test",
     "contact_id": "Contact",
-    "over_contact_id": "Announced to"
+    "over_contact_id": "Announced to",
+    "addresses": "Addresses",
+    "since": "Since"
   },
   "code": {
     "title": "Code",

@@ -13,12 +13,14 @@ import type {
   AlarmoPreview,
   CommandResult,
   TestActionResult,
+  ConfigBackup,
   ConfigMeta,
   EditResult,
   FoyerConfig,
   FoyerStatus,
   HomeAssistant,
   PageId,
+  Problem,
   RadioCandidate,
 } from "../shared/types";
 import type { PanelContext } from "./context";
@@ -459,7 +461,19 @@ class FoyerPanel extends LitElement {
             ...withCode(query.code ?? code),
           }),
         ),
-      exportConfig: () => hass.callWS({ type: "foyer/config/export" }),
+      exportConfig: () =>
+        this._coded((code) =>
+          hass
+            .callWS<{
+              success?: boolean;
+              reason?: string | null;
+              problems?: Problem[];
+              filename?: string;
+              document?: ConfigBackup;
+            }>({ type: "foyer/config/export", ...withCode(code) })
+            // A backup that went through carries no `success` of its own.
+            .then((result) => ({ ...result, success: result.success !== false })),
+        ),
       importConfig: (document) =>
         this._edit("config", { type: "foyer/config/import", document }),
       alarmoPreview: (labels) => hass.callWS({ type: "foyer/alarmo/preview", labels }),

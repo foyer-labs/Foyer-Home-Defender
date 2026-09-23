@@ -606,7 +606,7 @@
     "editor_layout": "Disposizione",
     "layout_full": "Completa: aree, scenari, conto alla rovescia e cosa blocca l'inserimento",
     "layout_compact": "Compatta: stato e un'azione",
-    "editor_hint": "Le disposizioni tastierino e pastiglia hanno senso con i codici; il tastierino compare da quando qualcuno ne ha uno.",
+    "editor_hint": "Il layout tastierino mostra sempre il tastierino, per un tablet a parete. Completo e compatto lo aprono quando serve un codice. Il badge non ha nulla da premere.",
     "layout_badge": "Pastiglia — solo lo stato, per una dashboard tua",
     "layout_keypad": "Tastierino",
     "code_hint": "{n} cifre",
@@ -616,7 +616,11 @@
     "code_show": "Inserisci un codice",
     "code_hide": "Nascondi il tastierino",
     "low_battery": "Batteria scarica: {zones}",
-    "auto_badge": "arma fra {seconds} s"
+    "auto_badge_arm": "arma fra {seconds} s",
+    "auto_badge_disarm": "disinserisce fra {seconds} s",
+    "auto_badge_switch": "cambia fra {seconds} s",
+    "not_sent": "Il comando non è arrivato a Foyer. Non è cambiato nulla: riprova.",
+    "locked_until": "Troppi codici sbagliati: bloccato fino alle {time}."
   },
   "help": {
     "toggle": "Informazioni su questa sezione",
@@ -1318,6 +1322,10 @@
     "token_lockout": {
       "title": "Foyer: endpoint dei dispositivi bloccato per un indirizzo",
       "message": "Troppe richieste con un token sbagliato o mancante sono arrivate da {address}. Quell'indirizzo è rifiutato per la durata del blocco. Lo fa anche un tastierino configurato con un token vecchio; lo fa anche qualcuno che tira a indovinare."
+    },
+    "alarm_ended": {
+      "title": "Foyer: allarme finito",
+      "message": "L'allarme in {area} è finito."
     }
   },
   "chime_mode": {
@@ -1471,7 +1479,8 @@
     "auto_blocked": "La regola automatica non ha agito",
     "auto_suspension_set": "Regole automatiche sospese",
     "auto_suspension_cleared": "Sospensione finita",
-    "auto_arming_switched": "Regole automatiche attivate o disattivate"
+    "auto_arming_switched": "Regole automatiche attivate o disattivate",
+    "alarm_ended": "Fine dell'allarme"
   },
   "condition": {
     "add": "Aggiungi una condizione",
@@ -1621,7 +1630,8 @@
     "simulation_run": "Simulazione eseguita",
     "config_refused": "Modifica di configurazione rifiutata",
     "config_new_token": "Token del tastierino generato",
-    "config_revoke_token": "Token del tastierino revocato"
+    "config_revoke_token": "Token del tastierino revocato",
+    "tokens_rejected": "Token di tastiera rifiutati"
   },
   "log": {
     "filters": "Filtri",
@@ -1679,7 +1689,8 @@
     "person_erase_confirm_pseudonym": "Questo sostituisce il nome su tutte le righe trovate — {rows} — con un identificatore stabile, per sempre. Il registro continuerà a dire che la stessa persona ha agito in due notti diverse, che non è la stessa cosa che dimenticarla. La cancellazione stessa viene registrata, senza nominarla.",
     "person_keep_pseudonym": "Tieni un identificatore stabile invece di dimenticare",
     "person_keep_pseudonym_hint": "Spento, le righe perdono la persona del tutto. Acceso, tengono un identificatore opaco che non dice nulla di lei ma continua a legare le sue righe fra loro. Chi chiede di essere dimenticato di solito chiede la prima.",
-    "person_erased": "Righe che non nominano più nessuno: {rows}."
+    "person_erased": "Righe che non nominano più nessuno: {rows}.",
+    "tokens_rejected": "{count} token sbagliati da {addresses} indirizzi mentre l'endpoint era bloccato"
   },
   "language": {
     "self": "Italiano"
@@ -1791,7 +1802,6 @@
       "group_not_imported": "Il gruppo «{group}» ({n} su {members} entro {seconds} s) non è stato creato: un gruppo ha bisogno dei suoi membri attivi, e ogni zona importata parte spenta. Crealo a pagina 13 quando saranno confermate.",
       "setting_not_imported": "L'impostazione di Alarmo «{setting}» non è stata importata; le impostazioni di Foyer sono rimaste come erano.",
       "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. È stato scritto da un Alarmo più recente di quello su cui è stato verificato, e quello che fa quel campo non è stato importato.",
-      "automation_untriggered": "«{automation}» partiva alla fine di un allarme. Ora parte al termine della sirena e a ogni disinserimento, anche quelli normali: controlla che sia quello che vuoi.",
       "scenario_overrides": "«{scenario}» ha un proprio ritardo di uscita o durata della sirena, e ora vale anche per le aree importate, qualunque cosa avesse Alarmo. Controllalo nella pagina 4."
     }
   },
@@ -1908,7 +1918,9 @@
     "entity_id": "Entità",
     "test": "Prova",
     "contact_id": "Contatto",
-    "over_contact_id": "Annunciato a"
+    "over_contact_id": "Annunciato a",
+    "addresses": "Indirizzi",
+    "since": "Dal"
   },
   "code": {
     "title": "Codice",

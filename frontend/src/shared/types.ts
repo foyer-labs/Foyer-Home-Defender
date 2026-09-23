@@ -32,6 +32,12 @@ export interface HomeAssistant {
    * without one in this zone, so the panel shows times in it too. */
   config?: { time_zone?: string };
   user?: { id: string; name: string; is_admin: boolean };
+  /** The entity registry as the frontend carries it: which integration an
+   * entity belongs to, whatever it has been renamed to. */
+  entities?: Record<
+    string,
+    { entity_id: string; platform?: string; translation_key?: string }
+  >;
   connection: HassConnection;
   callWS<T>(message: Record<string, unknown>): Promise<T>;
   callService(
@@ -143,7 +149,9 @@ export interface StatusIncident {
 export interface FoyerStatus {
   now: string;
   active_scenario_id: string | null;
-  master: { state: AreaState; mode: string | null };
+  /** `entity_id` is whatever the household renamed the master to: the card
+   * recognises it by this, never by the id it was created with. */
+  master: { state: AreaState; mode: string | null; entity_id: string | null };
   areas: StatusArea[];
   scenarios: StatusScenario[];
   zones: StatusZone[];

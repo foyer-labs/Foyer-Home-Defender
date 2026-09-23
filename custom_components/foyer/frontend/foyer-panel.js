@@ -3011,6 +3011,7 @@ var xt = {
 		"entry_started",
 		"triggered",
 		"siren_cutoff",
+		"alarm_ended",
 		"incident_opened",
 		"incident_joined",
 		"incident_acknowledged",
@@ -8118,6 +8119,10 @@ var X = 50, on = class extends N {
 		}
 		if (typeof r.error == "string") return r.error;
 		if (t.event_type === "zone_state") return `${r.from ?? "?"} → ${r.to ?? "?"}`;
+		if (t.event_type === "tokens_rejected") return I(e, "log.tokens_rejected", {
+			count: String(r.count ?? "?"),
+			addresses: String(r.addresses ?? "?")
+		});
 		if (t.event_type === "reloaded") return I(e, "log.gap_short", { seconds: String(r.gap_seconds ?? "") });
 		if (t.event_type === "system_unavailable" && typeof r.down_since == "string" && r.down_since !== "") return I(e, "log.gap", {
 			from: new Date(r.down_since).toLocaleString(n.hass.language, z(n.hass)),
@@ -8540,6 +8545,15 @@ var un = 30, dn = {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.exportConfig();
+				if (!e.success || !e.filename || !e.document) {
+					this._problems = e.problems?.length ? e.problems : [{
+						code: e.reason ?? "request_failed",
+						kind: "code",
+						ref: null,
+						field: null
+					}];
+					return;
+				}
 				We(e.filename, JSON.stringify(e.document, null, 2), "application/json");
 			} catch (e) {
 				this._problems = [{
@@ -10386,7 +10400,13 @@ var Sn = class extends N {
 				...$(t),
 				...Q(t.code ?? n)
 			})),
-			exportConfig: () => e.callWS({ type: "foyer/config/export" }),
+			exportConfig: () => this._coded((t) => e.callWS({
+				type: "foyer/config/export",
+				...Q(t)
+			}).then((e) => ({
+				...e,
+				success: e.success !== !1
+			}))),
 			importConfig: (e) => this._edit("config", {
 				type: "foyer/config/import",
 				document: e
