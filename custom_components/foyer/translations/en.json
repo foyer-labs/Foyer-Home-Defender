@@ -10,14 +10,14 @@
           "zone_entity": "Zone entity"
         },
         "data_description": {
-          "area_name": "The part of the house this alarm protects, for example Home.",
+          "area_name": "The part of the house this alarm watches, for example Home.",
           "scenario_name": "The name of the arming preset, for example Away.",
-          "zone_entity": "The sensor that watches this area: a door contact, a motion sensor, a cover or a lock."
+          "zone_entity": "The sensor that watches this area: a door sensor, a motion sensor, a cover or a lock."
         }
       },
       "trigger": {
         "title": "When is the zone triggered?",
-        "description": "{entity} is currently **{current_state}**. Choose the states that mean an intrusion. Normally-closed and normally-open contacts behave in opposite ways, so check this against the real sensor: open the door or walk past it and watch its state.",
+        "description": "{entity} is currently **{current_state}**. Choose the states that mean an intrusion. Normally-closed and normally-open contact sensors behave in opposite ways, so check this against the real sensor: open the door or walk past it and watch its state.",
         "data": {
           "trigger_states": "Triggered when the state is",
           "confirm_trigger": "I have checked these states against the real sensor"
@@ -82,7 +82,7 @@
   },
   "exceptions": {
     "rejected_invalid_state": {
-      "message": "The area is not in a state that allows this."
+      "message": "The area's current state does not allow this. Check whether it is already armed, arming or in alarm."
     },
     "rejected_unknown_scenario": {
       "message": "That scenario does not exist."
@@ -91,10 +91,10 @@
       "message": "That area does not exist."
     },
     "rejected_no_scenario_for_mode": {
-      "message": "No scenario reports this mode."
+      "message": "No scenario is linked to this arming mode."
     },
     "rejected_ambiguous_mode": {
-      "message": "More than one scenario reports this mode. Choose the scenario on select.foyer_scenario."
+      "message": "More than one scenario is linked to this arming mode. Choose the scenario on select.foyer_scenario."
     },
     "rejected_alarm_in_progress": {
       "message": "An alarm is in progress. Disarm before changing scenario."
@@ -109,10 +109,10 @@
       "message": "Cannot arm: zone open: {zones}."
     },
     "rejected_zone_not_bypassable": {
-      "message": "Cannot force arming: these zones may not be bypassed: {zones}."
+      "message": "Cannot force arming: these zones may not be excluded: {zones}."
     },
     "rejected_arm_hold_expired": {
-      "message": "Arming failed: still open: {zones}."
+      "message": "Arming failed: zone still open: {zones}."
     },
     "rejected_nothing_to_acknowledge": {
       "message": "There is nothing to acknowledge."
@@ -124,13 +124,13 @@
       "message": "That code is not right."
     },
     "rejected_locked_out": {
-      "message": "Too many wrong codes. This channel is locked for now."
+      "message": "Too many wrong codes. Codes from here are refused for a while."
     },
     "rejected_not_permitted": {
-      "message": "You are not allowed to do that."
+      "message": "Your Foyer user does not have permission for this."
     },
     "rejected_user_not_valid": {
-      "message": "That code is not valid at the moment."
+      "message": "That code belongs to a user who is disabled or outside their validity period."
     },
     "rejected_area_not_allowed": {
       "message": "You are not allowed to act on that area."
@@ -139,13 +139,13 @@
       "message": "You are not allowed to use that scenario."
     },
     "rejected_device_not_registered": {
-      "message": "That device is not one of the arming devices of this installation. Add it under Arming devices before it can command the alarm."
+      "message": "That device is not one of the arming devices of this system. Add it under Arming devices before it can command the alarm."
     },
     "rejected_nothing_to_cancel": {
       "message": "There is no automatic action counting down."
     },
     "rejected_unknown_rule": {
-      "message": "That automation rule does not exist."
+      "message": "That automatic rule does not exist."
     },
     "rejected_unknown_suspension": {
       "message": "That suspension does not exist."
@@ -157,7 +157,7 @@
       "message": "The device's token was missing or wrong."
     },
     "rejected_walk_test_active": {
-      "message": "A walk test is running. End it first, then arm."
+      "message": "A walk test is running. End it first (it disarms the areas it armed), then arm."
     },
     "service_refused": {
       "message": "Foyer refused the request: {reason}."
@@ -166,7 +166,7 @@
   "entity": {
     "alarm_control_panel": {
       "master": {
-        "name": "Master"
+        "name": "Whole house"
       }
     },
     "select": {
@@ -219,7 +219,7 @@
         "name": "Walk test"
       },
       "auto_arming": {
-        "name": "Automatic arming"
+        "name": "Automatic rules"
       }
     },
     "button": {
@@ -231,7 +231,7 @@
   "services": {
     "arm": {
       "name": "Arm",
-      "description": "Arm a scenario, one area, or a master mode. Returns the structured result of §9.1.",
+      "description": "Arm a scenario, one area, or a mode of the Whole house panel. Returns a structured result saying what was done, or why it was refused.",
       "fields": {
         "scenario_id": {
           "name": "Scenario",
@@ -246,8 +246,8 @@
           "description": "Arm this one area on its own, outside any scenario."
         },
         "mode": {
-          "name": "Master mode",
-          "description": "Arm through the master panel: the one scenario reporting this mode. Refused when two scenarios share it."
+          "name": "Whole house mode",
+          "description": "Arm through the Whole house panel: the one scenario linked to this mode. Refused when two scenarios share it."
         },
         "force": {
           "name": "Force",
@@ -259,11 +259,11 @@
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -271,7 +271,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     },
@@ -285,11 +285,11 @@
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -297,7 +297,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     },
@@ -311,15 +311,15 @@
         },
         "seconds": {
           "name": "For",
-          "description": "How long the exclusion lasts. Without it, the exclusion ends at the next disarm; with it, it outlives the disarm and announces the zone's return."
+          "description": "How long the exclusion lasts. Without it, the exclusion ends at the next disarm; with it, it outlives the disarm and announces when the zone is included again."
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -327,25 +327,25 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     },
     "unbypass_zone": {
-      "name": "Let a zone back in",
-      "description": "End a manual exclusion and let the zone protect again.",
+      "name": "Include a zone again",
+      "description": "End a manual exclusion so the zone is watched again.",
       "fields": {
         "zone_id": {
           "name": "Zone",
-          "description": "The zone to let back in."
+          "description": "The zone to include again."
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -353,7 +353,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     },
@@ -367,11 +367,11 @@
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -379,11 +379,11 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         },
         "via": {
           "name": "Path",
-          "description": "Which of the four paths this acknowledgement came by. It is recorded, never trusted: the authorisation is the channel's, not the word's."
+          "description": "Which of the four paths this acknowledgement came by. It is recorded, not trusted: what is allowed depends on how the request arrived, not on this field."
         },
         "contact_id": {
           "name": "Contact",
@@ -401,15 +401,15 @@
         },
         "duration": {
           "name": "Duration",
-          "description": "How long to run without a detection, in seconds. It may only be shorter than the configured maximum, never longer: the auto-exit cannot be switched off."
+          "description": "How long to run without a detection, in seconds. It may only be shorter than the configured maximum, never longer: the automatic end cannot be switched off."
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -417,7 +417,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     },
@@ -443,11 +443,11 @@
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -455,7 +455,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         },
         "contact_id": {
           "name": "Contact",
@@ -509,11 +509,11 @@
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -521,7 +521,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     },
@@ -531,11 +531,11 @@
       "fields": {
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -543,7 +543,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     },
@@ -557,11 +557,11 @@
         },
         "code": {
           "name": "Code",
-          "description": "The code of the person asking. Verified in the backend, always (INV-2)."
+          "description": "The code of the person asking. Always verified by Foyer on the server."
         },
         "user_id": {
           "name": "User",
-          "description": "Who to attribute this to in the log. It grants nothing: a claim buys that person's restrictions, never their exemptions."
+          "description": "Who to attribute this to in the log. It grants nothing: naming a person applies their restrictions, never their exemptions."
         },
         "channel": {
           "name": "Channel",
@@ -569,7 +569,7 @@
         },
         "device_id": {
           "name": "Device",
-          "description": "The name a registered arming device answers to, from Arming devices. A name this installation does not carry is refused."
+          "description": "The name a registered arming device answers to, from Arming devices. A name this system does not have is refused."
         }
       }
     }
@@ -581,7 +581,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "The zone {zone} has been unreadable for {days} days. While it is, it is a fault: it blocks arming and it is never treated as “closed”. A flat battery, a sensor out of range, or an integration that no longer loads.\n\nDismisses this card. It comes back if the problem does."
+            "description": "The zone {zone} has been unreadable for {days} days. While it is, it is a fault: it blocks arming and it is never treated as “closed”. A flat battery, a sensor out of range, or an integration that no longer loads.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }
@@ -592,7 +592,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "The notification channel {service}, which {contact} is reached through, is not in this installation any more. Integrations get removed, renamed or fail to load after an update, and a channel discovered broken during an alarm is the failure this check exists to prevent. Fix it on the Contacts page and send a test.\n\nDismisses this card. It comes back if the problem does."
+            "description": "The notification channel {service}, which {contact} is reached through, is not in this Home Assistant any more. Integrations get removed, renamed or fail to load after an update, and a channel discovered broken during an alarm is the failure this check exists to prevent. Fix it on the Contacts page and send a test.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }
@@ -603,7 +603,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "Messages to {contact} through {service} have failed repeatedly. The service is there; the sends are not arriving. Send a test from the Contacts page once you believe it is fixed — a success clears this.\n\nDismisses this card. It comes back if the problem does."
+            "description": "Messages to {contact} through {service} have failed repeatedly. The service is there; the sends are not arriving. Send a test from the Contacts page once you believe it is fixed — a success clears this.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }
@@ -614,7 +614,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "Not one ping has succeeded since it was switched on. Almost always a mistyped URL or an endpoint that was never created. Last error: {error}. Until it works, nothing outside the house knows whether Home Assistant is still alive.\n\nDismisses this card. It comes back if the problem does."
+            "description": "Not one ping has succeeded since it was switched on. Almost always a mistyped URL or an endpoint that was never created. Last error: {error}. Until it works, nothing outside the house knows whether Home Assistant is still alive.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }
@@ -625,7 +625,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "The pings are failing. Last error: {error}. Being unable to reach it means no notification that needs the internet would reach you either.\n\nDismisses this card. It comes back if the problem does."
+            "description": "The pings are failing. Last error: {error}. Being unable to reach it means no notification that needs the internet would reach you either.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }
@@ -636,7 +636,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "{count} of {of} zones on {radio} went quiet at once while the coordinator kept answering. This is a heuristic, not jamming detection: a coordinator crash, a firmware update, a channel change or a power cut to a room of mains-powered routers all look exactly like this. See docs/system-health.md.\n\nDismisses this card. It comes back if the problem does."
+            "description": "{count} of {of} zones on {radio} went quiet at once while the coordinator kept answering. This is a heuristic, not jamming detection: a coordinator crash, a firmware update, a channel change or a power cut to a room of mains-powered routers all look exactly like this.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }
@@ -647,7 +647,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "{entity_id} cannot be read, so no zone on {radio} is being watched. This is not interference — it is the coordinator, its power or its network. A coordinator on Power-over-Ethernet dies with its switch.\n\nDismisses this card. It comes back if the problem does."
+            "description": "{entity_id} cannot be read, so no zone on {radio} is being watched. This is not interference — it is the coordinator, its power or its network. A coordinator on Power-over-Ethernet dies with its switch.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }
@@ -658,7 +658,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "{entity_id} reports that mains power has failed. Everything that needs the internet stops when the router does: see docs/resilience.md.\n\nDismisses this card. It comes back if the problem does."
+            "description": "{entity_id} reports that mains power has failed. Everything that needs the internet stops when the router does.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }

@@ -9,14 +9,15 @@
     "save": "Salva",
     "cancel": "Annulla",
     "delete": "Elimina",
-    "acknowledge": "Riconosci",
+    "acknowledge": "Prendi atto",
     "yes": "Sì",
     "no": "No",
     "seconds_unit": "Secondi",
     "ok": "OK",
     "edit": "Modifica",
     "move_up": "Sposta su",
-    "move_down": "Sposta giù"
+    "move_down": "Sposta giù",
+    "confirm_delete": "Eliminare {name}? Non si può annullare."
   },
   "nav": {
     "overview": "Panoramica",
@@ -32,7 +33,8 @@
     "test": "Test e diagnostica",
     "contacts": "Contatti",
     "rules": "Regole automatiche",
-    "health": "Salute di sistema"
+    "health": "Stato del sistema",
+    "group_setup": "Configurazione"
   },
   "state": {
     "disarmed": "Disinserito",
@@ -42,10 +44,10 @@
     "triggered": "In allarme"
   },
   "timer": {
-    "exit": "Ritardo di uscita: {seconds} s",
-    "hold": "In attesa che una zona si chiuda: mancano {seconds} s",
-    "entry": "Ritardo di ingresso: {seconds} s",
-    "siren": "Sirene: {seconds} s"
+    "exit": "Ritardo di uscita: {seconds} s",
+    "hold": "In attesa che una zona si chiuda: mancano {seconds} s",
+    "entry": "Disinserisci entro {seconds} s",
+    "siren": "Sirene: {seconds} s"
   },
   "zone_status": {
     "closed": "Pronta",
@@ -57,7 +59,7 @@
   "fault": {
     "unavailable": "Guasto: non raggiungibile",
     "not_numeric": "Guasto: non è un numero",
-    "supervision": "Guasto: silenziosa da troppo",
+    "supervision": "Guasto: muta da troppo tempo",
     "battery_unavailable": "Entità batteria illeggibile"
   },
   "bypass": {
@@ -66,42 +68,43 @@
     "manual": "Esclusa a mano"
   },
   "reason": {
-    "invalid_state": "L'area non è in uno stato che lo permette.",
+    "invalid_state": "Lo stato attuale dell'area non lo consente. Controlla se è già inserita, in inserimento o in allarme.",
     "unknown_scenario": "Lo scenario non esiste.",
     "unknown_area": "L'area non esiste.",
-    "no_scenario_for_mode": "Nessuno scenario riporta questa modalità.",
-    "ambiguous_mode": "Più scenari riportano questa modalità. Scegli direttamente lo scenario.",
+    "no_scenario_for_mode": "Nessuno scenario è associato a questa modalità di inserimento.",
+    "ambiguous_mode": "Più scenari sono associati a questa modalità di inserimento. Scegli direttamente lo scenario.",
     "alarm_in_progress": "C'è un allarme in corso. Disinserisci prima di cambiare scenario.",
     "code_required": "Serve un codice.",
-    "zone_fault": "Impossibile inserire: zona in guasto: {zones}.",
-    "zone_open": "Impossibile inserire: zona aperta: {zones}.",
+    "zone_fault": "Non inserito — non rispondono: {zones}. Controlla batteria e segnale, oppure inserisci senza.",
+    "zone_open": "Non inserito — ancora aperte: {zones}. Chiudile e riprova, oppure inserisci senza.",
     "zone_not_bypassable": "Impossibile forzare: queste zone non possono essere escluse: {zones}.",
-    "arm_hold_expired": "Inserimento fallito: ancora aperta: {zones}.",
-    "unknown": "La richiesta è stata rifiutata.",
-    "nothing_to_acknowledge": "Non c'è nulla da riconoscere.",
+    "arm_hold_expired": "Inserimento non riuscito: zona ancora aperta: {zones}.",
+    "unknown": "La richiesta è stata rifiutata. Ricarica la pagina e riprova.",
+    "nothing_to_acknowledge": "Non c'è nulla di cui prendere atto.",
     "unknown_zone": "Quella zona non esiste.",
     "bad_code": "Il codice non è corretto.",
-    "locked_out": "Troppi codici errati. Questo canale è bloccato per ora.",
-    "not_permitted": "Non hai il permesso di farlo.",
-    "user_not_valid": "Questo codice non è valido in questo momento.",
-    "area_not_allowed": "Non puoi agire su quell’area.",
+    "locked_out": "Troppi codici errati. Riprova più tardi.",
+    "not_permitted": "Il tuo utente Foyer non ha il permesso per farlo.",
+    "user_not_valid": "Quel codice appartiene a un utente disattivato o fuori dal suo periodo di validità.",
+    "area_not_allowed": "Non puoi agire su quell'area.",
     "scenario_not_allowed": "Non puoi usare quello scenario.",
     "device_not_registered": "Quel dispositivo non è fra i dispositivi di inserimento dell'impianto. Aggiungilo prima in Dispositivi di inserimento.",
     "nothing_to_cancel": "Non c'è nessuna azione automatica in conto alla rovescia.",
     "unknown_rule": "Quella regola non esiste.",
     "unknown_suspension": "Quella sospensione non esiste.",
-    "not_loaded": "Foyer si stava ricaricando — non è stato fatto niente",
+    "not_loaded": "Foyer si stava ricaricando, quindi non è stato fatto nulla. Riprova.",
     "bad_token": "Il token del dispositivo mancava o era sbagliato.",
-    "walk_test_active": "È in corso un walk test. Terminalo prima, poi inserisci: alla fine il walk test disinserisce ogni area."
+    "walk_test_active": "È in corso un walk test. Terminalo, poi inserisci: quando finisce, disinserisce le aree che aveva inserito.",
+    "cancelled": "Annullato — non è stato cambiato nulla."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
     "name_required": "Serve un nome.",
-    "duplicate_name": "Esiste già con questo nome.",
+    "duplicate_name": "Esiste già un elemento con questo nome.",
     "invalid_ha_state": "Scegli uno degli stati di inserimento di Home Assistant.",
     "delay_out_of_range": "{field}: tra 0 e 300 secondi.",
     "siren_out_of_range": "{field}: tra 1 e 900 secondi (il riferimento EN 50131 per le sirene esterne).",
-    "retention_out_of_range": "{field}: ogni categoria va conservata fra 1 e 3650 giorni. Per non conservare nulla, spegni la categoria.",
+    "retention_out_of_range": "{field}: ogni categoria va conservata fra 1 e 3650 giorni. Per non conservare nulla, disattiva la categoria.",
     "hold_out_of_range": "{field}: tra 60 e 1800 secondi.",
     "supervision_out_of_range": "{field}: tra 60 secondi e 7 giorni, oppure vuoto per disattivarla.",
     "scenario_without_areas": "Uno scenario deve inserire almeno un'area.",
@@ -119,8 +122,8 @@
     "key_action_not_allowed": "Solo le zone chiave hanno un'azione chiave.",
     "always_on_must_be_instant": "Una zona sempre attiva scatta subito: il ritardo di ingresso non si applica.",
     "auto_bypass_needs_bypassable": "L'esclusione automatica richiede una zona che si possa escludere.",
-    "hold_needs_arm_after_closing": "Il limite di attesa vale solo per “inserisci dopo la chiusura”.",
-    "area_not_disarmed": "Quest'area non è disinserita. Disinseriscila prima di cambiare ciò che la protegge.",
+    "hold_needs_arm_after_closing": "Il limite di attesa vale solo per «Inserisci dopo la chiusura».",
+    "area_not_disarmed": "Quest'area non è disinserita. Disinseriscila prima di cambiare ciò che la sorveglia.",
     "scenario_active": "Questo scenario è in funzione. Disinserisci prima di modificarlo.",
     "trigger_not_confirmed": "Conferma prima gli stati del trigger sul sensore reale.",
     "not_found": "Non esiste più. Ricarica la pagina.",
@@ -128,7 +131,7 @@
     "area_in_scenario": "Togli prima quest'area dai suoi scenari.",
     "scenario_in_use": "Una zona chiave inserisce questo scenario. Modifica prima la zona chiave.",
     "unknown_kind": "Tipo di oggetto sconosciuto.",
-    "invalid": "Alcuni valori non sono validi.",
+    "invalid": "Alcuni valori non sono validi. Controlla i campi e riprova.",
     "follows_needs_follower": "Solo una zona percorso può seguire altre zone.",
     "follows_not_delayed": "Una zona percorso può seguire solo zone di intrusione ritardate.",
     "request_failed": "Home Assistant non ha accettato la richiesta ({detail}). Non è stato modificato nulla. Ricarica la pagina e riprova.",
@@ -155,9 +158,9 @@
     "unknown_profile": "Quel profilo di risposta non esiste.",
     "unknown_action_kind": "Tipo di azione sconosciuto.",
     "camera_dir_invalid": "Usa una cartella dentro la directory di configurazione, mai www: è servita senza autenticazione.",
-    "severity_out_of_range": "La severità è un numero da 1 a 10.",
+    "severity_out_of_range": "La gravità è un numero da 1 a 10.",
     "moments_required": "Scegli almeno un momento per questa azione.",
-    "too_many_conditions": "Un'azione porta al massimo due condizioni.",
+    "too_many_conditions": "Un'azione ha al massimo due condizioni.",
     "empty_window": "Una finestra che inizia quando finisce non si applica mai.",
     "condition_entity_invalid": "Scegli un'entità e lo stato con cui confrontarla.",
     "unknown_variable": "{field} usa una variabile che non esiste.",
@@ -177,10 +180,10 @@
     "code_length": "{field}: numero di cifre sbagliato.",
     "code_in_use": "{field}: quel codice appartiene già a qualcuno.",
     "unknown_permission": "Permesso sconosciuto.",
-    "unknown_user": "{field}: quell’utente non esiste.",
-    "ha_user_already_linked": "Quell’account Home Assistant è già collegato a un altro utente.",
-    "window_inverted": "{field}: la fine precede l’inizio.",
-    "exemption_needs_a_linked_account": "L’esenzione richiede un account Home Assistant collegato: senza, nulla può identificare questa persona senza un codice.",
+    "unknown_user": "{field}: quell'utente non esiste.",
+    "ha_user_already_linked": "Quell'account Home Assistant è già collegato a un altro utente.",
+    "window_inverted": "{field}: la fine precede l'inizio.",
+    "exemption_needs_a_linked_account": "L'esenzione richiede un account Home Assistant collegato: senza, nulla può identificare questa persona senza un codice.",
     "no_user_allowed": "{field}: uno scenario che nessuno può usare non si può inserire. Lascialo aperto a tutti.",
     "user_holds_a_key": "Una zona chiave è attribuita a questo utente. Modifica prima la zona.",
     "user_in_scenario": "Uno scenario nomina questo utente. Modifica prima lo scenario.",
@@ -188,17 +191,17 @@
     "lockout_out_of_range": "{field}: fuori intervallo.",
     "code_required": "È richiesto un codice.",
     "bad_code": "Il codice non è corretto.",
-    "not_permitted": "Non hai il permesso di farlo.",
-    "user_not_valid": "Questo codice non è valido in questo momento.",
-    "locked_out": "Troppi codici errati. Questo canale è bloccato per ora.",
-    "area_not_allowed": "Non puoi agire su quell’area.",
+    "not_permitted": "Il tuo utente Foyer non ha il permesso per farlo.",
+    "user_not_valid": "Quel codice appartiene a un utente disattivato o fuori dal suo periodo di validità.",
+    "locked_out": "Troppi codici errati. Per un po' i codici da qui vengono rifiutati.",
+    "area_not_allowed": "Non puoi agire su quell'area.",
     "scenario_not_allowed": "Non puoi usare quello scenario.",
     "unknown_scenario": "{field}: quello scenario non esiste.",
     "ref_required": "Un tastierino ha bisogno dell'identificativo che mette nei propri messaggi.",
-    "duplicate_ref": "Un altro dispositivo risponde già a quell'identificativo. Due tastierini con lo stesso nome condividerebbero il contatore dei blocchi e una riga di registro che non nomina nessuno dei due.",
+    "duplicate_ref": "Un altro dispositivo risponde già a quell'identificativo. Due tastierini con lo stesso identificativo condividerebbero il contatore dei blocchi e una riga di registro che non nomina nessuno dei due.",
     "keypad_has_no_entity": "Un tastierino è condiviso e porta un codice: non ha un'entità né un proprietario. Il tag o il telecomando sono l'altro tipo.",
-    "tag_has_no_ref": "Un tag non porta nessun codice, quindi non deve rispondere a un nome che chiunque può scrivere: lascia vuoto l'identificativo.",
-    "tag_entity_required": "Scegli l'entità tag o event su cui arriva la lettura.",
+    "tag_has_no_ref": "Un tag non porta nessun codice, quindi non deve rispondere a un nome che chiunque può digitare: lascia vuoto l'identificativo.",
+    "tag_entity_required": "Scegli l'entità tag o evento su cui arriva la lettura.",
     "tag_needs_a_user": "Un tag è di qualcuno: scegli di chi. Il possesso è la credenziale, quindi questa è l'unica identità che ha — e un tag di nessuno è un codice condiviso senza codice.",
     "scenario_required": "Scegli lo scenario che questo dispositivo inserisce.",
     "topic_invalid": "Un topic non ha caratteri jolly (+ o #) né livelli vuoti. Lascialo vuoto per il predefinito.",
@@ -207,25 +210,25 @@
     "device_not_registered": "Quel dispositivo non è registrato qui.",
     "user_holds_a_tag": "Questa persona possiede un tag o un telecomando. Cambia prima il dispositivo.",
     "unknown_attachment": "Questo tipo di allegato non è fra quelli che Foyer sa spedire.",
-    "unsupported_battery_domain": "La batteria dev’essere un sensore che riporta una percentuale, o un sensore binario di tipo batteria in cui “on” vuol dire scarica.",
-    "battery_is_zone_entity": "Quella è l’entità della zona stessa, non la sua batteria.",
+    "unsupported_battery_domain": "La batteria dev'essere un sensore che riporta una percentuale, o un sensore binario di tipo batteria in cui «on» vuol dire scarica.",
+    "battery_is_zone_entity": "Quella è l'entità della zona stessa, non la sua batteria.",
     "battery_out_of_range": "{field}: fra 1 e 100 per cento.",
     "walk_test_out_of_range": "Il timeout del walk test deve stare fra 1 e 60 minuti. Non si può disattivare.",
     "contact_in_use": "Un'azione avvisa ancora questo contatto. Modifica prima il profilo.",
     "contact_without_channels": "Dai a questo contatto almeno un canale: un contatto irraggiungibile è un passo che non raggiunge nessuno.",
     "escalation_kind_invalid": "Solo una notifica può essere un passo di escalation.",
     "escalation_moment_invalid": "Un passo di escalation risponde a un allarme o a un allarme tecnico: sono i due di cui si può prendere atto.",
-    "escalation_offset_out_of_range": "Metti questo passo fra 0 e 3600 secondi dall'inizio.",
+    "escalation_offset_out_of_range": "Metti questo passo fra 0 e 3600 secondi dall'inizio dell'allarme.",
     "notify_target_ambiguous": "Scegli i contatti oppure un servizio, non entrambi.",
     "notify_target_required": "Indica chi raggiunge questa notifica: dei contatti o un servizio di notifica.",
     "unknown_channel": "Quel contatto non ha più questo canale.",
     "unknown_contact": "Questo contatto non esiste più.",
-    "rule_without_people": "Scegli almeno una persona da osservare.",
+    "rule_without_people": "Scegli almeno una persona che questa regola deve osservare.",
     "rule_entity_invalid": "Una regola osserva persone: scegli una persona o un device tracker.",
     "rule_entity_required": "Scegli l'entità che questa regola osserva.",
     "rule_state_required": "Indica lo stato che l'entità deve mantenere.",
-    "rule_without_areas": "Scegli almeno un'area da disarmare.",
-    "rule_only_perimeter": "Tutte le aree indicate sono perimetrali, e una regola non le disarma mai. La regola non farebbe nulla.",
+    "rule_without_areas": "Scegli almeno un'area da disinserire.",
+    "rule_only_perimeter": "Tutte le aree indicate sono perimetrali, e una regola non le disinserisce mai. La regola non farebbe nulla.",
     "rule_countdown_without_contacts": "Un conto alla rovescia ha bisogno di qualcuno a cui annunciarsi, o non c'è nessuno che possa annullarlo.",
     "weekday_invalid": "Scegli giorni della settimana validi.",
     "window_incomplete": "Imposta entrambi gli estremi della finestra, o nessuno dei due.",
@@ -233,20 +236,22 @@
     "health_out_of_range": "Valore fuori dall'intervallo ammesso per questa impostazione.",
     "health_entity_invalid": "Questo non è un id di entità.",
     "mains_states_required": "Indica quale stato di quell'entità significa rete elettrica assente.",
-    "watchdog_url_required": "Un watchdog acceso ha bisogno di un URL http o https.",
+    "watchdog_url_required": "Un watchdog attivato ha bisogno di un URL http o https.",
     "watchdog_timeout_too_long": "Il timeout deve essere più breve dell'intervallo fra due ping.",
     "duplicate_radio_entry": "Un'altra radio usa già quell'integrazione.",
     "radio_entry_required": "Scegli quale integrazione è questa radio.",
-    "coordinator_required": "Indica l'entità coordinatore, oppure disattiva questa radio. Senza, Foyer non può distinguere l'interferenza da un coordinatore morto, e non tira a indovinare.",
-    "group_members_disabled": "Ci sono meno membri accesi di quanti ne chiede la soglia, quindi questo gruppo non può mai essere soddisfatto.",
-    "propose_failed": "Non è stato possibile chiedere a Home Assistant di quell'entità. Riprova fra un momento.",
+    "coordinator_required": "Indica l'entità coordinatore, oppure disattiva questa radio. Senza, Foyer non può distinguere l'interferenza da un coordinatore fermo, e non tira a indovinare.",
+    "group_members_disabled": "Ci sono meno membri attivi di quanti ne chiede la soglia, quindi questo gruppo non può mai essere soddisfatto.",
+    "propose_failed": "Non è stato possibile interrogare Home Assistant su quell'entità. Riprova fra un momento.",
     "duplicate_camera": "La stessa telecamera compare due volte. Verrebbe inviata due volte, e ogni copia conta fra le quattro che una notifica può portare.",
     "unknown_images": "Queste non sono immagini che Foyer sa allegare.",
     "camera_required": "Scegli la telecamera che questa notifica mostra sempre, oppure scegli un altro tipo di immagine.",
     "tag_has_no_token": "Solo un tastierino può usare l'endpoint dei dispositivi. Un tag non porta nessun codice, quindi il suo token sarebbe da solo la chiave di casa.",
     "token_without_endpoint": "Un token appartiene a un tastierino sull'endpoint dei dispositivi. Revocalo, oppure riporta il tastierino sull'endpoint.",
     "unknown_device": "Quel dispositivo di inserimento non esiste.",
-    "config_reloading": "La modifica precedente è ancora in corso di applicazione. Riprova tra un momento."
+    "config_reloading": "La modifica precedente è ancora in corso di applicazione. Riprova tra un momento.",
+    "cancelled": "Annullato — non è stato cambiato nulla.",
+    "code_mismatch": "I due codici non coincidono."
   },
   "field": {
     "name": "Nome",
@@ -264,7 +269,7 @@
     "bypassable": "Può essere esclusa",
     "allow_arm_when_faulted": "Consenti l'inserimento anche in guasto",
     "enabled": "Attiva",
-    "supervision_timeout": "Supervisione (secondi)",
+    "supervision_timeout": "Limite di silenzio (secondi)",
     "key": "Chiave",
     "on_activate": "Quando si attiva",
     "on_deactivate": "Quando si rilascia",
@@ -272,7 +277,7 @@
     "default_entry_delay": "Ritardo d'ingresso predefinito",
     "default_exit_delay": "Ritardo d'uscita predefinito",
     "ha_state_when_armed": "Stato riportato a Home Assistant",
-    "ha_master_state": "Stato riportato dal generale",
+    "ha_master_state": "Come appare in Home Assistant",
     "areas": "Aree inserite",
     "exit_delay_override": "Ritardo di uscita",
     "siren_duration_override": "Durata delle sirene",
@@ -288,7 +293,7 @@
     "trigger_window": "Entro",
     "chime": "Campanello",
     "targets": "Suona su",
-    "mode": "Modo",
+    "mode": "Modalità",
     "sound": "Contenuto da riprodurre",
     "tts_entity": "Sintesi vocale",
     "volume": "Volume",
@@ -296,7 +301,7 @@
     "quiet_end": "alle",
     "during_exit": "Anche durante il ritardo d'uscita",
     "response_profile_id": "Profilo di risposta",
-    "severity": "Severità",
+    "severity": "Gravità",
     "moments": "Quando parte",
     "conditions": "Condizioni",
     "condition_mode": "Le due condizioni",
@@ -310,7 +315,7 @@
     "rgb_color": "Colore",
     "flash": "Lampeggio",
     "state": "Stato",
-    "revert_after": "Torna indietro dopo",
+    "revert_after": "Ripristina dopo",
     "media_player_entity_ids": "Altoparlanti",
     "entity_ids": "Entità",
     "domain": "Dominio",
@@ -336,12 +341,12 @@
     "require_code_to_disarm": "Codice per disinserire",
     "code_length": "Lunghezza del codice",
     "lockout_failures": "Tentativi falliti",
-    "lockout_window": "Finestra",
-    "lockout_duration": "Blocco",
+    "lockout_window": "Entro (secondi)",
+    "lockout_duration": "Blocca per (secondi)",
     "new_code": "Codice",
     "new_duress_code": "Codice di coercizione",
     "code": "Codice",
-    "code_exempt_when_identified": "Salta il codice dove sono identificato",
+    "code_exempt_when_identified": "Nessun codice se identificato",
     "ref": "Identificativo del dispositivo",
     "user_id": "Di chi è",
     "event_type": "Quale pulsante",
@@ -350,7 +355,7 @@
     "command_topic": "Topic dei comandi",
     "state_topic": "Topic dello stato",
     "detail": "Cosa dice il messaggio di stato",
-    "retain": "Ritenuto",
+    "retain": "Conservato (retain)",
     "qos": "Qualità del servizio",
     "attachment": "Come allegarla",
     "battery_entity_id": "Entità della batteria",
@@ -359,7 +364,7 @@
     "walk_test_timeout": "Timeout del walk test",
     "channels": "Canali",
     "contacts": "Contatti",
-    "escalation_offset": "Momento del passo",
+    "escalation_offset": "Ritardo dall'inizio dell'allarme",
     "linked_user_id": "Utente collegato",
     "guards": "Condizioni di sicurezza",
     "window": "Finestra di attività",
@@ -374,14 +379,14 @@
     "url": "URL",
     "interval": "Intervallo",
     "timeout": "Timeout",
-    "failures": "Fallimenti prima di segnalare",
+    "failures": "Errori prima di segnalare",
     "entry_id": "Integrazione",
     "coordinator_entity_id": "Entità coordinatore",
     "n_zones": "Zone prima del sospetto",
     "rf_zones": "Zone prima del sospetto",
     "rf_window": "Entro",
     "rf_confirm": "Finestra di conferma",
-    "pseudonymise_after": "Ritardo di pseudonimizzazione",
+    "pseudonymise_after": "Sostituisci i nomi dopo",
     "camera_entity_ids": "Telecamere",
     "images": "Immagini",
     "transport": "Collegamento",
@@ -399,7 +404,7 @@
     "delayed": "Ritardata",
     "follower": "Percorso",
     "24h": "24h",
-    "tamper": "Tamper",
+    "tamper": "Manomissione",
     "technical": "Tecnica",
     "panic": "Panico",
     "key": "Chiave"
@@ -432,7 +437,7 @@
   },
   "arm_policy_hint": {
     "block": "L'inserimento fallisce e indica questa zona.",
-    "auto_bypass": "Esclusa e segnalata; rientra da sola appena si chiude.",
+    "auto_bypass": "Esclusa e segnalata; viene inclusa di nuovo da sola appena si chiude.",
     "arm_after_closing": "Dopo il ritardo di uscita l'inserimento attende che si chiuda. Fallisce se resta aperta troppo a lungo.",
     "ignore": "Inserisce comunque. Scatta la prossima volta che si apre."
   },
@@ -451,16 +456,16 @@
     "disarm": "Disinserisci tutto"
   },
   "overview": {
-    "no_codes_warning": "Nessuno ha ancora un codice, quindi nessuno viene chiesto: chiunque abbia accesso a Home Assistant può disinserire. Crea un utente con un codice nella pagina Utenti e smette di essere vero.",
+    "no_codes_warning": "Nessuno ha ancora un codice, quindi il sistema non ne chiede: chiunque abbia accesso a Home Assistant può disinserire. Crea un utente con un codice nella pagina Utenti per chiudere questa falla.",
     "memory_banner": "Memoria d'allarme in {area}: {zones}. Disinserisci l'area per azzerarla.",
-    "bypassed": "Inserito. Escluse: {zones}.",
+    "bypassed": "Inserita. Escluse: {zones}.",
     "master": "Tutta la casa",
     "scenario": "Scenario",
     "no_scenarios": "Ancora nessuno scenario.",
-    "scenario_hint": "Scegliere uno scenario ne inserisce le aree. A impianto inserito lo cambia: le aree non incluse nel nuovo si disinseriscono.",
+    "scenario_hint": "Scegliere uno scenario ne inserisce le aree. Scelto mentre ne è inserito un altro, lo sostituisce: le aree non incluse nel nuovo si disinseriscono.",
     "disarm_all": "Disinserisci tutto",
-    "force_arm": "Inserisci comunque (forzato)",
-    "force_arm_hint": "Esclude le zone indicate e registra l'inserimento come forzato.",
+    "force_arm": "Inserisci senza queste zone",
+    "force_arm_hint": "Restano scoperte fino al disinserimento; registrato come inserimento forzato.",
     "area": "Area",
     "memory": "Memoria d'allarme",
     "by_scenario": "Inserita dallo scenario {scenario}",
@@ -473,17 +478,24 @@
     "entity_state": "Stato dell'entità",
     "all_ready": "Tutte le zone sono pronte.",
     "technical_title": "Allarme tecnico",
-    "technical_banner": "Allarme tecnico: {zones}. È un canale separato: l'inserimento non lo influenza e il disinserimento non lo cancella. Si cancella una volta riconosciuto e tornato normale.",
+    "technical_banner": "Allarme tecnico: {zones}. È un canale separato: l'inserimento non lo influenza e il disinserimento non lo cancella. Si chiude quando se ne è preso atto e i sensori sono tornati normali.",
     "incident_title": "Incidente {id}",
     "incident_zones": "Zone: {zones}",
-    "incident_open": "Non riconosciuto",
-    "incident_acknowledged": "Riconosciuto — si chiude quando ogni area è disinserita o di nuovo inserita",
-    "incident_hint": "Un incidente raccoglie tutte le zone di un allarme. Anche il disinserimento lo riconosce.",
+    "incident_open": "Nessuna presa d'atto",
+    "incident_acknowledged": "Preso atto — si chiude quando ogni area è disinserita o di nuovo inserita",
+    "incident_hint": "Un incidente raccoglie tutte le zone di un allarme. Anche il disinserimento ne prende atto.",
     "recent": "Eventi recenti",
     "full_log": "Registro completo",
     "memory_banner_plain": "Memoria d'allarme in {area}. Disinserisci l'area per azzerarla.",
-    "low_battery": "Inserito, ma queste zone hanno la batteria scarica: {zones}. Escludine una da questo inserimento, o cambia la pila.",
-    "exclude_low_battery": "Escludile da questo inserimento"
+    "low_battery": "Inserita, ma queste zone hanno la batteria scarica: {zones}. Escludile da questo inserimento, o cambia le batterie.",
+    "exclude_low_battery": "Escludi queste zone",
+    "arm_scenario": "Inserisci «{name}»",
+    "ready": "Pronto per l'inserimento",
+    "not_ready_zones": "Non pronto: {zones}",
+    "not_ready_plain": "Non pronto per l'inserimento",
+    "one_area": "Solo un'area…",
+    "one_area_hide": "Nascondi l'inserimento di una sola area",
+    "code_needed": "Chiede un codice"
   },
   "areas": {
     "title": "Aree",
@@ -493,7 +505,7 @@
     "reports_as_hint": "Ciò che vedono assistenti vocali e HomeKit. Non cambia il comportamento.",
     "entry_hint": "Per le zone che non ne impostano uno proprio.",
     "exit_hint": "Il tempo per uscire dopo l'inserimento, salvo che lo scenario ne imposti uno proprio.",
-    "perimeter_hint": "L'anello esterno di difesa. Una regola automatica non disarma mai un'area perimetrale, qualunque cosa dica la regola (§9.4)."
+    "perimeter_hint": "L'anello esterno di difesa. Una regola automatica non disinserisce mai un'area perimetrale, qualunque cosa dica la regola."
   },
   "zones": {
     "title": "Zone",
@@ -506,7 +518,7 @@
     "entity_used": "{name} ({entity}) — già una zona",
     "entity_hint": "Qualsiasi sensore, contatto, tapparella, serratura, interruttore, persona, evento o tag.",
     "trigger_title": "Quando scatta questa zona?",
-    "trigger_intro": "{entity} in questo momento è “{state}”.",
+    "trigger_intro": "{entity} in questo momento è «{state}».",
     "device_class": "Proposta dal suo tipo: {device_class}.",
     "trigger_kind": "Leggila come",
     "kind_state": "Stati",
@@ -518,7 +530,7 @@
     "operator": "Scatta quando è",
     "threshold": "Soglia",
     "hysteresis": "Isteresi",
-    "hysteresis_hint": "Di quanto deve rientrare prima di tornare normale.",
+    "hysteresis_hint": "Un margine: dopo lo scatto, il valore deve rientrare oltre la soglia di questa quantità prima che la zona torni normale. Evita che una lettura che oscilla attorno alla soglia faccia scattare la zona di continuo.",
     "attribute": "Attributo (facoltativo)",
     "attribute_hint": "Legge questo attributo invece dello stato.",
     "tag_hint": "Un tag scatta a ogni scansione.",
@@ -528,9 +540,9 @@
     "confirm": "Ho verificato questi stati sul sensore reale",
     "confirm_hint": "Una scelta sbagliata è una zona che non scatta mai, e lo scopri durante un'effrazione.",
     "confirm_first": "Conferma il trigger per salvare.",
-    "unconfirmed_notice": "Questa zona è arrivata con un'importazione, e il suo trigger è una proposta ricavata dal tipo di sensore, non qualcosa che qualcuno abbia verificato. Resta spenta finché non lo fai tu: prova il sensore, correggi il trigger se è sbagliato, spunta la conferma e attiva la zona.",
+    "unconfirmed_notice": "Questa zona è arrivata con un'importazione, e il suo trigger è una proposta ricavata dal tipo di sensore, non qualcosa che qualcuno abbia verificato. Resta disattivata finché non lo fai tu: prova il sensore, correggi il trigger se è sbagliato, spunta la conferma e attiva la zona.",
     "properties_title": "Comportamento",
-    "type_unavailable": "{type} — aggiornamento successivo",
+    "type_unavailable": "{type} — in un prossimo aggiornamento",
     "type_hint": "Un preset: compila i campi qui sotto, che restano tutti modificabili.",
     "inherit_seconds": "eredita ({n} s)",
     "entry_delay_hint": "Vuoto: il predefinito dell'area.",
@@ -539,7 +551,7 @@
     "supervision_hint": "Silenziosa oltre questo tempo è un guasto; conta ogni segnalazione, anche senza cambi di stato. Impostala più lunga dell'intervallo con cui questo sensore si fa sentire. Vuoto: disattivata, che è il predefinito ed è giusto per i sensori che segnalano solo quando cambiano.",
     "always_on_hint": "Scatta anche a impianto disinserito.",
     "bypassable_hint": "Serve per l'esclusione automatica o forzata.",
-    "allow_faulted_hint": "L'inserimento procede anche se questa zona non è visibile. Lascialo spento se non sai perché.",
+    "allow_faulted_hint": "L'inserimento procede anche se questa zona non è leggibile. Lascialo disattivato se non sai perché.",
     "enabled_hint": "Una zona disattivata viene ignorata del tutto.",
     "key_title": "Azione chiave",
     "pick_scenario": "Scegli uno scenario…",
@@ -556,18 +568,18 @@
     "chime_hint": "Suona il campanello quando si apre mentre la sua area non è inserita.",
     "in_group": "Membro del gruppo di verifica {group}. Si modifica nella pagina Gruppi di verifica.",
     "bypass": "Escludi",
-    "unbypass": "Reinserisci",
+    "unbypass": "Includi di nuovo",
     "bypass_for": "Escludi per",
     "bypass_hours": "{hours} h",
-    "bypass_until": "rientra alle {time}",
-    "bypass_indefinite": "finché non la reinserisci",
-    "bypass_hint": "Una zona esclusa non allarma. Senza durata rientra al disinserimento dell'area; con una durata rientra da sola, e lo dice.",
-    "silent_hint": "La risposta gira senza i sonori elencati nelle impostazioni.",
+    "bypass_until": "inclusa di nuovo alle {time}",
+    "bypass_indefinite": "finché non la includi di nuovo",
+    "bypass_hint": "Una zona esclusa non allarma. Senza durata viene inclusa di nuovo al disinserimento dell'area; con una durata viene inclusa di nuovo da sola, e lo segnala.",
+    "silent_hint": "La risposta viene eseguita senza i tipi di azione scelti nelle Impostazioni, come le sirene.",
     "profile_hint": "Letto solo quando questa zona allarma. Vuoto: il profilo dell'area.",
     "bypass_minutes": "Minuti",
     "bypass_minutes_placeholder": "es. 20",
     "no_battery": "Nessuna entità batteria",
-    "battery_hint": "Per la diagnostica e l’avviso di batteria scarica. Una batteria scarica avvisa e non blocca mai l’inserimento; un’entità che non si riesce a leggere è invece un guasto, e blocca.",
+    "battery_hint": "Per la diagnostica e l'avviso di batteria scarica. Una batteria scarica avvisa e non blocca mai l'inserimento; un'entità che non si riesce a leggere è invece un guasto, e blocca.",
     "camera_up": "Sposta su",
     "camera_down": "Sposta giù",
     "camera_remove": "Togli",
@@ -580,14 +592,16 @@
     "add": "Aggiungi scenario",
     "new": "Nuovo scenario",
     "active": "in funzione",
-    "shared_mode": "Condivisa con un altro scenario: il generale non può inserire questa modalità.",
+    "shared_mode": "Condivisa con un altro scenario: Tutta la casa non può inserire questa modalità.",
     "area_default": "quello di ogni area",
     "global_default": "predefinito globale",
     "global_seconds": "globale ({n} s)",
-    "mode_hint": "Più scenari possono condividerla; il generale allora rifiuta quella modalità e lo scenario si sceglie qui.",
+    "mode_hint": "Ciò che il pannello Tutta la casa comunica a Home Assistant — e quindi a HomeKit, Google e Alexa — mentre questo scenario è inserito. Più scenari possono condividere la stessa modalità; in quel caso Tutta la casa la rifiuta e lo scenario si sceglie qui.",
     "exit_hint": "Vuoto: il ritardo di uscita di ogni area.",
     "siren_hint": "Al massimo 900 s. Vuoto: l'impostazione globale.",
-    "areas_hint": "Solo queste vengono inserite. Passando a un altro scenario si disinseriscono le aree che non elenca."
+    "areas_hint": "Solo queste vengono inserite. Passando a un altro scenario si disinseriscono le aree che non elenca.",
+    "everyone": "Chiunque abbia il permesso",
+    "allowed_users_hint": "Solo le persone spuntate possono usare questo scenario. Cambiare questo elenco richiede anche il permesso «Gestire utenti e codici»."
   },
   "card": {
     "arm": "Inserisci",
@@ -596,31 +610,52 @@
     "entity_missing": "Entità non trovata: {entity}",
     "area_countdown": "{area} — {countdown}",
     "technical": "Allarme tecnico: {zones}",
-    "incident": "Incidente: {zones}",
+    "incident": "Allarme: {zones}",
     "scenario": "Scenario",
     "pick_scenario": "Inserisci uno scenario…",
     "not_ready": "Non pronto all'inserimento",
     "zone_in": "{zone} — {areas}",
     "editor_entity": "Pannello da mostrare",
-    "editor_master": "Tutta la casa (master)",
+    "editor_master": "Tutta la casa",
     "editor_layout": "Disposizione",
-    "layout_full": "Completa: aree, scenari, conto alla rovescia e cosa blocca l'inserimento",
-    "layout_compact": "Compatta: stato e un'azione",
-    "editor_hint": "Il layout tastierino mostra sempre il tastierino, per un tablet a parete. Completo e compatto lo aprono quando serve un codice. Il badge non ha nulla da premere.",
-    "layout_badge": "Pastiglia — solo lo stato, per una dashboard tua",
+    "layout_full": "Completa",
+    "layout_compact": "Compatta",
+    "editor_hint": "Completa e Compatta aprono il tastierino quando serve un codice; Tastierino lo mostra sempre.",
+    "layout_badge": "Badge",
     "layout_keypad": "Tastierino",
-    "code_hint": "{n} cifre",
+    "code_hint": "Codice di {n} cifre",
     "code_clear": "Cancella",
     "code_confirm": "Conferma",
-    "code_entered": "Codice inserito",
-    "code_show": "Inserisci un codice",
+    "code_entered": "Codice digitato",
+    "code_show": "Digita il codice",
     "code_hide": "Nascondi il tastierino",
     "low_battery": "Batteria scarica: {zones}",
-    "auto_badge_arm": "arma fra {seconds} s",
-    "auto_badge_disarm": "disinserisce fra {seconds} s",
-    "auto_badge_switch": "cambia fra {seconds} s",
+    "auto_badge_arm": "inserisce fra {seconds} s",
+    "auto_badge_disarm": "disinserisce fra {seconds} s",
+    "auto_badge_switch": "cambia fra {seconds} s",
     "not_sent": "Il comando non è arrivato a Foyer. Non è cambiato nulla: riprova.",
-    "locked_until": "Troppi codici sbagliati: bloccato fino alle {time}."
+    "locked_until": "Troppi codici errati: riprova dopo le {time}.",
+    "technical_badge": "Allarme tecnico",
+    "incident_badge": "Allarme",
+    "code_for_arm": "Codice per inserire {target}",
+    "code_for_force": "Codice per inserire comunque {target}",
+    "code_for_disarm": "Codice per disinserire {target}",
+    "code_for_bypass": "Codice per escludere {target}",
+    "code_for_walk": "Codice per chiudere il walk test",
+    "code_for_cancel": "Codice per annullare {target}",
+    "code_for_ack_technical": "Codice per prendere atto dell'allarme tecnico",
+    "code_for_ack_incident": "Codice per prendere atto dell'allarme",
+    "confirm_arm": "Inserisci {target}",
+    "confirm_force": "Inserisci comunque {target}",
+    "confirm_disarm": "Disinserisci {target}",
+    "confirm_bypass": "Escludi {target}",
+    "code_retype": "Digita di nuovo il codice per questa azione",
+    "clear_memory": "Azzera memoria d'allarme",
+    "arm_scenario": "Inserisci {scenario}",
+    "layout_hint_full": "Aree, scenari, conto alla rovescia e cosa impedisce l'inserimento.",
+    "layout_hint_compact": "Una riga: stato, un'azione e lo scenario.",
+    "layout_hint_badge": "Solo lo stato, per una tua dashboard. Nulla da premere.",
+    "layout_hint_keypad": "Tastierino per un tablet a parete."
   },
   "help": {
     "toggle": "Informazioni su questa sezione",
@@ -635,11 +670,11 @@
         },
         "master": {
           "term": "Tutta la casa",
-          "text": "Derivato dalle aree: inserito se almeno una lo è. Il disinserimento qui disinserisce tutto."
+          "text": "Deriva dalle aree: risulta inserita se almeno una lo è. Disinserire da qui disinserisce tutto."
         },
         "scenario": {
           "term": "Scenario",
-          "text": "Inserisce un insieme di aree. Scelto a impianto inserito, lo cambia."
+          "text": "Inserisce un insieme di aree. Scelto mentre ne è inserito un altro, lo sostituisce."
         },
         "not_ready": {
           "term": "Non pronte",
@@ -647,21 +682,21 @@
         },
         "memory": {
           "term": "Memoria d'allarme",
-          "text": "Resta dopo che le sirene si fermano, finché qualcuno non disinserisce."
+          "text": "Mostra quali zone hanno dato l'allarme. Resta dopo che le sirene si fermano, finché qualcuno non disinserisce."
         },
         "technical": {
           "term": "Allarme tecnico",
-          "text": "Fumo, gas, acqua: un canale a sé. Il disinserimento non lo cancella; va riconosciuto."
+          "text": "Fumo, gas, acqua: un canale a sé. Il disinserimento non lo cancella; bisogna prenderne atto."
         },
         "incident": {
           "term": "Incidente",
-          "text": "Tutte le zone di un allarme, riconosciute una volta sola."
+          "text": "Tutte le zone di un allarme, con una sola presa d'atto."
         }
       }
     },
     "areas": {
       "title": "Cos'è un'area",
-      "intro": "Un gruppo di zone che si inseriscono insieme, con un proprio stato e una propria entità pannello d'allarme. Raggruppa per ciò che inserisci insieme — perimetro, interni giorno, interni notte — non per stanza: è questo che rende possibile \"cane in casa, solo perimetrale\".",
+      "intro": "Un gruppo di zone che si inseriscono insieme, con un proprio stato e una propria entità pannello d'allarme. Raggruppa per ciò che inserisci insieme — perimetro, interni giorno, interni notte — non per stanza: è questo che rende possibile «cane in casa, solo perimetro».",
       "items": {
         "own_state": {
           "term": "Stato proprio",
@@ -673,7 +708,7 @@
         },
         "exit": {
           "term": "Ritardo di uscita predefinito",
-          "text": "Le zone ancora aperte alla scadenza seguono la loro regola di inserimento."
+          "text": "Le zone ancora aperte alla scadenza seguono la loro impostazione «Se aperta all'inserimento»."
         },
         "reports_as": {
           "term": "Stato riportato",
@@ -699,7 +734,7 @@
         },
         "arm_policy": {
           "term": "Se aperta all'inserimento",
-          "text": "Blocca indica la zona; escludi la fa rientrare appena si chiude; ignora inserisce comunque."
+          "text": "Blocca indica la zona; escludi la include di nuovo appena si chiude; ignora inserisce comunque."
         },
         "hold": {
           "term": "Inserisci dopo la chiusura",
@@ -707,11 +742,11 @@
         },
         "always_on": {
           "term": "Sempre attiva",
-          "text": "Scatta anche a impianto disinserito. Tamper e panico lo sono sempre."
+          "text": "Scatta anche a impianto disinserito. Manomissione e panico lo sono sempre."
         },
         "supervision": {
-          "term": "Supervisione",
-          "text": "Un sensore silenzioso troppo a lungo è un guasto, mai “tutto tranquillo”."
+          "term": "Limite di silenzio",
+          "text": "Un sensore che non si fa sentire troppo a lungo è un guasto, mai «tutto tranquillo»."
         },
         "verification": {
           "term": "Verifica",
@@ -732,8 +767,8 @@
           "text": "Inserisce esattamente queste."
         },
         "reports_master": {
-          "term": "Stato riportato dal generale",
-          "text": "La modalità vista da HomeKit e dagli assistenti vocali. Una modalità condivisa da due scenari non si può inserire dal generale."
+          "term": "Stato mostrato da Tutta la casa",
+          "text": "La modalità vista da HomeKit e dagli assistenti vocali. Una modalità condivisa da due scenari non si può inserire da Tutta la casa."
         },
         "switching": {
           "term": "Cambio di scenario",
@@ -751,7 +786,7 @@
     },
     "groups": {
       "title": "Cos'è un gruppo di verifica",
-      "intro": "Un gruppo conferma un allarme quando almeno N delle sue zone rilevano entro una finestra: lo strumento più forte contro i falsi allarmi negli ambienti grandi. Il campo verifica incrociata di una zona è lo stesso motore, come gruppo 2 su 2.",
+      "intro": "Un gruppo conferma un allarme quando almeno un certo numero delle sue zone (la soglia) rileva entro una finestra: lo strumento più forte contro i falsi allarmi negli ambienti grandi. La verifica incrociata su una zona funziona allo stesso modo, come un gruppo di due in cui devono rilevare entrambe.",
       "items": {
         "threshold": {
           "term": "Soglia e finestra",
@@ -763,7 +798,7 @@
         },
         "suppress": {
           "term": "Membri sotto la soglia",
-          "text": "Spento di default: ogni membro allarma comunque da solo. Acceso: nulla finché il gruppo non è soddisfatto."
+          "text": "Disattivato di default: ogni membro allarma comunque da solo. Attivato: nulla finché il gruppo non è soddisfatto."
         },
         "derived": {
           "term": "Dal campo zona",
@@ -773,7 +808,7 @@
     },
     "settings": {
       "title": "Cosa fanno queste impostazioni",
-      "intro": "Impostazioni che valgono per tutta l'installazione: il campanello, e dove finisce ogni catena di risposta.",
+      "intro": "Impostazioni che valgono per tutto l'impianto: il campanello, e dove finisce ogni catena di risposta.",
       "items": {
         "targets": {
           "term": "Suona su",
@@ -785,7 +820,7 @@
         },
         "quiet": {
           "term": "Ore di silenzio",
-          "text": "Nessun campanello in questa fascia. Un singolo target può avere la sua."
+          "text": "Nessun campanello in questa fascia. Un singolo altoparlante o sirena può averne una sua."
         },
         "during_exit": {
           "term": "Durante il ritardo d'uscita",
@@ -797,7 +832,7 @@
         },
         "retention": {
           "term": "Conservazione del registro",
-          "text": "Per categoria, in giorni. Una categoria spenta non scrive più nulla da adesso; le righe già scritte restano finché non scadono i loro giorni."
+          "text": "Per categoria, in giorni. Una categoria disattivata non scrive più nulla da adesso; le righe già scritte restano finché non scadono i loro giorni."
         },
         "backup": {
           "term": "Backup",
@@ -805,7 +840,7 @@
         },
         "alarmo": {
           "term": "Importa da Alarmo",
-          "text": "Porta le aree, i sensori, le modalità e le persone di Alarmo accanto a quello che c'è, dopo averti mostrato cosa farebbe. Le zone arrivano spente finché non le confermi, e nessuno arriva con un codice."
+          "text": "Porta le aree, i sensori, le modalità e le persone di Alarmo accanto a quello che c'è, dopo averti mostrato cosa farebbe. Le zone arrivano disattivate finché non le confermi, e nessuno arriva con un codice."
         },
         "language": {
           "term": "Lingua dei messaggi",
@@ -823,19 +858,19 @@
       "items": {
         "inheritance": {
           "term": "Ereditarietà",
-          "text": "Zona, poi area, poi scenario, poi il profilo predefinito. La pagina mostra il profilo efficace e da dove arriva."
+          "text": "Zona, poi area, poi scenario, poi il profilo predefinito. La pagina mostra il profilo in uso e da dove arriva."
         },
         "moments": {
           "term": "Quando parte",
-          "text": "Un'azione può rispondere a più momenti. Alcuni momenti arrivano con una fase successiva e sono segnalati."
+          "text": "Un'azione può rispondere a più momenti. Alcuni momenti arriveranno in un prossimo aggiornamento e sono segnalati."
         },
         "conditions": {
           "term": "Condizioni",
           "text": "Al massimo due per azione, combinate in and oppure in or. Di più appartiene a un'automazione di Home Assistant."
         },
         "severity": {
-          "term": "Severità",
-          "text": "Decide soltanto quale escalation adotta un incidente quando vi contribuiscono profili di forza diversa."
+          "term": "Gravità",
+          "text": "Decide soltanto quale escalation (la sequenza di notifiche a tempo) segue un incidente quando vi contribuiscono profili di forza diversa."
         },
         "silent": {
           "term": "Zone silenziose",
@@ -853,11 +888,11 @@
       "items": {
         "category": {
           "term": "Categoria",
-          "text": "Raggruppa le righe per tipo. Ogni categoria si accende o si spegne, e si conserva per un numero di giorni suo, nelle Impostazioni."
+          "text": "Raggruppa le righe per tipo. Ogni categoria si attiva o si disattiva, e si conserva per un numero di giorni suo, nelle Impostazioni."
         },
         "zone_disarmed": {
           "term": "Attività delle zone a impianto disinserito",
-          "text": "Spenta di default: un solo sensore di movimento produce migliaia di righe al giorno e seppellisce tutto ciò che conta. Accendila mentre diagnostichi, e rispegnila dopo."
+          "text": "Disattivata di default: un solo sensore di movimento produce migliaia di righe al giorno e seppellisce tutto ciò che conta. Attivala mentre cerchi un problema, e disattivala dopo."
         },
         "incident": {
           "term": "Incidente",
@@ -879,7 +914,7 @@
     },
     "users": {
       "title": "Cosa decide questa pagina",
-      "intro": "Ognuno ha il proprio codice, perché un codice condiviso rende «chi ha disinserito alle 03:14?» una domanda senza risposta. I codici sono salvati come hash e verificati solo nel backend: una card è un tastierino che trasmette un codice, non qualcosa che decide.",
+      "intro": "Ognuno ha il proprio codice, perché un codice condiviso rende «chi ha disinserito alle 03:14?» una domanda senza risposta. I codici sono salvati come hash e verificati solo da Foyer sul server: una card è un tastierino che trasmette un codice, non qualcosa che decide.",
       "items": {
         "own_code": {
           "term": "Un codice a testa",
@@ -887,11 +922,11 @@
         },
         "policy": {
           "term": "Politica dei codici",
-          "text": "Quali operazioni chiedono un codice. Un’area o uno scenario possono chiedere di più; se non concordano, vince chi lo chiede."
+          "text": "Quali operazioni chiedono un codice. Un'area o uno scenario possono chiedere di più; se non concordano, vince chi lo chiede."
         },
         "identified": {
           "term": "Dove il codice si può saltare",
-          "text": "Solo sui canali che già sanno chi sei. Su un tastierino condiviso il codice è l’identità, quindi lì l’esenzione non vale."
+          "text": "Solo sui canali che già sanno chi sei. Su un tastierino condiviso il codice è l'identità, quindi lì l'esenzione non vale."
         },
         "duress": {
           "term": "Codice di coercizione",
@@ -899,7 +934,7 @@
         },
         "lockout": {
           "term": "Blocco",
-          "text": "Codici sbagliati ripetuti chiudono quel tastierino per un po’, sempre più a lungo. È anche un evento a cui un profilo di risposta può rispondere: qualcuno che tenta a caso su un tastierino è un segnale di manomissione."
+          "text": "Codici sbagliati ripetuti chiudono quel tastierino per un po', sempre più a lungo. È anche un evento a cui un profilo di risposta può rispondere: qualcuno che tenta a caso su un tastierino è un segnale di manomissione."
         },
         "scope": {
           "term": "Ambito e validità",
@@ -929,7 +964,7 @@
         },
         "detail": {
           "term": "Cosa dice il messaggio di stato",
-          "text": "È ritenuto su un broker spesso condiviso, quindi parte dal minimo che serve a un tastierino e si apre solo se lo chiedi."
+          "text": "È conservato (retain) su un broker spesso condiviso, quindi parte dal minimo che serve a un tastierino e si apre solo se lo chiedi."
         },
         "last_result": {
           "term": "last_result",
@@ -947,26 +982,26 @@
       "items": {
         "trigger_column": {
           "term": "Valutazione del trigger",
-          "text": "Se Foyer consideri la zona scattata adesso, letto attraverso il trigger di quella zona. Un contatto normalmente chiuso allarma su «off», quindi lo stato grezzo accanto non è la risposta."
+          "text": "Se Foyer considera la zona scattata adesso, letto attraverso il trigger di quella zona. Un contatto normalmente chiuso allarma su «off», quindi lo stato grezzo accanto non è la risposta."
         },
         "blocks": {
           "term": "Inserimento",
-          "text": "Se questa zona impedirebbe l’inserimento della sua area, e per quale dei due motivi: un guasto da riparare o una finestra da chiudere."
+          "text": "Se questa zona impedirebbe l'inserimento della sua area, e per quale dei due motivi: un guasto da riparare o una finestra da chiudere."
         },
         "battery": {
           "term": "Batteria",
-          "text": "Una batteria scarica avvisa e non blocca mai: un contatto al 15 % vede ancora. Un’entità batteria che non si riesce a leggere è invece un guasto, e quella blocca."
+          "text": "Una batteria scarica avvisa e non blocca mai: un sensore porta al 15 % funziona ancora. Un'entità batteria che non si riesce a leggere è invece un guasto, e quella blocca."
         },
         "nothing_runs": {
           "term": "Non viene eseguito nulla",
-          "text": "Il simulatore esegue lo stesso motore dell’allarme e butta via il risultato. Nessuna sirena, nessuna notifica, nessun cambiamento a ciò che è inserito."
+          "text": "Il simulatore esegue lo stesso motore dell'allarme e butta via il risultato. Nessuna sirena, nessuna notifica, nessun cambiamento a ciò che è inserito."
         },
         "clock": {
-          "term": "L’orologio ipotetico",
-          "text": "Un’azione limitata alle 22:00–07:00 parte o non parte a seconda di questo campo. Impostalo sull’ora che vuoi davvero verificare."
+          "term": "L'orologio ipotetico",
+          "text": "Un'azione limitata alle 22:00–07:00 parte o non parte a seconda di questo campo. Impostalo sull'ora che vuoi davvero verificare."
         },
         "skipped": {
-          "term": "Perché un’azione non è partita",
+          "term": "Perché un'azione non è partita",
           "text": "Ogni azione del profilo è elencata, comprese quelle saltate, con il motivo: una condizione, una zona silenziosa, una sirena già in funzione o un ritardo che trattiene ancora il resto della sequenza."
         },
         "inherited": {
@@ -983,7 +1018,7 @@
         },
         "walk_live": {
           "term": "Che cosa resta attivo",
-          "text": "Le zone 24h, tamper, tecniche e panico rispondono per intero, allarme compreso. Un walk test non silenzia mai un rilevatore di fumo."
+          "text": "Le zone 24h, di manomissione, tecniche e di panico rispondono per intero, allarme compreso. Un walk test non silenzia mai un rilevatore di fumo."
         },
         "action_real": {
           "term": "La prova azioni si esegue davvero",
@@ -993,11 +1028,11 @@
     },
     "contacts": {
       "title": "Che cosa decide questa pagina",
-      "intro": "L'escalation raggiunge persone, non servizi. I trasporti — push, SMS, voce, messaggistica — li fornisce già Home Assistant: qui si configurano l'ordine, i tempi e che cosa vale come “qualcuno se n'è accorto”.",
+      "intro": "L'escalation raggiunge persone, non servizi. I trasporti — push, SMS, voce, messaggistica — li fornisce già Home Assistant: qui si configurano l'ordine, i tempi e che cosa vale come «qualcuno se n'è accorto».",
       "items": {
         "order": {
           "term": "Ordine dei canali",
-          "text": "Provati dall'alto. Metti in elenco, non in fondo, il canale che sopravvive a una linea tagliata."
+          "text": "Provati dall'alto. Metti in alto, non in fondo, il canale che funziona anche senza internet."
         },
         "quiet": {
           "term": "Ore di silenzio",
@@ -1009,15 +1044,15 @@
         },
         "step": {
           "term": "Passo di escalation",
-          "text": "Una notifica con un tempo sopra, nel profilo che risponde all'allarme. La politica si ferma appena qualcuno prende atto."
+          "text": "Una notifica con un tempo sopra, nel profilo che risponde all'allarme. L'escalation si ferma appena qualcuno prende atto."
         },
         "acknowledge": {
           "term": "Presa d'atto",
-          "text": "Quattro percorsi fermano la politica, e ognuno registra chi ha risposto e come."
+          "text": "Quattro percorsi fermano l'escalation, e ognuno registra chi ha risposto e come."
         },
         "webhook": {
           "term": "Webhook di presa d'atto",
-          "text": "Un URL non autenticato che ferma un allarme. Spento finché non lo accendi, e da non dare a nessuno tranne al provider vocale."
+          "text": "Un URL non autenticato che ferma un allarme. Disattivato finché non lo attivi, e da non dare a nessuno tranne al provider vocale."
         },
         "test": {
           "term": "Prova i canali",
@@ -1027,7 +1062,7 @@
     },
     "rules": {
       "title": "Cosa decide questa pagina",
-      "intro": "Un modello chiuso di regole, non un motore di automazioni: quattro attivazioni, tre azioni, una finestra di attività e tre condizioni di sicurezza. Le regole agiscono come farebbe una persona, quindi tutto ciò che fanno finisce nel log con il nome della regola sul canale auto_rule — e anche tutto ciò che una condizione ha fermato, perché «perché non si è armata ieri sera?» è una domanda che la gente fa.",
+      "intro": "Un modello chiuso di regole, non un motore di automazioni: quattro attivazioni, tre azioni, una finestra di attività e tre condizioni di sicurezza. Le regole agiscono come farebbe una persona, quindi tutto ciò che fanno finisce nel registro con il nome della regola — e anche tutto ciò che una condizione di sicurezza ha fermato, perché «perché non si è inserito ieri sera?» è una domanda che la gente fa.",
       "items": {
         "trigger": {
           "term": "Attivazione",
@@ -1039,7 +1074,7 @@
         },
         "grace": {
           "term": "Periodo di grazia",
-          "text": "Una notifica con un bottone Annulla prima che la regola agisca. Se nessuno preme nulla, succede; se qualcuno annulla, la regola aspetta che la sua condizione torni vera."
+          "text": "Una notifica con un pulsante Annulla prima che la regola agisca. Se nessuno preme nulla, succede; se qualcuno annulla, la regola aspetta che la sua condizione torni vera."
         },
         "suspension": {
           "term": "Sospensione",
@@ -1047,33 +1082,33 @@
         },
         "visitor": {
           "term": "Visita prevista",
-          "text": "La stessa sospensione con un nome sopra. Meccanicamente identica; la differenza è che fra sei mesi il log dice ancora perché."
+          "text": "La stessa sospensione con un nome sopra. Meccanicamente identica; la differenza è che fra sei mesi il registro dice ancora perché."
         },
         "disarming": {
-          "term": "Disarmo automatico",
-          "text": "Spento finché non lo accendi, e mai su un'area perimetrale. Un cambio di scenario che lascerebbe disarmata un'area armata conta come disarmo."
+          "term": "Disinserimento automatico",
+          "text": "Disattivato finché non lo attivi, e mai su un'area perimetrale. Un cambio di scenario che lascerebbe disinserita un'area inserita conta come disinserimento."
         },
         "next": {
           "term": "Prossima azione automatica",
-          "text": "Ciò che è programmato, non ciò che accadrà di sicuro: le condizioni si valutano nel momento in cui la regola agisce, e il log dice quale l'ha fermata."
+          "text": "Ciò che è programmato, non ciò che accadrà di sicuro: le condizioni di sicurezza si valutano nel momento in cui la regola agisce, e il registro dice quale l'ha fermata."
         }
       }
     },
     "health": {
-      "title": "Che cosa sorveglia la salute di sistema",
-      "intro": "Un allarme che non sa dirti che ha smesso di funzionare ha smesso di funzionare. Questa pagina è la risposta ai quattro guasti che sconfiggono in silenzio un allarme fai-da-te: manca la corrente, si rompe il canale di notifica, la radio ammutolisce, o Home Assistant muore. Niente di tutto questo è un'intrusione, e l'unica cosa che arriva al pannello d'allarme è un'interferenza confermata a casa inserita — che i centrali professionali trattano come manomissione.",
+      "title": "Che cosa sorveglia lo stato del sistema",
+      "intro": "Un allarme che non sa dirti che ha smesso di funzionare ha smesso di funzionare. Questa pagina è la risposta ai quattro guasti che sconfiggono in silenzio un allarme fai-da-te: manca la corrente, si rompe il canale di notifica, la radio ammutolisce, o Home Assistant si ferma. Niente di tutto questo è un'intrusione, e l'unica cosa che arriva al pannello d'allarme è un'interferenza confermata a casa inserita — che le centrali professionali trattano come manomissione.",
       "items": {
         "mains": {
           "term": "Rete elettrica",
           "text": "Indica l'entità e quale suo stato significa assenza. Un black-out è annunciato subito e non è mai una notte tranquilla."
         },
         "channels": {
-          "term": "Salute dei canali",
+          "term": "Stato dei canali",
           "text": "Il servizio è controllato periodicamente; solo un invio reale dimostra che arriva. Un canale rotto viene annunciato su un altro."
         },
         "watchdog": {
           "term": "Watchdog esterno",
-          "text": "Se Home Assistant muore i ping si fermano e il servizio che hai scelto dà l'allarme. Foyer segnala anche quando non lo raggiunge."
+          "text": "Se Home Assistant si ferma, i ping si fermano e il servizio che hai scelto dà l'allarme. Foyer segnala anche quando non lo raggiunge."
         },
         "payload": {
           "term": "Payload del ping",
@@ -1085,11 +1120,11 @@
         },
         "coordinator": {
           "term": "Entità coordinatore",
-          "text": "Senza, su quella radio non viene segnalato niente: è ciò che distingue il jamming da un coordinatore morto."
+          "text": "Senza, su quella radio non viene segnalato niente: è ciò che distingue il jamming da un coordinatore fermo."
         },
         "diagnostics": {
-          "term": "Diagnostici",
-          "text": "Il bottone di download di Home Assistant, con tutto il personale rimosso e gli id delle entità sostituiti."
+          "term": "Diagnostica",
+          "text": "Il pulsante di download di Home Assistant, con tutti i dati personali rimossi e gli id delle entità sostituiti."
         }
       }
     },
@@ -1102,31 +1137,31 @@
     },
     "armed": {
       "title": "Foyer: inserito",
-      "message": "{area} inserito con lo scenario {scenario}."
+      "message": "{area}: inserita con lo scenario {scenario}."
     },
     "armed_area": {
       "title": "Foyer: inserito",
-      "message": "{area} inserito da solo, fuori da ogni scenario."
+      "message": "{area}: inserita da sola, fuori da ogni scenario."
     },
     "disarmed": {
       "title": "Foyer: disinserito",
-      "message": "{area} disinserito."
+      "message": "{area}: disinserita."
     },
     "arm_failed": {
-      "title": "Foyer: inserimento fallito",
-      "message": "{area} non si è inserito. Ancora aperte o in guasto: {zones}. Resta disinserito."
+      "title": "Foyer: inserimento non riuscito",
+      "message": "{area}: inserimento non riuscito. Ancora aperte o in guasto: {zones}. Resta disinserita."
     },
     "forced_arm": {
       "title": "Foyer: inserimento forzato",
-      "message": "{area}{scenario} inserito forzando. Escluse: {zones}."
+      "message": "{area}{scenario}: inserimento forzato. Escluse: {zones}."
     },
     "zone_bypassed": {
       "title": "Foyer: zona esclusa",
-      "message": "{zone} era aperta all'inserimento ed è esclusa. Rientra da sola appena si chiude."
+      "message": "{zone} era aperta all'inserimento ed è esclusa. Viene inclusa di nuovo da sola appena si chiude."
     },
     "zone_rejoined": {
-      "title": "Foyer: zona rientrata",
-      "message": "{zone} si è chiusa ed è di nuovo protetta."
+      "title": "Foyer: zona inclusa di nuovo",
+      "message": "{zone} si è chiusa ed è di nuovo sorvegliata."
     },
     "entry_started": {
       "title": "Foyer: ritardo di ingresso",
@@ -1142,23 +1177,23 @@
     },
     "zone_fault": {
       "title": "Foyer: guasto zona",
-      "message": "La zona {zone} in {area} non è raggiungibile. Blocca l'inserimento finché non torna visibile."
+      "message": "La zona {zone} in {area} non è leggibile. Blocca l'inserimento finché non torna a farsi sentire."
     },
     "ha_restarted": {
       "title": "Foyer: di nuovo attivo",
-      "message": "Foyer è rimasto fermo per un periodo. In quel lasso di tempo la casa non era protetta."
+      "message": "Foyer è rimasto fermo per un periodo. In quel lasso di tempo la casa non era sorvegliata."
     },
     "technical_raised": {
       "title": "Foyer: ALLARME TECNICO",
-      "message": "{zone} in {area} rileva un allarme tecnico. Il disinserimento non lo cancella: riconoscilo quando è sicuro. Foyer non è un sistema antincendio."
+      "message": "{zone} in {area} rileva un allarme tecnico. Il disinserimento non lo cancella: prendine atto quando è sicuro. Foyer non è un sistema antincendio."
     },
     "technical_acknowledged": {
-      "title": "Foyer: allarme tecnico riconosciuto",
-      "message": "Riconosciuto: {zones}. Si cancella quando torna normale."
+      "title": "Foyer: presa d'atto dell'allarme tecnico",
+      "message": "Preso atto: {zones}. Si chiude quando torna normale."
     },
     "technical_cleared": {
       "title": "Foyer: allarme tecnico cessato",
-      "message": "{zone} è tornato normale ed è riconosciuto."
+      "message": "{zone}: di nuovo normale, presa d'atto registrata."
     },
     "incident_opened": {
       "title": "Foyer: incidente aperto",
@@ -1169,15 +1204,15 @@
       "message": "Un'altra zona si è aggiunta all'allarme: {zones}."
     },
     "incident_acknowledged": {
-      "title": "Foyer: incidente riconosciuto",
-      "message": "L'allarme è stato riconosciuto: {zones}."
+      "title": "Foyer: presa d'atto dell'incidente",
+      "message": "Qualcuno ha preso atto dell'allarme: {zones}."
     },
     "incident_closed": {
       "title": "Foyer: incidente chiuso",
       "message": "L'incidente è concluso: {zones}."
     },
     "verification_pending": {
-      "title": "Foyer: rilevamento da confermare",
+      "title": "Foyer: in attesa di conferma",
       "message": "{zone} ha rilevato; in attesa di conferma."
     },
     "verification_satisfied": {
@@ -1190,19 +1225,19 @@
     },
     "chime": {
       "title": "Foyer: campanello",
-      "message": "{zone} si è aperto."
+      "message": "{zone} si è aperta."
     },
     "chime_switched": {
       "title": "Foyer: campanello",
-      "message": "Il campanello è stato acceso o spento."
+      "message": "Il campanello è stato attivato o disattivato."
     },
     "code_rejected": {
       "title": "Foyer: codice rifiutato",
-      "message": "È stato inserito un codice errato su {channel}."
+      "message": "È stato digitato un codice errato su {channel}."
     },
     "lockout": {
-      "title": "Foyer: canale bloccato",
-      "message": "Troppi codici errati su {channel}. Quel canale è bloccato."
+      "title": "Foyer: codici bloccati",
+      "message": "Troppi codici errati su {channel}. Per un po' i codici da lì vengono rifiutati."
     },
     "low_battery": {
       "title": "Foyer: batteria scarica",
@@ -1210,7 +1245,7 @@
     },
     "walk_test_started": {
       "title": "Foyer: walk test",
-      "message": "È iniziato un walk test. Le azioni di risposta sono inibite."
+      "message": "È iniziato un walk test. Le azioni di risposta sono sospese."
     },
     "walk_test_ended": {
       "title": "Foyer: walk test concluso",
@@ -1218,7 +1253,7 @@
     },
     "escalation_exhausted": {
       "title": "Foyer: nessuno ha risposto",
-      "message": "L'escalation ha raggiunto l'ultimo passo senza presa in carico."
+      "message": "L'escalation ha raggiunto l'ultimo passo senza che nessuno prendesse atto."
     },
     "duress": {
       "title": "Codice di coercizione usato",
@@ -1230,7 +1265,7 @@
     },
     "escalation_skipped": {
       "title": "Foyer: notifiche non inviate",
-      "message": "Home Assistant era spento quando questi passi di escalation sono scaduti, quindi non sono partiti."
+      "message": "Home Assistant era spento quando questi passi di escalation dovevano partire, quindi non sono stati inviati."
     },
     "acknowledge": "Prendo atto",
     "auto_pending": {
@@ -1238,12 +1273,12 @@
       "message": "La regola «{rule}» sta per agire. Annulla per fermarla."
     },
     "auto_pending_arm": {
-      "title": "Foyer: arma fra {seconds} s",
-      "message": "Non sembra esserci nessuno, quindi «{rule}» armerà {scenario}. Annulla per fermarla."
+      "title": "Foyer: inserisce fra {seconds} s",
+      "message": "Non sembra esserci nessuno, quindi «{rule}» inserirà {scenario}. Annulla per fermarla."
     },
     "auto_pending_disarm": {
-      "title": "Foyer: disarma fra {seconds} s",
-      "message": "La regola «{rule}» sta per disarmare. Annulla per fermarla."
+      "title": "Foyer: disinserisce fra {seconds} s",
+      "message": "La regola «{rule}» sta per disinserire. Annulla per fermarla."
     },
     "auto_pending_switch": {
       "title": "Foyer: cambia scenario fra {seconds} s",
@@ -1258,16 +1293,16 @@
       "message": "La regola «{rule}» non ha agito."
     },
     "auto_suspension_set": {
-      "title": "Foyer: inserimento automatico sospesa",
-      "message": "L'inserimento automatico è sospesa."
+      "title": "Foyer: regole automatiche sospese",
+      "message": "Le regole automatiche sono sospese."
     },
     "auto_suspension_cleared": {
       "title": "Foyer: sospensione finita",
-      "message": "La sospensione dell'inserimento automatico è terminata."
+      "message": "La sospensione delle regole automatiche è terminata."
     },
     "auto_arming_switched": {
       "title": "Foyer: regole automatiche",
-      "message": "Le regole automatiche sono state accese o spente."
+      "message": "Le regole automatiche sono state attivate o disattivate."
     },
     "cancel": "Annulla",
     "system_power_lost": {
@@ -1280,7 +1315,7 @@
     },
     "notification_channel_down": {
       "title": "Foyer: un canale di notifica è rotto",
-      "message": "{contact} non è raggiungibile tramite {service}. Questo messaggio è uscito su un canale diverso: avvisarti di un canale morto sul canale morto non ti direbbe niente."
+      "message": "{contact} non è raggiungibile tramite {service}. Questo messaggio è uscito su un canale diverso: un avviso mandato sul canale guasto non ti arriverebbe."
     },
     "notification_channel_restored": {
       "title": "Foyer: canale di notifica di nuovo attivo",
@@ -1316,7 +1351,7 @@
     },
     "cameras_omitted": "Telecamere non mostrate: {count}.",
     "device_wrong_transport": {
-      "title": "Foyer: nome di un tastierino usato sulla strada sbagliata",
+      "title": "Foyer: nome di un tastierino usato sul percorso sbagliato",
       "message": "Qualcosa ha usato il nome {device} via MQTT o con una chiamata di servizio. Quel tastierino parla solo attraverso l'endpoint dei dispositivi, con il suo token, quindi la richiesta è stata rifiutata e non è cambiato nulla. Se non sei stato tu, qualcuno conosce il nome del tastierino."
     },
     "token_lockout": {
@@ -1342,8 +1377,8 @@
   },
   "technical_state": {
     "active": "In allarme",
-    "memory": "Tornato normale, non riconosciuto",
-    "acknowledged": "Riconosciuto, non ancora tornato normale"
+    "memory": "Tornato normale, senza presa d'atto",
+    "acknowledged": "Preso atto, non ancora tornato normale"
   },
   "groups": {
     "title": "Gruppi di verifica",
@@ -1356,7 +1391,7 @@
     "suppressed": "Non producono nulla",
     "not_suppressed": "Allarmano da soli",
     "members_hint": "Zone antintrusione di qualsiasi area. Un membro conta solo mentre la sua area è inserita, e contano solo i rilevamenti che allarmerebbero subito.",
-    "suppress_hint": "Spento: ogni membro allarma comunque da solo e il gruppo aggiunge la sua conferma. Acceso: i membri non fanno nulla finché il gruppo non è soddisfatto — un solo sensore davanti a un vero intruso produce allora silenzio.",
+    "suppress_hint": "Disattivato: ogni membro allarma comunque da solo e il gruppo aggiunge la sua conferma. Attivato: i membri non fanno nulla finché il gruppo non è soddisfatto — un solo sensore davanti a un vero intruso produce allora silenzio.",
     "window_hint": "Secondi entro cui i membri devono rilevare.",
     "area_hint": "Dove viene mostrato il gruppo.",
     "no_zones": "Nessuna zona antintrusione disponibile: ogni zona può stare in un solo gruppo o coppia.",
@@ -1366,14 +1401,14 @@
     "title": "Impostazioni",
     "chime_title": "Campanello",
     "chime_intro": "Suona quando si apre una zona con il campanello attivo mentre la sua area non è inserita — non solo quando la casa è disinserita. Con il solo perimetro inserito, una porta interna suona comunque.",
-    "targets_hint": "Media player, sirene e servizi o entità notify: il campanello arriva anche sul telefono e su Telegram. Ogni target può avere le sue ore di silenzio.",
+    "targets_hint": "Media player, sirene e servizi o entità notify: il campanello arriva anche sul telefono e su Telegram. Ognuno può avere le sue ore di silenzio.",
     "no_targets": "Nessun media player o sirena trovato.",
     "sound_hint": "Per i media player: un id di contenuto o un URL, come media-source://media_source/local/chime.mp3. Una sirena suona per un secondo, se supporta una durata impostata; altrimenti viene saltata.",
     "tts_hint": "Usata per pronunciare il nome della zona.",
     "pick_tts": "Scegli…",
     "volume_hint": "Percentuale. Vuoto: lascia il volume del lettore com'è.",
     "quiet_hint": "Nessun campanello in questa fascia, che può attraversare la mezzanotte. Vuoto: mai silenzio.",
-    "during_exit_hint": "Spento: la porta da cui esci non suona mentre l'area conta alla rovescia.",
+    "during_exit_hint": "Disattivato: la porta da cui esci non suona mentre l'area conta alla rovescia.",
     "switch_hint": "switch.foyer_chime lo silenzia senza cambiare queste impostazioni.",
     "saved": "Salvato.",
     "response_title": "Risposta",
@@ -1386,13 +1421,13 @@
     "defaults_title": "Valori predefiniti",
     "defaults_intro": "Con cosa partono le aree nuove, e i limiti che valgono per tutte.",
     "siren_duration_hint": "Per quanto suonano le sirene prima di fermarsi. Massimo 900 secondi, il riferimento EN 50131 per le sirene esterne; un disinserimento le ferma prima.",
-    "arm_hold_hint": "Per quanto una zona impostata su «inserisci dopo la chiusura» può restare aperta una volta finito il ritardo d'uscita. Dopo, l'inserimento fallisce come se la zona l'avesse bloccato.",
+    "arm_hold_hint": "Per quanto una zona impostata su «Inserisci dopo la chiusura» può restare aperta una volta finito il ritardo d'uscita. Dopo, l'inserimento fallisce come se la zona l'avesse bloccato.",
     "area_defaults_hint": "Solo per le aree create da adesso. Le aree esistenti mantengono i loro ritardi.",
     "log_title": "Registro eventi",
     "log_intro": "Quali categorie vengono registrate, e per quanto ciascuna viene conservata.",
     "log_off": "Non registrata",
     "log_days": "giorni",
-    "log_rows_hint": "Le righe già scritte restano finché non scadono i loro giorni, anche per una categoria che spegni.",
+    "log_rows_hint": "Le righe già scritte restano finché non scadono i loro giorni, anche per una categoria che disattivi.",
     "backup_title": "Backup della configurazione",
     "backup_intro": "Nessuno che abbia configurato quaranta zone lo rifarà una seconda volta.",
     "backup_export": "Esporta JSON",
@@ -1404,19 +1439,19 @@
     "language_system": "Come Home Assistant",
     "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le notifiche, e il nome della zona pronunciato dal campanello.",
     "low_battery_hint": "Per cento. Sotto questo valore una batteria numerica è considerata scarica. Un sensore binario di batteria è invece letto dal suo «on».",
-    "walk_test_hint": "Secondi per cui un walk test resta attivo senza rilevazioni prima di chiudersi da solo. Ogni rilevazione lo rimanda, e un tetto assoluto lo chiude comunque: §5.3 rende obbligatoria l'uscita automatica, quindi qui non c'è un valore che la disattivi.",
+    "walk_test_hint": "Secondi per cui un walk test resta attivo senza rilevazioni prima di chiudersi da solo. Ogni rilevazione lo rimanda, e un tetto assoluto lo chiude comunque. La chiusura automatica è obbligatoria, quindi nessun valore qui la disattiva.",
     "short_preset": "Accorcia a {days} giorni",
-    "short_preset_hint": "Porta {categories} a {days} giorni e lascia stare il resto. È pensato per le installazioni con personale domestico: quelle sono le categorie che nominano persone, e le altre portano guasti e stati delle porte, che non nominano nessuno e sono quello che si legge quando un sensore non ha reagito tre settimane fa.",
+    "short_preset_hint": "Porta {categories} a {days} giorni e lascia stare il resto. È pensato per le case con personale domestico: quelle sono le categorie che nominano persone, e le altre portano guasti e stati delle porte, che non nominano nessuno e sono quello che si legge quando un sensore non ha reagito tre settimane fa.",
     "privacy_title": "Dati personali nel registro",
-    "privacy_intro": "Il registro parla di persone, e non solo di chi ha installato il sistema. Queste due impostazioni sono dell'installazione; cancellare o esportare le righe di una singola persona si fa dalla pagina del registro.",
+    "privacy_intro": "Il registro parla di persone, e non solo di chi ha installato il sistema. Queste due impostazioni valgono per tutto l'impianto; cancellare o esportare le righe di una singola persona si fa dalla pagina del registro.",
     "pseudonymise": "Sostituisci i nomi nelle righe più vecchie",
-    "pseudonymise_warning": "Questo rinuncia alla possibilità di rispondere a «chi ha disinserito quella notte» per ogni riga più vecchia del ritardo — che è esattamente la domanda per cui il registro esiste. È uno scambio vero, non una sicurezza gratuita. Gira una volta al giorno e non si torna indietro: spegnerlo dopo non riporta nessun nome.",
-    "pseudonymise_hint": "Le righe più vecchie di questo tengono un identificatore stabile invece di un nome, così la forma delle notti sopravvive e i nomi no. L'accensione e lo spegnimento vengono registrati entrambi.",
+    "pseudonymise_warning": "Questo rinuncia alla possibilità di rispondere a «chi ha disinserito quella notte» per ogni riga più vecchia del ritardo — che è esattamente la domanda per cui il registro esiste. È uno scambio vero, non una sicurezza gratuita. Gira una volta al giorno e non si torna indietro: disattivarlo dopo non riporta nessun nome.",
+    "pseudonymise_hint": "Le righe più vecchie di questo tengono un identificatore stabile invece di un nome, così la forma delle notti sopravvive e i nomi no. L'attivazione e la disattivazione vengono registrate entrambe.",
     "delete_on_uninstall": "Cancella il database del registro se Foyer viene rimosso",
-    "delete_on_uninstall_hint": "Spento, rimuovere Foyer lascia il database dov'è, nella cartella di configurazione, come foyer-log.db. La conferma di Home Assistant è l'ultima finestra che c'è, quindi è qui che si risponde alla domanda — e tenere è la risposta che non distrugge niente.",
+    "delete_on_uninstall_hint": "Se è disattivato, rimuovere Foyer lascia il database dov'è, nella cartella di configurazione, come foyer-log.db. La conferma di Home Assistant è l'ultima finestra che c'è, quindi è qui che si risponde alla domanda — e tenere è la risposta che non distrugge niente.",
     "uninstall_snapshots_hint": "Gli scatti delle telecamere non vengono mai cancellati insieme. Sono fotografie dell'interno della casa, in una cartella che hai scelto tu e che può contenere file che non sono di Foyer — rimuoverli sta a te.",
-    "pseudonymise_confirm": "Dal prossimo avvio — e salvare una qualsiasi impostazione è un avvio — ogni riga più vecchia di {days} giorni perde il nome che porta, e il nome dentro il suo dettaglio. Non si torna indietro rispegnendo questo interruttore. Il registro non risponderà più a chi ha disinserito quelle notti.",
-    "pseudonymise_yes": "Accendi"
+    "pseudonymise_confirm": "Dal prossimo avvio — e salvare una qualsiasi impostazione è un avvio — ogni riga più vecchia di {days} giorni perde il nome che porta, e il nome dentro il suo dettaglio. Non si torna indietro disattivando di nuovo questa opzione. Il registro non risponderà più a chi ha disinserito quelle notti.",
+    "pseudonymise_yes": "Attiva"
   },
   "action_kind": {
     "notify": "Notifica",
@@ -1429,15 +1464,15 @@
     "tts": "Messaggio parlato",
     "call_service": "Chiama un servizio",
     "delay": "Attendi",
-    "chime": "Segnale di apertura",
+    "chime": "Campanello",
     "revert": "Rimessa a riposo"
   },
   "moment_group": {
     "alarm": "All'allarme",
     "state": "Al cambio di stato",
     "system": "Su evento di sistema",
-    "later": "Arriva in una fase successiva",
-    "health": "Sulla salute di sistema"
+    "later": "In un prossimo aggiornamento",
+    "health": "Sullo stato del sistema"
   },
   "moment": {
     "armed": "Inserito",
@@ -1445,26 +1480,26 @@
     "arm_failed": "Inserimento fallito",
     "forced_arm": "Inserimento forzato",
     "zone_bypassed": "Zona esclusa",
-    "zone_rejoined": "Zona rientrata",
+    "zone_rejoined": "Zona inclusa di nuovo",
     "entry_started": "Ritardo d'ingresso avviato",
     "triggered": "Allarme",
     "siren_cutoff": "Fine della sirena",
     "zone_fault": "Guasto di zona",
     "ha_restarted": "Home Assistant riavviato",
     "technical_raised": "Allarme tecnico",
-    "technical_acknowledged": "Allarme tecnico preso in carico",
+    "technical_acknowledged": "Presa d'atto dell'allarme tecnico",
     "technical_cleared": "Allarme tecnico rientrato",
     "incident_opened": "Incidente aperto",
     "incident_joined": "Zona aggiunta all'incidente",
-    "incident_acknowledged": "Incidente preso in carico",
+    "incident_acknowledged": "Presa d'atto dell'incidente",
     "incident_closed": "Incidente chiuso",
-    "verification_pending": "Gruppo non ancora soddisfatto",
-    "verification_satisfied": "Gruppo soddisfatto",
-    "verification_expired": "Finestra del gruppo scaduta",
+    "verification_pending": "In attesa di conferma",
+    "verification_satisfied": "Rilevamento confermato",
+    "verification_expired": "Non confermato in tempo",
     "chime": "Campanello",
-    "chime_switched": "Campanello acceso o spento",
+    "chime_switched": "Campanello attivato o disattivato",
     "code_rejected": "Codice rifiutato",
-    "lockout": "Tastiera bloccata",
+    "lockout": "Codici bloccati",
     "low_battery": "Batteria scarica",
     "walk_test_started": "Walk test avviato",
     "walk_test_ended": "Walk test concluso",
@@ -1507,7 +1542,7 @@
     "max": "Al massimo due condizioni per azione. Qualcosa di più complesso appartiene a un'automazione di Home Assistant in ascolto su foyer_event."
   },
   "profiles": {
-    "title": "Profili",
+    "title": "Profili di risposta",
     "add": "Aggiungi profilo",
     "new": "Nuovo profilo",
     "none": "Nessun profilo.",
@@ -1520,7 +1555,7 @@
     "add_action": "Aggiungi azione",
     "no_actions": "Questo profilo non fa ancora nulla.",
     "delete_action": "Rimuovi azione",
-    "severity_hint": "Serve a una cosa sola: quando più zone entrano in uno stesso incidente, l'incidente adotta l'escalation del profilo più severo fra quelli coinvolti. Non cambia nulla quando questo profilo gira da solo.",
+    "severity_hint": "Serve a una cosa sola: quando più zone entrano in uno stesso incidente, l'incidente adotta l'escalation del profilo di gravità più alta fra quelli coinvolti. Non cambia nulla quando questo profilo gira da solo.",
     "inherit": "Eredita",
     "effective": "Profilo in uso: {profile}",
     "inherited_from_area": "ereditato dall'area",
@@ -1534,8 +1569,8 @@
     "revert_hint": "In secondi. Vuoto: lascialo com'è.",
     "camera_hint": "La notifica allega l'immagine dal vivo; il file finisce nella cartella telecamere.",
     "call_service_hint": "Tutto ciò che Foyer non modella nativamente. I dati sono JSON.",
-    "escalation_later": "Un passo di escalation è una notifica con un tempo sopra: dai un momento del passo e aspetta invece di partire subito. Chi raggiunge si configura nella pagina Contatti.",
-    "future_moment": "Prodotto da una fase successiva.",
+    "escalation_later": "Un passo di escalation è una notifica con un tempo sopra: dagli un ritardo dall'inizio dell'allarme e aspetterà invece di partire subito. Chi raggiunge si configura nella pagina Contatti.",
+    "future_moment": "Arriva in un prossimo aggiornamento.",
     "attach_hint": "L'immagine dal vivo accompagna la notifica, attraverso il proxy autenticato di Home Assistant. Nessun file viene scritto.",
     "attach_hint_telegram": "Telegram scarica l'immagine da fuori casa, quindi uno scatto viene salvato nella cartella telecamere e spedito con il messaggio. Quella cartella deve essere in allowlist_external_dirs.",
     "pick_or_type": "Scegline uno, oppure scrivilo: un'integrazione non caricata adesso non compare nell'elenco.",
@@ -1553,7 +1588,7 @@
     "escalation_hint": "Secondi dall'inizio dell'escalation. Con un tempo qui questa notifica diventa un passo: aspetta e si ferma appena qualcuno prende atto.",
     "escalation_moment_hint": "Si può far escalare solo un allarme o un allarme tecnico: sono i due di cui si può prendere atto.",
     "images_text_alone": "Le immagini partono solo con un allarme: l'allarme stesso, una zona che vi si aggiunge, un passo di escalation, un allarme tecnico. Per «{moments}» questa notifica invia solo il testo. Mai all'inizio di un ritardo di ingresso, che è qualcuno che torna a casa.",
-    "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale \"altro\" riceve solo il testo, invece di un messaggio in più per ogni telecamera.",
+    "images_channels": "Solo i canali push e chat ricevono le immagini. Un SMS, una chiamata vocale o un canale «altro» riceve solo il testo, invece di un messaggio in più per ogni telecamera.",
     "effective_from": "Profilo in uso: {profile} — {from}",
     "flash_none": "Nessun lampeggio",
     "flash_short": "Lampeggio breve",
@@ -1606,7 +1641,7 @@
     "arm_rejected": "Inserimento rifiutato",
     "disarm_rejected": "Disinserimento rifiutato",
     "bypass_rejected": "Esclusione rifiutata",
-    "acknowledge_rejected": "Presa in carico rifiutata",
+    "acknowledge_rejected": "Presa d'atto rifiutata",
     "chime_rejected": "Modifica del campanello rifiutata",
     "config_save": "Configurazione salvata",
     "config_delete": "Elemento di configurazione eliminato",
@@ -1620,7 +1655,7 @@
     "action_camera": "Telecamera",
     "action_scene": "Scena",
     "action_switch": "Interruttore",
-    "action_tts": "Messaggio vocale",
+    "action_tts": "Messaggio parlato",
     "action_call_service": "Chiamata di servizio",
     "action_delay": "Attesa",
     "action_chime": "Campanello",
@@ -1628,20 +1663,20 @@
     "reloaded": "Foyer ricaricato",
     "device_rejected": "Dispositivo rifiutato",
     "config_history_erased": "Storia di una persona cancellata",
-    "config_pseudonymisation": "Pseudonimizzazione a tempo modificata",
-    "duress": "Disinserito sotto costrizione",
+    "config_pseudonymisation": "Sostituzione automatica dei nomi modificata",
+    "duress": "Disinserito con codice di coercizione",
     "auto_pending": "Azione automatica in conto alla rovescia",
     "auto_cancelled": "Azione automatica annullata",
     "auto_blocked": "Azione automatica trattenuta",
-    "auto_arming_switched": "Inserimento automatico commutato",
-    "auto_suspension_set": "Inserimento automatico sospeso",
+    "auto_arming_switched": "Regole automatiche attivate o disattivate",
+    "auto_suspension_set": "Regole automatiche sospese",
     "auto_suspension_cleared": "Sospensione revocata",
     "action_test": "Azione provata",
     "simulation_run": "Simulazione eseguita",
     "config_refused": "Modifica di configurazione rifiutata",
     "config_new_token": "Token del tastierino generato",
     "config_revoke_token": "Token del tastierino revocato",
-    "tokens_rejected": "Token di tastiera rifiutati",
+    "tokens_rejected": "Token di tastierino rifiutati",
     "access_recovered": "Accesso recuperato da un amministratore"
   },
   "log": {
@@ -1654,7 +1689,7 @@
     "severity": "Gravità",
     "outcome": "Esito",
     "categories": "Categorie",
-    "categories_hint": "Nessuna selezione significa tutte le categorie. L'attività delle zone a impianto disinserito viene registrata solo se accendi quella categoria nelle Impostazioni.",
+    "categories_hint": "Nessuna selezione significa tutte le categorie. L'attività delle zone a impianto disinserito viene registrata solo se attivi quella categoria nelle Impostazioni.",
     "incident_filter": "Mostra un solo incidente: {id}",
     "clear_filter": "Mostra tutto",
     "events": "Eventi",
@@ -1680,26 +1715,26 @@
     "gap": "Dal {from} al {to}",
     "refresh": "Aggiorna",
     "changes": "Modifiche",
-    "added": "aggiunta",
-    "removed": "rimossa",
+    "added": "aggiunto",
+    "removed": "rimosso",
     "changed": "modificato",
     "and_more": "e altre {count}",
     "gap_short": "{seconds} s",
-    "claimed": "(dichiarato)",
+    "claimed": "(non verificato)",
     "person_title": "I dati di una persona",
-    "person_intro": "Il registro racconta chi era in casa e quando, per tutto il tempo che la conservazione tiene. L'esportazione consegna a qualcuno ogni riga che la riguarda; la cancellazione la toglie dal registro e lascia ogni evento dov'è, così il racconto di cosa è successo sopravvive alla rimozione di chi.",
+    "person_intro": "Il registro racconta chi era in casa e quando, per tutto il periodo di conservazione. L'esportazione consegna a una persona ogni riga che la riguarda; la cancellazione la toglie dal registro e lascia ogni evento dov'è, così il racconto di cosa è successo sopravvive alla rimozione di chi.",
     "person": "Persona",
     "person_none": "Scegli una persona",
     "person_found": "Righe che verrebbero cancellate: {total} — {by_id} trovate dal suo account, {by_name} dal solo nome (scritte prima che fosse un utente Foyer, o sotto un nome che ha poi cambiato), {about} sul suo account.",
     "person_export_rows": "Righe nell'esportazione: {rows} — quello che ha fatto, più quello che la casa ha fatto a lei: il suo tag rifiutato, un'escalation che l'ha raggiunta.",
-    "person_export_csv": "Esporta le sue righe (CSV)",
-    "person_export_json": "Esporta le sue righe (JSON)",
+    "person_export_csv": "Esporta righe (CSV)",
+    "person_export_json": "Esporta righe (JSON)",
     "person_erase": "Cancella la sua storia",
     "person_erase_yes": "Cancella",
     "person_erase_confirm": "Questo svuota il nome, l'account, il canale e il dispositivo su tutte le righe trovate — {rows} — per sempre. Gli eventi restano: il registro continuerà a dire cosa è successo quella notte, e non dirà più chi. La cancellazione stessa viene registrata, senza nominarla.",
     "person_erase_confirm_pseudonym": "Questo sostituisce il nome su tutte le righe trovate — {rows} — con un identificatore stabile, per sempre. Il registro continuerà a dire che la stessa persona ha agito in due notti diverse, che non è la stessa cosa che dimenticarla. La cancellazione stessa viene registrata, senza nominarla.",
     "person_keep_pseudonym": "Tieni un identificatore stabile invece di dimenticare",
-    "person_keep_pseudonym_hint": "Spento, le righe perdono la persona del tutto. Acceso, tengono un identificatore opaco che non dice nulla di lei ma continua a legare le sue righe fra loro. Chi chiede di essere dimenticato di solito chiede la prima.",
+    "person_keep_pseudonym_hint": "Se è disattivato, le righe perdono la persona del tutto. Se è attivato, tengono un identificatore opaco che non dice nulla di lei ma continua a legare le sue righe fra loro. Chi chiede di essere dimenticato di solito chiede la prima.",
     "person_erased": "Righe che non nominano più nessuno: {rows}.",
     "tokens_rejected": "{count} token sbagliati da {addresses} indirizzi mentre l'endpoint era bloccato"
   },
@@ -1709,11 +1744,11 @@
   "alarmo": {
     "title": "Importa da Alarmo",
     "intro": "Legge la configurazione di Alarmo da questo Home Assistant e porta in Foyer le sue aree, i sensori, le modalità e le persone, accanto a quello che c'è già. È uno strumento al meglio delle possibilità, non una migrazione: il file che legge è il formato interno di Alarmo, che può cambiare in qualunque versione di Alarmo senza preavviso e senza colpa di nessuno, e per questo ti dice tutto quello che non è riuscito a portare. Non viene scritto niente finché non l'hai letto e hai premuto Applica.",
-    "read": "Leggi la configurazione di Alarmo",
+    "read": "Leggi da Alarmo",
     "apply": "Applica",
     "summary_title": "Cosa verrebbe aggiunto",
     "report_title": "Cosa sapere prima di applicare",
-    "applied": "Importato. Ora dai un codice a ogni persona a pagina 7, e conferma ogni zona a pagina 3 prima di attivarla.",
+    "applied": "Importato. Ora dai un codice a ogni persona nella pagina Utenti, e conferma ogni zona nella pagina Zone prima di attivarla.",
     "hint": "Finché le zone di Foyer non sono confermate, lascia che Alarmo sorvegli la casa — ma non inserire mai entrambi sugli stessi sensori.",
     "created": {
       "areas": "Aree: {names}",
@@ -1721,7 +1756,7 @@
       "extended": "Scenari che inserirebbero anche ciò che viene importato: {names}",
       "people": "Persone, senza codice: {names}",
       "profiles": "Profili di risposta: {names}",
-      "zones": "Zone, spente finché non confermate: {count}"
+      "zones": "Zone, disattivate finché non confermate: {count}"
     },
     "split_name": "{area} ({modes})",
     "profile_name": "{area} (da Alarmo)",
@@ -1755,16 +1790,16 @@
       "too_large": "Il file di configurazione di Alarmo è molto più grande di quanto serva a qualunque casa, e non è stato letto.",
       "not_json": "Il file di configurazione di Alarmo non è un JSON valido.",
       "not_alarmo": "Il file non è una configurazione di Alarmo.",
-      "version_unsupported": "Questo file è nel formato di archiviazione {version} di Alarmo, che questo importatore non è stato verificato a leggere. Legge i formati da 6.1 a 6.3, scritti da Alarmo 1.9.5 fino a 1.10.19. Non è stato portato niente.",
+      "version_unsupported": "Questo file è nel formato di archiviazione {version} di Alarmo, su cui questo importatore non è stato verificato. Legge i formati da 6.1 a 6.3, scritti da Alarmo dalla 1.9.5 alla 1.10.19. Non è stato importato niente.",
       "invalid": "Il file non ha la forma per cui questo importatore è stato scritto, in {where}. Invece di portarne metà, non ha portato niente.",
       "too_many": "{where} ha più di {limit} elementi, e questa non è una casa. Non è stato portato niente.",
       "nothing_to_import": "Nella configurazione di Alarmo non c'è niente che Foyer non abbia già.",
       "changed": "Qualcosa è cambiato dall'anteprima: il file di Alarmo, la configurazione di Foyer o uno dei sensori. Rileggila, e guarda prima di applicare."
     },
     "line": {
-      "codes": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo conserva i codici come hash nel proprio formato, e Foyer non accetta sulla fiducia una credenziale da un altro sistema. Chiunque sia stato importato — {people} in tutto — ha bisogno di un codice nuovo a pagina 7 prima di poter disinserire con un codice.",
-      "codes_nobody": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo conserva i codici come hash nel proprio formato, e Foyer non accetta sulla fiducia una credenziale da un altro sistema. Non è stata importata nessuna persona nuova, quindi chi può disinserire è chi è già a pagina 7.",
-      "zones_to_confirm": "Zone importate: {zones}, tutte spente. Ogni trigger è la proposta di Foyer ricavata dal tipo di sensore, non qualcosa che qualcuno abbia verificato: finché non lo confermi a pagina 3 e non attivi la zona, non sorveglia niente.",
+      "codes": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo conserva i codici come hash nel proprio formato, e Foyer non accetta sulla fiducia una credenziale da un altro sistema. Chiunque sia stato importato — {people} in tutto — ha bisogno di un codice nuovo nella pagina Utenti prima di poter disinserire con un codice.",
+      "codes_nobody": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo conserva i codici come hash nel proprio formato, e Foyer non accetta sulla fiducia una credenziale da un altro sistema. Non è stata importata nessuna persona nuova, quindi chi può disinserire è chi è già nella pagina Utenti.",
+      "zones_to_confirm": "Zone importate: {zones}, tutte disattivate. Ogni trigger è la proposta di Foyer ricavata dal tipo di sensore, non qualcosa che qualcuno abbia verificato: finché non lo confermi nella pagina Zone e non attivi la zona, non sorveglia niente.",
       "unavailable_is_fault": "In Foyer un sensore che diventa non disponibile è un guasto, mai un silenzio: blocca l'inserimento e viene segnalato. Alarmo lo leggeva come chiuso, se non gli si diceva altro.",
       "sensor_duplicate": "{entity} compare due volte nel file; è stato importato una volta sola.",
       "sensor_exists": "{entity} è già la zona Foyer «{zone}», che è rimasta esattamente com'era.",
@@ -1787,13 +1822,13 @@
       "arm_on_close": "In Alarmo «{zone}» inseriva la casa cinque secondi dopo essersi chiusa. In Foyer è impostata per inserirsi dopo la chiusura, che aspetta anche il ritardo di uscita.",
       "auto_bypass_partial": "«{zone}» veniva esclusa automaticamente in alcune modalità e non in altre. Foyer ha una sola regola per zona, e ha preso quella che rifiuta di inserire con la zona aperta.",
       "mode_unused": "La modalità {mode} era abilitata in Alarmo ma non sorvegliava nessun sensore tra quelli importati, quindi non è stato creato uno scenario.",
-      "scenario_extended": "Il tuo scenario «{scenario}» riporta già {mode} a Home Assistant, quindi ora inserisce anche le aree importate per quella modalità: un secondo scenario farebbe rifiutare quella modalità al master. Il suo ritardo di uscita, la sua durata della sirena e le sue regole sui codici valgono anche per loro.",
-      "scenario_mode_ambiguous": "Due scenari riportano già {mode}, quindi il master rifiuta quella modalità. Ne è stato creato uno nuovo comunque, e il master la rifiuta finché non ne resta uno solo.",
+      "scenario_extended": "Il tuo scenario «{scenario}» riporta già {mode} a Home Assistant, quindi ora inserisce anche le aree importate per quella modalità: un secondo scenario farebbe rifiutare quella modalità a Tutta la casa. Il suo ritardo di uscita, la sua durata della sirena e le sue regole sui codici valgono anche per loro.",
+      "scenario_mode_ambiguous": "Due scenari riportano già {mode}, quindi Tutta la casa rifiuta quella modalità. Ne è stato creato uno nuovo comunque, e Tutta la casa la rifiuta finché non ne resta uno solo.",
       "siren_varies": "In questa modalità le aree di Alarmo suonavano per tempi diversi. «{scenario}» ha una sola durata della sirena, e ha preso la più lunga: {seconds} s.",
       "exit_abort": "Sensori che in Alarmo interrompevano l'inserimento appena si aprivano durante il ritardo di uscita: {zones}. Foyer li controlla quando premi inserisci e quando il ritardo finisce, non nel mezzo.",
-      "scenario_restricted": "Solo alcune persone possono usare «{scenario}», e le persone importate non sono fra queste finché non le aggiungi a pagina 4.",
-      "profile_hides_scenario": "«{area}» risponde con un proprio profilo di risposta, quindi non eredita più quello di «{scenario}». Controlla a pagina 5 che avvisi chi avvisava quello.",
-      "automation_no_area": "«{automation}» agiva su un'area che non è stata importata, e non è stata importata.",
+      "scenario_restricted": "Solo alcune persone possono usare «{scenario}», e le persone importate non sono fra queste finché non le aggiungi nella pagina Scenari.",
+      "profile_hides_scenario": "«{area}» risponde con un proprio profilo di risposta, quindi non eredita più quello di «{scenario}». Controlla nella pagina Profili di risposta che avvisi chi avvisava quello.",
+      "automation_no_area": "«{automation}» agiva su un'area che non è stata importata, quindi non è stata importata neanche l'automazione.",
       "automation_empty": "«{automation}» non aveva niente da fare, e non è stata importata.",
       "siren_not_imported": "«{automation}» fa suonare una sirena in un momento diverso dall'allarme, o con un tono o una durata sua. Importata, diventerebbe la sirena piena per tutto il tempo, quindi non lo è stata.",
       "person_duplicate": "{person} compare due volte nel file; è stato importato una volta sola.",
@@ -1801,24 +1836,24 @@
       "person_unnamed": "Una persona senza nome nel file non è stata importata.",
       "person_exists": "{person} è già un utente Foyer, ed è rimasto esattamente com'era.",
       "override_code": "In Alarmo {person} aveva un codice di forzatura, che inseriva anche con sensori aperti. In Foyer è il permesso di inserimento forzato, ed è stato dato.",
-      "person_scope_empty": "{person} era limitato ad aree che non sono state importate, quindi per ora non può usarne nessuna; allarga il permesso a pagina 7.",
+      "person_scope_empty": "{person} era limitato ad aree che non sono state importate, quindi per ora non può usarne nessuna; allarga il permesso nella pagina Utenti.",
       "automation_disabled": "L'automazione «{automation}» era disattivata in Alarmo, e non è stata importata.",
-      "automation_notification": "La notifica «{automation}» non è stata importata. Una notifica che arriva dove non dovrebbe è peggio di una che imposti di nuovo: in Foyer le notifiche vanno ai contatti, a pagina 6.",
+      "automation_notification": "La notifica «{automation}» non è stata importata. Una notifica che arriva dove non dovrebbe è peggio di una che imposti di nuovo: in Foyer le notifiche vanno ai contatti, nella pagina Contatti.",
       "automation_trigger": "«{automation}» parte da qualcosa per cui i profili di risposta di Foyer non hanno un momento, e non è stata importata.",
       "automation_modes": "«{automation}» funzionava solo in alcune modalità. Un profilo Foyer risponde per un'area qualunque sia lo scenario, quindi non è stata importata.",
       "action_not_imported": "«{automation}» chiama {service}, che non è una sirena né un interruttore; quella parte non è stata importata.",
       "siren_off_not_needed": "«{automation}» spegneva una sirena. Foyer lo fa da sé quando disinserisci e quando finisce il tempo della sirena, quindi non serviva.",
       "automation_imported": "«{automation}» è stata importata: le sue sirene e i suoi interruttori.",
       "profile_created": "Il profilo di risposta «{profile}» parte come copia del tuo profilo predefinito, più le sirene e gli interruttori di Alarmo, e risponde per le aree importate.",
-      "group_not_imported": "Il gruppo «{group}» ({n} su {members} entro {seconds} s) non è stato creato: un gruppo ha bisogno dei suoi membri attivi, e ogni zona importata parte spenta. Crealo a pagina 13 quando saranno confermate.",
+      "group_not_imported": "Il gruppo «{group}» ({n} su {members} entro {seconds} s) non è stato creato: un gruppo ha bisogno dei suoi membri attivi, e ogni zona importata parte disattivata. Crealo nella pagina Gruppi di verifica quando saranno confermate.",
       "setting_not_imported": "L'impostazione di Alarmo «{setting}» non è stata importata; le impostazioni di Foyer sono rimaste come erano.",
       "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. È stato scritto da un Alarmo più recente di quello su cui è stato verificato, e quello che fa quel campo non è stato importato.",
-      "scenario_overrides": "«{scenario}» ha un proprio ritardo di uscita o durata della sirena, e ora vale anche per le aree importate, qualunque cosa avesse Alarmo. Controllalo nella pagina 4."
+      "scenario_overrides": "«{scenario}» ha un proprio ritardo di uscita o durata della sirena, e ora vale anche per le aree importate, qualunque cosa avesse Alarmo. Controllalo nella pagina Scenari."
     }
   },
   "wizard": {
     "title": "Completa la configurazione di Foyer",
-    "intro": "Foyer sta già proteggendo una zona: l'integrazione ha creato un'area, una zona e uno scenario quando l'hai aggiunta. Quattro passi brevi trasformano tutto questo in qualcosa che sorveglia davvero la casa. Puoi fermarti quando vuoi e proseguire dalle pagine qui sopra.",
+    "intro": "L'integrazione ha creato un'area, una zona e uno scenario — ancora nulla è inserito. Cinque passi brevi trasformano tutto questo in una configurazione che copre tutta la casa. Puoi fermarti quando vuoi e proseguire dalle pagine qui sopra.",
     "dismiss": "Non ora",
     "next": "Continua",
     "back": "Indietro",
@@ -1838,23 +1873,37 @@
     "zones_text": "Zone mappate: {have} su {want}",
     "add_zone": "Aggiungi una zona",
     "pick_entity": "Scegli un'entità…",
-    "proposed": "{entity} adesso legge {state}. Foyer propone una zona {type}, in allarme su: {states}.",
-    "confirm_trigger": "È corretto: questa zona è in allarme in quegli stati.",
+    "proposed": "{name} adesso è {state}. Foyer la considererà in allarme quando è: {states}.",
+    "confirm_trigger": "L'ho provato: aprendola o facendola scattare, lo stato qui sopra diventa quello indicato.",
     "confirm_hint": "È l'unica cosa che Foyer non può indovinare da solo. I contatti normalmente chiusi e normalmente aperti si comportano al contrario, e un errore qui produce un allarme che non suona mai — cosa che scopriresti nel momento peggiore possibile.",
     "add": "Aggiungi la zona",
     "scenario_text": "Uno scenario è un preset con un nome che inserisce un insieme di aree scelto. Uno che inserisce tutto basta per iniziare; quelli parziali vengono dopo.",
     "scenario_areas": "Inserisce: {areas}",
     "user_text": "Il tuo codice, così dal primo giorno il registro ha qualcuno a cui attribuire le cose.",
-    "test_text": "Dimostra che un messaggio ti arriva davvero, prima di farci affidamento. Questo lo manda direttamente tramite Home Assistant, al destinatario che scegli.",
+    "test_text": "Dimostra che un messaggio ti arriva davvero, prima di farci affidamento. Passa da Foyer, come un vero messaggio d'allarme, e resta nel registro come prova.",
     "test_target": "Manda a",
     "pick_target": "Scegli un servizio di notifica…",
     "send_test": "Manda la prova",
     "test_sent": "Mandata. Se non è arrivato nulla, quel canale non ti avrebbe raggiunto nemmeno durante un allarme.",
     "test_hint": "Quali notifiche manda Foyer, e quando, si imposta nella pagina Profili di risposta.",
     "test_message": "Foyer Home Defender: questa è una notifica di prova.",
-    "user_hint": "Questa persona è collegata al tuo account Home Assistant e riceve tutti i permessi: sei tu che stai configurando l’impianto. Gli altri si aggiungono dalla pagina Utenti, ognuno con il proprio codice.",
+    "user_hint": "Questa persona è collegata al tuo account Home Assistant e riceve tutti i permessi: sei tu che stai configurando l'impianto. Gli altri si aggiungono dalla pagina Utenti, ognuno con il proprio codice.",
     "user_create": "Crea utente",
-    "user_done": "{name} ha un codice. Da ora il disinserimento lo chiede."
+    "user_done": "{name} ha un codice. Da ora il disinserimento lo chiede.",
+    "user_create_next": "Crea e continua",
+    "skip": "Salta",
+    "numeric_elsewhere": "Questo sensore riporta un numero: imposta la soglia nella pagina Zone.",
+    "go_zones": "Vai a Zone",
+    "type_hint": "Immediata fa scattare l'allarme subito. Ritardata lascia il ritardo di ingresso per disinserire: per la porta da cui entri.",
+    "type_fixed": "Tipo di zona: {type}. Si può cambiare nella pagina Zone.",
+    "go_contacts": "Vai a Contatti",
+    "left": {
+      "title": "Ancora da fare",
+      "zones": "Zone mappate: {have} su {want}. Aggiungi le porte e le finestre che contano.",
+      "users": "Nessuno ha ancora un codice, quindi il codice non viene mai richiesto.",
+      "contacts": "Ancora nessun contatto: nessuno da raggiungere quando nessuno prende atto di un allarme.",
+      "none": "Niente di evidente da fare. Tutto il resto è nelle pagine qui sopra."
+    }
   },
   "config_kind": {
     "areas": "Area",
@@ -1868,7 +1917,7 @@
     "log": "Registro eventi",
     "user": "Utente",
     "security": "Codici e blocco",
-    "health": "Salute di sistema",
+    "health": "Stato del sistema",
     "radio": "Radio",
     "devices": "Dispositivo di inserimento",
     "contacts": "Contatto",
@@ -1876,7 +1925,7 @@
     "users": "Persone",
     "removed": "Righe rimosse",
     "rows": "Righe",
-    "pseudonymised": "Righe pseudonimizzate",
+    "pseudonymised": "Righe con nomi sostituiti",
     "from": "Da",
     "to": "A",
     "reason": "Motivo"
@@ -1900,7 +1949,7 @@
     "item_id": "Elemento",
     "group_id": "Gruppo",
     "incident_zones": "Zone dell'incidente",
-    "via": "Presa in carico tramite",
+    "via": "Presa d'atto tramite",
     "removed": "Righe cancellate",
     "n": "Soglia",
     "count": "Conteggio",
@@ -1911,7 +1960,7 @@
     "state": "Stato",
     "attributed": "Attribuzione",
     "rows": "Righe",
-    "pseudonymised": "Pseudonimo mantenuto",
+    "pseudonymised": "Identificatore stabile mantenuto",
     "rule": "Regola",
     "rule_id": "Regola",
     "pending_id": "Conto alla rovescia",
@@ -1920,7 +1969,7 @@
     "never_detected": "Mai rilevata",
     "radio": "Radio",
     "threshold": "Soglia",
-    "failures": "Fallimenti",
+    "failures": "Errori",
     "service": "Servizio",
     "contact": "Contatto",
     "channel_id": "Canale",
@@ -1938,13 +1987,23 @@
   "code": {
     "title": "Codice",
     "prompt": "Digita il tuo codice ({n} cifre).",
-    "wrong": "Il codice non è corretto. Riprova."
+    "wrong": "Codice errato. Riprova ({n} cifre).",
+    "purpose": {
+      "arm": "Codice per inserire {target}",
+      "disarm": "Codice per disinserire {target}",
+      "disarm_all": "Codice per disinserire tutta la casa",
+      "config": "Codice per salvare la modifica",
+      "bypass": "Codice per escludere {zone}",
+      "unbypass": "Codice per includere di nuovo {zone}"
+    },
+    "required_by": "Lo chiede {name}.",
+    "locked_until": "Troppi codici errati. I codici da questo account sono bloccati fino alle {time}."
   },
   "code_policy": {
     "inherit": "Come la politica globale",
     "required": "Codice richiesto",
     "not_required": "Senza codice",
-    "strictest": "Se un’area e uno scenario non concordano, vince quello che chiede il codice.",
+    "strictest": "Se un'area e uno scenario non concordano, vince quello che chiede il codice.",
     "inert": "Per ora nessuno chiede un codice: nessun utente ne ha uno."
   },
   "permission": {
@@ -1964,12 +2023,12 @@
     "disarm": "Disinserimento",
     "force_arm": "Inserimento forzato",
     "change_scenario": "Cambio scenario a impianto inserito",
-    "acknowledge": "Riconoscimento di un allarme",
+    "acknowledge": "Presa d'atto di un allarme",
     "bypass_zone": "Esclusione di una zona",
     "edit_config": "Modifica della configurazione",
-    "walk_test": "Ingresso in walk test",
-    "test_action": "Prova reale di un’azione",
-    "cancel_auto_action": "Annullare un'azione automatica"
+    "walk_test": "Avvio del walk test",
+    "test_action": "Prova reale di un'azione",
+    "cancel_auto_action": "Annullamento di un'azione automatica"
   },
   "users": {
     "title": "Utenti",
@@ -1977,7 +2036,7 @@
     "new": "Nuovo utente",
     "none": "Nessun utente. Finché nessuno ha un codice, chiunque raggiunga Home Assistant può disinserire.",
     "not_enforced": "I codici non sono attivi",
-    "not_enforced_hint": "Nessun utente ha un codice, quindi nessuno viene chiesto. Crea un utente con un codice e la politica qui sotto inizia a valere subito.",
+    "not_enforced_hint": "Nessun utente ha un codice, quindi il codice non viene mai richiesto. Crea un utente con un codice e la politica qui sotto inizia a valere subito.",
     "code": "Codice",
     "code_set": "Impostato",
     "code_missing": "Assente",
@@ -1995,22 +2054,25 @@
     "not_linked": "Non collegato",
     "linked_hint": "Collegare un account Home Assistant permette al pannello di sapere chi sta agendo senza digitare un codice.",
     "validity_hint": "Per un codice ospite: fuori da questa finestra il codice viene rifiutato.",
-    "exempt": "Non chiedermi il codice dove sono identificato",
-    "exempt_hint": "Solo sui canali che ti identificano da soli — l’interfaccia di Home Assistant con il tuo account.",
-    "exempt_note": "Su un tastierino condiviso il codice è l’identità: il sistema non può sapere chi sta digitando finché non digita. Lì l’esenzione non vale mai. E un tablet lasciato aperto con il tuo account è un disinserimento a portata di chiunque passi.",
+    "exempt": "Non chiedere il codice dove questa persona è identificata",
+    "exempt_hint": "Solo sui canali che identificano la persona da soli — l'interfaccia di Home Assistant con il suo account.",
+    "exempt_note": "Su un tastierino condiviso il codice è l'identità: il sistema non può sapere chi sta digitando finché non digita. Lì l'esenzione non vale mai. E un tablet lasciato aperto con l'account di questa persona è un disinserimento a portata di chiunque passi.",
     "enabled": "Attivo",
     "enabled_hint": "Il codice di un utente disattivato viene rifiutato, e la sua storia resta nel registro.",
     "policy": "Politica dei codici",
     "policy_hint": "Quali operazioni chiedono un codice. Aree e scenari possono chiedere di più, mai di meno.",
     "operation": "Operazione",
     "needs_code": "Codice richiesto",
-    "later_phase": "fase successiva",
+    "later_phase": "prossimo aggiornamento",
     "code_length": "Lunghezza del codice",
     "code_length_hint": "Uguale per tutti, perché un tastierino deve sapere quante cifre raccogliere. Quattro cifre sono diecimila combinazioni: si appoggia interamente al blocco qui sotto.",
     "lockout_failures": "Tentativi falliti",
     "lockout_window": "Entro (secondi)",
     "lockout_duration": "Blocca per (secondi)",
-    "lockout_hint": "Ogni blocco successivo sullo stesso canale dura il doppio. Il percorso dell’amministratore Home Assistant non viene mai bloccato, così nessuno può chiudersi fuori."
+    "lockout_hint": "Ogni blocco successivo dalla stessa origine dura il doppio. Il percorso dell'amministratore Home Assistant non viene mai bloccato, così nessuno può chiudersi fuori.",
+    "code_repeat": "Ripeti il codice",
+    "code_hint_new": "{n} cifre, diverso da quello di chiunque altro.",
+    "confirm_delete": "Eliminare {name}? Non si può annullare. Il suo codice smette subito di funzionare; la sua storia resta nel registro."
   },
   "device_kind": {
     "keypad": "Tastierino",
@@ -2022,32 +2084,32 @@
     "full": "Completo"
   },
   "devices": {
-    "title": "Dispositivi",
+    "title": "Dispositivi di inserimento",
     "add": "Aggiungi un dispositivo",
     "new": "Nuovo dispositivo",
     "none": "Nessun dispositivo di inserimento. Un tastierino, un tag o un telecomando si dichiara qui prima di poter comandare qualcosa.",
     "reaches": "Raggiunto tramite",
     "identifies": "Identifica",
     "code_is_identity": "Il codice è l'identità",
-    "white_list": "Questo elenco è una lista bianca, non una rubrica: un dispositivo che non è qui viene rifiutato con qualunque codice arrivi. È ciò che rende contabile il blocco, perché chi può inventarsi il nome di un dispositivo non viene bloccato mai.",
+    "white_list": "Questo elenco è una lista bianca, non una rubrica: un dispositivo che non è qui viene rifiutato con qualunque codice arrivi. È ciò che permette al blocco di contare i tentativi, perché chi può inventarsi il nome di un dispositivo non viene bloccato mai.",
     "kind_hint_keypad": "Condiviso, e porta un codice. Su un tastierino condiviso il codice è l'identità, quindi l'esenzione per utente non può valere qui.",
     "kind_hint_tag": "Di una sola persona, e non porta nessun codice: un tag NFC, un badge RFID, un telecomando.",
     "ref_hint": "Il nome che questo tastierino mette nei propri messaggi, in device_id. È registrato su ogni evento ed è ciò su cui il blocco conta i tentativi: dai a ogni tastierino il suo.",
     "stolen_tag": "Un tag rubato inserisce e disinserisce senza sapere nessun codice.",
     "stolen_tag_hint": "Il possesso è la credenziale: su un tag non c'è dove digitare un codice. Trattalo come una chiave, e dallo a qualcuno a cui daresti una chiave. Tutto il resto di quella persona continua a valere: cosa può fare, in quali aree, e fino a quando.",
-    "entity_hint": "L'entità tag o event su cui arriva la lettura. Passa il tag una volta su Home Assistant perché compaia.",
+    "entity_hint": "L'entità tag o evento su cui arriva la lettura. Passa il tag una volta su Home Assistant perché compaia.",
     "event_type_hint": "Per un telecomando con più pulsanti: quale evento conta. Lascialo vuoto per un tag, che ha solo la lettura.",
     "owner_hint": "Di chi è questo tag. È tutta la sua identità, ed è ciò che dirà il registro.",
-    "enabled_hint": "Spento, smette di comandare, non sparisce soltanto da questo elenco.",
+    "enabled_hint": "Se è disattivato, smette di comandare, non sparisce soltanto da questo elenco.",
     "mqtt": "MQTT",
     "mqtt_note": "I modelli di tastierino cambiano ogni sei mesi; questo contratto no. Qualunque cosa sappia pubblicare su un broker può inserire questa casa, e riceve indietro un riscontro strutturato per i suoi LED e i suoi segnali acustici. Tutto questo è disponibile anche come servizi foyer.*, per un dispositivo che non sa pubblicare in MQTT.",
     "mqtt_enabled": "Ascolta e pubblica sul broker",
-    "mqtt_enabled_hint": "Spento finché non lo accendi: un broker è spesso la macchina di qualcun altro.",
+    "mqtt_enabled_hint": "Disattivato finché non lo attivi: un broker è spesso la macchina di qualcun altro.",
     "topic_hint": "Lascia vuoto per il predefinito, foyer/<id impianto>/command. C'è chi fa girare più impianti su un solo broker.",
     "detail_hint_minimal": "Ciò che serve a un tastierino e nient'altro: nessun nome di scenario, nessun nome di area, nessun elenco di finestre aperte.",
     "detail_hint_standard": "Aggiunge lo scenario attivo e lo stato di ogni area, per nome.",
-    "detail_hint_full": "Il contratto alla lettera, zone aperte per nome comprese. Ricorda cosa vuol dire «ritenuto» su un broker condiviso.",
-    "retain_hint": "Ritenuto, così un tastierino che si riavvia conosce lo stato senza chiederlo, e lo conosce anche chiunque altro si colleghi al broker dopo.",
+    "detail_hint_full": "Il contratto alla lettera, zone aperte per nome comprese. Ricorda cosa vuol dire «conservato (retain)» su un broker condiviso.",
+    "retain_hint": "Conservato (retain), così un tastierino che si riavvia conosce lo stato senza chiederlo, e lo conosce anche chiunque altro si colleghi al broker dopo.",
     "inbound": "In ingresso: dal dispositivo a Foyer",
     "outbound": "In uscita: da Foyer al dispositivo",
     "last_result_hint": "last_result è ciò che permette a un tastierino di distinguere un codice sbagliato da un inserimento bloccato da una finestra aperta, invece di fallire in silenzio.",
@@ -2088,12 +2150,12 @@
     },
     "refresh": "Aggiorna",
     "ok": "OK",
-    "disabled": "Disabilitata",
+    "disabled": "Disattivata",
     "diagnostics": {
       "title": "Stato delle zone in tempo reale",
       "subtitle": "Qui non viene eseguito nulla",
       "empty": "Nessuna zona è ancora mappata.",
-      "missing": "Home Assistant non ha queste entità. Una zona che punta a un’entità rinominata è una zona che non potrà mai scattare."
+      "missing": "Home Assistant non ha queste entità. Una zona che punta a un'entità rinominata è una zona che non potrà mai scattare."
     },
     "col": {
       "zone": "Zona",
@@ -2104,7 +2166,7 @@
       "health": "Salute",
       "battery": "Batteria",
       "signal": "Segnale",
-      "supervision": "Supervisione",
+      "supervision": "Limite di silenzio",
       "arming": "Inserimento",
       "device": "Dispositivo",
       "kind": "Tipo"
@@ -2114,7 +2176,7 @@
     "momentary": "Solo alla lettura",
     "no_entity": "Entità inesistente",
     "no_entity_kind": "Nessuna entità da seguire",
-    "supervision_off": "Spenta",
+    "supervision_off": "Disattivato",
     "supervision_on": "{n} s",
     "blocks": {
       "fault": "Blocca: guasto",
@@ -2128,19 +2190,19 @@
     },
     "devices": {
       "title": "Dispositivi di inserimento",
-      "subtitle": "Una tastiera non può bloccare l’inserimento, quindi ha una tabella sua"
+      "subtitle": "Un tastierino non può bloccare l'inserimento, quindi ha una tabella sua"
     },
     "simulator": {
       "safe_title": "Qui non viene eseguito nulla.",
-      "safe": "Il simulatore chiama lo stesso motore decisionale che chiama l’allarme, con un mondo e un orologio inventati, e poi semplicemente non consegna mai il risultato a chi farebbe suonare le sirene.",
+      "safe": "Il simulatore chiama lo stesso motore decisionale che chiama l'allarme, con un mondo e un orologio inventati, e poi semplicemente non consegna mai il risultato a chi farebbe suonare le sirene.",
       "conditions": "Condizioni ipotetiche",
       "scenario": "Scenario",
       "scenario_hint": "La casa viene inserita con questo prima che accada altro.",
       "disarmed": "Nessuno — casa disinserita",
       "clock": "Data e ora",
-      "clock_hint": "È l’ora su cui si legge una condizione oraria. Vuoto vuol dire adesso.",
+      "clock_hint": "È l'ora su cui si legge una condizione oraria. Vuoto vuol dire adesso.",
       "zones": "Forza lo stato delle zone",
-      "zones_hint": "Ognuna avviene dopo questi secondi da quando la casa ha finito di inserirsi — quindi zero vuol dire «inserita, e poi questo». L’intervallo serve a vedere un gruppo che si riempie, o una seconda zona che si unisce a un allarme.",
+      "zones_hint": "Ognuna avviene dopo questi secondi da quando la casa ha finito di inserirsi — quindi zero vuol dire «inserita, e poi questo». Il ritardo serve a vedere un gruppo che si riempie, o una seconda zona che si unisce a un allarme.",
       "pick_zone": "Scegli una zona",
       "state": "Stato",
       "at": "Secondi da casa inserita",
@@ -2148,10 +2210,10 @@
       "add_zone": "Aggiungi una zona",
       "entities": "Entità usate nelle condizioni",
       "entities_hint": "Solo le entità lette dalle condizioni delle azioni. Lasciane una vuota per usare ciò che dice davvero adesso.",
-      "as_now": "Com’è adesso",
+      "as_now": "Com'è adesso",
       "run": "Esegui la simulazione",
       "reset": "Azzera",
-      "premise_code": "Questa installazione chiede un codice per inserire, e la simulazione inserisce la casa prima che accada altro — quindi lo chiede anche lei. In ogni caso non viene eseguito nulla."
+      "premise_code": "Questo impianto chiede un codice per inserire, e la simulazione inserisce la casa prima che accada altro — quindi lo chiede anche lei. In ogni caso non viene eseguito nulla."
     },
     "trace": {
       "title": "Traccia della decisione",
@@ -2164,14 +2226,14 @@
       "low_battery": "Inserita con batteria scarica su: {zones}",
       "group": "Gruppo «{group}»: {count} su {n} entro {window} s → non soddisfatto",
       "group_satisfied": "Gruppo «{group}»: {count} su {n} entro {window} s → SODDISFATTO",
-      "cross_zone": "Coppia di conferma incrociata",
+      "cross_zone": "Coppia di verifica incrociata",
       "profile": "Profilo «{profile}», ereditato {source}",
       "ran": "✓ {action}",
       "skipped": "✗ {action} — {why}",
       "no_profile": "✗ nessun profilo risponde a questo — non verrebbe eseguito nulla",
       "later": {
         "delay": "⏱ il resto di questa sequenza alle {at}",
-        "siren": "⏱ taglio della sirena alle {at}",
+        "siren": "⏱ fine della sirena alle {at}",
         "escalation_step": "⏱ passo di escalation {step} a +{offset}s → {who}"
       },
       "nothing_configured": "✗ non è configurato nulla per questo momento",
@@ -2185,7 +2247,7 @@
     "source": {
       "zone": "dalla zona",
       "group": "dal gruppo",
-      "area": "dall’area",
+      "area": "dall'area",
       "scenario": "dallo scenario",
       "technical": "dal canale tecnico",
       "default": "dal profilo predefinito",
@@ -2214,11 +2276,11 @@
   "walk": {
     "banner_title": "Walk test in corso.",
     "banner": "Ogni risposta è trattenuta. Finisce fra {time}, o quando lo chiudi tu. Avviato da {who}.",
-    "card_banner": "Ogni risposta è trattenuta. Finisce fra {time}.",
+    "card_banner": "L'allarme non suonerà. Finisce fra {time}.",
     "badge": "Walk test",
-    "badge_title": "È in corso un walk test: ogni risposta è trattenuta.",
+    "badge_title": "È in corso un walk test: l'allarme non suonerà.",
     "somebody": "qualcuno",
-    "always_on_live": "Le zone 24h, tamper, tecniche e panico restano completamente attive. Un walk test non silenzia mai un rilevatore di fumo.",
+    "always_on_live": "Le zone 24h, di manomissione, tecniche e di panico restano completamente attive. Un walk test non silenzia mai un rilevatore di fumo.",
     "end": "Chiudi il walk test",
     "idle_title": "Non è in corso nulla.",
     "idle": "Avviare un walk test inserisce davvero la casa e legge davvero i sensori. Quel che viene trattenuto è la risposta: niente sirena, niente notifiche, niente luci.",
@@ -2228,8 +2290,8 @@
     "start_sub": "Davvero inserito, davvero in ascolto, nessuna risposta",
     "explainer": "Viene inserita ogni area che può esserlo, e tutte vengono disinserite alla fine — tranne quelle già inserite prima. Un'area tenuta aperta da una zona resta semplicemente fuori, e viene indicata.",
     "duration": "Timeout",
-    "duration_default": "Valore dell'installazione",
-    "duration_hint": "Minuti senza rilevazioni prima che si chiuda da solo. Ogni rilevazione lo rimanda. Può solo essere più breve dell'impostazione dell'installazione, mai più lungo: l'uscita automatica non si disattiva.",
+    "duration_default": "Predefinito dell'impianto",
+    "duration_hint": "Minuti senza rilevazioni prima che si chiuda da solo. Ogni rilevazione lo rimanda. Può solo essere più breve dell'impostazione dell'impianto, mai più lungo: la chiusura automatica non si disattiva.",
     "start": "Avvia il walk test",
     "table_title": "Rilevazioni durante questo walk test",
     "started_by": "Avviato alle {at} da {who}",
@@ -2256,8 +2318,8 @@
     "never": "mai provata",
     "ok": "ha funzionato",
     "failed": "FALLITA",
-    "failed_detail": "La prova di “{action}” è fallita: {detail}",
-    "confirm": "Eseguire davvero “{action}” adesso? Si esegue sul serio.",
+    "failed_detail": "La prova di «{action}» è fallita: {detail}",
+    "confirm": "Eseguire davvero «{action}» adesso? Si esegue sul serio.",
     "confirm_yes": "Sì, esegui",
     "confirm_short": "Esegui davvero",
     "col": {
@@ -2275,8 +2337,8 @@
       "switch": "Commuta come configurato",
       "tts": "Pronuncia il messaggio",
       "call_service": "Chiama il servizio",
-      "chime": "Suona il gong",
-      "revert": "Rimette a posto",
+      "chime": "Suona il campanello",
+      "revert": "Rispegne",
       "delay": "Nulla: un ritardo è l'attesa stessa"
     },
     "reason": {
@@ -2311,8 +2373,8 @@
     "actionable_hint": "L'app Companion sì, un SMS no. Un trasporto scarta senza dire niente una chiave che non conosce, quindi qui si dichiara invece di indovinare.",
     "quiet_hours": "Ore di silenzio",
     "quiet_hint": "Dentro questa finestra raggiunge il contatto solo ciò che è abbastanza grave. Non zittisce mai l'allarme per tutta la casa.",
-    "quiet_min_severity": "Passa la finestra",
-    "quiet_severity_hint": "Sulla scala del registro. Lasciato su allarme, un'effrazione passa alle quattro del mattino e un'inserzione riuscita no.",
+    "quiet_min_severity": "Gravità minima per passare",
+    "quiet_severity_hint": "Sulla scala del registro. Lasciato su allarme, un'effrazione passa alle quattro del mattino e un inserimento riuscito no.",
     "linked_hint": "Permette di attribuire nel registro a questa persona una presa d'atto arrivata dal suo telefono.",
     "orchestration": "L'escalation raggiunge persone, non servizi. I trasporti li fornisce già Home Assistant: qui si decide chi, in che ordine e quando fermarsi.",
     "test": "Prova questo canale",
@@ -2324,11 +2386,11 @@
     "step_number": "Passo",
     "exhausted": "Se nessuno prende atto, l'ultimo passo solleva escalation_exhausted, che è a sua volta un momento su cui un profilo può agire.",
     "acknowledgement": "Presa d'atto",
-    "ack_stops": "La politica si ferma nell'istante in cui ne arriva una. Ogni presa d'atto registra chi e da quale canale.",
+    "ack_stops": "L'escalation si ferma nell'istante in cui ne arriva una. Ogni presa d'atto registra chi e da quale canale.",
     "ack_push": "Pulsante in una notifica push",
     "ack_push_how": "Un canale dichiarato capace di portarne uno",
     "ack_disarm": "Disinserimento da qualunque canale",
-    "ack_disarm_how": "Tastierino, scheda, tag, chiamata di servizio — su un'area toccata dall'allarme",
+    "ack_disarm_how": "Tastierino, card, tag, chiamata di servizio — su un'area toccata dall'allarme",
     "ack_dtmf": "Tasto premuto durante una chiamata vocale",
     "ack_dtmf_how": "Catturato dal provider e rimandato al webhook qui sotto",
     "ack_service": "Chiamata di servizio o pulsante",
@@ -2339,29 +2401,29 @@
     "webhook_warning_hint": "I webhook di Home Assistant sono aperti a chi ne conosce l'indirizzo: chiunque lo abbia, o lo intercetti, può fermare l'escalation mentre sta andando dal vicino. Attivalo solo se serve a un provider vocale e non darlo a nient'altro.",
     "webhook_hint": "Il provider vocale fa una POST su questo percorso quando il tasto viene premuto. Disattivandolo l'indirizzo viene dimenticato: riattivandolo ne viene dato uno nuovo.",
     "no_quiet_hours": "Sempre raggiungibile",
-    "actionable_entity": "Questa è un'entità notify: porta un messaggio e un titolo e nient'altro, quindi al telefono non arrivano né il pulsante né i dati aggiuntivi. Usa il servizio notify che ci sta dietro se da questo canale si deve poter prendere atto.",
+    "actionable_entity": "Questa è un'entità notify: porta un messaggio e un titolo e nient'altro, quindi al telefono non arrivano né il pulsante, né il destinatario, né i dati aggiuntivi. Usa il servizio notify che ci sta dietro se da questo canale si deve poter prendere atto.",
     "step_offset": "+{n} s"
   },
   "rules": {
-    "title": "Regole",
+    "title": "Regole automatiche",
     "add": "Aggiungi regola",
     "new": "Nuova regola",
-    "none": "Nessuna regola. La casa si arma da sola solo quando ne esiste una.",
+    "none": "Nessuna regola. La casa si inserisce da sola solo quando ne esiste una.",
     "action": "Azione",
     "status": "Stato",
     "active": "Attiva",
-    "disabled": "Spenta",
+    "disabled": "Disattivata",
     "at_once": "Subito",
     "enabled": "Regola attiva",
-    "switched_off": "Le regole automatiche sono spente. Nulla si armerà o disarmerà da solo.",
-    "switch_on": "Accendi",
-    "switch_off": "Spegni",
-    "counting_arm": "{rule}: arma {scenario} fra {seconds} s.",
-    "counting_disarm": "{rule}: disarma fra {seconds} s.",
-    "counting_switch": "{rule}: passa a {scenario} fra {seconds} s.",
+    "switched_off": "Le regole automatiche sono disattivate. Nulla si inserirà o disinserirà da solo.",
+    "switch_on": "Attiva",
+    "switch_off": "Disattiva",
+    "counting_arm": "{rule}: inserisce {scenario} fra {seconds} s.",
+    "counting_disarm": "{rule}: disinserisce fra {seconds} s.",
+    "counting_switch": "{rule}: passa a {scenario} fra {seconds} s.",
     "cancel_now": "Annulla",
-    "next_arm": "Prossima: {rule} arma {scenario}, {when}.",
-    "next_disarm": "Prossima: {rule} disarma, {when}.",
+    "next_arm": "Prossima: {rule} inserisce {scenario}, {when}.",
+    "next_disarm": "Prossima: {rule} disinserisce, {when}.",
     "next_switch": "Prossima: {rule} passa a {scenario}, {when}.",
     "next_none": "Non è programmato nulla.",
     "trigger_absence": "Tutti assenti da {minutes} min · persone osservate: {n}",
@@ -2375,62 +2437,62 @@
     "trigger_kind_entity": "Stato di un'entità",
     "trigger_hint_absence": "Tutte le persone scelte devono essere fuori per tutto il tempo.",
     "trigger_hint_presence": "Scatta quando una di loro rientra. Chi è già in casa non è arrivato.",
-    "trigger_hint_time": "Accade una volta. Se una condizione la blocca, l'occasione è persa, non rimandata.",
+    "trigger_hint_time": "Accade una volta. Se una condizione di sicurezza la blocca, l'occasione è persa, non rimandata.",
     "trigger_hint_entity": "L'entità deve mantenere quello stato per tutto il tempo.",
     "at": "Alle",
     "for_minutes": "Per (minuti)",
     "people": "Persone osservate da questa regola",
-    "no_people": "Non è stata trovata nessuna entità person o device_tracker.",
+    "no_people": "Non è stata trovata nessuna entità persona o device tracker.",
     "people_hint": "Una persona che Home Assistant non riesce a leggere non è mai la prova che non ci sia nessuno.",
-    "action_kind_arm": "Arma uno scenario",
-    "action_kind_disarm": "Disarma le aree indicate",
+    "action_kind_arm": "Inserisci uno scenario",
+    "action_kind_disarm": "Disinserisci le aree indicate",
     "action_kind_switch": "Passa a un altro scenario",
-    "action_arm": "Arma {scenario}",
-    "action_disarm": "Disarma {areas}",
+    "action_arm": "Inserisci {scenario}",
+    "action_disarm": "Disinserisci {areas}",
     "action_switch": "Passa a {scenario}",
     "choose_scenario": "Scegli uno scenario",
-    "window_hint": "Fuori da questa finestra la regola non esiste: non viene bloccata e non scrive nulla nel log.",
-    "guard_disarmed": "Solo se è tutto disarmato",
+    "window_hint": "Fuori da questa finestra la regola non esiste: non viene bloccata e non scrive nulla nel registro.",
+    "guard_disarmed": "Solo se è tutto disinserito",
     "guard_ready": "Solo se tutte le zone sono pronte",
-    "guard_ready_hint": "Altrimenti la regola armerebbe attorno a una finestra aperta.",
+    "guard_ready_hint": "Altrimenti la regola inserirebbe attorno a una finestra aperta.",
     "guard_quiet": "nessun movimento interno da {minutes} min",
     "guard_quiet_label": "Solo se nessun movimento interno da (minuti)",
     "guard_quiet_hint": "Prende il caso del telefono scarico: qualcuno è in casa, il suo telefono no.",
     "guard_none": "Nessuna",
-    "grace_hint": "Una notifica con un bottone Annulla prima di agire. 0 agisce subito.",
-    "notify_hint": "Chi sente il conto alla rovescia e ha il bottone Annulla. Le loro ore di quiete valgono comunque.",
-    "never_disarmed": "mai disarmata da una regola",
+    "grace_hint": "Una notifica con un pulsante Annulla prima di agire. 0 agisce subito.",
+    "notify_hint": "Chi sente il conto alla rovescia e ha il pulsante Annulla. Le loro ore di silenzio valgono comunque.",
+    "never_disarmed": "mai disinserita da una regola",
     "suspensions": "Sospensioni",
-    "visitor_intro": "Una finestra con un nome sospende l'inserimento automatico — e fra sei mesi il log dice perché, cosa che una sospensione anonima non farà mai.",
+    "visitor_intro": "Una finestra con un nome sospende le regole automatiche — e fra sei mesi il registro dice perché, cosa che una sospensione anonima non farà mai.",
     "suspension_until": "Sospesa fino a",
     "suspension_next": "Salta la prossima occasione",
     "suspension_visitor": "Visita prevista",
     "suspension_next_hint": "Finisce la prossima volta che la regola avrebbe agito.",
     "every_rule": "tutte le regole",
-    "instead": "arma {scenario} al suo posto",
+    "instead": "inserisce {scenario} al suo posto",
     "lift": "Togli",
     "no_suspensions": "Non c'è nessuna sospensione.",
     "visitor": "Visita prevista",
     "reason": "Motivo",
     "reason_placeholder": "Tecnico della caldaia",
     "instead_label": "Applica al suo posto",
-    "instead_nothing": "Niente — lascia disarmato",
-    "instead_hint": "Si applica quando la regola sospesa avrebbe armato, non all'apertura della finestra.",
+    "instead_nothing": "Niente — lascia disinserito",
+    "instead_hint": "Si applica quando la regola sospesa avrebbe inserito, non all'apertura della finestra.",
     "add_visitor": "Aggiungi finestra",
-    "skip_next": "Salta la prossima occasione",
-    "disarming": "Disarmo automatico",
-    "disarming_warning": "La presenza è dedotta da un telefono. Un telefono rubato apre la casa, una deriva GPS di 200 metri apre la casa, un MAC clonato sulla rete di casa apre la casa. È l'attacco più banale contro un allarme fai-da-te, ed è la ragione per cui questo è spento per default.",
-    "allow_disarm": "Permetti alle regole di disarmare",
-    "allow_disarm_hint": "Vale anche per un cambio di scenario che lascerebbe disarmata un'area armata.",
-    "areas_a_rule_may_disarm": "Aree che una regola può disarmare",
-    "perimeter_note": "Le aree perimetrali sono escluse nel motore, non in questa schermata. Chi entra con un telefono rubato trova comunque armata ogni porta e finestra esterna.",
-    "block_switch_off": "Spente",
+    "skip_next": "Salta la prossima",
+    "disarming": "Disinserimento automatico",
+    "disarming_warning": "La presenza è dedotta da un telefono. Un telefono rubato disinserisce la casa, una deriva GPS di 200 metri disinserisce la casa, un MAC clonato sulla rete di casa disinserisce la casa. È l'attacco più banale contro un allarme fai-da-te, ed è la ragione per cui questa funzione è disattivata di default.",
+    "allow_disarm": "Permetti alle regole di disinserire",
+    "allow_disarm_hint": "Vale anche per un cambio di scenario che lascerebbe disinserita un'area inserita.",
+    "areas_a_rule_may_disarm": "Aree che una regola può disinserire",
+    "perimeter_note": "Le aree perimetrali sono lasciate fuori dal motore stesso, non da questa schermata. Chi entra con un telefono rubato trova comunque inserita ogni porta e finestra esterna.",
+    "block_switch_off": "Disattivate",
     "block_suspended": "Sospesa",
     "block_walk_test": "Walk test",
-    "block_not_disarmed": "Non disarmato",
+    "block_not_disarmed": "Non disinserito",
     "block_not_ready": "Una zona non è pronta",
     "block_motion": "Movimento in casa",
-    "block_auto_disarm_disabled": "Disarmo non permesso",
+    "block_auto_disarm_disabled": "Disinserimento non permesso",
     "block_perimeter": "Solo perimetro",
     "weekday_0": "Lun",
     "weekday_1": "Mar",
@@ -2443,19 +2505,19 @@
     "block_refused": "L'ultimo tentativo è stato rifiutato",
     "because": " · {name}",
     "block_alarm_in_progress": "C'è un allarme in corso",
-    "block_missed": "Persa: Home Assistant era spento",
+    "block_missed": "Persa: Home Assistant era fermo",
     "block_unknown_area": "Un'area che nomina non esiste più"
   },
   "health": {
-    "settings": "Impostazioni di salute di sistema",
+    "settings": "Impostazioni dello stato del sistema",
     "settings_hint": "Quale entità segnala la rete elettrica, dove il watchdog manda i suoi ping e quali radio vengono contate insieme. Cambiarle è una modifica di configurazione.",
     "mains": "Rete elettrica",
     "mains_present": "Presente",
     "mains_lost": "Assente",
     "mains_pick": "Nessuna entità scelta",
     "mains_placeholder": "binary_sensor.ups_on_battery",
-    "mains_hint": "Un UPS via NUT o una presa smart te ne danno già una. Se è anche una zona di tipo tecnico, mantiene il suo allarme e il suo riconoscimento: qui dici soltanto a Foyer qual è la rete elettrica.",
-    "mains_states_hint": "Quali stati significano rete assente, separati da virgole. Un binary sensor di un UPS di solito è “on” quando la rete manca, un sensore di potenza “off”: una risposta sbagliata qui è un allarme che non suona mai.",
+    "mains_hint": "Un UPS via NUT o una presa smart te ne danno già una. Se è anche una zona di tipo tecnico, mantiene il suo allarme e la sua presa d'atto: qui dici soltanto a Foyer qual è la rete elettrica.",
+    "mains_states_hint": "Quali stati significano rete assente, separati da virgole. Un binary sensor di un UPS di solito è «on» quando la rete manca, un sensore di potenza «off»: una risposta sbagliata qui è un allarme che non suona mai.",
     "not_configured": "Non configurata",
     "unreadable": "Non leggibile",
     "off": "Spento",
@@ -2469,34 +2531,34 @@
     "no_payload": "payload vuoto",
     "watchdog_note": "Foyer sorveglia anche il watchdog: i fallimenti ripetuti nel raggiungere questo endpoint sono segnalati qui, perché non riuscire a raggiungere internet significa che nemmeno una notifica via internet uscirebbe.",
     "url_placeholder": "https://hc-ping.com/…",
-    "url_hint": "healthchecks.io, Uptime Kuma, Cronitor, o qualunque cosa risponda. Se Home Assistant muore i ping si fermano e quel servizio dà l'allarme: è l'unica risposta al fatto che un sistema morto non può annunciare la propria morte.",
-    "interval_hint": "Secondi fra un ping e l'altro. Più corto significa che fuori casa si accorgono prima che Home Assistant sia morto.",
+    "url_hint": "healthchecks.io, Uptime Kuma, Cronitor, o qualunque cosa risponda. Se Home Assistant si ferma, i ping si fermano e quel servizio dà l'allarme: è l'unica risposta al fatto che un sistema fermo non può annunciare di essersi fermato.",
+    "interval_hint": "Secondi fra un ping e l'altro. Più corto significa che fuori casa ci si accorge prima dell'arresto di Home Assistant.",
     "failures_hint": "Quanti ping consecutivi devono fallire prima che Foyer lo dica qui.",
     "payload": "Includi lo stato della casa nel ping",
-    "payload_hint": "Spento di default.",
-    "payload_warning": "Un ping che dice “inserito, non c'è nessuno” racconta a chi gestisce quel servizio esattamente quando la tua casa è vuota. Anche acceso, Foyer manda solo quante aree sono inserite: mai quale scenario, quali aree o quali zone sono aperte.",
+    "payload_hint": "Disattivato di default.",
+    "payload_warning": "Un ping che dice «inserito, non c'è nessuno» racconta a chi gestisce quel servizio esattamente quando la tua casa è vuota. Anche se attivato, Foyer manda solo quante aree sono inserite: mai quale scenario, quali aree o quali zone sono aperte.",
     "channels": "Canali di notifica",
     "channels_ok": "{n} in ordine",
     "channels_broken": "{n} da sistemare",
     "channels_meta": "mai provati: {n}",
-    "channels_note": "Un canale rotto viene annunciato su un altro: avvisarti di un canale morto sul canale morto è la battuta che si scrive da sola. Manda una prova dalla pagina Contatti.",
+    "channels_note": "Un canale rotto viene annunciato su un altro, perché un avviso mandato sul canale rotto non arriverebbe mai. Manda una prova dalla pagina Contatti.",
     "channels_note_none": "Nessun contatto configurato.",
     "no_channels": "Nessun canale di notifica configurato.",
     "sweep_every": "controllati ogni {minutes} min",
-    "healthy": "Sano",
+    "healthy": "In ordine",
     "untested": "Mai usato",
     "fault_missing_service": "Servizio assente",
     "fault_send_failed": "Invii falliti",
     "since": "Da",
     "radios": "Radio",
     "no_radios": "Nessuna radio configurata: il silenzio correlato non viene contato.",
-    "radios_hint": "Una radio è il config entry di un'integrazione: tutte le zone di una stessa installazione ZHA, Z-Wave JS o Zigbee2MQTT lo condividono, quindi indicarlo una volta assegna quaranta zone.",
+    "radios_hint": "Una radio è il config entry di un'integrazione: tutte le zone di una stessa rete ZHA, Z-Wave JS o Zigbee2MQTT lo condividono, quindi indicarlo una volta assegna quaranta zone.",
     "radios_note": "Molte zone di una stessa radio che ammutoliscono in pochi secondi sono la firma del jamming — e anche di un crash del coordinatore, di un aggiornamento firmware, di un cambio di canale e di un black-out in una stanza piena di router alimentati a rete. Per questo l'evento si chiama sospetto.",
     "add_radio": "Aggiungi una radio",
     "candidate": "{title} · zone: {zones}",
     "entry_hint": "Solo le integrazioni da cui proviene almeno una delle tue zone.",
     "coordinator_placeholder": "sensor.zigbee_coordinator",
-    "coordinator_hint": "È il controllo che rende utile tutto il resto: zone che ammutoliscono mentre il coordinatore risponde sono interferenza, zone che ammutoliscono con il coordinatore sparito sono un coordinatore morto. Senza, Foyer non segnala niente su questa radio invece di tirare a indovinare.",
+    "coordinator_hint": "È il controllo che rende utile tutto il resto: zone che ammutoliscono mentre il coordinatore risponde sono interferenza, zone che ammutoliscono con il coordinatore sparito sono un coordinatore fermo. Senza, Foyer non segnala niente su questa radio invece di tirare a indovinare.",
     "no_coordinator": "non indicato",
     "quiet_zones": "Ammutolite",
     "quiet_of": "{quiet} su {zones} · segnala a {threshold}",
@@ -2508,14 +2570,14 @@
     "rf_zones_hint": "Oppure il 40% delle zone di quella radio, se è meno.",
     "rf_confirm_hint": "Quanto deve durare il silenzio prima che Foyer lo dica. È quello in cui finiscono un riavvio del coordinatore e un aggiornamento firmware, invece che nella sirena.",
     "faults": "Guasti aperti",
-    "faults_sub": "segnalati anche come problemi di Home Assistant",
+    "faults_sub": "mostrati anche nelle Riparazioni di Home Assistant",
     "no_faults": "Nessun guasto.",
     "days": "giorni: {n}",
     "recent": "Da poco",
-    "diagnostics": "Diagnostici",
+    "diagnostics": "Diagnostica",
     "diagnostics_hint": "Un dump anonimizzato della configurazione e dello stato: niente codici, niente hash, niente nomi di persone, niente URL, e gli id delle entità ridotti a segnaposto stabili. È ciò che trasforma una segnalazione in qualcosa a cui si può rispondere.",
-    "diagnostics_open": "Apri la pagina dell'integrazione",
-    "diagnostics_where": "Il bottone di download è quello di Home Assistant, sulla pagina dell'integrazione, ed è riservato agli amministratori.",
+    "diagnostics_open": "Apri l'integrazione",
+    "diagnostics_where": "Il pulsante di download è quello di Home Assistant, sulla pagina dell'integrazione, ed è riservato agli amministratori.",
     "no_zones": "Nessuna zona",
     "last_result": "Ultimo esito"
   },

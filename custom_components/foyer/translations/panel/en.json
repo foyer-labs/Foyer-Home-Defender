@@ -16,7 +16,8 @@
     "ok": "OK",
     "edit": "Edit",
     "move_up": "Move up",
-    "move_down": "Move down"
+    "move_down": "Move down",
+    "confirm_delete": "Delete {name}? This cannot be undone."
   },
   "nav": {
     "overview": "Overview",
@@ -31,8 +32,9 @@
     "devices": "Arming devices",
     "test": "Test & diagnostics",
     "contacts": "Contacts",
-    "rules": "Automation rules",
-    "health": "System health"
+    "rules": "Automatic rules",
+    "health": "System health",
+    "group_setup": "Setup"
   },
   "state": {
     "disarmed": "Disarmed",
@@ -42,10 +44,10 @@
     "triggered": "Triggered"
   },
   "timer": {
-    "exit": "Exit delay: {seconds} s",
-    "hold": "Waiting for a zone to close: {seconds} s left",
-    "entry": "Entry delay: {seconds} s",
-    "siren": "Sounders: {seconds} s"
+    "exit": "Exit delay: {seconds} s",
+    "hold": "Waiting for a zone to close: {seconds} s left",
+    "entry": "Disarm within {seconds} s",
+    "siren": "Siren: {seconds} s"
   },
   "zone_status": {
     "closed": "Ready",
@@ -66,41 +68,42 @@
     "manual": "Excluded by hand"
   },
   "reason": {
-    "invalid_state": "The area is not in a state that allows this.",
+    "invalid_state": "The area's current state does not allow this. Check whether it is already armed, arming or in alarm.",
     "unknown_scenario": "That scenario does not exist.",
     "unknown_area": "That area does not exist.",
-    "no_scenario_for_mode": "No scenario reports this mode.",
-    "ambiguous_mode": "More than one scenario reports this mode. Choose the scenario itself.",
+    "no_scenario_for_mode": "No scenario is linked to this arming mode.",
+    "ambiguous_mode": "More than one scenario is linked to this arming mode. Choose the scenario itself.",
     "alarm_in_progress": "An alarm is in progress. Disarm before changing scenario.",
     "code_required": "A code is required.",
-    "zone_fault": "Cannot arm: zone in fault: {zones}.",
-    "zone_open": "Cannot arm: zone open: {zones}.",
+    "zone_fault": "Not armed — not responding: {zones}. Check battery and signal, or arm without them.",
+    "zone_open": "Not armed — still open: {zones}. Close them and try again, or arm without them.",
     "zone_not_bypassable": "Cannot force arming: these zones may not be excluded: {zones}.",
-    "arm_hold_expired": "Arming failed: still open: {zones}.",
-    "unknown": "The request was refused.",
+    "arm_hold_expired": "Arming failed: zone still open: {zones}.",
+    "unknown": "The request was refused. Reload the page and try again.",
     "nothing_to_acknowledge": "There is nothing to acknowledge.",
     "unknown_zone": "That zone does not exist.",
     "bad_code": "That code is not right.",
-    "locked_out": "Too many wrong codes. This channel is locked for now.",
-    "not_permitted": "You are not allowed to do that.",
-    "user_not_valid": "That code is not valid at the moment.",
+    "locked_out": "Too many wrong codes. Try again later.",
+    "not_permitted": "Your Foyer user does not have permission for this.",
+    "user_not_valid": "That code belongs to a user who is disabled or outside their validity period.",
     "area_not_allowed": "You are not allowed to act on that area.",
     "scenario_not_allowed": "You are not allowed to use that scenario.",
-    "device_not_registered": "That device is not one of this installation's arming devices. Add it under Arming devices first.",
+    "device_not_registered": "That device is not one of this system's arming devices. Add it under Arming devices first.",
     "nothing_to_cancel": "There is no automatic action counting down.",
     "unknown_rule": "That rule does not exist.",
     "unknown_suspension": "That suspension does not exist.",
-    "not_loaded": "Foyer was reloading — nothing was done",
+    "not_loaded": "Foyer was reloading, so nothing was done. Try again.",
     "bad_token": "The device's token was missing or wrong.",
-    "walk_test_active": "A walk test is running. End it first, then arm: the walk test disarms every area when it ends."
+    "walk_test_active": "A walk test is running. End it first, then arm: when it ends, it disarms the areas it armed.",
+    "cancelled": "Cancelled — nothing was changed."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
     "name_required": "A name is required.",
-    "duplicate_name": "Another one already has this name.",
+    "duplicate_name": "Something else already has this name.",
     "invalid_ha_state": "Choose one of the Home Assistant armed states.",
     "delay_out_of_range": "{field}: between 0 and 300 seconds.",
-    "siren_out_of_range": "{field}: between 1 and 900 seconds (the EN 50131 reference for external sounders).",
+    "siren_out_of_range": "{field}: between 1 and 900 seconds (the EN 50131 reference for outdoor sirens).",
     "retention_out_of_range": "{field}: keep each category between 1 and 3650 days. To keep nothing, switch the category off.",
     "hold_out_of_range": "{field}: between 60 and 1800 seconds.",
     "supervision_out_of_range": "{field}: between 60 seconds and 7 days, or empty for off.",
@@ -120,7 +123,7 @@
     "always_on_must_be_instant": "An always-on zone fires at once: no entry delay applies.",
     "auto_bypass_needs_bypassable": "Automatic exclusion needs a zone that may be excluded.",
     "hold_needs_arm_after_closing": "The wait limit applies only to “arm after closing”.",
-    "area_not_disarmed": "This area is not disarmed. Disarm it before changing what protects it.",
+    "area_not_disarmed": "This area is not disarmed. Disarm it before changing what watches it.",
     "scenario_active": "This scenario is running. Disarm before editing it.",
     "trigger_not_confirmed": "Confirm the trigger states against the real sensor first.",
     "not_found": "It no longer exists. Reload the page.",
@@ -128,14 +131,14 @@
     "area_in_scenario": "Remove this area from its scenarios first.",
     "scenario_in_use": "A key zone arms this scenario. Change the key zone first.",
     "unknown_kind": "Unknown kind of object.",
-    "invalid": "Some values are not valid.",
+    "invalid": "Some values are not valid. Check the fields and try again.",
     "follows_needs_follower": "Only a follower zone can follow other zones.",
     "follows_not_delayed": "A follower can follow only delayed intrusion zones.",
     "request_failed": "Home Assistant did not accept the request ({detail}). Nothing was changed. Reload the page and try again.",
     "area_has_groups": "A verification group is shown in this area. Move or delete it first.",
     "zone_in_group": "This zone is a member of a verification group. Remove it from the group first.",
     "zone_is_cross_partner": "Another zone uses this one for cross-zone verification. Change that zone first.",
-    "cross_zone_invalid": "Cross-zone needs another intrusion zone.",
+    "cross_zone_invalid": "Cross-zone verification needs another intrusion zone.",
     "cross_zone_window_mismatch": "Both zones of this pair point at each other with different windows. Give them the same window.",
     "group_members": "A group needs at least two different members.",
     "group_member_invalid": "Only existing intrusion zones can be members.",
@@ -157,7 +160,7 @@
     "camera_dir_invalid": "Use a folder inside the configuration directory, never www: it is served without authentication.",
     "severity_out_of_range": "Severity is a number from 1 to 10.",
     "moments_required": "Choose at least one moment for this action.",
-    "too_many_conditions": "An action carries at most two conditions.",
+    "too_many_conditions": "An action has at most two conditions.",
     "empty_window": "A window that starts when it ends never applies.",
     "condition_entity_invalid": "Choose an entity and the state to compare it with.",
     "unknown_variable": "{field} uses a variable that does not exist.",
@@ -188,9 +191,9 @@
     "lockout_out_of_range": "{field}: out of range.",
     "code_required": "A code is required.",
     "bad_code": "That code is not right.",
-    "not_permitted": "You are not allowed to do that.",
-    "user_not_valid": "That code is not valid at the moment.",
-    "locked_out": "Too many wrong codes. This channel is locked for now.",
+    "not_permitted": "Your Foyer user does not have permission for this.",
+    "user_not_valid": "That code belongs to a user who is disabled or outside their validity period.",
+    "locked_out": "Too many wrong codes. Codes from here are refused for a while.",
     "area_not_allowed": "You are not allowed to act on that area.",
     "scenario_not_allowed": "You are not allowed to use that scenario.",
     "unknown_scenario": "{field}: that scenario does not exist.",
@@ -215,7 +218,7 @@
     "contact_without_channels": "Give this contact at least one channel: a contact nobody can reach is a step that reaches nobody.",
     "escalation_kind_invalid": "Only a notification can be an escalation step.",
     "escalation_moment_invalid": "An escalation step answers an alarm or a technical alarm: those are the two that can be acknowledged.",
-    "escalation_offset_out_of_range": "Put this step between 0 and 3600 seconds from the start.",
+    "escalation_offset_out_of_range": "Put this step between 0 and 3600 seconds from the start of the alarm.",
     "notify_target_ambiguous": "Choose contacts or a service, not both.",
     "notify_target_required": "Say who this notification reaches: contacts, or a notification service.",
     "unknown_channel": "That contact no longer has this channel.",
@@ -246,7 +249,9 @@
     "tag_has_no_token": "Only a keypad can use the device endpoint. A tag carries no code, so its token would be the key to the house by itself.",
     "token_without_endpoint": "A token belongs to a keypad on the device endpoint. Revoke it, or put the keypad back on the endpoint.",
     "unknown_device": "That arming device does not exist.",
-    "config_reloading": "The previous change is still being applied. Try again in a moment."
+    "config_reloading": "The previous change is still being applied. Try again in a moment.",
+    "cancelled": "Cancelled — nothing was changed.",
+    "code_mismatch": "The two codes do not match."
   },
   "field": {
     "name": "Name",
@@ -264,7 +269,7 @@
     "bypassable": "May be excluded",
     "allow_arm_when_faulted": "Allow arming while in fault",
     "enabled": "Enabled",
-    "supervision_timeout": "Supervision (seconds)",
+    "supervision_timeout": "Silence limit (seconds)",
     "key": "Key",
     "on_activate": "When activated",
     "on_deactivate": "When released",
@@ -272,11 +277,11 @@
     "default_entry_delay": "Default entry delay",
     "default_exit_delay": "Default exit delay",
     "ha_state_when_armed": "Reports to Home Assistant as",
-    "ha_master_state": "Reports master as",
+    "ha_master_state": "Shown to Home Assistant as",
     "areas": "Areas armed",
     "exit_delay_override": "Exit delay",
-    "siren_duration_override": "Sounders run for",
-    "siren_duration": "Sounders run for",
+    "siren_duration_override": "Sirens sound for",
+    "siren_duration": "Sirens sound for",
     "follows": "Also follows",
     "members": "Members",
     "n": "Threshold",
@@ -336,12 +341,12 @@
     "require_code_to_disarm": "Code to disarm",
     "code_length": "Code length",
     "lockout_failures": "Failed attempts",
-    "lockout_window": "Window",
-    "lockout_duration": "Lockout",
+    "lockout_window": "Within (seconds)",
+    "lockout_duration": "Lock for (seconds)",
     "new_code": "Code",
     "new_duress_code": "Duress code",
     "code": "Code",
-    "code_exempt_when_identified": "Skip the code where identified",
+    "code_exempt_when_identified": "No code when identified",
     "ref": "Device identifier",
     "user_id": "Belongs to",
     "event_type": "Which button",
@@ -359,9 +364,9 @@
     "walk_test_timeout": "Walk test timeout",
     "channels": "Channels",
     "contacts": "Contacts",
-    "escalation_offset": "Step time",
+    "escalation_offset": "Delay from alarm start",
     "linked_user_id": "Linked user",
-    "guards": "Guards",
+    "guards": "Safety checks",
     "window": "Active window",
     "grace_seconds": "Grace period",
     "notify_contact_ids": "Announce to",
@@ -381,7 +386,7 @@
     "rf_zones": "Zones before suspecting",
     "rf_window": "Within",
     "rf_confirm": "Confirmation window",
-    "pseudonymise_after": "Pseudonymisation delay",
+    "pseudonymise_after": "Replace names after",
     "camera_entity_ids": "Cameras",
     "images": "Pictures",
     "transport": "Connection",
@@ -432,7 +437,7 @@
   },
   "arm_policy_hint": {
     "block": "Arming fails and names this zone.",
-    "auto_bypass": "Excluded and announced; it rejoins by itself once closed.",
+    "auto_bypass": "Excluded and announced; included again by itself once closed.",
     "arm_after_closing": "Arming waits, after the exit delay, until it closes. It fails if it stays open too long.",
     "ignore": "Arms regardless. It fires the next time it opens."
   },
@@ -451,16 +456,16 @@
     "disarm": "Disarm everything"
   },
   "overview": {
-    "no_codes_warning": "Nobody holds a code yet, so nothing asks for one: anyone with access to Home Assistant can disarm. Create a user with a code on the Users page and it stops being true.",
+    "no_codes_warning": "Nobody holds a code yet, so nothing asks for one: anyone with access to Home Assistant can disarm. Create a user with a code on the Users page to close this gap.",
     "memory_banner": "Alarm memory in {area}: {zones}. Disarm the area to clear it.",
     "bypassed": "Armed. Excluded: {zones}.",
     "master": "Whole house",
     "scenario": "Scenario",
     "no_scenarios": "No scenarios yet.",
-    "scenario_hint": "Choosing a scenario arms its areas. While armed, it switches: areas not in the new one are disarmed.",
+    "scenario_hint": "Choosing a scenario arms its areas. Chosen while another is armed, it takes its place: areas not in the new one are disarmed.",
     "disarm_all": "Disarm everything",
-    "force_arm": "Arm anyway (forced)",
-    "force_arm_hint": "Excludes the zones above and records the arming as forced.",
+    "force_arm": "Arm without these zones",
+    "force_arm_hint": "They stay unguarded until you disarm; recorded as a forced arming.",
     "area": "Area",
     "memory": "Alarm memory",
     "by_scenario": "Armed by scenario {scenario}",
@@ -473,7 +478,7 @@
     "entity_state": "Entity state",
     "all_ready": "Every zone is ready.",
     "technical_title": "Technical alarm",
-    "technical_banner": "Technical alarm: {zones}. A separate channel: arming does not affect it and disarming does not clear it. It clears once acknowledged and back to normal.",
+    "technical_banner": "Technical alarm: {zones}. A separate channel: arming does not affect it and disarming does not clear it. It clears once acknowledged and the sensors are back to normal.",
     "incident_title": "Incident {id}",
     "incident_zones": "Zones: {zones}",
     "incident_open": "Not acknowledged",
@@ -482,8 +487,15 @@
     "recent": "Recent events",
     "full_log": "Full log",
     "memory_banner_plain": "Alarm memory in {area}. Disarm the area to clear it.",
-    "low_battery": "Armed, but these zones are on a low battery: {zones}. Exclude one from this arming, or replace the cell.",
-    "exclude_low_battery": "Exclude them from this arming"
+    "low_battery": "Armed, but these zones are on a low battery: {zones}. Exclude them from this arming, or replace the batteries.",
+    "exclude_low_battery": "Exclude these zones",
+    "arm_scenario": "Arm “{name}”",
+    "ready": "Ready to arm",
+    "not_ready_zones": "Not ready: {zones}",
+    "not_ready_plain": "Not ready to arm",
+    "one_area": "Just one area…",
+    "one_area_hide": "Hide single-area arming",
+    "code_needed": "Asks for a code"
   },
   "areas": {
     "title": "Areas",
@@ -493,7 +505,7 @@
     "reports_as_hint": "What voice assistants and HomeKit see. Changes nothing about behaviour.",
     "entry_hint": "For zones that do not set their own.",
     "exit_hint": "Time to leave after arming, unless the scenario sets its own.",
-    "perimeter_hint": "The outer defence ring. An automatic rule never disarms a perimeter area, whatever the rule says (§9.4)."
+    "perimeter_hint": "The outer defence ring. An automatic rule never disarms a perimeter area, whatever the rule says."
   },
   "zones": {
     "title": "Zones",
@@ -504,7 +516,7 @@
     "pick_entity": "Choose an entity…",
     "entity": "{name} ({entity})",
     "entity_used": "{name} ({entity}) — already a zone",
-    "entity_hint": "Any sensor, contact, cover, lock, switch, person, event or tag.",
+    "entity_hint": "Any sensor, door sensor, cover, lock, switch, person, event or tag.",
     "trigger_title": "When is this zone triggered?",
     "trigger_intro": "{entity} is “{state}” right now.",
     "device_class": "Proposed from its type: {device_class}.",
@@ -514,11 +526,11 @@
     "now": "now",
     "other_state": "Another state",
     "add_state": "Add",
-    "state_hint": "Normally-closed and normally-open contacts behave in opposite ways. Open the door or walk past and watch the state.",
+    "state_hint": "Normally-closed and normally-open contact sensors behave in opposite ways. Open the door or walk past and watch the state.",
     "operator": "Triggered when",
     "threshold": "Threshold",
     "hysteresis": "Hysteresis",
-    "hysteresis_hint": "How far back it must go before it counts as normal again.",
+    "hysteresis_hint": "A margin: after triggering, the value must come back past the threshold by this much before the zone counts as normal again. It stops a reading that hovers at the threshold from firing over and over.",
     "attribute": "Attribute (optional)",
     "attribute_hint": "Read this attribute instead of the state.",
     "tag_hint": "A tag fires every time it is scanned.",
@@ -530,7 +542,7 @@
     "confirm_first": "Confirm the trigger to save.",
     "unconfirmed_notice": "This zone was brought across by an import, and its trigger is a proposal read from the sensor's type, not something anybody has checked. It stays switched off until you have: test the sensor, correct the trigger if it is wrong, tick the confirmation and switch the zone on.",
     "properties_title": "Behaviour",
-    "type_unavailable": "{type} — later update",
+    "type_unavailable": "{type} — in a later version",
     "type_hint": "A preset: it fills the fields below, which all stay editable.",
     "inherit_seconds": "inherit ({n} s)",
     "entry_delay_hint": "Empty: the area's default.",
@@ -539,7 +551,7 @@
     "supervision_hint": "Silent longer than this is a fault; any report counts, even without a change. Set it longer than this sensor's own reporting interval. Empty: off, which is the default and right for sensors that report only when they change.",
     "always_on_hint": "Fires even when disarmed.",
     "bypassable_hint": "Needed for automatic or forced exclusion.",
-    "allow_faulted_hint": "Arming proceeds even if this zone cannot be seen. Leave off unless you know why.",
+    "allow_faulted_hint": "Arming proceeds even if this zone cannot be read. Leave off unless you know why.",
     "enabled_hint": "A disabled zone is ignored completely.",
     "key_title": "Key action",
     "pick_scenario": "Choose a scenario…",
@@ -556,13 +568,13 @@
     "chime_hint": "Plays the chime when it opens while its area is not armed.",
     "in_group": "Member of the verification group {group}. Change it on the Verification groups page.",
     "bypass": "Exclude",
-    "unbypass": "Put back",
+    "unbypass": "Include again",
     "bypass_for": "Exclude for",
     "bypass_hours": "{hours} h",
-    "bypass_until": "back at {time}",
-    "bypass_indefinite": "until you put it back",
-    "bypass_hint": "An excluded zone does not alarm. Without a duration it comes back when the area is disarmed; with one it comes back on its own, and says so.",
-    "silent_hint": "The response runs without the sounders the settings list.",
+    "bypass_until": "included again at {time}",
+    "bypass_indefinite": "until you include it again",
+    "bypass_hint": "An excluded zone does not alarm. Without a duration it is included again when the area is disarmed; with one it is included again on its own, and says so.",
+    "silent_hint": "The response runs without the action kinds chosen in Settings, such as sirens.",
     "profile_hint": "Read only when this zone alarms. Empty: the area's profile.",
     "bypass_minutes": "Minutes",
     "bypass_minutes_placeholder": "e.g. 20",
@@ -573,21 +585,23 @@
     "camera_remove": "Remove",
     "camera_add": "Add a camera…",
     "cameras_hint": "A notification set to show the zones' cameras sends these, in this order, one picture each after the text, and at most four cameras across the whole alarm.",
-    "cameras_none_hint": "No cameras: a notification set to show the zones' cameras sends its text alone when this zone goes. Choose the camera that shows it, and the one in the room next door."
+    "cameras_none_hint": "No cameras: a notification set to show the zones' cameras sends its text alone when this zone alarms. Choose the camera that shows it, and the one in the room next door."
   },
   "scenarios": {
     "title": "Scenarios",
     "add": "Add scenario",
     "new": "New scenario",
     "active": "running",
-    "shared_mode": "Shared with another scenario: the master cannot arm this mode.",
+    "shared_mode": "Shared with another scenario: Whole house cannot arm this mode.",
     "area_default": "each area's own",
     "global_default": "global default",
     "global_seconds": "global ({n} s)",
-    "mode_hint": "Several scenarios may share one; the master then refuses that mode and the scenario is chosen here.",
+    "mode_hint": "What the Whole house panel reports to Home Assistant — and so to HomeKit, Google and Alexa — while this scenario is armed. Several scenarios may share one; the Whole house panel then refuses that mode and the scenario is chosen here.",
     "exit_hint": "Empty: each area's own exit delay.",
     "siren_hint": "At most 900 s. Empty: the global setting.",
-    "areas_hint": "Only these are armed. Switching to another scenario disarms the areas it does not list."
+    "areas_hint": "Only these are armed. Switching to another scenario disarms the areas it does not list.",
+    "everyone": "Everyone with permission",
+    "allowed_users_hint": "Only the people ticked may use this scenario. Changing this list also needs the “Manage users and codes” permission."
   },
   "card": {
     "arm": "Arm",
@@ -596,31 +610,52 @@
     "entity_missing": "Entity not found: {entity}",
     "area_countdown": "{area} — {countdown}",
     "technical": "Technical alarm: {zones}",
-    "incident": "Incident: {zones}",
+    "incident": "Alarm: {zones}",
     "scenario": "Scenario",
     "pick_scenario": "Arm a scenario…",
     "not_ready": "Not ready to arm",
     "zone_in": "{zone} — {areas}",
     "editor_entity": "Panel to show",
-    "editor_master": "Whole house (master)",
+    "editor_master": "Whole house",
     "editor_layout": "Layout",
-    "layout_full": "Full — areas, scenarios, countdown and what blocks arming",
-    "layout_compact": "Compact — state and one action",
-    "editor_hint": "The keypad layout always shows the pad, for a wall tablet. Full and compact open it when a code is asked for. The badge has nothing to press.",
-    "layout_badge": "Badge — state only, for a dashboard of your own",
+    "layout_full": "Full",
+    "layout_compact": "Compact",
+    "editor_hint": "Full and Compact open the keypad when a code is asked for; Keypad always shows it.",
+    "layout_badge": "Badge",
     "layout_keypad": "Keypad",
-    "code_hint": "{n} digits",
+    "code_hint": "{n}-digit code",
     "code_clear": "Clear",
     "code_confirm": "Confirm",
     "code_entered": "Code entered",
-    "code_show": "Enter a code",
+    "code_show": "Enter the code",
     "code_hide": "Hide the keypad",
     "low_battery": "Low battery: {zones}",
-    "auto_badge_arm": "arming in {seconds} s",
-    "auto_badge_disarm": "disarming in {seconds} s",
-    "auto_badge_switch": "switching in {seconds} s",
+    "auto_badge_arm": "arming in {seconds} s",
+    "auto_badge_disarm": "disarming in {seconds} s",
+    "auto_badge_switch": "switching in {seconds} s",
     "not_sent": "The command did not reach Foyer. Nothing changed: try again.",
-    "locked_until": "Too many wrong codes: locked until {time}."
+    "locked_until": "Too many wrong codes: try again after {time}.",
+    "technical_badge": "Technical alarm",
+    "incident_badge": "Alarm",
+    "code_for_arm": "Code to arm {target}",
+    "code_for_force": "Code to arm {target} anyway",
+    "code_for_disarm": "Code to disarm {target}",
+    "code_for_bypass": "Code to exclude {target}",
+    "code_for_walk": "Code to end the walk test",
+    "code_for_cancel": "Code to cancel {target}",
+    "code_for_ack_technical": "Code to acknowledge the technical alarm",
+    "code_for_ack_incident": "Code to acknowledge the alarm",
+    "confirm_arm": "Arm {target}",
+    "confirm_force": "Arm {target} anyway",
+    "confirm_disarm": "Disarm {target}",
+    "confirm_bypass": "Exclude {target}",
+    "code_retype": "Type the code again for this action",
+    "clear_memory": "Clear alarm memory",
+    "arm_scenario": "Arm {scenario}",
+    "layout_hint_full": "Areas, scenarios, countdown and what stops arming.",
+    "layout_hint_compact": "One row: state, one action and the scenario.",
+    "layout_hint_badge": "State only, for a dashboard of your own. Nothing to press.",
+    "layout_hint_keypad": "PIN pad for a wall tablet."
   },
   "help": {
     "toggle": "About this section",
@@ -639,7 +674,7 @@
         },
         "scenario": {
           "term": "Scenario",
-          "text": "Arms a set of areas. Chosen while armed, it switches."
+          "text": "Arms a set of areas. Chosen while another is armed, it takes its place."
         },
         "not_ready": {
           "term": "Not ready",
@@ -647,7 +682,7 @@
         },
         "memory": {
           "term": "Alarm memory",
-          "text": "Stays after the sounders stop, until someone disarms."
+          "text": "Shows which zones alarmed. It stays after the sirens stop, until someone disarms."
         },
         "technical": {
           "term": "Technical alarm",
@@ -661,7 +696,7 @@
     },
     "areas": {
       "title": "What an area is",
-      "intro": "A group of zones armed together, with its own state and alarm panel entity. Group by what you arm together — perimeter, interior day, interior night — not by room: that is what makes \"dog at home, perimeter only\" possible.",
+      "intro": "A group of zones armed together, with its own state and alarm panel entity. Group by what you arm together — perimeter, interior day, interior night — not by room: that is what makes “dog at home, perimeter only” possible.",
       "items": {
         "own_state": {
           "term": "Own state",
@@ -673,7 +708,7 @@
         },
         "exit": {
           "term": "Default exit delay",
-          "text": "Zones still open when it ends are handled by their own arm policy."
+          "text": "Zones still open when it ends are handled by their own “If open when arming” setting."
         },
         "reports_as": {
           "term": "Reports as",
@@ -699,7 +734,7 @@
         },
         "arm_policy": {
           "term": "If open when arming",
-          "text": "Block names the zone; exclude lets it rejoin once closed; ignore arms anyway."
+          "text": "Block names the zone; exclude includes it again once closed; ignore arms anyway."
         },
         "hold": {
           "term": "Arm after closing",
@@ -710,16 +745,16 @@
           "text": "Fires even when disarmed. Tamper and panic are always on."
         },
         "supervision": {
-          "term": "Supervision",
-          "text": "A sensor silent too long is a fault, never “all quiet”."
+          "term": "Silence limit",
+          "text": "A sensor that reports nothing for too long is a fault, never “all quiet”."
         },
         "verification": {
           "term": "Verification",
-          "text": "Cross-zone and activations needed cut false alarms; a group does it for several zones."
+          "text": "Cross-zone verification and activations needed cut false alarms; a group does it for several zones."
         },
         "cameras": {
           "term": "Cameras",
-          "text": "The cameras that show this zone. A notification set to show the zones' cameras sends them when it goes."
+          "text": "The cameras that show this zone. A notification set to show the zones' cameras sends them when it alarms."
         }
       }
     },
@@ -732,8 +767,8 @@
           "text": "Exactly these are armed by it."
         },
         "reports_master": {
-          "term": "Reports master as",
-          "text": "The mode HomeKit and voice assistants see. A mode shared by two scenarios cannot be armed from the master."
+          "term": "Whole house shows as",
+          "text": "The mode HomeKit and voice assistants see. A mode shared by two scenarios cannot be armed from Whole house."
         },
         "switching": {
           "term": "Switching",
@@ -744,14 +779,14 @@
           "text": "Replaces each area's own for this scenario."
         },
         "siren": {
-          "term": "Sounders run for",
+          "term": "Sirens sound for",
           "text": "A night scenario may sound for less. Never more than 900 s."
         }
       }
     },
     "groups": {
       "title": "What a verification group is",
-      "intro": "A group confirms an alarm when at least N of its member zones detect within a window: the strongest tool against false alarms in large spaces. A zone's cross-zone field is the same engine, as a 2-of-2 group.",
+      "intro": "A group confirms an alarm when at least a set number of its member zones (the threshold) detect within a window: the strongest tool against false alarms in large spaces. Cross-zone verification on a zone works the same way, as a group of two where both must detect.",
       "items": {
         "threshold": {
           "term": "Threshold and window",
@@ -773,7 +808,7 @@
     },
     "settings": {
       "title": "What these settings do",
-      "intro": "Settings that apply to the whole installation: the chime, and where every response chain ends.",
+      "intro": "Settings that apply to the whole system: the chime, and where every response chain ends.",
       "items": {
         "targets": {
           "term": "Play on",
@@ -785,7 +820,7 @@
         },
         "quiet": {
           "term": "Quiet hours",
-          "text": "No chime inside this window. A target may carry a window of its own."
+          "text": "No chime inside this window. A single speaker or siren may have a window of its own."
         },
         "during_exit": {
           "term": "During the exit delay",
@@ -823,11 +858,11 @@
       "items": {
         "inheritance": {
           "term": "Inheritance",
-          "text": "Zone, then area, then scenario, then the global default. The page shows the effective profile and where it comes from."
+          "text": "Zone, then area, then scenario, then the global default. The page shows the profile in use and where it comes from."
         },
         "moments": {
           "term": "When it runs",
-          "text": "One action can answer several moments. Some moments arrive with a later phase and are marked."
+          "text": "One action can answer several moments. Some moments arrive in a later version and are marked."
         },
         "conditions": {
           "term": "Conditions",
@@ -835,7 +870,7 @@
         },
         "severity": {
           "term": "Severity",
-          "text": "Only decides which escalation an incident adopts when profiles of different strength contribute to it."
+          "text": "Only decides which escalation (the timed sequence of notifications) an incident follows when profiles of different strength contribute to it."
         },
         "silent": {
           "term": "Silent zones",
@@ -879,7 +914,7 @@
     },
     "users": {
       "title": "What this page decides",
-      "intro": "Everyone has their own code, because a shared one makes “who disarmed at 03:14?” unanswerable. Codes are stored as hashes and checked in the backend only: a card is a keypad that transmits a code, never something that decides.",
+      "intro": "Everyone has their own code, because a shared one makes “who disarmed at 03:14?” unanswerable. Codes are stored as hashes and checked only by Foyer on the server: a card is a keypad that transmits a code, never something that decides.",
       "items": {
         "own_code": {
           "term": "One code each",
@@ -955,7 +990,7 @@
         },
         "battery": {
           "term": "Battery",
-          "text": "A low battery warns and never blocks: a contact at 15 % still sees. A battery entity that cannot be read at all is a fault, and that one does block."
+          "text": "A low battery warns and never blocks: a door sensor at 15 % still works. A battery entity that cannot be read at all is a fault, and that one does block."
         },
         "nothing_runs": {
           "term": "Nothing is executed",
@@ -997,11 +1032,11 @@
       "items": {
         "order": {
           "term": "Channel order",
-          "text": "Tried highest first. Put the channel that survives a cut internet connection somewhere in the list, not at the bottom."
+          "text": "Tried highest first. Put the channel that survives a cut internet connection near the top, not at the bottom."
         },
         "quiet": {
           "term": "Quiet hours",
-          "text": "Only what is loud enough reaches this contact inside the window. It never suppresses an alarm to the whole household."
+          "text": "Only what is serious enough reaches this contact inside the window. It never suppresses an alarm to the whole household."
         },
         "linked": {
           "term": "Linked user",
@@ -1009,11 +1044,11 @@
         },
         "step": {
           "term": "Escalation step",
-          "text": "A notification with a time on it, on the profile that answers the alarm. The policy stops the instant anyone acknowledges."
+          "text": "A notification with a time on it, on the profile that answers the alarm. The escalation stops the moment anyone acknowledges."
         },
         "acknowledge": {
           "term": "Acknowledgement",
-          "text": "Four paths stop the policy, and each records who answered and how."
+          "text": "Four paths stop the escalation, and each records who answered and how."
         },
         "webhook": {
           "term": "Acknowledgement webhook",
@@ -1027,14 +1062,14 @@
     },
     "rules": {
       "title": "What this page decides",
-      "intro": "A closed rule model, not an automation engine: four triggers, three actions, an active window and three guards. Rules act as a user would, so everything they do is logged with the rule's name against the auto_rule channel — and everything a guard stopped is logged too, because “why did it not arm last night?” is a question people ask.",
+      "intro": "A closed rule model, not an automation engine: four triggers, three actions, an active window and three safety checks. Rules act as a user would, so everything they do is logged with the rule's name — and everything a safety check stopped is logged too, because “why did it not arm last night?” is a question people ask.",
       "items": {
         "trigger": {
           "term": "Trigger",
-          "text": "Absence and entity state are conditions that stay true, so a rule a guard blocked acts as soon as the guard clears. A time or an arrival happens once: blocked, that occurrence is missed."
+          "text": "Absence and entity state are conditions that stay true, so a rule a safety check blocked acts as soon as the check clears. A time or an arrival happens once: blocked, that occurrence is missed."
         },
         "guards": {
-          "term": "Guards",
+          "term": "Safety checks",
           "text": "Each one is a reason not to act. They are evaluated again when the countdown ends, because two minutes is long enough for somebody to come home."
         },
         "grace": {
@@ -1055,7 +1090,7 @@
         },
         "next": {
           "term": "Next automatic action",
-          "text": "What is scheduled, not what will certainly happen: the guards are evaluated at the moment the rule acts, and the log says which one stopped it."
+          "text": "What is scheduled, not what will certainly happen: the safety checks are evaluated at the moment the rule acts, and the log says which one stopped it."
         }
       }
     },
@@ -1098,7 +1133,7 @@
   "notification": {
     "device_rejected": {
       "title": "Foyer: unknown device",
-      "message": "A device calling itself {device} tried to command the alarm and is not one of this installation's arming devices. Nothing was changed. Add it under Arming devices if it is yours."
+      "message": "A device calling itself {device} tried to command the alarm and is not one of this system's arming devices. Nothing was changed. Add it under Arming devices if it is yours."
     },
     "armed": {
       "title": "Foyer: armed",
@@ -1114,19 +1149,19 @@
     },
     "arm_failed": {
       "title": "Foyer: arming failed",
-      "message": "{area} did not arm. Still open or in fault: {zones}. It is disarmed."
+      "message": "{area} did not arm. Still open or in fault: {zones}. It stays disarmed."
     },
     "forced_arm": {
       "title": "Foyer: forced arming",
-      "message": "{area}{scenario} armed by force. Excluded: {zones}."
+      "message": "{area}{scenario}: forced arming. Excluded: {zones}."
     },
     "zone_bypassed": {
       "title": "Foyer: zone excluded",
-      "message": "{zone} was open at arming and is excluded. It rejoins by itself once it closes."
+      "message": "{zone} was open at arming and is excluded. It is included again by itself once it closes."
     },
     "zone_rejoined": {
-      "title": "Foyer: zone back in",
-      "message": "{zone} has closed and is protected again."
+      "title": "Foyer: zone included again",
+      "message": "{zone} has closed and is watched again."
     },
     "entry_started": {
       "title": "Foyer: entry delay",
@@ -1137,16 +1172,16 @@
       "message": "Alarm in {area}: {zones}."
     },
     "siren_cutoff": {
-      "title": "Foyer: sounders stopped",
+      "title": "Foyer: sirens stopped",
       "message": "The alarm in {area} is over; the area is back to its previous state. Disarm to clear the alarm memory."
     },
     "zone_fault": {
       "title": "Foyer: zone fault",
-      "message": "Zone {zone} in {area} cannot be seen. It blocks arming until it is seen again."
+      "message": "Zone {zone} in {area} cannot be read. It blocks arming until it reports again."
     },
     "ha_restarted": {
       "title": "Foyer: back online",
-      "message": "Foyer was not running for a while. The house was not protected during that time."
+      "message": "Foyer was not running for a while. The house was not watched during that time."
     },
     "technical_raised": {
       "title": "Foyer: TECHNICAL ALARM",
@@ -1158,7 +1193,7 @@
     },
     "technical_cleared": {
       "title": "Foyer: technical alarm cleared",
-      "message": "{zone} is back to normal and acknowledged."
+      "message": "{zone}: back to normal, and acknowledged."
     },
     "incident_opened": {
       "title": "Foyer: incident opened",
@@ -1170,14 +1205,14 @@
     },
     "incident_acknowledged": {
       "title": "Foyer: incident acknowledged",
-      "message": "The alarm has been acknowledged: {zones}."
+      "message": "Somebody has acknowledged the alarm: {zones}."
     },
     "incident_closed": {
       "title": "Foyer: incident closed",
       "message": "The incident is over: {zones}."
     },
     "verification_pending": {
-      "title": "Foyer: detection to confirm",
+      "title": "Foyer: waiting for confirmation",
       "message": "{zone} detected; waiting for confirmation."
     },
     "verification_satisfied": {
@@ -1201,8 +1236,8 @@
       "message": "A wrong code was entered on {channel}."
     },
     "lockout": {
-      "title": "Foyer: locked out",
-      "message": "Too many wrong codes on {channel}. That channel is locked."
+      "title": "Foyer: code entry locked",
+      "message": "Too many wrong codes on {channel}. Codes from there are refused for a while."
     },
     "low_battery": {
       "title": "Foyer: low battery",
@@ -1210,7 +1245,7 @@
     },
     "walk_test_started": {
       "title": "Foyer: walk test",
-      "message": "A walk test has started. Response actions are inhibited."
+      "message": "A walk test has started. Response actions are held back."
     },
     "walk_test_ended": {
       "title": "Foyer: walk test over",
@@ -1230,7 +1265,7 @@
     },
     "escalation_skipped": {
       "title": "Foyer: notifications were not sent",
-      "message": "Home Assistant was down when these escalation steps fell due, so they were not sent."
+      "message": "Home Assistant was down when these escalation steps were due, so they were not sent."
     },
     "acknowledge": "Acknowledge",
     "auto_pending": {
@@ -1258,12 +1293,12 @@
       "message": "Rule “{rule}” did not act."
     },
     "auto_suspension_set": {
-      "title": "Foyer: automatic arming suspended",
-      "message": "Automatic arming is suspended."
+      "title": "Foyer: automatic rules suspended",
+      "message": "Automatic rules are suspended."
     },
     "auto_suspension_cleared": {
       "title": "Foyer: suspension over",
-      "message": "The suspension of automatic arming has ended."
+      "message": "The suspension of automatic rules has ended."
     },
     "auto_arming_switched": {
       "title": "Foyer: automatic rules",
@@ -1366,12 +1401,12 @@
     "title": "Settings",
     "chime_title": "Chime",
     "chime_intro": "Sounds when a zone with the chime switched on opens while its area is not armed — not merely when the house is disarmed. With only the perimeter armed, an internal door still chimes.",
-    "targets_hint": "Media players, sirens, and notify services or entities — the phone and Telegram chime too. Each target may carry quiet hours of its own.",
+    "targets_hint": "Media players, sirens, and notify services or entities — the phone and Telegram chime too. Each one may have quiet hours of its own.",
     "no_targets": "No media player or siren found.",
     "sound_hint": "For media players: a media id or URL, such as media-source://media_source/local/chime.mp3. A siren sounds for one second, if it supports a set duration; otherwise it is skipped.",
     "tts_hint": "Used to speak the zone name.",
     "pick_tts": "Choose…",
-    "volume_hint": "Percent. Empty: leave the player's volume as it is.",
+    "volume_hint": "Per cent. Empty: leave the player's volume as it is.",
     "quiet_hint": "No chime in this window, which may cross midnight. Empty: never quiet.",
     "during_exit_hint": "Off: the door you leave by does not chime while the area counts down.",
     "switch_hint": "switch.foyer_chime silences it without changing these settings.",
@@ -1385,8 +1420,8 @@
     "none": "None",
     "defaults_title": "Defaults",
     "defaults_intro": "What new areas start with, and the limits that apply to every area.",
-    "siren_duration_hint": "How long sounders run before stopping. Capped at 900 seconds, the EN 50131 reference for external sounders; a disarm stops them sooner.",
-    "arm_hold_hint": "How long a zone set to arm after closing may stay open once the exit delay is over. After that, arming fails as if the zone had blocked it.",
+    "siren_duration_hint": "How long sirens sound before stopping. Capped at 900 seconds, the EN 50131 reference for outdoor sirens; a disarm stops them sooner.",
+    "arm_hold_hint": "How long a zone set to “Arm after closing” may stay open once the exit delay is over. After that, arming fails as if the zone had blocked it.",
     "area_defaults_hint": "Only for areas created from now on. Existing areas keep their own delays.",
     "log_title": "Event log",
     "log_intro": "Which categories are recorded, and for how long each is kept.",
@@ -1404,11 +1439,11 @@
     "language_system": "As Home Assistant",
     "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: notifications, and the zone name the chime speaks.",
     "low_battery_hint": "Per cent. Below this a numeric battery counts as low. A battery binary sensor is read by its own “on” instead.",
-    "walk_test_hint": "Seconds a walk test runs without a detection before it ends itself. Each detection pushes it back, and an absolute cap ends it whatever happens: §5.3 makes the auto-exit mandatory, so there is no value here that switches it off.",
+    "walk_test_hint": "Seconds a walk test runs without a detection before it ends itself. Each detection pushes it back, and an absolute cap ends it whatever happens. The automatic end is mandatory, so no value here switches it off.",
     "short_preset": "Shorten to {days} days",
-    "short_preset_hint": "Sets {categories} to {days} days and leaves the rest alone. Offered for installations with domestic staff: those are the categories that name people, and the others carry faults and door states, which name nobody and are what you read when a sensor did not react three weeks ago.",
+    "short_preset_hint": "Sets {categories} to {days} days and leaves the rest alone. Offered for homes with domestic staff: those are the categories that name people, and the others carry faults and door states, which name nobody and are what you read when a sensor did not react three weeks ago.",
     "privacy_title": "Personal data in the log",
-    "privacy_intro": "The log is about people, and not only about whoever installed the system. These two settings are the installation's; erasing or exporting one person's rows is done on the log page.",
+    "privacy_intro": "The log is about people, and not only about whoever installed the system. These two settings apply to the whole system; erasing or exporting one person's rows is done on the log page.",
     "pseudonymise": "Replace names in older rows",
     "pseudonymise_warning": "This trades away the ability to answer “who disarmed that night” for every row older than the delay — which is the very question the log exists to answer. It is a real trade, not a free safety feature. It runs once a day and cannot be undone: switching it off later brings no name back.",
     "pseudonymise_hint": "Rows older than this keep a stable identifier instead of a name, so the shape of the nights survives and the names do not. Switching it on and switching it off are both recorded.",
@@ -1436,7 +1471,7 @@
     "alarm": "On alarm",
     "state": "On state change",
     "system": "On system event",
-    "later": "Arrives in a later phase",
+    "later": "In a later version",
     "health": "On system health"
   },
   "moment": {
@@ -1445,7 +1480,7 @@
     "arm_failed": "Arming failed",
     "forced_arm": "Forced arming",
     "zone_bypassed": "Zone excluded",
-    "zone_rejoined": "Zone back in",
+    "zone_rejoined": "Zone included again",
     "entry_started": "Entry delay started",
     "triggered": "Alarm",
     "siren_cutoff": "Siren cutoff",
@@ -1458,13 +1493,13 @@
     "incident_joined": "Zone joined the incident",
     "incident_acknowledged": "Incident acknowledged",
     "incident_closed": "Incident closed",
-    "verification_pending": "Group not yet satisfied",
-    "verification_satisfied": "Group satisfied",
-    "verification_expired": "Group window expired",
+    "verification_pending": "Waiting for confirmation",
+    "verification_satisfied": "Detection confirmed",
+    "verification_expired": "Not confirmed in time",
     "chime": "Chime",
-    "chime_switched": "Chime switched",
+    "chime_switched": "Chime switched on or off",
     "code_rejected": "Code rejected",
-    "lockout": "Keypad locked out",
+    "lockout": "Code entry locked",
     "low_battery": "Low battery",
     "walk_test_started": "Walk test started",
     "walk_test_ended": "Walk test ended",
@@ -1487,7 +1522,7 @@
     "auto_blocked": "Automatic rule did not act",
     "auto_suspension_set": "Automatic rules suspended",
     "auto_suspension_cleared": "Suspension over",
-    "auto_arming_switched": "Automatic rules switched",
+    "auto_arming_switched": "Automatic rules switched on or off",
     "alarm_ended": "Alarm over",
     "alarm_cleared": "Alarm memory cleared",
     "access_recovered": "Access recovered"
@@ -1507,7 +1542,7 @@
     "max": "At most two conditions per action. Anything more belongs in a Home Assistant automation subscribed to foyer_event."
   },
   "profiles": {
-    "title": "Profiles",
+    "title": "Response profiles",
     "add": "Add profile",
     "new": "New profile",
     "none": "No profiles yet.",
@@ -1534,8 +1569,8 @@
     "revert_hint": "In seconds. Empty: leave it as it is.",
     "camera_hint": "The notification attaches the live picture; the file is written to the camera folder.",
     "call_service_hint": "Anything Foyer does not model natively. Data is JSON.",
-    "escalation_later": "An escalation step is a notification with a time on it: give one a step time, and it waits instead of firing at once. Who it reaches lives on the Contacts page.",
-    "future_moment": "Raised from a later phase on.",
+    "escalation_later": "An escalation step is a notification with a time on it: give one a delay from the alarm start, and it waits instead of firing at once. Who it reaches is set on the Contacts page.",
+    "future_moment": "Arrives in a later version.",
     "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written.",
     "attach_hint_telegram": "Telegram fetches the picture from outside the house, so a still is written to the camera folder and sent with the message. That folder must be in allowlist_external_dirs.",
     "pick_or_type": "Pick one, or type it: an integration that is not loaded right now is not in the list.",
@@ -1553,7 +1588,7 @@
     "escalation_hint": "Seconds from the start of the escalation. With a time here this notification becomes a step: it waits, and it stops the moment somebody acknowledges.",
     "escalation_moment_hint": "Only an alarm or a technical alarm can be escalated: they are the two that can be acknowledged.",
     "images_text_alone": "Pictures go only with an alarm: a trigger, a zone joining it, an escalation step, a technical alarm. For “{moments}” this notification sends its text alone. Never at the start of an entry delay, which is somebody coming home.",
-    "images_channels": "Only push and chat channels receive the pictures. An SMS, a voice call or an \"other\" channel receives the text alone, rather than one more message per camera.",
+    "images_channels": "Only push and chat channels receive the pictures. An SMS, a voice call or an “other” channel receives the text alone, rather than one more message per camera.",
     "effective_from": "Effective profile: {profile} — {from}",
     "flash_none": "No flash",
     "flash_short": "Short flash",
@@ -1628,13 +1663,13 @@
     "reloaded": "Foyer reloaded",
     "device_rejected": "Device refused",
     "config_history_erased": "History of a person erased",
-    "config_pseudonymisation": "Timed pseudonymisation changed",
+    "config_pseudonymisation": "Automatic name replacement changed",
     "duress": "Disarmed under duress",
     "auto_pending": "Automatic action counting down",
     "auto_cancelled": "Automatic action cancelled",
     "auto_blocked": "Automatic action held back",
-    "auto_arming_switched": "Automatic arming switched",
-    "auto_suspension_set": "Automatic arming suspended",
+    "auto_arming_switched": "Automatic rules switched on or off",
+    "auto_suspension_set": "Automatic rules suspended",
     "auto_suspension_cleared": "Suspension lifted",
     "action_test": "Action tested",
     "simulation_run": "Simulation run",
@@ -1685,15 +1720,15 @@
     "changed": "changed",
     "and_more": "and {count} more",
     "gap_short": "{seconds} s",
-    "claimed": "(claimed)",
+    "claimed": "(not verified)",
     "person_title": "One person's data",
     "person_intro": "The log records who was in the house and when, for as long as retention keeps it. Export hands somebody every row that is about them; erasing takes them out of the log and leaves every event where it is, so the record of what happened survives the removal of who.",
     "person": "Person",
     "person_none": "Choose a person",
     "person_found": "Rows that would be erased: {total} — {by_id} found by their account, {by_name} by name alone (written before they were a Foyer user, or under a name they have since changed), {about} about their account.",
     "person_export_rows": "Rows in an export: {rows} — what they did, plus what the house did to them: their tag refused, an escalation that reached them.",
-    "person_export_csv": "Export their rows (CSV)",
-    "person_export_json": "Export their rows (JSON)",
+    "person_export_csv": "Export rows (CSV)",
+    "person_export_json": "Export rows (JSON)",
     "person_erase": "Erase their history",
     "person_erase_yes": "Erase",
     "person_erase_confirm": "This empties the name, the account, the channel and the device on every row found — {rows} of them — for good. The events stay: the log will still say what happened that night, and will no longer say who. The erasure itself is recorded, without naming them.",
@@ -1709,11 +1744,11 @@
   "alarmo": {
     "title": "Import from Alarmo",
     "intro": "Reads Alarmo's configuration from this Home Assistant and brings its areas, sensors, modes and people into Foyer, beside what is already here. It is a best-effort tool, not a migration: the file it reads is Alarmo's internal format, which may change in any Alarmo release without notice and without anybody being at fault, so it tells you everything it could not bring across. Nothing is written until you have read that and pressed Apply.",
-    "read": "Read Alarmo's configuration",
+    "read": "Read from Alarmo",
     "apply": "Apply",
     "summary_title": "What would be added",
     "report_title": "What to know before you apply",
-    "applied": "Imported. Now give each person a code on page 7, and confirm each zone on page 3 before switching it on.",
+    "applied": "Imported. Now give each person a code on the Users page, and confirm each zone on the Zones page before switching it on.",
     "hint": "Until Foyer's zones are confirmed, keep Alarmo watching the house — but never arm both on the same sensors.",
     "created": {
       "areas": "Areas: {names}",
@@ -1762,9 +1797,9 @@
       "changed": "Something changed since the preview — Alarmo's file, Foyer's configuration or one of the sensors. Read it again, and look before applying."
     },
     "line": {
-      "codes": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Everybody brought in — {people} in all — needs a new code on page 7 before they can disarm with one.",
-      "codes_nobody": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Nobody new was brought in, so the people who can disarm are the ones already on page 7.",
-      "zones_to_confirm": "Zones brought in: {zones}, every one switched off. Each trigger is Foyer's proposal from the kind of sensor, not something anybody has checked: until you confirm it on page 3 and switch the zone on, it watches nothing.",
+      "codes": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Everybody brought in — {people} in all — needs a new code on the Users page before they can disarm with one.",
+      "codes_nobody": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Nobody new was brought in, so the people who can disarm are the ones already on the Users page.",
+      "zones_to_confirm": "Zones brought in: {zones}, every one switched off. Each trigger is Foyer's proposal from the kind of sensor, not something anybody has checked: until you confirm it on the Zones page and switch the zone on, it watches nothing.",
       "unavailable_is_fault": "A sensor that goes unavailable is a fault in Foyer, never a quiet one: it blocks arming and is reported. Alarmo read it as closed unless told otherwise.",
       "sensor_duplicate": "{entity} is listed twice in the file; it was brought in once.",
       "sensor_exists": "{entity} is already Foyer's zone “{zone}”, which was left exactly as it is.",
@@ -1785,14 +1820,14 @@
       "area_split": "Alarmo's area “{area}” became {areas}: its sensors were watched in different modes, and in Foyer a scenario arms whole areas.",
       "arm_while_open": "Sensors that Alarmo let you arm with open, as long as they were closed when the exit delay ran out: {zones}. In Foyer they must be closed when you press arm — or be set to arm after closing.",
       "arm_on_close": "“{zone}” armed the house five seconds after it closed, in Alarmo. In Foyer it is set to arm after closing, which also waits for the exit delay.",
-      "auto_bypass_partial": "“{zone}” was bypassed automatically in some modes and not in others. Foyer has one policy per zone, and it took the one that refuses to arm with the zone open.",
+      "auto_bypass_partial": "“{zone}” was excluded automatically in some modes and not in others. Foyer has one policy per zone, and it took the one that refuses to arm with the zone open.",
       "mode_unused": "The mode {mode} was switched on in Alarmo but watched no sensor that came across, so no scenario was made for it.",
-      "scenario_extended": "Your scenario “{scenario}” already reports {mode} to Home Assistant, so it now also arms the areas brought in for that mode — a second scenario would make the master refuse it. Its own exit delay, siren duration and code settings apply to them.",
-      "scenario_mode_ambiguous": "Two scenarios already report {mode}, so the master refuses that mode. A new one was made anyway, and the master refuses the mode until only one is left.",
+      "scenario_extended": "Your scenario “{scenario}” already reports {mode} to Home Assistant, so it now also arms the areas brought in for that mode — a second scenario would make Whole house refuse it. Its own exit delay, siren duration and code settings apply to them.",
+      "scenario_mode_ambiguous": "Two scenarios already report {mode}, so Whole house refuses that mode. A new one was made anyway, and Whole house refuses the mode until only one is left.",
       "siren_varies": "Alarmo's areas sounded for different times in this mode. “{scenario}” has one siren duration, and it took the longest: {seconds} s.",
       "exit_abort": "Sensors that stopped an arming in Alarmo the moment they opened during the exit delay: {zones}. Foyer checks them when you press arm and when the delay runs out, not in between.",
-      "scenario_restricted": "Only some people may use “{scenario}”, and the people brought in are not among them until you add them on page 4.",
-      "profile_hides_scenario": "“{area}” answers with its own response profile, so it no longer inherits the one “{scenario}” has. Check on page 5 that it notifies whoever that one did.",
+      "scenario_restricted": "Only some people may use “{scenario}”, and the people brought in are not among them until you add them on the Scenarios page.",
+      "profile_hides_scenario": "“{area}” answers with its own response profile, so it no longer inherits the one “{scenario}” has. Check on the Response profiles page that it notifies whoever that one did.",
       "automation_no_area": "“{automation}” acted on an area that did not come across, and was not brought in.",
       "automation_empty": "“{automation}” had nothing to do, and was not brought in.",
       "siren_not_imported": "“{automation}” sounds a siren at another moment than the alarm, or with a tone or a duration of its own. Brought across, that would become the full siren for the full time, so it was not.",
@@ -1801,24 +1836,24 @@
       "person_unnamed": "A person with no name in the file was not brought in.",
       "person_exists": "{person} is already a Foyer user, and was left exactly as they are.",
       "override_code": "{person} had an override code in Alarmo, which armed past open sensors. In Foyer that is the force-arm permission, and it was given.",
-      "person_scope_empty": "{person} was limited to areas that did not come across, so for now they may use none; widen it on page 7.",
+      "person_scope_empty": "{person} was limited to areas that did not come across, so for now they may use none; widen it on the Users page.",
       "automation_disabled": "The automation “{automation}” was switched off in Alarmo, and was not brought in.",
-      "automation_notification": "The notification “{automation}” was not brought in. A notification that arrives somewhere unintended is worse than one you set up again: in Foyer, notifications go to contacts, on page 6.",
+      "automation_notification": "The notification “{automation}” was not brought in. A notification that arrives somewhere unintended is worse than one you set up again: in Foyer, notifications go to contacts, on the Contacts page.",
       "automation_trigger": "“{automation}” starts on something Foyer's response profiles have no moment for, and was not brought in.",
       "automation_modes": "“{automation}” ran only in some modes. A Foyer profile answers for an area whatever the scenario, so it was not brought in.",
       "action_not_imported": "“{automation}” calls {service}, which is not a siren or a switch; that part was not brought in.",
       "siren_off_not_needed": "“{automation}” turned a siren off. Foyer does that itself when you disarm and when the siren time runs out, so it was not needed.",
       "automation_imported": "“{automation}” came across: its sirens and switches.",
       "profile_created": "The response profile “{profile}” starts as a copy of your default one, plus the sirens and switches from Alarmo, and answers for the areas brought in.",
-      "group_not_imported": "The group “{group}” ({n} of {members} within {seconds} s) was not made: a group needs its members switched on, and every zone brought in starts switched off. Make it on page 13 once they are confirmed.",
+      "group_not_imported": "The group “{group}” ({n} of {members} within {seconds} s) was not made: a group needs its members switched on, and every zone brought in starts switched off. Make it on the Verification groups page once they are confirmed.",
       "setting_not_imported": "Alarmo's setting “{setting}” was not brought across; Foyer's own settings were left as they are.",
       "unknown_field": "The file has a field this importer does not know: {field}. It was written by a newer Alarmo than the one this was checked against, and whatever that field does was not brought across.",
-      "scenario_overrides": "“{scenario}” has its own exit delay or siren time, and it now applies to the imported areas too, whatever Alarmo had. Check it on page 4."
+      "scenario_overrides": "“{scenario}” has its own exit delay or siren time, and it now applies to the imported areas too, whatever Alarmo had. Check it on the Scenarios page."
     }
   },
   "wizard": {
     "title": "Finish setting up Foyer",
-    "intro": "Foyer is already protecting one zone: the integration created an area, a zone and a scenario when you added it. Four short steps turn that into something that actually guards the house. You can stop at any point and carry on from the pages above.",
+    "intro": "The integration created one area, one zone and one scenario — nothing is armed yet. Five short steps turn that into a setup that covers the whole house. You can stop at any point and carry on from the pages above.",
     "dismiss": "Not now",
     "next": "Continue",
     "back": "Back",
@@ -1838,14 +1873,14 @@
     "zones_text": "Zones mapped: {have} of {want}",
     "add_zone": "Add a zone",
     "pick_entity": "Choose an entity…",
-    "proposed": "{entity} reads {state} right now. Foyer proposes a {type} zone, triggered on: {states}.",
-    "confirm_trigger": "That is right: this zone is in alarm in those states.",
-    "confirm_hint": "This is the one thing Foyer cannot get right on its own. Normally-closed and normally-open contacts behave in opposite ways, and a wrong guess here produces an alarm that never fires — which you would find out at the worst possible moment.",
+    "proposed": "{name} is {state} right now. Foyer will treat it as in alarm when it is: {states}.",
+    "confirm_trigger": "I tried it: opening or triggering it changes the state above to the one listed.",
+    "confirm_hint": "This is the one thing Foyer cannot get right on its own. Normally-closed and normally-open contact sensors behave in opposite ways, and a wrong guess here produces an alarm that never fires — which you would find out at the worst possible moment.",
     "add": "Add the zone",
     "scenario_text": "A scenario is a named preset that arms a chosen set of areas. One that arms everything is enough to start; partial ones come later.",
     "scenario_areas": "It arms: {areas}",
     "user_text": "Your own code, so the log has somebody to credit from the first day.",
-    "test_text": "Prove that a message actually reaches you before you rely on it. This sends one straight through Home Assistant, to the target you pick.",
+    "test_text": "Prove that a message actually reaches you before you rely on it. This goes through Foyer, as a real alarm message would, and is logged as a test.",
     "test_target": "Send to",
     "pick_target": "Choose a notification service…",
     "send_test": "Send the test",
@@ -1854,7 +1889,21 @@
     "test_message": "Foyer Home Defender: this is a test notification.",
     "user_hint": "This person is linked to your Home Assistant account and gets every permission — you are the one setting the system up. Everyone else is added on the Users page, each with their own code.",
     "user_create": "Create user",
-    "user_done": "{name} holds a code. From now on disarming asks for one."
+    "user_done": "{name} holds a code. From now on disarming asks for one.",
+    "user_create_next": "Create and continue",
+    "skip": "Skip",
+    "numeric_elsewhere": "This sensor reports a number: set its threshold on the Zones page.",
+    "go_zones": "Go to Zones",
+    "type_hint": "Instant sounds the alarm at once. Delayed leaves the entry delay to disarm: for the door you come in by.",
+    "type_fixed": "Zone type: {type}. It can be changed on the Zones page.",
+    "go_contacts": "Go to Contacts",
+    "left": {
+      "title": "Still to do",
+      "zones": "Zones mapped: {have} of {want}. Add the doors and windows that matter.",
+      "users": "Nobody holds a code yet, so nothing asks for one.",
+      "contacts": "No contacts yet: nobody to reach when nobody acknowledges an alarm.",
+      "none": "Nothing obvious left. Everything else is on the pages above."
+    }
   },
   "config_kind": {
     "areas": "Area",
@@ -1876,7 +1925,7 @@
     "users": "People",
     "removed": "Rows removed",
     "rows": "Rows",
-    "pseudonymised": "Rows pseudonymised",
+    "pseudonymised": "Rows with names replaced",
     "from": "From",
     "to": "To",
     "reason": "Why"
@@ -1900,7 +1949,7 @@
     "item_id": "Item",
     "group_id": "Group",
     "incident_zones": "Incident zones",
-    "via": "Acknowledged by",
+    "via": "Acknowledged via",
     "removed": "Rows removed",
     "n": "Threshold",
     "count": "Count",
@@ -1911,7 +1960,7 @@
     "state": "State",
     "attributed": "Attribution",
     "rows": "Rows",
-    "pseudonymised": "Kept a pseudonym",
+    "pseudonymised": "Kept a stable identifier",
     "rule": "Rule",
     "rule_id": "Rule",
     "pending_id": "Countdown",
@@ -1938,7 +1987,17 @@
   "code": {
     "title": "Code",
     "prompt": "Type your code ({n} digits).",
-    "wrong": "That code is not right. Try again."
+    "wrong": "Wrong code. Try again ({n} digits).",
+    "purpose": {
+      "arm": "Code to arm {target}",
+      "disarm": "Code to disarm {target}",
+      "disarm_all": "Code to disarm the whole house",
+      "config": "Code to save this change",
+      "bypass": "Code to exclude {zone}",
+      "unbypass": "Code to include {zone} again"
+    },
+    "required_by": "{name} asks for a code.",
+    "locked_until": "Too many wrong codes. Codes from this account are blocked until {time}."
   },
   "code_policy": {
     "inherit": "As the global policy",
@@ -1967,9 +2026,9 @@
     "acknowledge": "Acknowledge an alarm",
     "bypass_zone": "Exclude a zone",
     "edit_config": "Edit the configuration",
-    "walk_test": "Enter walk test",
+    "walk_test": "Start a walk test",
     "test_action": "Run a real action test",
-    "cancel_auto_action": "Cancelling an automatic action"
+    "cancel_auto_action": "Cancel an automatic action"
   },
   "users": {
     "title": "Users",
@@ -1977,7 +2036,7 @@
     "new": "New user",
     "none": "No users yet. Until somebody holds a code, anyone who can reach Home Assistant can disarm.",
     "not_enforced": "Codes are not in force",
-    "not_enforced_hint": "No user holds a code, so nothing asks for one. Create a user with a code and the policy below starts applying at once.",
+    "not_enforced_hint": "No user holds a code, so no code is ever asked for. Create a user with a code and the policy below starts applying at once.",
     "code": "Code",
     "code_set": "Set",
     "code_missing": "None",
@@ -1995,22 +2054,25 @@
     "not_linked": "Not linked",
     "linked_hint": "Linking a Home Assistant account lets the panel know who is acting without a code being typed.",
     "validity_hint": "For a guest code: outside this window the code is refused.",
-    "exempt": "Do not ask me for a code where I am identified",
-    "exempt_hint": "Only on channels that identify you by themselves — the Home Assistant UI of your own account.",
-    "exempt_note": "On a shared keypad the code is the identity: the system cannot know who is typing until they type. The exemption never applies there. And a tablet left signed in as you is a disarm anybody passing can press.",
+    "exempt": "Skip the code where this person is identified",
+    "exempt_hint": "Only on channels that identify the person by themselves — the Home Assistant UI of their own account.",
+    "exempt_note": "On a shared keypad the code is the identity: the system cannot know who is typing until they type. The exemption never applies there. And a tablet left signed in as this person is a disarm anybody passing can press.",
     "enabled": "Enabled",
     "enabled_hint": "A disabled user's code is refused, and their history is kept.",
     "policy": "Code policy",
     "policy_hint": "Which operations ask for a code. Areas and scenarios can ask for more, never for less.",
     "operation": "Operation",
     "needs_code": "Code required",
-    "later_phase": "later phase",
+    "later_phase": "later version",
     "code_length": "Code length",
     "code_length_hint": "The same for everybody, because a keypad has to know how many digits to collect. Four digits is ten thousand combinations: it leans entirely on the lockout below.",
     "lockout_failures": "Failed attempts",
     "lockout_window": "Within (seconds)",
     "lockout_duration": "Lock for (seconds)",
-    "lockout_hint": "Each further lockout on the same channel lasts twice as long. The Home Assistant admin path is never locked, so nobody can shut themselves out."
+    "lockout_hint": "Each further lockout from the same source lasts twice as long. The Home Assistant admin path is never locked, so nobody can shut themselves out.",
+    "code_repeat": "Repeat the code",
+    "code_hint_new": "{n} digits, different from everyone else's.",
+    "confirm_delete": "Delete {name}? This cannot be undone. Their code stops working at once; their history stays in the log."
   },
   "device_kind": {
     "keypad": "Keypad",
@@ -2022,14 +2084,14 @@
     "full": "Full"
   },
   "devices": {
-    "title": "Devices",
+    "title": "Arming devices",
     "add": "Add a device",
     "new": "New device",
     "none": "No arming device yet. A keypad, a tag or a remote is declared here before it may command anything.",
     "reaches": "Reached through",
     "identifies": "Identifies",
     "code_is_identity": "The code is the identity",
-    "white_list": "This list is a white list, not an address book: a device that is not here is refused whatever code it brings. That is what makes the lockout countable, because a caller free to invent a device name is a caller who is never locked out.",
+    "white_list": "This list is a white list, not an address book: a device that is not here is refused whatever code it brings. That is what lets the lockout count attempts, because a caller free to invent a device name is a caller who is never locked out.",
     "kind_hint_keypad": "Shared, and carries a code. On a shared keypad the code is the identity, so the per-user exemption can never apply here.",
     "kind_hint_tag": "One person's, and carries no code at all: an NFC tag, an RFID badge, a remote.",
     "ref_hint": "The name this keypad puts in its own messages, in device_id. It is recorded on every event and is what the lockout counts attempts against, so give each keypad its own.",
@@ -2104,7 +2166,7 @@
       "health": "Health",
       "battery": "Battery",
       "signal": "Signal",
-      "supervision": "Supervision",
+      "supervision": "Silence limit",
       "arming": "Arming",
       "device": "Device",
       "kind": "Kind"
@@ -2140,7 +2202,7 @@
       "clock": "Date and time",
       "clock_hint": "What a time condition is read against. Empty means now.",
       "zones": "Force zone states",
-      "zones_hint": "Each one happens this many seconds after the house has finished arming — so zero means “armed, and then this”. The offset is what lets you watch a group fill up, or a second zone join an alarm.",
+      "zones_hint": "Each one happens this many seconds after the house has finished arming — so zero means “armed, and then this”. The delay is what lets you watch a group fill up, or a second zone join an alarm.",
       "pick_zone": "Choose a zone",
       "state": "State",
       "at": "Seconds after the house is armed",
@@ -2151,7 +2213,7 @@
       "as_now": "As now",
       "run": "Run simulation",
       "reset": "Reset",
-      "premise_code": "This installation asks for a code to arm, and the simulation arms the house before anything else happens — so it asks for one too. Nothing is executed either way."
+      "premise_code": "This system asks for a code to arm, and the simulation arms the house before anything else happens — so it asks for one too. Nothing is executed either way."
     },
     "trace": {
       "title": "Decision trace",
@@ -2171,7 +2233,7 @@
       "no_profile": "✗ no profile answers this — nothing would run",
       "later": {
         "delay": "⏱ the rest of this sequence at {at}",
-        "siren": "⏱ siren cutoff at {at}",
+        "siren": "⏱ siren stops at {at}",
         "escalation_step": "⏱ escalation step {step} at +{offset}s → {who}"
       },
       "nothing_configured": "✗ nothing is configured for this moment",
@@ -2214,9 +2276,9 @@
   "walk": {
     "banner_title": "Walk test running.",
     "banner": "Every response is held back. It ends in {time}, or when you end it. Started by {who}.",
-    "card_banner": "Every response is held back. Ends in {time}.",
+    "card_banner": "The alarm will not sound. Ends in {time}.",
     "badge": "Walk test",
-    "badge_title": "A walk test is running: every response is held back.",
+    "badge_title": "A walk test is running: the alarm will not sound.",
     "somebody": "somebody",
     "always_on_live": "24h, tamper, technical and panic zones stay fully live. A walk test never silences a smoke detector.",
     "end": "End walk test",
@@ -2228,8 +2290,8 @@
     "start_sub": "Really armed, really reading, nothing answering",
     "explainer": "Every area that can arm is armed, and every area is disarmed again when the test ends — except one that was already armed before it started. An area a zone is holding open simply stays out, and is named.",
     "duration": "Timeout",
-    "duration_default": "Installation default",
-    "duration_hint": "Minutes without a detection before it ends itself. Each detection pushes it back. It can only be shorter than the installation's setting, never longer: the auto-exit cannot be switched off.",
+    "duration_default": "System default",
+    "duration_hint": "Minutes without a detection before it ends itself. Each detection pushes it back. It can only be shorter than the system setting, never longer: the automatic end cannot be switched off.",
     "start": "Start walk test",
     "table_title": "Detection during this walk test",
     "started_by": "Started at {at} by {who}",
@@ -2304,14 +2366,14 @@
     "channels_hint": "Tried highest first. Put the channel that survives a cut internet connection somewhere in the list, not at the bottom.",
     "add_channel": "Add channel",
     "service": "Notification service",
-    "service_hint": "Any notify service or notify entity in this installation. Foyer orchestrates transports; it does not implement them.",
-    "target": "Target",
+    "service_hint": "Any notify service or notify entity in this Home Assistant. Foyer orchestrates transports; it does not implement them.",
+    "target": "Recipient",
     "target_hint": "What this transport needs to reach the person: a phone number, a chat id. Leave it empty when the service already knows.",
     "actionable": "Can carry an acknowledge button",
     "actionable_hint": "The Companion app can; an SMS cannot. A transport throws away a key it does not know without a word, so this is declared rather than guessed.",
     "quiet_hours": "Quiet hours",
-    "quiet_hint": "Inside this window only what is loud enough reaches this contact. It never silences the alarm for the whole household.",
-    "quiet_min_severity": "Gets through the window",
+    "quiet_hint": "Inside this window only what is serious enough reaches this contact. It never silences the alarm for the whole household.",
+    "quiet_min_severity": "Minimum severity to get through",
     "quiet_severity_hint": "On the log's own scale. Left at alarm, a break-in gets through at four in the morning and a successful arming does not.",
     "linked_hint": "Lets an acknowledgement from this person's phone be attributed to them in the log.",
     "orchestration": "Escalation targets people, not services. Home Assistant already provides the transports, so what is configured here is who, in what order, and when to stop.",
@@ -2324,7 +2386,7 @@
     "step_number": "Step",
     "exhausted": "If nobody acknowledges, the last step raises escalation_exhausted, which is itself a moment a profile can act on.",
     "acknowledgement": "Acknowledgement",
-    "ack_stops": "The policy stops the instant any of these arrives. Every acknowledgement records who and through which channel.",
+    "ack_stops": "The escalation stops the instant any of these arrives. Every acknowledgement records who and through which channel.",
     "ack_push": "Action button in a push notification",
     "ack_push_how": "A channel marked as able to carry one",
     "ack_disarm": "Disarming through any channel",
@@ -2343,7 +2405,7 @@
     "step_offset": "+{n} s"
   },
   "rules": {
-    "title": "Rules",
+    "title": "Automatic rules",
     "add": "Add rule",
     "new": "New rule",
     "none": "No rules yet. The house arms itself only once one exists.",
@@ -2356,9 +2418,9 @@
     "switched_off": "Automatic rules are switched off. Nothing will arm or disarm on its own.",
     "switch_on": "Switch on",
     "switch_off": "Switch off",
-    "counting_arm": "{rule}: arming {scenario} in {seconds} s.",
-    "counting_disarm": "{rule}: disarming in {seconds} s.",
-    "counting_switch": "{rule}: switching to {scenario} in {seconds} s.",
+    "counting_arm": "{rule}: arming {scenario} in {seconds} s.",
+    "counting_disarm": "{rule}: disarming in {seconds} s.",
+    "counting_switch": "{rule}: switching to {scenario} in {seconds} s.",
     "cancel_now": "Cancel",
     "next_arm": "Next: {rule} arms {scenario}, {when}.",
     "next_disarm": "Next: {rule} disarms, {when}.",
@@ -2375,7 +2437,7 @@
     "trigger_kind_entity": "Entity state",
     "trigger_hint_absence": "Every person chosen has to be away for the whole time.",
     "trigger_hint_presence": "Fires when one of them comes home. Somebody already at home has not arrived.",
-    "trigger_hint_time": "Happens once. Blocked by a guard, the occurrence is missed rather than postponed.",
+    "trigger_hint_time": "Happens once. Blocked by a safety check, the occurrence is missed rather than postponed.",
     "trigger_hint_entity": "The entity has to hold that state for the whole time.",
     "at": "At",
     "for_minutes": "For (minutes)",
@@ -2401,7 +2463,7 @@
     "notify_hint": "Who hears the countdown and holds the Cancel button. Their quiet hours still apply.",
     "never_disarmed": "never disarmed by a rule",
     "suspensions": "Suspensions",
-    "visitor_intro": "A named window suspends automatic arming — and in six months the log says why, which a bare suspension never will.",
+    "visitor_intro": "A named window suspends automatic rules — and in six months the log says why, which a bare suspension never will.",
     "suspension_until": "Suspended until",
     "suspension_next": "Skip the next occurrence",
     "suspension_visitor": "Expected visitor",
@@ -2417,13 +2479,13 @@
     "instead_nothing": "Nothing — leave it disarmed",
     "instead_hint": "Applied when the suspended rule would have armed, not when the window opens.",
     "add_visitor": "Add window",
-    "skip_next": "Skip the next occurrence",
+    "skip_next": "Skip next occurrence",
     "disarming": "Automatic disarming",
     "disarming_warning": "Presence is inferred from a phone. A stolen phone disarms the house, GPS drift of 200 metres disarms the house, a cloned MAC address on the home network disarms the house. This is the most banal attack against a DIY alarm, which is why this is off by default.",
     "allow_disarm": "Allow rules to disarm",
-    "allow_disarm_hint": "Also covers a scenario switch that would drop an armed area.",
+    "allow_disarm_hint": "Also covers a scenario switch that would leave an armed area disarmed.",
     "areas_a_rule_may_disarm": "Areas a rule may disarm",
-    "perimeter_note": "Perimeter areas are excluded in the engine, not on this screen. Whoever walks in on a stolen phone still finds every external door and window armed.",
+    "perimeter_note": "Perimeter areas are left out by the engine itself, not by this screen. Whoever walks in on a stolen phone still finds every external door and window armed.",
     "block_switch_off": "Switched off",
     "block_suspended": "Suspended",
     "block_walk_test": "Walk test",
@@ -2479,7 +2541,7 @@
     "channels_ok": "{n} healthy",
     "channels_broken": "{n} failing",
     "channels_meta": "{n} never used",
-    "channels_note": "A broken channel is announced through a different one: warning you about a dead channel over the dead channel is the joke that writes itself. Send a test from the Contacts page.",
+    "channels_note": "A broken channel is announced through a different one, since a warning sent over the broken channel would never arrive. Send a test from the Contacts page.",
     "channels_note_none": "No contacts configured yet.",
     "no_channels": "No notification channels are configured.",
     "sweep_every": "checked every {minutes} min",
@@ -2490,7 +2552,7 @@
     "since": "Since",
     "radios": "Radios",
     "no_radios": "No radios are configured, so correlated silence is not counted.",
-    "radios_hint": "A radio is one integration's config entry: every zone of one ZHA, Z-Wave JS or Zigbee2MQTT installation shares it, so naming the entry once assigns forty zones.",
+    "radios_hint": "A radio is one integration's config entry: every zone of one ZHA, Z-Wave JS or Zigbee2MQTT network shares it, so naming the entry once assigns forty zones.",
     "radios_note": "Many zones on one radio going quiet within seconds is the signature of jamming — and of a coordinator crash, a firmware update, a channel change and a power cut to a room of mains-powered routers. That is why the event is called suspected.",
     "add_radio": "Add a radio",
     "candidate": "{title} · zones: {zones}",
@@ -2508,13 +2570,13 @@
     "rf_zones_hint": "Or 40% of that radio's zones, whichever is lower.",
     "rf_confirm_hint": "How long the silence must last before Foyer says so. This is what a coordinator reboot and a firmware update walk into instead of the siren.",
     "faults": "Open faults",
-    "faults_sub": "also raised as Home Assistant repair issues",
+    "faults_sub": "also shown in Home Assistant's Repairs",
     "no_faults": "Nothing is in fault.",
     "days": "days: {n}",
     "recent": "Recently",
     "diagnostics": "Diagnostics",
     "diagnostics_hint": "An anonymised dump of the configuration and the state: no codes, no hashes, no personal names, no URLs, and entity ids reduced to stable placeholders. It is what turns a bug report into something answerable.",
-    "diagnostics_open": "Open the integration page",
+    "diagnostics_open": "Open integration page",
     "diagnostics_where": "The download button is Home Assistant's own, on the integration's page, and it is available to administrators.",
     "no_zones": "No zones on it",
     "last_result": "Last result"
@@ -2523,7 +2585,7 @@
     "zone": "The cameras of the zones behind the alarm",
     "fixed": "Always the same camera",
     "none": "No pictures",
-    "zone_hint": "Every zone in the alarm, in the order they went, each camera once, at most four. The text goes first, with its buttons; then one notification per camera.",
+    "zone_hint": "Every zone in the alarm, in the order they alarmed, each camera once, at most four. The text goes first, with its buttons; then one notification per camera.",
     "fixed_hint": "The one camera chosen below, attached to the notification itself, whatever raised it.",
     "none_hint": "The text alone."
   },

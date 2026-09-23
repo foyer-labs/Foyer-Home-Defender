@@ -10,9 +10,9 @@
           "zone_entity": "Entità della zona"
         },
         "data_description": {
-          "area_name": "La parte della casa protetta da questo allarme, per esempio Casa.",
+          "area_name": "La parte della casa sorvegliata da questo allarme, per esempio Casa.",
           "scenario_name": "Il nome del preset di inserimento, per esempio Fuori casa.",
-          "zone_entity": "Il sensore che sorveglia l'area: un contatto porta, un sensore di movimento, una tapparella o una serratura."
+          "zone_entity": "Il sensore che sorveglia l'area: un contatto magnetico della porta, un sensore di movimento, una tapparella o una serratura."
         }
       },
       "trigger": {
@@ -30,7 +30,7 @@
     },
     "error": {
       "no_trigger_states": "Scegli almeno uno stato.",
-      "fault_state_as_trigger": "Non disponibile e sconosciuto sono guasti, non allarmi. Bloccano sempre l'inserimento.",
+      "fault_state_as_trigger": "Non disponibile e sconosciuto sono guasti, non stati di allarme. Bloccano sempre l'inserimento.",
       "trigger_not_confirmed": "Conferma di aver verificato gli stati di allarme."
     },
     "abort": {
@@ -82,7 +82,7 @@
   },
   "exceptions": {
     "rejected_invalid_state": {
-      "message": "L'area non è in uno stato che lo permette."
+      "message": "Lo stato attuale dell'area non lo consente. Controlla se è già inserita, in inserimento o in allarme."
     },
     "rejected_unknown_scenario": {
       "message": "Lo scenario non esiste."
@@ -91,10 +91,10 @@
       "message": "L'area non esiste."
     },
     "rejected_no_scenario_for_mode": {
-      "message": "Nessuno scenario riporta questa modalità."
+      "message": "Nessuno scenario è associato a questa modalità di inserimento."
     },
     "rejected_ambiguous_mode": {
-      "message": "Più scenari riportano questa modalità. Scegli lo scenario da select.foyer_scenario."
+      "message": "Più scenari sono associati a questa modalità di inserimento. Scegli lo scenario da select.foyer_scenario."
     },
     "rejected_alarm_in_progress": {
       "message": "C'è un allarme in corso. Disinserisci prima di cambiare scenario."
@@ -112,10 +112,10 @@
       "message": "Impossibile forzare l'inserimento: queste zone non possono essere escluse: {zones}."
     },
     "rejected_arm_hold_expired": {
-      "message": "Inserimento fallito: ancora aperta: {zones}."
+      "message": "Inserimento non riuscito: zona ancora aperta: {zones}."
     },
     "rejected_nothing_to_acknowledge": {
-      "message": "Non c'è nulla da riconoscere."
+      "message": "Non c'è nulla di cui prendere atto."
     },
     "rejected_unknown_zone": {
       "message": "Quella zona non esiste."
@@ -124,16 +124,16 @@
       "message": "Il codice non è corretto."
     },
     "rejected_locked_out": {
-      "message": "Troppi codici errati. Questo canale è bloccato per ora."
+      "message": "Troppi codici errati. Per un po' i codici da qui vengono rifiutati."
     },
     "rejected_not_permitted": {
-      "message": "Non hai il permesso di farlo."
+      "message": "Il tuo utente Foyer non ha il permesso per farlo."
     },
     "rejected_user_not_valid": {
-      "message": "Questo codice non è valido in questo momento."
+      "message": "Quel codice appartiene a un utente disattivato o fuori dal suo periodo di validità."
     },
     "rejected_area_not_allowed": {
-      "message": "Non puoi agire su quell’area."
+      "message": "Non puoi agire su quell'area."
     },
     "rejected_scenario_not_allowed": {
       "message": "Non puoi usare quello scenario."
@@ -145,7 +145,7 @@
       "message": "Non c'è nessuna azione automatica in conto alla rovescia."
     },
     "rejected_unknown_rule": {
-      "message": "Quella regola di automazione non esiste."
+      "message": "Quella regola automatica non esiste."
     },
     "rejected_unknown_suspension": {
       "message": "Quella sospensione non esiste."
@@ -157,7 +157,7 @@
       "message": "Il token del dispositivo mancava o era sbagliato."
     },
     "rejected_walk_test_active": {
-      "message": "È in corso un walk test. Terminalo prima, poi inserisci."
+      "message": "È in corso un walk test. Terminalo (disinserisce le aree che aveva inserito), poi inserisci."
     },
     "service_refused": {
       "message": "Foyer ha rifiutato la richiesta: {reason}."
@@ -166,7 +166,7 @@
   "entity": {
     "alarm_control_panel": {
       "master": {
-        "name": "Generale"
+        "name": "Tutta la casa"
       }
     },
     "select": {
@@ -185,7 +185,7 @@
         "name": "Allarme tecnico"
       },
       "system_health": {
-        "name": "Salute di sistema"
+        "name": "Stato del sistema"
       },
       "rf_interference": {
         "name": "Interferenza radio ({radio})"
@@ -219,19 +219,19 @@
         "name": "Walk test"
       },
       "auto_arming": {
-        "name": "Armatura automatica"
+        "name": "Regole automatiche"
       }
     },
     "button": {
       "acknowledge": {
-        "name": "Riconosci"
+        "name": "Prendi atto"
       }
     }
   },
   "services": {
     "arm": {
       "name": "Inserisci",
-      "description": "Inserisce uno scenario, una sola area o una modalità del master. Restituisce il risultato strutturato di §9.1.",
+      "description": "Inserisce uno scenario, una sola area o una modalità del pannello Tutta la casa. Restituisce un risultato strutturato che dice cosa è stato fatto, o perché è stato rifiutato.",
       "fields": {
         "scenario_id": {
           "name": "Scenario",
@@ -246,8 +246,8 @@
           "description": "Inserisce questa sola area, fuori da ogni scenario."
         },
         "mode": {
-          "name": "Modalità del master",
-          "description": "Inserisce attraverso il pannello master: l'unico scenario che riporta questa modalità. Rifiutata se due scenari la condividono."
+          "name": "Modalità di Tutta la casa",
+          "description": "Inserisce tramite il pannello Tutta la casa: l'unico scenario associato a questa modalità. Rifiutato se due scenari la condividono."
         },
         "force": {
           "name": "Forza",
@@ -255,15 +255,15 @@
         },
         "skip_exit_delay": {
           "name": "Salta il ritardo d'uscita",
-          "description": "Inserisce subito, senza dare tempo di uscire. Chi può inserire può inserire subito, e il registro dice che è successo."
+          "description": "Inserisce subito, senza dare tempo di uscire. Chi può inserire può farlo subito, e il registro lo annota."
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -285,11 +285,11 @@
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -311,15 +311,15 @@
         },
         "seconds": {
           "name": "Per",
-          "description": "Quanto dura l'esclusione. Senza durata finisce al disinserimento; con una durata sopravvive al disinserimento e annuncia il rientro della zona."
+          "description": "Quanto dura l'esclusione. Senza durata finisce al disinserimento; con una durata sopravvive al disinserimento e annuncia quando la zona viene inclusa di nuovo."
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -332,20 +332,20 @@
       }
     },
     "unbypass_zone": {
-      "name": "Reinserisci una zona",
-      "description": "Chiude un'esclusione manuale e rimette la zona a protezione.",
+      "name": "Includi di nuovo una zona",
+      "description": "Chiude un'esclusione manuale: la zona torna sorvegliata.",
       "fields": {
         "zone_id": {
           "name": "Zona",
-          "description": "La zona da reinserire."
+          "description": "La zona da includere di nuovo."
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -359,7 +359,7 @@
     },
     "acknowledge": {
       "name": "Prendi atto",
-      "description": "Dichiara che qualcuno ha visto l'allarme. Di base non richiede codice.",
+      "description": "Registra che qualcuno ha preso atto dell'allarme. Di base non richiede codice.",
       "fields": {
         "target": {
           "name": "Cosa",
@@ -367,11 +367,11 @@
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -383,17 +383,17 @@
         },
         "via": {
           "name": "Percorso",
-          "description": "Da quale dei quattro percorsi arriva la presa d'atto. Viene registrato, mai creduto: l'autorizzazione è quella del canale, non della parola."
+          "description": "Da quale dei quattro percorsi arriva la presa d'atto. Viene registrato, non creduto: ciò che è permesso dipende da come è arrivata la richiesta, non da questo campo."
         },
         "contact_id": {
           "name": "Contatto",
-          "description": "A chi era andata la notifica, quando la risposta arriva da una. Il registro indica contatto e canale anche dove non c'è una persona."
+          "description": "A chi era andata la notifica, se la risposta arriva da una notifica. Il registro indica contatto e canale anche dove non c'è una persona."
         }
       }
     },
     "walk_test": {
       "name": "Walk test",
-      "description": "Inserisce la casa, trattiene ogni risposta e registra quali zone ti rilevano. Termina da solo e non silenzia mai una zona 24h, tamper, tecnica o panico.",
+      "description": "Inserisce la casa, trattiene ogni risposta e registra quali zone ti rilevano. Termina da solo e non silenzia mai una zona 24h, di manomissione, tecnica o di panico.",
       "fields": {
         "enable": {
           "name": "Attiva",
@@ -401,23 +401,23 @@
         },
         "duration": {
           "name": "Durata",
-          "description": "Per quanto resta attivo senza rilevazioni, in secondi. Può solo essere più breve del massimo configurato, mai più lunga: l'uscita automatica non si disattiva."
+          "description": "Quanto resta attivo senza rilevazioni, in secondi. Può essere solo inferiore al massimo configurato, mai superiore: la chiusura automatica non si può disattivare."
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi sta chiedendo. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta le sue restrizioni, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
-          "description": "Da dove arriva la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
         },
         "device_id": {
           "name": "Dispositivo",
-          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi. Un nome che questa installazione non ha viene rifiutato."
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
         }
       }
     },
@@ -443,19 +443,19 @@
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi sta chiedendo. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta le sue restrizioni, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
-          "description": "Da dove arriva la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
+          "description": "Come è arrivata la richiesta. Si possono dichiarare solo api e automation; keypad e nfc appartengono a un dispositivo registrato."
         },
         "device_id": {
           "name": "Dispositivo",
-          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi. Un nome che questa installazione non ha viene rifiutato."
+          "description": "Il nome a cui risponde un dispositivo di inserimento registrato, da Dispositivi di inserimento. Un nome che l'impianto non ha viene rifiutato."
         },
         "contact_id": {
           "name": "Contatto",
@@ -509,11 +509,11 @@
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -531,11 +531,11 @@
       "fields": {
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -557,11 +557,11 @@
         },
         "code": {
           "name": "Codice",
-          "description": "Il codice di chi chiede. Verificato sempre nel backend (INV-2)."
+          "description": "Il codice di chi fa la richiesta. Verificato sempre da Foyer sul server."
         },
         "user_id": {
           "name": "Utente",
-          "description": "A chi attribuire l'azione nel registro. Non concede nulla: dichiararsi qualcuno porta i suoi limiti, mai le sue esenzioni."
+          "description": "A chi attribuire l'azione nel registro. Non concede nulla: indicare una persona applica i suoi limiti, mai le sue esenzioni."
         },
         "channel": {
           "name": "Canale",
@@ -576,12 +576,12 @@
   },
   "issues": {
     "zone_unreachable": {
-      "title": "Foyer: {zone} non si vede da {days} giorni",
+      "title": "Foyer: {zone} non dà segni di vita da {days} giorni",
       "fix_flow": {
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "La zona {zone} è illeggibile da {days} giorni. Finché lo è, è un guasto: blocca l'inserimento e non viene mai considerata “chiusa”. Batteria scarica, sensore fuori portata, o un'integrazione che non si carica più.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "La zona {zone} è illeggibile da {days} giorni. Finché lo è, è un guasto: blocca l'inserimento e non viene mai considerata «chiusa». Batteria scarica, sensore fuori portata, o un'integrazione che non si carica più.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
@@ -592,7 +592,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "Il canale di notifica {service}, con cui si raggiunge {contact}, non è più presente in questa installazione. Le integrazioni vengono rimosse, rinominate o non si caricano più dopo un aggiornamento, e un canale scoperto rotto durante un allarme è esattamente il fallimento che questo controllo esiste per evitare. Correggilo nella pagina Contatti e manda una prova.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "Il canale di notifica {service}, con cui si raggiunge {contact}, non è più presente in questo Home Assistant. Le integrazioni vengono rimosse, rinominate o non si caricano più dopo un aggiornamento, e un canale scoperto rotto durante un allarme è proprio il guasto che questo controllo serve a evitare. Correggilo nella pagina Contatti e manda una prova.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
@@ -603,7 +603,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "I messaggi a {contact} tramite {service} sono falliti più volte di seguito. Il servizio c'è; gli invii non arrivano. Manda una prova dalla pagina Contatti quando pensi di averlo sistemato: un invio riuscito chiude questa segnalazione.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "I messaggi a {contact} tramite {service} sono falliti più volte di seguito. Il servizio c'è; gli invii non arrivano. Manda una prova dalla pagina Contatti quando pensi di averlo sistemato: un invio riuscito chiude questa segnalazione.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
@@ -614,7 +614,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "Da quando è stato acceso non è riuscito nemmeno un ping. Quasi sempre un URL sbagliato o un endpoint mai creato. Ultimo errore: {error}. Finché non funziona, niente fuori casa sa se Home Assistant è ancora vivo.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "Da quando è stato attivato non è riuscito nemmeno un ping. Quasi sempre un URL sbagliato o un endpoint mai creato. Ultimo errore: {error}. Finché non funziona, niente fuori casa sa se Home Assistant è ancora attivo.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
@@ -625,7 +625,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "I ping falliscono. Ultimo errore: {error}. Non riuscire a raggiungerlo significa che nemmeno una notifica che passa da internet ti raggiungerebbe.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "I ping falliscono. Ultimo errore: {error}. Non riuscire a raggiungerlo significa che nemmeno una notifica che passa da internet ti raggiungerebbe.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
@@ -636,7 +636,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "{count} zone su {of} di {radio} sono ammutolite insieme mentre il coordinatore continuava a rispondere. È un'euristica, non un rilevamento di jamming: un crash del coordinatore, un aggiornamento firmware, un cambio di canale o un black-out in una stanza piena di router alimentati a rete hanno tutti questo aspetto. Vedi docs/system-health.md.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "{count} zone su {of} di {radio} sono ammutolite insieme mentre il coordinatore continuava a rispondere. È un'euristica, non un rilevamento di jamming: un crash del coordinatore, un aggiornamento firmware, un cambio di canale o un black-out in una stanza piena di router alimentati a rete hanno tutti questo aspetto.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
@@ -647,7 +647,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "{entity_id} non è leggibile, quindi nessuna zona di {radio} è sorvegliata. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete. Un coordinatore alimentato via Power-over-Ethernet muore insieme al suo switch.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "{entity_id} non è leggibile, quindi nessuna zona di {radio} è sorvegliata. Non è interferenza: è il coordinatore, la sua alimentazione o la sua rete. Un coordinatore alimentato via Power-over-Ethernet si spegne insieme al suo switch.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
@@ -658,7 +658,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "{entity_id} segnala che la rete elettrica è venuta a mancare. Tutto ciò che passa da internet si ferma quando si ferma il router: vedi docs/resilience.md.\n\nChiudi questa scheda. Torna se il problema si ripresenta."
+            "description": "{entity_id} segnala che la rete elettrica è venuta a mancare. Tutto ciò che passa da internet si ferma quando si ferma il router.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
