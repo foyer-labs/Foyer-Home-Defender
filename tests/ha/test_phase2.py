@@ -505,3 +505,43 @@ async def test_an_administrator_is_asked_for_the_code_like_anybody_else(
 
     saved = await _ws(client, {**save, "code": CODE})
     assert saved["success"], saved
+
+
+async def test_a_restore_that_changes_people_needs_manage_users(
+    hass, with_user, hass_ws_client, hass_read_only_user, hass_read_only_access_token
+):
+    """Decision 111: edit_config alone was a way to hand oneself every
+    permission through a backup file."""
+    admin = with_user
+    await _make_user(
+        hass,
+        admin,
+        name="Editor",
+        new_code=OTHER,
+        code=CODE,
+        permissions=["edit_config"],
+        ha_user_id=hass_read_only_user.id,
+    )
+    editor = await hass_ws_client(hass, hass_read_only_access_token)
+    backup = await _ws(editor, {"type": "foyer/config/export", "code": OTHER})
+    assert backup["document"], backup
+
+    # The same file, unchanged: no person moves, edit_config is enough.
+    same = await _ws(
+        editor,
+        {"type": "foyer/config/import", "document": backup["document"], "code": OTHER},
+    )
+    assert same["success"], same
+    await hass.async_block_till_done()
+
+    document = backup["document"]
+    for person in document["config"]["users"]:
+        if person["name"] == "Editor":
+            person["permissions"] = [*person["permissions"], "manage_users"]
+    refused = await _ws(
+        editor, {"type": "foyer/config/import", "document": document, "code": OTHER}
+    )
+    assert refused["success"] is False
+    assert refused["reason"] == "not_permitted"
+    editor_now = next(u for u in hass.data[DOMAIN].config.users if u.name == "Editor")
+    assert "manage_users" not in editor_now.permissions

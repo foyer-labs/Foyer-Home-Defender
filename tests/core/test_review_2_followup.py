@@ -351,3 +351,50 @@ def test_a_disarm_during_the_alarm_ends_it_and_clears_it():
 def test_an_ordinary_disarm_clears_nothing():
     world = _armed_house()
     assert _cleared(world.disarm()) == []
+
+
+# --- decision 111: a restore that touches people ---------------------------------
+
+
+def test_a_restore_touches_people_when_a_permission_changes():
+    from custom_components.foyer.store.editing import touches_people
+
+    before = _with_codes()
+    after = replace(
+        before,
+        users=tuple(
+            replace(u, permissions=frozenset({*u.permissions, "manage_users"}))
+            if u.id == "reader"
+            else u
+            for u in before.users
+        ),
+    )
+    assert touches_people(before, after)
+
+
+def test_codes_and_pseudonyms_the_restore_keeps_are_not_a_change():
+    from custom_components.foyer.store.editing import touches_people
+
+    before = _with_codes()
+    after = replace(
+        before,
+        users=tuple(
+            replace(u, code_hash="$2b$10$other", pseudonym="person-x")
+            for u in before.users
+        ),
+    )
+    assert not touches_people(before, after)
+
+
+def test_giving_a_tag_to_somebody_else_touches_people():
+    from custom_components.foyer.store.editing import touches_people
+
+    tag = ArmingDevice(
+        id="t", name="Tag", kind=DeviceKind.TAG, entity_id=TAG, user_id="luca"
+    )
+    before = replace(_with_codes(), devices=(tag,))
+    after = replace(before, devices=(replace(tag, user_id="reader"),))
+    assert touches_people(before, after)
+    # A zone renamed is not a person.
+    zones = tuple(replace(z, name=z.name + " 2") for z in before.zones)
+    assert not touches_people(before, replace(before, zones=zones))

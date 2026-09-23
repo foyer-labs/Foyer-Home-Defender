@@ -70,6 +70,7 @@ from ..core.models import (
 from ..runtime import notices
 from ..runtime.system import FoyerSystem
 from ..security.devices import Requester, async_requester
+from ..store.editing import touches_people
 from .backup import async_write, backup_document, restore
 
 SERVICE_ARM = "arm"
@@ -480,6 +481,18 @@ def async_register(hass: HomeAssistant) -> None:
             return refused
         assert requester.actor is not None
         result = restore(system, call.data["document"])
+        if result.config is not None and touches_people(system.config, result.config):
+            # People and tags are manage_users' (decision 111); the code was
+            # checked above.
+            refused = await _refused(
+                system,
+                requester,
+                Operation.EDIT_CONFIG,
+                Permission.MANAGE_USERS,
+                need_code=False,
+            )
+            if refused is not None:
+                return refused
         named = system.config.user(requester.actor.user_id)
         return await async_write(
             hass,

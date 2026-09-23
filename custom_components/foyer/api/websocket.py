@@ -141,6 +141,7 @@ from ..store.editing import (
     EditResult,
     delete,
     set_device_token,
+    touches_people,
     update_chime,
     update_health,
     update_security,
@@ -2031,7 +2032,7 @@ async def ws_config_import(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     if (
-        await _gate(
+        actor := await _gate(
             hass,
             system,
             connection,
@@ -2042,9 +2043,60 @@ async def ws_config_import(
     ) is None:
         return
     result = restore(system, msg["document"])
+    if (
+        result.config is not None
+        and touches_people(system.config, result.config)
+        and _refuse_people(system, connection, msg["id"], actor)
+    ):
+        return
     await _apply(
         hass, connection, msg["id"], system, result, operation="restore", kind="config"
     )
+
+
+def _refuse_people(
+    system: FoyerSystem,
+    connection: websocket_api.ActiveConnection,
+    msg_id: int,
+    actor: Actor,
+) -> bool:
+    """Refuse, and say so, a bulk write that brings people or tags with it
+    to somebody without `manage_users` (decision 111). The code has already
+    been checked by the gate in front of the command. True when refused."""
+    reason = _may_configure(
+        system,
+        actor,
+        Operation.EDIT_CONFIG,
+        Permission.MANAGE_USERS,
+        need_code=False,
+    )
+    if reason is None:
+        return False
+    # A refusal is a row of its own (§10.2), as _gate writes one.
+    system.async_record(
+        (
+            config_row(
+                dt_util.utcnow(),
+                operation="refused",
+                kind=Operation.EDIT_CONFIG.value,
+                user_id=actor.user_id,
+                user_name=(
+                    named.name if (named := system.config.user(actor.user_id)) else None
+                ),
+                channel=CHANNEL_HA_UI,
+                changes={"reason": reason.value},
+            ),
+        )
+    )
+    connection.send_result(
+        msg_id,
+        {
+            "success": False,
+            "reason": reason.value,
+            "problems": [asdict(Problem(reason.value, "code", None, "code"))],
+        },
+    )
+    return True
 
 
 # --- bringing an Alarmo configuration across (SPEC §20.2) -------------------------
@@ -2137,41 +2189,7 @@ async def ws_alarmo_apply(
             {"success": False, "refused": {"code": "changed", "params": {}}},
         )
         return
-    if result.counts["people"] and (
-        reason := _may_configure(
-            system,
-            actor,
-            Operation.EDIT_CONFIG,
-            Permission.MANAGE_USERS,
-            need_code=False,
-        )
-    ):
-        # A refusal is a row of its own (§10.2), as _gate writes one.
-        system.async_record(
-            (
-                config_row(
-                    dt_util.utcnow(),
-                    operation="refused",
-                    kind=Operation.EDIT_CONFIG.value,
-                    user_id=actor.user_id,
-                    user_name=(
-                        named.name
-                        if (named := system.config.user(actor.user_id))
-                        else None
-                    ),
-                    channel=CHANNEL_HA_UI,
-                    changes={"reason": reason.value},
-                ),
-            )
-        )
-        connection.send_result(
-            msg["id"],
-            {
-                "success": False,
-                "reason": reason.value,
-                "problems": [asdict(Problem(reason.value, "code", None, "code"))],
-            },
-        )
+    if result.counts["people"] and _refuse_people(system, connection, msg["id"], actor):
         return
     if answer["problems"]:
         connection.send_result(

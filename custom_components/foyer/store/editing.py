@@ -45,6 +45,7 @@ from .schema import (
     config_to_dict,
     contact_from_dict,
     device_from_dict,
+    device_to_dict,
     group_from_dict,
     health_from_dict,
     log_from_dict,
@@ -54,6 +55,7 @@ from .schema import (
     scenario_from_dict,
     security_from_dict,
     user_from_dict,
+    user_to_dict,
     zone_from_dict,
 )
 
@@ -816,6 +818,35 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
     if old.health.watchdog.url != new.health.watchdog.url:
         changes.setdefault("health", {})["watchdog.url"] = []
     return changes
+
+
+def touches_people(old: FoyerConfig, new: FoyerConfig) -> bool:
+    """Whether going from one configuration to the other adds, removes or
+    changes a person or a tag (decision 111).
+
+    What `manage_users` owns: who exists, what they may do, and which key
+    opens the house as whom. The codes and the pseudonym are left out of the
+    comparison because a restore keeps the installation's own — they would
+    differ between the file and the house without anybody having changed a
+    person.
+    """
+
+    def people(config: FoyerConfig) -> dict[str, dict[str, Any]]:
+        return {
+            user.id: {
+                k: v
+                for k, v in user_to_dict(user).items()
+                if k not in ("code_hash", "duress_code_hash", "pseudonym")
+            }
+            for user in config.users
+        }
+
+    def tags(config: FoyerConfig) -> dict[str, dict[str, Any]]:
+        return {
+            d.id: device_to_dict(d) for d in config.devices if d.kind is DeviceKind.TAG
+        }
+
+    return people(old) != people(new) or tags(old) != tags(new)
 
 
 def update_security(
