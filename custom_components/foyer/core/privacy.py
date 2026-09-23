@@ -234,25 +234,3 @@ def unlink_detail(detail: Mapping[str, Any], user_id: str) -> dict[str, Any]:
     if out.get("item_id") == user_id:
         out.pop("item_id", None)
     return out
-
-
-def erased_row(
-    row: Mapping[str, Any], ref: PersonRef, *, pseudonym: str | None = None
-) -> dict[str, Any]:
-    """One row as it looks after the erasure — for the preview, and for tests.
-
-    The store writes the same thing; this is where what it writes is decided,
-    so the panel can show a person exactly what will be left before anybody
-    presses the button.
-    """
-    out = dict(row)
-    for column in ERASED_COLUMNS:
-        out[column] = None
-    if pseudonym:
-        # The minimisation form of the same operation: the shape of the nights
-        # without the name (part 2 decision 1).
-        out["user_id"] = pseudonym
-        out["user_name"] = pseudonym
-    if row.get("detail"):
-        out["detail"] = redact_detail(row["detail"], ref.names)
-    return out

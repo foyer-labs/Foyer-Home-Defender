@@ -22,11 +22,11 @@ with no hashes in it.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 from .health import causes, configured_channels
 from .models import ActionKind, FoyerConfig, RuntimeState, SystemSnapshot
+from .response import entity_ids
 from .validation import notify_images
 
 
@@ -169,7 +169,7 @@ def anonymised(
                         # a media file name or a free-text message lives, so
                         # what travels is their shape: which keys were set.
                         "params": sorted(action.params),
-                        "targets": [names.entity(e) for e in _targets(action.params)],
+                        "targets": [names.entity(e) for e in entity_ids(action.params)],
                         # A closed set of three words, never an entity: which
                         # pictures a notification carries (§6.2.1).
                         **(
@@ -302,13 +302,6 @@ def anonymised(
             "bypassed": len(state.bypassed),
         },
     }
-
-
-def _targets(params: Mapping[str, Any]) -> tuple[str, ...]:
-    value = params.get("entity_ids") or params.get("entity_id") or ()
-    if isinstance(value, str):
-        return (value,)
-    return tuple(str(v) for v in value)
 
 
 def _health(

@@ -18,7 +18,6 @@ from custom_components.foyer.core.privacy import (
     SHORT_RETENTION_DAYS,
     PersonRef,
     cutoff,
-    erased_row,
     new_pseudonym,
     person_ref,
     redact_detail,
@@ -72,36 +71,9 @@ def test_person_ref_of_somebody_who_is_not_a_user():
 
 def test_erasure_empties_every_identifying_column():
     """Decision 6: not two columns but four. Which keypad, and by which
-    route, is as much "who" as the name once you know the household."""
-    row = {
-        "ts": "2026-09-14T03:14:00+00:00",
-        "event_type": "disarmed",
-        "area_id": "ground",
-        "user_id": "ana",
-        "user_name": "Ana Cleaner",
-        "channel": "keypad",
-        "device_id": "hall",
-        "detail": {"zone_ids": ["door"]},
-    }
-    out = erased_row(row, person_ref(_house(), "ana"))
-    for column in ERASED_COLUMNS:
-        assert out[column] is None
-    # And what happened survives, which is the half §10.4 says must.
-    assert out["event_type"] == "disarmed"
-    assert out["area_id"] == "ground"
-    assert out["ts"] == row["ts"]
-    assert out["detail"] == {"zone_ids": ["door"]}
-
-
-def test_erasure_with_a_pseudonym_keeps_the_shape():
-    """The minimisation form of the same operation (decision 1): the same
-    person on both nights, without the name."""
-    ref = person_ref(_house(), "ana")
-    out = erased_row(
-        {"user_id": "ana", "user_name": "Ana Cleaner"}, ref, pseudonym="person-abc"
-    )
-    assert out["user_id"] == out["user_name"] == "person-abc"
-    assert out["channel"] is None
+    route, is as much "who" as the name once you know the household. The
+    store erases exactly these (store/log_store.py reads this tuple)."""
+    assert set(ERASED_COLUMNS) == {"user_id", "user_name", "channel", "device_id"}
 
 
 def test_redaction_reaches_a_name_inside_a_configuration_diff():

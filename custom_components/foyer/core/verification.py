@@ -62,7 +62,26 @@ def cross_zone_id(a: str, b: str) -> str:
     return "cross:" + "+".join(sorted((a, b)))
 
 
+# The last few configurations' groups, by identity. A configuration is frozen
+# and every decision reads it several times — the engine's windows, its group
+# index, the scheduler's next wake-up — and each rebuilt the same tuple from
+# scratch (second review). The configuration object itself is kept beside its
+# answer, so an id reused by a later object can never be mistaken for it.
+_GROUPS: dict[int, tuple[FoyerConfig, tuple[Verification, ...]]] = {}
+
+
 def groups(config: FoyerConfig) -> tuple[Verification, ...]:
+    cached = _GROUPS.get(id(config))
+    if cached is not None and cached[0] is config:
+        return cached[1]
+    answer = _groups(config)
+    if len(_GROUPS) >= 8:
+        _GROUPS.clear()
+    _GROUPS[id(config)] = (config, answer)
+    return answer
+
+
+def _groups(config: FoyerConfig) -> tuple[Verification, ...]:
     """Every group: the configured ones, then one per cross-zone pair.
 
     A pair is symmetric (part 2 decision 4): A pointing at B forms {A, B}
@@ -115,11 +134,6 @@ def groups(config: FoyerConfig) -> tuple[Verification, ...]:
             )
         )
     return tuple(out)
-
-
-def group_of(config: FoyerConfig, zone_id: str) -> Verification | None:
-    """The group a zone belongs to. Validation allows at most one."""
-    return next((g for g in groups(config) if zone_id in g.members), None)
 
 
 def counter_of(zone: Zone) -> Verification | None:

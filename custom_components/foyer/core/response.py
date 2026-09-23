@@ -177,6 +177,9 @@ class PlanContext:
     # kitchen when the smoke detector goes is worth as much as seeing it when
     # the window does (§6.2.1, decision 96).
     technical: Mapping[str, TechnicalAlarm] = field(default_factory=dict)
+    # Answers worked out once per decision (see `reachable`). Not part of
+    # what the context is: two contexts differing only here are the same.
+    memo: dict[Any, Any] = field(default_factory=dict, compare=False)
 
     @property
     def tz(self) -> tzinfo:
@@ -232,13 +235,6 @@ def _area_chain(
         if (profile := config.profile(candidate)) is not None:
             return profile, source
     return None, FROM_NONE
-
-
-def area_profile(
-    config: FoyerConfig, area_id: str | None, scenario_id: str | None
-) -> ResponseProfile | None:
-    """area → scenario → global default (SPEC §6)."""
-    return _area_chain(config, area_id, scenario_id)[0]
 
 
 def resolve_profile(
@@ -361,7 +357,13 @@ def reachable(
     refs = notify_contacts(action)
     if not refs:
         return (), ()
-    return recipients_for(
+    # Asked twice for every notification — whether it runs, then who it
+    # reaches — and the answer cannot change between the two within one
+    # decision (second review).
+    key = (action.id, moment)
+    if key in ctx.memo:
+        return ctx.memo[key]
+    answer = recipients_for(
         ctx.config,
         refs,
         ctx.now,
@@ -379,6 +381,8 @@ def reachable(
             else frozenset()
         ),
     )
+    ctx.memo[key] = answer
+    return answer
 
 
 def recipients_for(
@@ -721,7 +725,7 @@ def _as_list(value: Any) -> tuple[str, ...]:
     return ()
 
 
-def _entity_ids(params: Mapping[str, Any]) -> tuple[str, ...]:
+def entity_ids(params: Mapping[str, Any]) -> tuple[str, ...]:
     """Every entity this action would act on, wherever it names them."""
     found: list[str] = []
     for key in _TARGET_KEYS:
@@ -796,7 +800,7 @@ def _emptied(action: ProfileAction, params: Mapping[str, Any]) -> bool:
     immediate one is, and a marker riding in the params is a marker one
     call site forgets to read.
     """
-    return bool(_entity_ids(action.params)) and not _entity_ids(params)
+    return bool(entity_ids(action.params)) and not entity_ids(params)
 
 
 def _on_impaired_radio(
@@ -807,7 +811,7 @@ def _on_impaired_radio(
         dict.fromkeys(
             entity_id
             for action in actions
-            for entity_id in _entity_ids(action.params)
+            for entity_id in entity_ids(action.params)
             if ctx.snapshot.radio_of(entity_id) in ctx.impaired
         )
     )
@@ -939,15 +943,15 @@ def _running(
     *,
     technical: bool = False,
 ) -> RunningAction | None:
-    entity_ids = _entity_ids(params)
-    if not entity_ids:
+    targets = entity_ids(params)
+    if not targets:
         return None
     if action.kind is ActionKind.SIREN:
         duration = int(params.get("duration") or 0)
         return RunningAction(
             action_id=action.id,
             kind=action.kind.value,
-            entity_ids=entity_ids,
+            entity_ids=targets,
             until=now + timedelta(seconds=duration) if duration else None,
             restore="off",
             area_id=area_id,
@@ -960,7 +964,7 @@ def _running(
     return RunningAction(
         action_id=action.id,
         kind=action.kind.value,
-        entity_ids=entity_ids,
+        entity_ids=targets,
         until=now + timedelta(seconds=int(revert_after)),
         restore="off" if params.get("state", "on") == "on" else "on",
         area_id=area_id,

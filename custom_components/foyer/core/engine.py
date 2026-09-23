@@ -323,17 +323,6 @@ def walk_test_zones(
     )
 
 
-def zone_fault(
-    snapshot: SystemSnapshot, config: FoyerConfig, zone: Zone, now: datetime
-) -> str | None:
-    return fault_cause(
-        zone,
-        snapshot.entity(zone.entity_id),
-        now,
-        snapshot.entity(zone.battery_entity_id or ""),
-    )
-
-
 def master_state(
     state: RuntimeState, config: FoyerConfig
 ) -> tuple[AreaState, str | None]:
