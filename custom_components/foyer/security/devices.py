@@ -129,6 +129,7 @@ async def async_requester(
     user_id: str | None = None,
     device: ArmingDevice | None = None,
     encrypted: bool | None = None,
+    account: str | None = None,
 ) -> Requester:
     """Resolve one request arriving from a service call or a broker.
 
@@ -163,7 +164,6 @@ async def async_requester(
         # and was silently filed as an automation has been told nothing.
         return Requester(reason=Reason.DEVICE_NOT_REGISTERED)
 
-    credential = await hass.async_add_executor_job(codes.identify, config.users, code)
     if device is not None and device.token:
         # Possession is the credential; nothing can be typed on it (§9.3).
         return Requester(
@@ -176,6 +176,9 @@ async def async_requester(
             ),
             device=device,
         )
+    # After the token branch, which discards it: every stored hash is checked
+    # twice per code, and a tag carries no code to check (second review).
+    credential = await hass.async_add_executor_job(codes.identify, config.users, code)
     # The code wins over a claimed user, as it does everywhere else: somebody
     # typing their own code on the hall keypad is that person, whatever the
     # message says about who is holding it.
@@ -188,6 +191,9 @@ async def async_requester(
             code=credential.result,
             duress=credential.duress,
             encrypted=encrypted,
+            # Only for a request with no device: a keypad's failures count
+            # against the keypad, whoever's automation relayed them.
+            account=None if device is not None else account,
             # Nothing established this person: the message said so. The log
             # records the difference rather than flattening it.
             claimed=credential.user is None and bool(resolved),

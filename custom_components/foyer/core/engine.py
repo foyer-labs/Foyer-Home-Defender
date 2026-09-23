@@ -127,12 +127,12 @@ from .response import (
     without,
 )
 from .triggers import (
+    NEVER_FIRED,
     battery_low,
     fault_cause,
     fires_momentarily,
-    is_active,
-    NEVER_FIRED,
     has_baseline,
+    is_active,
     is_unavailable,
     scanned,
     supervision_due,

@@ -49,7 +49,10 @@ class FoyerChimeSwitch(FoyerEntity, SwitchEntity):
 
     async def _set(self, enabled: bool) -> None:
         actor = await actor_of(self.hass, self._system, self._context)
-        await self._system.async_handle(SetChime(enabled, actor))
+        decision = await self._system.async_handle(SetChime(enabled, actor))
+        # A refusal said, as the other two switches say theirs: a toggle
+        # that quietly snaps back looks like a broken switch (second review).
+        raise_if_rejected(self._system, decision)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._set(True)

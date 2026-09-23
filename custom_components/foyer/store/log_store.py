@@ -67,7 +67,11 @@ EVENT_FOYER = "foyer_event"
 # pages through; a filter that matches a year of zone activity must not try to
 # cross the WebSocket in one message.
 DEFAULT_LIMIT = 200
-MAX_LIMIT = 1000
+# The most one query may return: the size of an export (§10.3). A page of the
+# panel is bounded far lower by its own command; clamping every query here to
+# a page cut the CSV and JSON exports at a thousand rows while they promised
+# ten thousand (second review).
+MAX_LIMIT = 10000
 
 # How many rows one person's export may carry. The same order as the
 # filtered export of §10.3, because it is the same export: a subject
@@ -96,6 +100,8 @@ CREATE INDEX IF NOT EXISTS idx_cat_ts ON events(category, ts);
 CREATE INDEX IF NOT EXISTS idx_area_ts ON events(area_id, ts);
 CREATE INDEX IF NOT EXISTS idx_user_ts ON events(user_id, ts);
 CREATE INDEX IF NOT EXISTS idx_incident ON events(incident_id);
+CREATE INDEX IF NOT EXISTS idx_zone_ts ON events(zone_id, ts);
+CREATE INDEX IF NOT EXISTS idx_user_name ON events(user_name COLLATE NOCASE);
 """
 
 _COLUMNS = (
@@ -229,6 +235,9 @@ class LogStore:
         self._holding: list[LogRow] = []
         self._worker: asyncio.Task[None] | None = None
         self._connection: sqlite3.Connection | None = None
+        # Row counts by filter, with the connection's change counter they
+        # were taken at (see `_query`).
+        self._counts: dict[tuple[str, tuple[Any, ...]], tuple[int, int]] = {}
         # sqlite3 connections are shared across Home Assistant's executor
         # threads, so every use of one is serialised here.
         self._lock = threading.Lock()
@@ -278,6 +287,10 @@ class LogStore:
         # WAL keeps a reader (the panel) from blocking the writer (an alarm).
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("PRAGMA synchronous=NORMAL")
+        # A row deleted or rewritten is overwritten on disk, not merely
+        # unlinked: a name the privacy tools removed must not stay readable in
+        # a freed page (second review, §10.4).
+        connection.execute("PRAGMA secure_delete=ON")
         connection.executescript(_SCHEMA)
         connection.commit()
         self._connection = connection
@@ -391,10 +404,22 @@ class LogStore:
         with self._lock:
             if self._connection is None:
                 return {"rows": [], "total": 0}
-            total = self._connection.execute(
-                f"SELECT COUNT(*) FROM events{where}",
-                params,
-            ).fetchone()[0]
+            # Counted once per filter while nothing has been written: a page
+            # turn over a hundred thousand rows of zone activity must not scan
+            # them all again to learn a number it already has (second review).
+            key = (where, tuple(params))
+            changes = self._connection.total_changes
+            cached = self._counts.get(key)
+            if cached is not None and cached[0] == changes:
+                total = cached[1]
+            else:
+                total = self._connection.execute(
+                    f"SELECT COUNT(*) FROM events{where}",
+                    params,
+                ).fetchone()[0]
+                if len(self._counts) > 32:
+                    self._counts.clear()
+                self._counts[key] = (changes, total)
             records = self._connection.execute(
                 # Newest first, and by id within the same millisecond, so the
                 # order a decision produced is the order it is read back in.
@@ -464,6 +489,7 @@ class LogStore:
                 )
                 removed += cursor.rowcount
             self._connection.commit()
+            self._checkpoint()
         return removed
 
     # --- personal data (SPEC 10.4) -------------------------------------------
@@ -508,7 +534,7 @@ class LogStore:
                 marks = ", ".join("?" for _ in accounts)
                 qualifier = f"(user_id IS NULL OR user_id IN ({marks}))"
             clauses.append(
-                f"(user_name IS NOT NULL AND lower(user_name) = lower(?) "
+                f"(user_name IS NOT NULL AND user_name = ? COLLATE NOCASE "
                 f"AND {qualifier})"
             )
             params.append(name)
@@ -590,7 +616,7 @@ class LogStore:
             # way rather than asserted to be (found in review).
             by_name = sum(
                 count(
-                    "user_name IS NOT NULL AND lower(user_name) = lower(?) "
+                    "user_name IS NOT NULL AND user_name = ? COLLATE NOCASE "
                     "AND user_id IS NULL",
                     [name],
                 )
@@ -805,7 +831,18 @@ class LogStore:
                 )
                 changed += cursor.rowcount
             self._connection.commit()
+            self._checkpoint()
         return changed
+
+    def _checkpoint(self) -> None:
+        """Fold the write-ahead log into the database and empty it.
+
+        Rows rewritten or removed by the sweeps otherwise survive, readable,
+        in the `-wal` file until SQLite gets round to it — the old names
+        included (second review, §10.4). The caller holds the lock.
+        """
+        assert self._connection is not None
+        self._connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
     async def async_clear(self) -> int:
         """Empty the log. An edit_config operation, and itself logged (§10.3)."""

@@ -192,6 +192,11 @@ def lockout_key(actor: Actor) -> str:
     """
     if actor.device_id is None and actor.address:
         return f"http:{actor.address}"
+    if actor.device_id is None and actor.account:
+        # One counter per Home Assistant account on the panel and the
+        # services: a read-only account typing wrong codes must not lock out
+        # everybody else in the house (second review, decision 1).
+        return f"{actor.channel}:@{actor.account}"
     return f"{actor.channel}:{actor.device_id or ''}"
 
 

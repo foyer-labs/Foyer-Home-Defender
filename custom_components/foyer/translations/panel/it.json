@@ -1092,7 +1092,7 @@
   "notification": {
     "device_rejected": {
       "title": "Foyer: dispositivo sconosciuto",
-      "message": "Un dispositivo che si chiama «{device}» ha provato a comandare l'allarme e non è fra i dispositivi di inserimento di questo impianto. Non è cambiato nulla. Aggiungilo in Dispositivi di inserimento se è tuo."
+      "message": "Un dispositivo che si chiama {device} ha provato a comandare l'allarme e non è fra i dispositivi di inserimento di questo impianto. Non è cambiato nulla. Aggiungilo in Dispositivi di inserimento se è tuo."
     },
     "armed": {
       "title": "Foyer: inserito",
@@ -1311,7 +1311,7 @@
     "cameras_omitted": "Telecamere non mostrate: {count}.",
     "device_wrong_transport": {
       "title": "Foyer: nome di un tastierino usato sulla strada sbagliata",
-      "message": "Qualcosa ha usato il nome «{device}» via MQTT o con una chiamata di servizio. Quel tastierino parla solo attraverso l'endpoint dei dispositivi, con il suo token, quindi la richiesta è stata rifiutata e non è cambiato nulla. Se non sei stato tu, qualcuno conosce il nome del tastierino."
+      "message": "Qualcosa ha usato il nome {device} via MQTT o con una chiamata di servizio. Quel tastierino parla solo attraverso l'endpoint dei dispositivi, con il suo token, quindi la richiesta è stata rifiutata e non è cambiato nulla. Se non sei stato tu, qualcuno conosce il nome del tastierino."
     },
     "token_lockout": {
       "title": "Foyer: endpoint dei dispositivi bloccato per un indirizzo",
@@ -1772,7 +1772,9 @@
       "profile_created": "Il profilo di risposta «{profile}» parte come copia del tuo profilo predefinito, più le sirene e gli interruttori di Alarmo, e risponde per le aree importate.",
       "group_not_imported": "Il gruppo «{group}» ({n} su {members} entro {seconds} s) non è stato creato: un gruppo ha bisogno dei suoi membri attivi, e ogni zona importata parte spenta. Crealo a pagina 13 quando saranno confermate.",
       "setting_not_imported": "L'impostazione di Alarmo «{setting}» non è stata importata; le impostazioni di Foyer sono rimaste come erano.",
-      "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. È stato scritto da un Alarmo più recente di quello su cui è stato verificato, e quello che fa quel campo non è stato importato."
+      "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. È stato scritto da un Alarmo più recente di quello su cui è stato verificato, e quello che fa quel campo non è stato importato.",
+      "automation_untriggered": "«{automation}» partiva alla fine di un allarme. Ora parte al termine della sirena e quando l'allarme viene preso in carico, disinserimento compreso — non a ogni disinserimento normale.",
+      "scenario_overrides": "«{scenario}» ha un proprio ritardo di uscita o durata della sirena, e ora vale anche per le aree importate, qualunque cosa avesse Alarmo. Controllalo nella pagina 4."
     }
   },
   "wizard": {

@@ -58,6 +58,11 @@ PICTURE_KINDS: frozenset[str] = frozenset({"push", "chat"})
 # place of the message that carries the acknowledgement.
 PICTURE_DROPPED_KEYS: frozenset[str] = frozenset({"actions", "tag"})
 
+# How long a notification may take to be accepted before it counts as
+# failed. Long enough for a slow provider, short enough that the retry still
+# means something.
+NOTIFY_TIMEOUT = 20
+
 # How long to wait before the one retry a failed send gets (part 1 decision
 # 4). Short, because an escalation step is worth seconds and not minutes: it
 # exists for the transport that is not ready a second after a restart, not
@@ -91,6 +96,21 @@ class Executor:
     def __init__(self, hass: HomeAssistant, language: str | None = None) -> None:
         self.hass = hass
         self._language = language
+        self._cache: dict[str, dict[str, Any]] = {}
+
+    async def _strings(self) -> dict[str, Any]:
+        """The words of the house's language, read from disk once.
+
+        Asked for per recipient on the alarm path — every button needs its
+        label — and each ask was a hop to the executor for a file already in
+        memory (second review).
+        """
+        language = self.language
+        if language not in self._cache:
+            self._cache[language] = await self.hass.async_add_executor_job(
+                i18n.load_strings, language
+            )
+        return self._cache[language]
 
     @property
     def language(self) -> str:
@@ -100,31 +120,47 @@ class Executor:
         return self._language or self.hass.config.language
 
     async def async_run(self, decision: Decision) -> list[ActionResult]:
-        results: list[ActionResult] = []
-        for intent in decision.actions:
-            # A local, not a field on this object: two decisions interleave
-            # here the moment either awaits a service call, and a shared
-            # accumulator would give one decision's send outcomes to the
-            # other — losing a dead channel, or counting one failure twice
-            # and breaking a working channel at half the threshold.
-            #
-            # It is read back whether the action raised or not: a
-            # notification to three contacts that failed for one of them has
-            # still told the other two something true about their channels.
-            sends: dict[str, bool] = {}
-            try:
-                await self._async_run_one(intent, sends)
-                results.append(
-                    ActionResult(intent.action_id, intent.kind, True, sends=sends)
+        """Run every intent, and say how each went, in the Decision's order.
+
+        A notification waits for its transport's answer — that answer is the
+        only honest test of a channel (§11.4, §12.2) — so notifications run
+        beside the rest rather than in front of it: a Telegram server taking
+        ten seconds must not hold back the siren that comes after the
+        notification in the same list (second review). Everything else runs
+        in order, as the profile lists it.
+        """
+        pending: dict[int, asyncio.Task[ActionResult]] = {}
+        results: dict[int, ActionResult] = {}
+        for index, intent in enumerate(decision.actions):
+            if intent.kind == ActionKind.NOTIFY.value:
+                pending[index] = self.hass.async_create_task(
+                    self._async_result(intent), eager_start=True
                 )
-            except Exception as err:  # one failed action must not stop the others
-                _LOGGER.exception("Foyer action %s failed", intent.action_id)
-                results.append(
-                    ActionResult(
-                        intent.action_id, intent.kind, False, str(err), sends=sends
-                    )
-                )
-        return results
+            else:
+                results[index] = await self._async_result(intent)
+        for index, task in pending.items():
+            results[index] = await task
+        return [results[i] for i in range(len(decision.actions))]
+
+    async def _async_result(self, intent: ActionIntent) -> ActionResult:
+        # A local, not a field on this object: two decisions interleave here
+        # the moment either awaits a service call, and a shared accumulator
+        # would give one decision's send outcomes to the other — losing a
+        # dead channel, or counting one failure twice and breaking a working
+        # channel at half the threshold.
+        #
+        # It is read back whether the action raised or not: a notification
+        # to three contacts that failed for one of them has still told the
+        # other two something true about their channels.
+        sends: dict[str, bool] = {}
+        try:
+            await self._async_run_one(intent, sends)
+        except Exception as err:  # one failed action must not stop the others
+            _LOGGER.exception("Foyer action %s failed", intent.action_id)
+            return ActionResult(
+                intent.action_id, intent.kind, False, str(err), sends=sends
+            )
+        return ActionResult(intent.action_id, intent.kind, True, sends=sends)
 
     async def _async_run_one(
         self, intent: ActionIntent, sends: dict[str, bool]
@@ -159,9 +195,7 @@ class Executor:
         title = str(intent.params.get("title") or "")
         message = str(intent.params.get("message") or "")
         if not message:
-            strings = await self.hass.async_add_executor_job(
-                i18n.load_strings, self.language
-            )
+            strings = await self._strings()
             base = f"notification.{intent.moment.value}"
             if intent.variant:
                 base = f"{base}_{intent.variant}"
@@ -188,9 +222,7 @@ class Executor:
         writes no user-visible string anywhere else either: this is the same
         lookup ``_async_persistent`` does, for the same reason.
         """
-        strings = await self.hass.async_add_executor_job(
-            i18n.load_strings, self.language
-        )
+        strings = await self._strings()
         base = f"notification.{intent.moment.value}"
         if intent.variant:
             variant = f"{base}_{intent.variant}"
@@ -267,9 +299,7 @@ class Executor:
             # Past four, the message says how many were left out (decision
             # 95), in the words of the house (decision 73). On the text,
             # because the text is the one message that always arrives.
-            strings = await self.hass.async_add_executor_job(
-                i18n.load_strings, self.language
-            )
+            strings = await self._strings()
             note = i18n.translate(
                 strings, "notification.cameras_omitted", count=omitted
             )
@@ -444,9 +474,7 @@ class Executor:
             # different handler. It carries which countdown it would stop,
             # so the button on last night's notification cannot stop
             # tonight's arming.
-            strings = await self.hass.async_add_executor_job(
-                i18n.load_strings, self.language
-            )
+            strings = await self._strings()
             if "actions" in extra:
                 # This channel configures its own actions, so the button
                 # would be dropped. Said out loud rather than swallowed: a
@@ -474,9 +502,7 @@ class Executor:
             # declared actionable carries it: a transport discards a key it
             # does not know without a word, and a button nobody can press is
             # worse than none.
-            strings = await self.hass.async_add_executor_job(
-                i18n.load_strings, self.language
-            )
+            strings = await self._strings()
             extra.setdefault(
                 "actions",
                 [
@@ -552,12 +578,27 @@ class Executor:
             payload = {ATTR_ENTITY_ID: service, "message": data.get("message", "")}
             if title := data.get("title"):
                 payload["title"] = title
-            await self._call("notify", "send_message", payload)
+            await self._call_and_wait("notify", "send_message", payload)
             return
         domain, _, name = service.partition(".")
         if not name:
             raise ValueError(f"not a notify service: {service!r}")
-        await self._call(domain, name, data)
+        await self._call_and_wait(domain, name, data)
+
+    async def _call_and_wait(
+        self, domain: str, service: str, data: dict[str, Any]
+    ) -> None:
+        """A notification, waited for, within a bound.
+
+        Not fire-and-forget: a transport that accepts the call and then fails
+        — a revoked Telegram token, a push the provider refused — only logs
+        in Home Assistant, and Foyer counted it as sent. The test button said
+        a dead channel worked, channel health never saw it fail, and the one
+        retry never ran (second review). Bounded, because a transport that
+        never answers is a failure too.
+        """
+        async with asyncio.timeout(NOTIFY_TIMEOUT):
+            await self.hass.services.async_call(domain, service, data, blocking=True)
 
     # --- the world ------------------------------------------------------------
 
@@ -749,8 +790,19 @@ class Executor:
             )
         for notifier in notifiers:
             # The free channels the house already has (decision 60), through
-            # the same path the notify action uses.
+            # the same path the notify action uses — off the path of what
+            # comes after the chime, since a notification now waits for its
+            # transport's answer.
+            self.hass.async_create_background_task(
+                self._async_chime_notify(notifier, zone),
+                f"foyer_chime_{slugify(notifier)}",
+            )
+
+    async def _async_chime_notify(self, notifier: str, zone: str) -> None:
+        try:
             await self._async_notify_call(notifier, {"message": zone})
+        except Exception:
+            _LOGGER.warning("Foyer: %s did not accept the chime", notifier, exc_info=True)
 
     # --- plumbing -------------------------------------------------------------
 

@@ -554,7 +554,13 @@ def test_a_switch_off_on_untriggered_ends_with_the_alarm():
         if a.kind is ActionKind.SWITCH
     )
     assert action.params["state"] == "off"
-    assert action.moments == frozenset({Moment.SIREN_CUTOFF, Moment.DISARMED})
+    # The two moments that end an alarm, and not every ordinary disarm
+    # (second review): a relay meant to drop when the alarm ends must not
+    # drop every evening.
+    assert action.moments == frozenset(
+        {Moment.SIREN_CUTOFF, Moment.INCIDENT_ACKNOWLEDGED}
+    )
+    assert "automation_untriggered" in [line.code for line in result.lines]
 
 
 @pytest.mark.parametrize(

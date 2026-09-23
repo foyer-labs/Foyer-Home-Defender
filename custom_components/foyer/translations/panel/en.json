@@ -1092,7 +1092,7 @@
   "notification": {
     "device_rejected": {
       "title": "Foyer: unknown device",
-      "message": "A device calling itself “{device}” tried to command the alarm and is not one of this installation's arming devices. Nothing was changed. Add it under Arming devices if it is yours."
+      "message": "A device calling itself {device} tried to command the alarm and is not one of this installation's arming devices. Nothing was changed. Add it under Arming devices if it is yours."
     },
     "armed": {
       "title": "Foyer: armed",
@@ -1311,7 +1311,7 @@
     "cameras_omitted": "Cameras not shown: {count}.",
     "device_wrong_transport": {
       "title": "Foyer: a keypad's name used on the wrong path",
-      "message": "Something used the name “{device}” over MQTT or a service call. That keypad speaks only through the device endpoint, with its own token, so the request was refused and nothing was changed. If it was not you, somebody knows the keypad's name."
+      "message": "Something used the name {device} over MQTT or a service call. That keypad speaks only through the device endpoint, with its own token, so the request was refused and nothing was changed. If it was not you, somebody knows the keypad's name."
     },
     "token_lockout": {
       "title": "Foyer: device endpoint locked for one address",
@@ -1772,7 +1772,9 @@
       "profile_created": "The response profile “{profile}” starts as a copy of your default one, plus the sirens and switches from Alarmo, and answers for the areas brought in.",
       "group_not_imported": "The group “{group}” ({n} of {members} within {seconds} s) was not made: a group needs its members switched on, and every zone brought in starts switched off. Make it on page 13 once they are confirmed.",
       "setting_not_imported": "Alarmo's setting “{setting}” was not brought across; Foyer's own settings were left as they are.",
-      "unknown_field": "The file has a field this importer does not know: {field}. It was written by a newer Alarmo than the one this was checked against, and whatever that field does was not brought across."
+      "unknown_field": "The file has a field this importer does not know: {field}. It was written by a newer Alarmo than the one this was checked against, and whatever that field does was not brought across.",
+      "automation_untriggered": "“{automation}” ran when an alarm ended. It now runs at the siren cutoff and when the alarm is acknowledged, a disarm included — not at every ordinary disarm.",
+      "scenario_overrides": "“{scenario}” has its own exit delay or siren time, and it now applies to the imported areas too, whatever Alarmo had. Check it on page 4."
     }
   },
   "wizard": {

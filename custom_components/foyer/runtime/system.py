@@ -65,6 +65,7 @@ from ..core.models import (
     SystemSnapshot,
     Tick,
     User,
+    Zone,
     ZoneStateChanged,
 )
 from ..core.privacy import cutoff as privacy_cutoff, ref_for
@@ -254,6 +255,13 @@ class FoyerSystem:
         self._revision = 0
         self._health_at = -1
         self._health_cache: dict[str, Any] | None = None
+        self._unsub_started: CALLBACK_TYPE | None = None
+        self._by_entity: dict[str, tuple[Zone, ...]] | None = None
+        self._watched: list[str] | None = None
+        self._blockers_rev = -1
+        self._notify_pending = False
+        self._blockers_cache: dict[tuple[str, ...], tuple[tuple[str, ...], ...]] = {}
+        self._unsub_stop: CALLBACK_TYPE | None = None
         self._radio_cache: dict[str, str] | None = None
         # Which config entry this system belongs to, for the repair issues
         # of §12.4. Set by __init__.py once the entry exists.
@@ -274,16 +282,22 @@ class FoyerSystem:
             # enabled: Home Assistant itself did not restart.
             self.hass.async_create_task(self._async_started("reload"), eager_start=True)
         else:
-            self._unsubs.append(
-                self.hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STARTED, self._on_ha_started
-                )
+            self._unsub_started = self.hass.bus.async_listen_once(
+                EVENT_HOMEASSISTANT_STARTED, self._on_ha_started
             )
         self._unsubs.append(
             async_track_time_interval(self.hass, self._on_alive, ALIVE_INTERVAL)
         )
+        # Which radio an entity sits on changes only with the registry, not
+        # with every door that opens: the map was thrown away on every notify
+        # and rebuilt from registry lookups on the next event (second review).
         self._unsubs.append(
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._on_ha_stop)
+            self.hass.bus.async_listen(
+                er.EVENT_ENTITY_REGISTRY_UPDATED, self._on_registry_updated
+            )
+        )
+        self._unsub_stop = self.hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, self._on_ha_stop
         )
         if self.log is not None:
             self._unsubs.append(
@@ -312,17 +326,32 @@ class FoyerSystem:
 
     async def async_stop(self) -> None:
         """Unload: timers stop here, their state is on disk for the next start."""
-        self._stopped = True
         for unsub in self._unsubs:
             unsub()
         self._unsubs.clear()
+        # A listen-once handle is spent once its event has fired, and calling
+        # it again makes Home Assistant log an error with a traceback — on
+        # the first configuration save after every start (second review).
+        for name in ("_unsub_started", "_unsub_stop"):
+            if (unsub := getattr(self, name)) is not None:
+                unsub()
+                setattr(self, name, None)
         if self._unsub_wakeup:
             self._unsub_wakeup()
             self._unsub_wakeup = None
+        # The last save, and only then the flag that refuses every later one:
+        # set first, it made this save return at once, and the restart gap
+        # after a reload was measured from a stale `alive_at` (second review).
         await self._async_save()
+        self._stopped = True
+
+    @callback
+    def _on_registry_updated(self, _event: HassEvent) -> None:
+        self._radio_cache = None
 
     @callback
     def _on_ha_started(self, _event: HassEvent) -> None:
+        self._unsub_started = None  # spent: see async_stop
         self.hass.async_create_task(self._async_started("ha_start"), eager_start=True)
 
     async def _async_started(self, cause: str) -> None:
@@ -386,6 +415,11 @@ class FoyerSystem:
 
     @callback
     def _on_alive(self, _now: datetime) -> None:
+        # The health status depends on the clock as well as on the state —
+        # how long a zone has been unreachable, how many days — and on a
+        # quiet house nothing else moves the revision it is cached on, so the
+        # repair cards measured in days never appeared (second review).
+        self._health_cache = None
         self.hass.async_create_task(self._async_save(), eager_start=True)
         # Persistent problems belong in Settings, where somebody sees them
         # without opening the Foyer panel (§12.4). Reconciled here rather
@@ -439,6 +473,7 @@ class FoyerSystem:
 
     @callback
     def _on_ha_stop(self, _event: HassEvent) -> None:
+        self._unsub_stop = None  # spent: see async_stop
         self.hass.async_create_task(self._async_save(), eager_start=True)
 
     # --- system health (§12) -------------------------------------------------
@@ -570,26 +605,41 @@ class FoyerSystem:
         # No await between snapshot and store: on the event loop this block is
         # atomic, so two events can never interleave their decisions.
         was_active = self.state.active_zones
+        previous = self.state
         decision = decide(
             self._snapshot(overrides), event, self.config, dt_util.utcnow()
         )
         self.state = decision.state
         _LOGGER.debug("%s -> %s", event, decision)
-        self._reschedule()
+        # Neither the timers nor the log may stand between a stored decision
+        # and its sirens: §10 says a log failure never blocks the alarm path,
+        # and an exception here used to skip the executor (second review).
+        try:
+            self._reschedule()
+        except Exception:
+            _LOGGER.exception("Foyer could not schedule its next wake-up")
         self._notify()
-        await self._async_save()
+        if decision.state != previous or decision.occurrences or decision.actions:
+            # Only when something about the alarm moved: an attribute a
+            # sensor reports every few seconds wrote the whole state file
+            # each time, which on a Raspberry Pi's card is wear for nothing
+            # (second review). The alive tick still saves every five minutes.
+            await self._async_save()
         # The log is written before the actions run and again after them: what
         # happened is on record even if an action hangs, and how each action
         # went is recorded when it is known (§10.2, category ``action``).
-        self.async_record(
-            rows_for(
-                event,
-                decision,
-                self.config,
-                old_state=old_state,
-                was_active=was_active,
+        try:
+            self.async_record(
+                rows_for(
+                    event,
+                    decision,
+                    self.config,
+                    old_state=old_state,
+                    was_active=was_active,
+                )
             )
-        )
+        except Exception:
+            _LOGGER.exception("Foyer could not record a decision in its log")
         results = await self._executor.async_run(decision)
         self.async_record(_action_rows(decision, results))
         await self._async_report_sends(results)
@@ -659,12 +709,24 @@ class FoyerSystem:
             # arm a wake-up on a dead instance that nothing will ever cancel
             # (found in review).
             return
-        zones = [z for z in self.config.zones if z.entity_id == entity_id]
+        zones = self._zones_by_entity().get(entity_id, ())
         if any(z.id in self.state.faults for z in zones):
             # It may have been in supervision fault: let the engine clear it.
             self.hass.async_create_task(self.async_handle(Tick()), eager_start=True)
-        else:
+        elif any(z.supervision_timeout for z in zones):
+            # Only a supervised zone's deadline moves with a report. A person
+            # tracker or a battery sensor reporting every few seconds would
+            # otherwise rebuild the snapshot to reschedule nothing (second
+            # review).
             self._reschedule()
+
+    def _zones_by_entity(self) -> dict[str, tuple[Zone, ...]]:
+        if self._by_entity is None:
+            index: dict[str, list[Zone]] = {}
+            for zone in self.config.zones:
+                index.setdefault(zone.entity_id, []).append(zone)
+            self._by_entity = {k: tuple(v) for k, v in index.items()}
+        return self._by_entity
 
     # --- scheduler -----------------------------------------------------------
 
@@ -740,7 +802,16 @@ class FoyerSystem:
     def watched_entity_ids(self) -> list[str]:
         """Zones and arming devices, plus every entity an action's condition
         reads (§6.3): the engine is given the world, it never looks anything
-        up (INV-1)."""
+        up (INV-1).
+
+        Worked out once: the configuration cannot change within a system's
+        life (a save reloads it), and this ran on every snapshot (second
+        review)."""
+        if self._watched is None:
+            self._watched = self._watched_entity_ids()
+        return self._watched
+
+    def _watched_entity_ids(self) -> list[str]:
         entities = {z.entity_id for z in self.config.zones}
         # A zone's battery entity is watched like the zone itself: it is read
         # on every decision — a battery that cannot be read is a fault, and
@@ -1086,12 +1157,26 @@ class FoyerSystem:
         """Tell subscribers something visible changed (e.g. a zone state)."""
         self._notify()
 
+    @callback
+    def async_notify_soon(self) -> None:
+        """One notify on the next turn of the loop, however many ask for it."""
+        if self._notify_pending:
+            return
+        self._notify_pending = True
+
+        @callback
+        def run() -> None:
+            self._notify_pending = False
+            if not self._stopped:
+                self.async_notify()
+
+        self.hass.loop.call_soon(run)
+
     def _notify(self) -> None:
         # One revision per round of updates: what the entities read is
         # computed once and shared, rather than rebuilt per entity per
         # property.
         self._revision += 1
-        self._radio_cache = None
         for listener in list(self._listeners):
             try:
                 listener()
@@ -1107,7 +1192,18 @@ class FoyerSystem:
     # --- read model ----------------------------------------------------------
 
     def blockers(self, area_ids: tuple[str, ...]) -> tuple[tuple[str, ...], ...]:
-        return arm_blockers(self._snapshot(), self.config, area_ids, dt_util.utcnow())
+        # Once per round of updates and set of areas: every ready-to-arm
+        # entity asked twice per notify, each time with a new snapshot
+        # (second review).
+        if self._blockers_rev != self._revision:
+            self._blockers_rev = self._revision
+            self._blockers_cache = {}
+        key = tuple(area_ids)
+        if key not in self._blockers_cache:
+            self._blockers_cache[key] = arm_blockers(
+                self._snapshot(), self.config, key, dt_util.utcnow()
+            )
+        return self._blockers_cache[key]
 
     def master(self) -> tuple[AreaState, str | None]:
         return master_state(self.state, self.config)

@@ -278,7 +278,11 @@ def health_from_dict(h: dict[str, Any]) -> HealthSettings:
     w = h.get("watchdog") or {}
     return HealthSettings(
         mains_entity_id=h.get("mains_entity_id") or None,
-        mains_lost_states=tuple(h.get("mains_lost_states") or ("on",)),
+        # The default only when the key is missing: an empty list the
+        # household saved is refused by validation (INV-5), and reading it as
+        # `on` hid that — a mains alarm on a power sensor that never fires
+        # (second review).
+        mains_lost_states=tuple(h.get("mains_lost_states", ("on",)) or ()),
         watchdog=WatchdogSettings(
             enabled=bool(w.get("enabled", False)),
             url=str(w.get("url", "")),

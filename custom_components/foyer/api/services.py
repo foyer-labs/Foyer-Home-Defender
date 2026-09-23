@@ -40,7 +40,7 @@ from homeassistant.core import (
     SupportsResponse,
     callback,
 )
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import dt as dt_util
 import voluptuous as vol
@@ -50,6 +50,7 @@ from ..const import ACK_PATHS, CHANNEL_API, DOMAIN
 from ..core.journal import security_row
 from ..core.models import (
     ARMED_HA_STATES,
+    MAX_BYPASS_SECONDS,
     MAX_WALK_TEST_TIMEOUT,
     MIN_WALK_TEST_TIMEOUT,
     AcknowledgeIncident,
@@ -112,7 +113,9 @@ DISARM_SCHEMA = vol.Schema(
 BYPASS_SCHEMA = vol.Schema(
     {
         vol.Required("zone_id"): cv.string,
-        vol.Optional("seconds"): vol.Any(vol.All(int, vol.Range(min=1)), None),
+        vol.Optional("seconds"): vol.Any(
+            vol.All(int, vol.Range(min=1, max=MAX_BYPASS_SECONDS)), None
+        ),
         **_IDENTITY,
     }
 )
@@ -194,6 +197,7 @@ async def _requester(hass: HomeAssistant, system: FoyerSystem, call: ServiceCall
         code=call.data.get("code"),
         channel=call.data.get("channel"),
         user_id=call.data.get("user_id"),
+        account=call.context.user_id,
     )
 
 
@@ -203,6 +207,17 @@ async def _requester(hass: HomeAssistant, system: FoyerSystem, call: ServiceCall
 # reads — the same reasoning §10.2 applies to zone activity.
 _REPORT_EVERY = timedelta(minutes=1)
 _REPORTED = f"{DOMAIN}_reported_devices"
+_MAX_REPORTED = 20
+
+
+def _plain(ref: str | None) -> str:
+    """A name the sender chose, fit to sit in a notification's markdown.
+
+    Shown as code, so `[Re-authenticate](https://…)` reads as the text it is
+    and not as a link inside a Foyer security notice (second review).
+    """
+    text = " ".join((ref or "?").replace("`", "'").split())[:64]
+    return f"`{text}`"
 
 
 async def async_report_unknown_device(
@@ -239,6 +254,12 @@ async def async_report_unknown_device(
     # to what a minute of reports can need.
     for stale in [k for k, at in seen.items() if now - at >= _REPORT_EVERY]:
         del seen[stale]
+    if len(seen) >= _MAX_REPORTED:
+        # A sender rotating invented names would otherwise write a row and a
+        # notification for each (second review). Past this many distinct
+        # names in a minute the rest are not recorded one by one: whoever is
+        # doing that has already left enough rows to be seen.
+        return
     seen[key] = now
     system.async_record(
         (
@@ -260,11 +281,12 @@ async def async_report_unknown_device(
     key = "device_wrong_transport" if wrong_transport else "device_rejected"
     notices.async_create(
         hass,
-        i18n.translate(strings, f"notification.{key}.message", device=ref or "?"),
+        i18n.translate(strings, f"notification.{key}.message", device=_plain(ref)),
         title=i18n.translate(strings, f"notification.{key}.title"),
-        # Keyed by the device, so the same one retrying replaces its own
-        # notification instead of adding a hundred nobody reads.
-        notification_id=f"foyer_device_{channel}_{ref}",
+        # One per channel, replaced by the next: keyed by the name the sender
+        # chose, a sender inventing names could add notifications without
+        # end. The rows keep every name the log has room for.
+        notification_id=f"foyer_device_{channel}",
     )
 
 
@@ -560,10 +582,50 @@ def async_register(hass: HomeAssistant) -> None:
         hass.services.async_register(
             DOMAIN,
             name,
-            handler,
+            _raising(hass, handler),
             schema=schema,
             supports_response=SupportsResponse.OPTIONAL,
         )
+
+
+def _raising(hass: HomeAssistant, handler):
+    """A refusal the caller will not read is raised, not returned.
+
+    An automation that calls `foyer.disarm` without asking for the response
+    would otherwise take a wrong code, a lockout or an open window for
+    success, and carry on as if the house were disarmed (second review,
+    decision 2). A caller that asks for the response gets the structured
+    result of §9.1, refusal and all, exactly as before.
+    """
+
+    async def call(service: ServiceCall) -> ServiceResponse:
+        result = await handler(service)
+        if service.return_response or not isinstance(result, dict):
+            return result
+        if result.get("success") is False:
+            reason = str(result.get("reason") or "")
+            names = [
+                str(z.get("name") or z.get("id"))
+                for z in result.get("blocking_zones") or ()
+                if isinstance(z, dict)
+            ]
+            if reason in _REASONS:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key=f"rejected_{reason}",
+                    translation_placeholders={"zones": ", ".join(names)},
+                )
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="service_refused",
+                translation_placeholders={"reason": reason or "?"},
+            )
+        return None
+
+    return call
+
+
+_REASONS = frozenset(r.value for r in Reason)
 
 
 def _log_filters(data: dict[str, Any]) -> dict[str, Any]:
@@ -572,7 +634,12 @@ def _log_filters(data: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for key in ("start", "end"):
         if value := data.get(key):
-            parsed = dt_util.parse_datetime(value)
+            try:
+                parsed = dt_util.parse_datetime(value)
+            except ValueError:
+                # "2026-99-01" is shaped like a date and is not one: Home
+                # Assistant raises rather than answering None (second review).
+                parsed = None
             if parsed is not None:
                 out[key] = dt_util.as_utc(parsed)
     for key in (

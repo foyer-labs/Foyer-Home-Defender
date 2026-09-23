@@ -132,6 +132,9 @@
     },
     "rejected_walk_test_active": {
       "message": "A walk test is running. End it first, then arm."
+    },
+    "service_refused": {
+      "message": "Foyer refused the request: {reason}."
     }
   },
   "entity": {

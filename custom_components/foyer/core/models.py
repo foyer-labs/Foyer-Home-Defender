@@ -508,6 +508,11 @@ DEFAULT_SIREN_DURATION = 180
 DEFAULT_ARM_HOLD_TIMEOUT = 300
 MIN_ARM_HOLD_TIMEOUT = 60
 MAX_ARM_HOLD_TIMEOUT = 1800
+# The longest a timed exclusion may last. A holiday's worth and then some: a
+# number without a bound overflowed the clock inside `decide` (second
+# review), and an exclusion measured in years is a zone switched off in all
+# but name — which is what disabling it is for.
+MAX_BYPASS_SECONDS = 30 * 24 * 3600
 MIN_SUPERVISION_TIMEOUT = 60
 MAX_SUPERVISION_TIMEOUT = 7 * 24 * 3600
 
@@ -2532,6 +2537,11 @@ class Actor:
     # the wrong one (§9.2.1). The lockout of §8.4 then counts per source
     # address. Nothing else sets it.
     address: str | None = None
+    # The Home Assistant account behind a request that has no device: the
+    # panel, the card, a service call made by a signed-in person. The lockout
+    # of §8.4 counts per account there, so one account guessing locks itself
+    # out and not the whole household (second review, decision 1).
+    account: str | None = None
     # Whether the request crossed the network encrypted, as Home Assistant
     # judged it — directly, or behind a reverse proxy it trusts (§9.2.1).
     # None where the question does not arise; False is recorded on every row

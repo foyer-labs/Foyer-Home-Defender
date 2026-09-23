@@ -55,4 +55,5 @@ async def async_actor(
         identified=linked is not None and user is linked,
         duress=credential.duress,
         is_admin=bool(is_admin),
+        account=ha_user_id,
     )

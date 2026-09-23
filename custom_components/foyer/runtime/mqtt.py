@@ -35,6 +35,7 @@ is open" and "I am not a registered device" reads that one.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 import json
 import logging
@@ -317,7 +318,6 @@ async def async_setup(
         hass, command_topic, on_message, qos=settings.qos
     )
     remove_listener = system.async_add_listener(on_change)
-    await publish()
 
     @callback
     def stop() -> None:
@@ -325,6 +325,15 @@ async def async_setup(
         if remove_listener is not None:
             remove_listener()
 
+    try:
+        await publish()
+    except asyncio.CancelledError:
+        # Cancelled by an unload in the middle of the first publish: the
+        # subscription is already made and nobody else holds its handle, so
+        # it is released here or it answers commands for a dead system
+        # beside the new one (second review).
+        stop()
+        raise
     return stop
 
 

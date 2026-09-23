@@ -126,7 +126,9 @@ class FoyerAreaPanel(_Panel):
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         self._system.area_entity_ids[self._area.id] = self.entity_id
-        self._system.async_notify()
+        # One round of updates once the areas have all arrived, not one per
+        # area: each was every entity, the broker and every open panel.
+        self._system.async_notify_soon()
 
     async def async_will_remove_from_hass(self) -> None:
         self._system.area_entity_ids.pop(self._area.id, None)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, fields, replace
+import re
 from typing import Any
 import uuid
 
@@ -199,6 +200,10 @@ def _fail(*problems: Problem) -> EditResult:
     return EditResult(config=None, problems=tuple(problems))
 
 
+# What an id may be made of. Every id Foyer generates is a uuid's hex.
+_SAFE_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
 def upsert(
     config: FoyerConfig,
     state: RuntimeState,
@@ -213,6 +218,12 @@ def upsert(
         return _fail(Problem("unknown_kind", kind))
     data = dict(item)
     data["id"] = data.get("id") or new_id()
+    if not isinstance(data["id"], str) or not _SAFE_ID.fullmatch(data["id"]):
+        # Ids are generated here; one a client chose is at least plain. An
+        # id with a quote or an accent in it is escaped differently in the
+        # log's JSON detail, and the erasure of §10.4 then misses the rows
+        # about that person (second review).
+        return _fail(Problem("invalid", kind, str(data["id"])[:64]))
     try:
         if kind == "area":
             obj = area_from_dict({**_area_defaults(config), **data})
@@ -543,7 +554,22 @@ def _log_from(data: Any, current: LogSettings) -> LogSettings:
     """
     if not isinstance(data, dict):
         return current
-    parsed = log_from_dict(data)
+    # Merged category by category, not map by map: a payload naming the
+    # retention of one category would otherwise put every other one back to
+    # thirty days, which the next purge acts on (second review).
+    categories = [c.value for c in LogCategory]
+    merged = dict(data)
+    if isinstance(data.get("enabled"), dict):
+        merged["enabled"] = {
+            **{c: current.is_enabled(c) for c in categories},
+            **data["enabled"],
+        }
+    if isinstance(data.get("retention_days"), dict):
+        merged["retention_days"] = {
+            **{c: current.retention(c) for c in categories},
+            **data["retention_days"],
+        }
+    parsed = log_from_dict(merged)
     return replace(
         parsed,
         # Every part of the block keeps what the caller did not mention, not
@@ -641,6 +667,14 @@ def _without_credentials(document: dict[str, Any]) -> dict[str, Any]:
     for device in document.get("devices", []):
         if device.get("token_hash"):
             device["token_hash"] = _REDACTED
+    for user in document.get("users", []):
+        # A person's codes are hashes and never belong in a row; their
+        # pseudonym is the identifier a swept row carries, and a row that
+        # printed it beside the name would undo the sweep.
+        for key in ("code_hash", "duress_code_hash"):
+            if user.get(key):
+                user[key] = _REDACTED
+        user.pop("pseudonym", None)
     settings = document.get("settings") or {}
     if settings.get("ack_webhook_id"):
         settings["ack_webhook_id"] = _REDACTED
@@ -648,6 +682,23 @@ def _without_credentials(document: dict[str, Any]) -> dict[str, Any]:
     if watchdog.get("url"):
         watchdog["url"] = _REDACTED
     return document
+
+
+def _labeller(*sides: dict[str, dict[str, Any]]):
+    """How an item is named in the row: its name, and its id as well when two
+    carry the same name — keyed by name alone, one overwrote the other's
+    entry (second review)."""
+    names = [item.get("name") for side in sides for item in side.values()]
+    ids = {i: item.get("name") for side in sides for i, item in side.items()}
+    shared = {
+        n for n in names if n is not None and sum(v == n for v in ids.values()) > 1
+    }
+
+    def label(item: dict[str, Any]) -> str:
+        name = item.get("name") or item["id"]
+        return f"{name} ({item['id'][:8]})" if name in shared else name
+
+    return label
 
 
 def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
@@ -663,28 +714,55 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
     after = _without_credentials(config_to_dict(new))
     # A credential replaced by another is still a change: the redaction above
     # makes the two sides equal, so the fact is put back as the field alone.
-    token_changed = {
-        d.id
-        for d in new.devices
-        if (o := old.device(d.id)) is not None and o.token_hash != d.token_hash
+    secrets_changed: dict[str, dict[str, set[str]]] = {
+        "devices": {
+            d.id: {"token_hash"}
+            for d in new.devices
+            if (o := old.device(d.id)) is not None and o.token_hash != d.token_hash
+        },
+        "users": {
+            u.id: {
+                key
+                for key in ("code_hash", "duress_code_hash")
+                if getattr(o, key) != getattr(u, key)
+            }
+            for u in new.users
+            if (o := old.user(u.id)) is not None
+        },
     }
     changes: dict[str, Any] = {}
-    for kind in ("areas", "zones", "scenarios", "groups", "profiles", "devices"):
+    # Every kind of thing a household configures, people, contacts and rules
+    # included: which rule was changed to disarm, and who was given
+    # `manage_users`, are the questions this category exists for (second
+    # review).
+    for kind in (
+        "areas",
+        "zones",
+        "scenarios",
+        "groups",
+        "profiles",
+        "devices",
+        "users",
+        "contacts",
+        "rules",
+    ):
         was = {item["id"]: item for item in before.get(kind, [])}
         now = {item["id"]: item for item in after.get(kind, [])}
-        added = [now[i].get("name", i) for i in now.keys() - was.keys()]
-        removed = [was[i].get("name", i) for i in was.keys() - now.keys()]
+        label = _labeller(was, now)
+        added = [label(now[i]) for i in now.keys() - was.keys()]
+        removed = [label(was[i]) for i in was.keys() - now.keys()]
         edited = {
             # The name it has now: a rename shows as a change of "name", and
             # filing it under the old one would hide it from the object it
             # belongs to.
-            now[i].get("name", i): _fields(was[i], now[i])
+            label(now[i]): _fields(was[i], now[i])
             for i in was.keys() & now.keys()
             if was[i] != now[i]
         }
-        if kind == "devices":
-            for i in token_changed & was.keys() & now.keys():
-                edited.setdefault(now[i].get("name", i), {})["token_hash"] = []
+        for i, keys in secrets_changed.get(kind, {}).items():
+            if i in was and i in now:
+                for key in keys:
+                    edited.setdefault(label(now[i]), {})[key] = []
         entry = {
             k: v
             for k, v in (("added", added), ("removed", removed), ("changed", edited))

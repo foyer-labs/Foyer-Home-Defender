@@ -76,7 +76,10 @@ def validate(code: str, length: int) -> str:
     to collect before it validates anything. Digits only, for the same reason:
     a keypad has no letters.
     """
-    if not code.isdigit():
+    # ASCII digits only: `isdigit` also accepts superscripts and the digits
+    # of other scripts, which no keypad can type, so a code made of them is
+    # one nobody could ever enter.
+    if not (code.isascii() and code.isdigit()):
         raise CodeError("a code is digits only")
     if len(code) != length:
         raise CodeError(f"a code must be exactly {length} digits")

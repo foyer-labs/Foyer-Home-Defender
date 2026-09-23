@@ -7,7 +7,7 @@ stored (INV-2). The panel's own checks are a courtesy.
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from functools import partial
 from typing import Any
 import uuid
@@ -33,6 +33,7 @@ from ..core.models import (
     ARMED_HA_STATES,
     IDENTIFYING_CHANNELS,
     MAX_ARM_HOLD_TIMEOUT,
+    MAX_BYPASS_SECONDS,
     MAX_CODE_LENGTH,
     MAX_CONDITIONS,
     MAX_ENTRY_DELAY,
@@ -582,7 +583,9 @@ async def ws_acknowledge(
         vol.Required("zone_id"): str,
         vol.Optional("bypass", default=True): bool,
         # A timed temporary bypass: the zone rejoins on its own (SPEC §16).
-        vol.Optional("seconds"): vol.Any(vol.All(int, vol.Range(min=1)), None),
+        vol.Optional("seconds"): vol.Any(
+            vol.All(int, vol.Range(min=1, max=MAX_BYPASS_SECONDS)), None
+        ),
         vol.Optional("code"): vol.Any(str, None),
     }
 )
@@ -724,13 +727,23 @@ async def ws_auto_suspend(
     connection.send_result(msg["id"], _result(system, decision, connection.user))
 
 
+def _lenient_datetime(value: str) -> Any:
+    """A timestamp, or None when it cannot be read. Home Assistant raises for
+    a string shaped like a date that is not one ("2026-99-01"), and a filter
+    that crashed the handler answered nothing at all (second review)."""
+    try:
+        return dt_util.parse_datetime(value)
+    except ValueError:
+        return None
+
+
 def _parse_time(value: str | None) -> Any:
     """An ISO timestamp from the panel, or None. A bad one is refused rather
     than guessed at: a suspension that ends at the wrong hour is a house
     armed at the wrong hour."""
     if not value:
         return None
-    parsed = dt_util.parse_datetime(value)
+    parsed = _lenient_datetime(value)
     if parsed is None:
         raise ValueError(value)
     return dt_util.as_utc(parsed)
@@ -1340,16 +1353,15 @@ async def ws_user_save(
     """
     if (system := _system(hass, connection, msg["id"])) is None:
         return
-    if (
-        await _gate(
-            hass,
-            system,
-            connection,
-            msg,
-            operation=Operation.EDIT_CONFIG,
-            permission=Permission.MANAGE_USERS,
-        )
-    ) is None:
+    actor = await _gate(
+        hass,
+        system,
+        connection,
+        msg,
+        operation=Operation.EDIT_CONFIG,
+        permission=Permission.MANAGE_USERS,
+    )
+    if actor is None:
         return
 
     item = dict(msg["user"])
@@ -1359,6 +1371,7 @@ async def ws_user_save(
     existing = system.config.user(item.get("id"))
     length = system.config.settings.security.code_length
     problems: list[Problem] = []
+    new_codes: dict[str, str] = {}
     for field, stored in (
         ("new_code", "code_hash"),
         ("new_duress_code", "duress_code_hash"),
@@ -1379,38 +1392,84 @@ async def ws_user_save(
         except codes.CodeError:
             problems.append(Problem("code_length", "user", item.get("id"), field))
             continue
-        if await hass.async_add_executor_job(
-            partial(
-                codes.collides,
-                system.config.users,
-                code,
-                ignore_user_id=item.get("id"),
-            )
-        ):
-            problems.append(Problem("code_in_use", "user", item.get("id"), field))
-            continue
-        item[stored] = await hass.async_add_executor_job(codes.hash_code, code)
-    # A person's two codes must differ as well, and this cannot be left to the
-    # uniqueness check above: that one skips the user being edited, precisely
-    # so they can keep their own code. Setting a duress code equal to one's own
-    # ordinary code would be accepted by it — and the duress code would then
-    # never be reached, because the ordinary hash matches first. A silent alarm
-    # that can never fire is the worst thing in this file.
-    for field, other in (
-        ("new_code", "duress_code_hash"),
-        ("new_duress_code", "code_hash"),
-    ):
-        code = msg.get(field)
-        if not code or not item.get(other):
-            continue
-        if await hass.async_add_executor_job(codes.matches, code, item[other]):
-            problems.append(Problem("code_in_use", "user", item.get("id"), field))
+        new_codes[field] = code
+        item[stored] = getattr(existing, stored) if existing else None
     if problems:
         connection.send_result(
             msg["id"],
             {"success": False, "problems": [asdict(p) for p in problems]},
         )
         return
+    # The rest of the person first. Checked after it, the uniqueness check is
+    # reached only by a save that would otherwise be stored: before it, a
+    # save built to fail validation made every probe free, and the check an
+    # unlimited way of testing codes against the household (second review).
+    trial = upsert(system.config, system.state, "user", item)
+    if trial.config is None:
+        connection.send_result(
+            msg["id"],
+            {"success": False, "problems": [asdict(p) for p in trial.problems]},
+        )
+        return
+    # Only a person who already exists keeps their own code out of the check,
+    # and only as the stored record says — never an id the client chose.
+    own = existing.id if existing is not None else None
+    collided = False
+    for field, code in new_codes.items():
+        if await hass.async_add_executor_job(
+            partial(codes.collides, system.config.users, code, ignore_user_id=own)
+        ):
+            collided = True
+            problems.append(Problem("code_in_use", "user", item.get("id"), field))
+    # A person's two codes must differ as well, and this cannot be left to the
+    # uniqueness check above: that one skips the user being edited, precisely
+    # so they can keep their own code. Setting a duress code equal to one's own
+    # ordinary code would be accepted by it — and the duress code would then
+    # never be reached, because the ordinary hash matches first. A silent alarm
+    # that can never fire is the worst thing in this file.
+    ordinary = new_codes.get("new_code")
+    duress = new_codes.get("new_duress_code")
+    if ordinary and duress and ordinary == duress:
+        problems.append(
+            Problem("code_in_use", "user", item.get("id"), "new_duress_code")
+        )
+    for field, other in (
+        ("new_code", "duress_code_hash"),
+        ("new_duress_code", "code_hash"),
+    ):
+        code = new_codes.get(field)
+        stored = item.get(other)
+        if not code or not stored or (field == "new_code" and duress):
+            continue
+        if field == "new_duress_code" and ordinary:
+            continue
+        if await hass.async_add_executor_job(codes.matches, code, stored):
+            problems.append(Problem("code_in_use", "user", item.get("id"), field))
+    if collided:
+        # A code that is somebody else's is spent like a wrong code (second
+        # review, decision 5): the same counter, the same row, the same
+        # lockout. The accidental collision of a household choosing codes is
+        # one attempt; a series of them is somebody testing codes.
+        await system.async_handle(
+            CodeAttempt(
+                operation=Operation.EDIT_CONFIG,
+                actor=replace(actor, code=CodeResult.INVALID),
+            )
+        )
+    if problems:
+        connection.send_result(
+            msg["id"],
+            {"success": False, "problems": [asdict(p) for p in problems]},
+        )
+        return
+    for field, stored in (
+        ("new_code", "code_hash"),
+        ("new_duress_code", "duress_code_hash"),
+    ):
+        if field in new_codes:
+            item[stored] = await hass.async_add_executor_job(
+                codes.hash_code, new_codes[field]
+            )
 
     result = upsert(system.config, system.state, "user", item)
     await _apply(
@@ -1565,7 +1624,7 @@ def _filters(msg: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for key in ("start", "end"):
         if value := msg.get(key):
-            parsed = dt_util.parse_datetime(value)
+            parsed = _lenient_datetime(value)
             if parsed is not None:
                 out[key] = dt_util.as_utc(parsed)
     for key in (
@@ -2262,7 +2321,7 @@ async def ws_simulate(
         )
     ) is None:
         return
-    start = dt_util.parse_datetime(msg.get("start") or "") or dt_util.utcnow()
+    start = _lenient_datetime(msg.get("start") or "") or dt_util.utcnow()
     request = SimulationRequest(
         start=dt_util.as_utc(start),
         timezone=dt_util.get_default_time_zone(),

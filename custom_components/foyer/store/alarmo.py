@@ -707,14 +707,17 @@ def read(document: Any) -> Alarmo:
 # Alarmo's automation events, as the moments of §6.1 that mean the same thing.
 # `arming` has no moment of its own in Foyer (an exit delay starting is not a
 # moment a profile answers), and `untriggered` — leaving `triggered`, by a
-# disarm or by the siren time running out — is both of the moments that end
-# an alarm. A switch turned off at either is what Alarmo users write to pair
-# with the one they turned on.
+# disarm or by the siren time running out — is the two moments that end an
+# alarm: the siren cutoff, and the acknowledgement a disarm of that area is.
+# Not `disarmed`: that is every ordinary disarm too, and a switch meant to go
+# off when an alarm ends would go off every evening (second review). A switch
+# turned off at either is what Alarmo users write to pair with the one they
+# turned on, and the report says how it was read.
 _MOMENTS: Mapping[str, frozenset[Moment]] = {
     "armed": frozenset({Moment.ARMED}),
     "disarmed": frozenset({Moment.DISARMED}),
     "triggered": frozenset({Moment.TRIGGERED}),
-    "untriggered": frozenset({Moment.SIREN_CUTOFF, Moment.DISARMED}),
+    "untriggered": frozenset({Moment.SIREN_CUTOFF, Moment.INCIDENT_ACKNOWLEDGED}),
     "arm_failure": frozenset({Moment.ARM_FAILED}),
     "pending": frozenset({Moment.ENTRY_STARTED}),
 }
@@ -1008,6 +1011,14 @@ def plan(
             )
             extended += 1
             note("scenario_extended", scenario=target.name, mode=mode)
+            if (
+                target.exit_delay_override is not None
+                or target.siren_duration_override is not None
+            ):
+                # The scenario's own exit delay and siren time now apply to
+                # the imported areas too, whatever Alarmo had (second
+                # review): said, because a 0 s override means no exit delay.
+                note("scenario_overrides", scenario=target.name)
             if target.allowed_user_ids is not None:
                 note("scenario_restricted", scenario=target.name)
             if target.response_profile_id is not None:
@@ -1284,6 +1295,8 @@ def _profiles(
         if not actions:
             continue
         note("automation_imported", automation=label)
+        if any(t.event == "untriggered" for t in automation.triggers):
+            note("automation_untriggered", automation=label)
         for area_id in sorted(scope):
             wanted.setdefault(area_id, []).extend(actions)
 

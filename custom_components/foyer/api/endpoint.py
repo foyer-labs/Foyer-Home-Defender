@@ -158,14 +158,11 @@ def _address(request: web.Request) -> str:
 
 def _counted_as(system: FoyerSystem, address: str) -> str:
     """The counter a bad token from this address spends (§9.2.1)."""
-    known = {
-        key.removeprefix("http:")
-        for key in system.state.lockouts
-        if key.startswith("http:")
-    }
-    if address in known or len(known) < MAX_ADDRESS_COUNTERS:
+    lockouts = system.state.lockouts
+    if f"http:{address}" in lockouts:
         return address
-    return OVERFLOW_ADDRESS
+    known = sum(1 for key in lockouts if key.startswith("http:"))
+    return address if known < MAX_ADDRESS_COUNTERS else OVERFLOW_ADDRESS
 
 
 def _endpoint_in_use(system: FoyerSystem) -> bool:
@@ -287,10 +284,15 @@ async def _async_authenticate(
         return None, None, web.Response(status=HTTPStatus.SERVICE_UNAVAILABLE)
     if not _endpoint_in_use(system):
         return system, None, web.Response(status=HTTPStatus.NOT_FOUND)
-    address = _counted_as(system, _address(request))
+    # The address's own counter, never the shared overflow one: that one
+    # stops strangers' guesses from being counted one by one, and must never
+    # refuse a keypad whose token is right. Refusing on it let anybody who
+    # had filled the sixty-four counters lock every keypad in the house out
+    # (second review).
+    address = _address(request)
     if authz.address_locked_until(system.state.lockouts, address, dt_util.utcnow()):
         # Answered here, before the engine: a locked address hammering the
-        # endpoint must not write a row per request (decision of this phase).
+        # endpoint must not write a row per request.
         return system, None, _unauthorised()
     device = device_by_token(system.config, _bearer(request))
     if device is None:

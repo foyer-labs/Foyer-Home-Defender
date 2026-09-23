@@ -132,6 +132,9 @@
     },
     "rejected_walk_test_active": {
       "message": "È in corso un walk test. Terminalo prima, poi inserisci."
+    },
+    "service_refused": {
+      "message": "Foyer ha rifiutato la richiesta: {reason}."
     }
   },
   "entity": {
