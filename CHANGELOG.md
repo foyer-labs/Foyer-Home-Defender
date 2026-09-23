@@ -5,6 +5,51 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.20] — when everybody leaves and a window is open
+
+An automatic rule that met an open window used to fail quietly: the house
+stayed disarmed, and the people who had just left heard nothing unless
+somebody had added a notification to the response profile. SPEC §9.4 "When
+the house is not ready", decisions 124–127. The stored configuration moves
+to schema 8.3, additive.
+
+### Changed — read this before you update
+- **The contacts of an automatic rule now hear how its arming went**,
+  through their quiet hours. A rule that could not arm, or armed with zones
+  excluded, sends a second message after its countdown. One that armed as
+  announced sends nothing more.
+
+### Added
+- **The countdown names what is not ready.** For example: "Nobody seems to
+  be in, so “Empty house” will arm Away — but Bathroom window is not ready,
+  and it cannot arm until it is." It says instead that the zone will be
+  excluded when the rule excludes open zones.
+- **The outcome, in words that follow what happened:**
+  - not armed, naming the zones, and "it will arm by itself as soon as they
+    are";
+  - then "arming now" once they are;
+  - armed excluding what was open;
+  - an arming that failed at the end of its exit delay because a zone
+    opened while everybody was leaving.
+
+  A rule triggered by an instant (a time, an arrival) has one turn: it says
+  it will not try again until its next time, and does not. A scenario
+  switch is told in a switch's words.
+- **"Arm anyway, excluding open zones"**, an option on each rule, off by
+  default and warned about when switched on:
+  - it excludes only the zones that are open and may be excluded;
+  - a zone in fault or unavailable, or one that may not be excluded, still
+    refuses the arming;
+  - it covers what is open when the rule arms and nothing after;
+  - an excluded zone is watched again as soon as it closes;
+  - the log records a forced arming with the rule's name.
+
+### Fixed
+- A rule refused by a zone that may not be excluded never tried again. It
+  now waits for that zone like any other.
+- The hint beside **Arm without these zones** said the zones stay unwatched
+  until you disarm. They are watched again as soon as they close.
+
 ## [0.1.0-beta.19] — API devices, and a documented contract
 
 The device endpoint of beta.13 was built for a keypad. It is now the way any
