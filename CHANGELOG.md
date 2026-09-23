@@ -5,6 +5,72 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.18] — easier to set up, and to arm with a code
+
+A full review of the panel and the card for usability, and of every string
+in both languages. Reviewers read and used the panel and the card in both
+languages, light and dark, down to a 220 px wide card, and others verified
+the fixes. The stored configuration stays at schema 8.1.
+
+### Changed — read these before you update
+- **The panel forgets a code** two minutes after it was last used, after
+  every arming or disarming, and when the panel closes. Until now it kept a
+  code that had worked for the whole visit, so whoever came next to an
+  unlocked wall tablet could disarm or reconfigure without typing it
+  (decision 114). Expect to be asked again during a long configuration.
+- **The words changed**, in both languages, to one term per idea:
+  - in English, *Exclude / Include again*, *Whole house* (also the name of
+    the whole-house alarm entity in Home Assistant; its entity id is
+    unchanged), *siren*, *Automatic rules*;
+  - in Italian, always *inserire / disinserire*, *prendere atto*,
+    *escludere / includere*, *tastierino*, *impianto*, *registro*.
+
+  Automations that match on a displayed name rather than an entity id
+  should be checked.
+
+### Added
+- **A code prompt that says what it is for, and who asks.** "Code to arm
+  Away", and, when an area's or a scenario's own setting asked, "Upstairs
+  asks for a code". The engine now reports which setting asked (§8.2).
+- **The Overview arms a scenario with a button of its own**, says whether
+  the house is ready, and shows a lock on the scenarios that ask for a code.
+  Arming one area alone is behind *Just one area…*.
+- **The scenario editor has its code settings** and the list of people
+  allowed to use it, which had been in the model since Phase 1 with no page
+  to set them.
+- **Deleting asks first**, beside the button, on every page; a new code is
+  typed twice.
+- **The card:**
+  - the keypad opens by itself during an entry delay when disarming asks for
+    a code;
+  - it names what the code is for and labels the confirm key with the
+    action;
+  - it shows until when a lockout lasts;
+  - smoke and open incidents now show on the compact layout and the badge
+    too.
+
+### Fixed
+- **The first-run wizard threw away a person typed in its user step**
+  unless a second button was pressed. It could also save a threshold or a
+  trigger nobody had seen (INV-5): it now sends those zones to the Zones
+  page.
+- **The panel resent a wrong code** with the next command, spending the
+  lockout without anybody typing.
+- **On the card, digits typed for one command could go with another**: a
+  banner button, a second action, or a Clear that forgot what the digits
+  were for.
+- **During a forced arm the card's most obvious button repeated the refused
+  arm** and spent the code.
+- **A keypad for one area lost every button** while a different area was in
+  alarm.
+- **A delete question moved to the next item opened**, where one click
+  deleted something nobody had chosen.
+- Italian meanings that were wrong (*Armatura automatica*, *Pastiglia*,
+  *Ritenuto*, "nessuno viene chiesto") and gender agreements; specification
+  references and promises of protection taken out of what a household reads.
+- The Overview's help starts collapsed, so on a phone the controls are on
+  the screen (decision 113).
+
 ## [0.1.0-beta.17] — manage_users, wherever people are touched
 
 One open item from beta.16, closed. The stored configuration stays at schema
