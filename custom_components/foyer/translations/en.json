@@ -47,13 +47,13 @@
           "code": "New code"
         },
         "data_description": {
-          "account": "Home Assistant does not tell Foyer who opened this window, so choose the account to recover.",
+          "account": "Only administrators' accounts are listed: Home Assistant does not tell Foyer who opened this window, so choose yours. Anybody else is given a way in from the Users page.",
           "code": "Exactly {length} digits, not already somebody else's."
         }
       }
     },
     "error": {
-      "unknown_account": "That account does not exist or cannot sign in.",
+      "unknown_account": "That account is not an administrator of Home Assistant, or cannot sign in.",
       "invalid_code": "The code must be digits only, of the length set in Foyer.",
       "code_in_use": "That code is not available. Choose another.",
       "invalid": "Foyer could not save this person. Open the Users page to see why.",

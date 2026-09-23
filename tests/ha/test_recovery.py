@@ -11,8 +11,9 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import timedelta
 
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from homeassistant.util import dt as dt_util
+import pytest
 from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.foyer.const import DOMAIN
@@ -73,8 +74,8 @@ async def test_an_administrator_with_no_code_gets_back_in_and_everybody_hears(
     # Heard: a message to the contact, a Home Assistant notification.
     assert phone and hass_admin_user.name in phone[0].data["message"]
     notes = hass.data.get("persistent_notification", {})
-    assert "foyer_access_recovered" in notes
-    assert hass_admin_user.name in notes["foyer_access_recovered"]["message"]
+    (note,) = [n for k, n in notes.items() if k.startswith("foyer_access_recovered")]
+    assert hass_admin_user.name in note["message"]
 
     # And in: a person linked to the account, every permission, the new code.
     system = hass.data[DOMAIN]
@@ -135,3 +136,50 @@ async def test_a_code_somebody_else_holds_is_refused_without_saying_whose(
     assert result["errors"] == {"base": "code_in_use"}
     assert hass.data[DOMAIN].config.user_of_ha(hass_admin_user.id) is None
     assert await _rows(hass, "access_recovered") == []
+
+
+async def test_only_an_administrator_account_can_be_recovered(
+    hass, loaded, hass_ws_client, hass_read_only_user
+):
+    """Decision 110: the recovery is an administrator's own access."""
+    client = await hass_ws_client(hass)
+    await _make_user(hass, client, new_code=CODE)
+    # Not even offered: the form refuses it before Foyer sees it.
+    with pytest.raises(InvalidData):
+        await _recover(hass, loaded, hass_read_only_user.id, NEW)
+    assert hass.data[DOMAIN].config.user_of_ha(hass_read_only_user.id) is None
+
+
+async def test_a_recovery_that_could_not_be_written_is_not_announced_as_done(
+    hass, loaded, hass_ws_client, hass_admin_user, monkeypatch
+):
+    """Found in review: announced first, a recovery that another save beat
+    to the write told everybody about a code that did not exist."""
+    from custom_components.foyer.api import recovery
+
+    client = await hass_ws_client(hass)
+    await _make_user(hass, client, new_code=CODE)
+
+    async def beaten(*_args, **_kwargs):
+        # What async_write answers when another save got there first.
+        return {"success": False, "problems": [{"code": "config_reloading"}]}
+
+    monkeypatch.setattr(recovery, "async_write", beaten)
+    result = await _recover(hass, loaded, hass_admin_user.id, NEW)
+    assert result.get("errors") == {"base": "reloading"}, result
+    (row,) = await _rows(hass, "access_recovered")
+    assert row["outcome"] == "failed"
+    notes = hass.data.get("persistent_notification", {})
+    assert not any(key.startswith("foyer_access_recovered") for key in notes)
+
+
+async def test_two_recoveries_leave_two_notices(
+    hass, loaded, hass_ws_client, hass_admin_user, freezer
+):
+    client = await hass_ws_client(hass)
+    await _make_user(hass, client, new_code=CODE)
+    await _recover(hass, loaded, hass_admin_user.id, NEW)
+    freezer.tick(timedelta(seconds=5))
+    await _recover(hass, loaded, hass_admin_user.id, "246800")
+    notes = hass.data.get("persistent_notification", {})
+    assert sum(key.startswith("foyer_access_recovered") for key in notes) == 2

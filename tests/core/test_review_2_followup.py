@@ -398,3 +398,22 @@ def test_giving_a_tag_to_somebody_else_touches_people():
     # A zone renamed is not a person.
     zones = tuple(replace(z, name=z.name + " 2") for z in before.zones)
     assert not touches_people(before, replace(before, zones=zones))
+
+
+def test_giving_a_key_switch_to_somebody_else_touches_people():
+    from custom_components.foyer.store.editing import touches_people
+
+    key = zone(
+        "key",
+        KEY,
+        "garage",
+        type=ZoneType.KEY,
+        channel=Channel.KEY,
+        key=KeyAction(
+            on_activate=KeyCommand.TOGGLE, scenario_id="away", user_id="luca"
+        ),
+    )
+    before = replace(_with_codes(), zones=(*_with_codes().zones, key))
+    moved = replace(key, key=replace(key.key, user_id="reader"))
+    after = replace(before, zones=(*_with_codes().zones, moved))
+    assert touches_people(before, after)

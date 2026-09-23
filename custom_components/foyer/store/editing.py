@@ -822,7 +822,8 @@ def config_diff(old: FoyerConfig, new: FoyerConfig) -> dict[str, Any]:
 
 def touches_people(old: FoyerConfig, new: FoyerConfig) -> bool:
     """Whether going from one configuration to the other adds, removes or
-    changes a person or a tag (decision 111).
+    changes a person, a tag, or the person a key switch acts as (decision
+    111).
 
     What `manage_users` owns: who exists, what they may do, and which key
     opens the house as whom. The codes and the pseudonym are left out of the
@@ -846,7 +847,15 @@ def touches_people(old: FoyerConfig, new: FoyerConfig) -> bool:
             d.id: device_to_dict(d) for d in config.devices if d.kind is DeviceKind.TAG
         }
 
-    return people(old) != people(new) or tags(old) != tags(new)
+    def keys(config: FoyerConfig) -> dict[str, str | None]:
+        # A key switch acts as the person it names, with no code (§4.7): the
+        # same credential a tag is, and "somebody else's key" whichever of
+        # the two it is (review).
+        return {z.id: z.key.user_id for z in config.zones if z.key is not None}
+
+    return (
+        people(old) != people(new) or tags(old) != tags(new) or keys(old) != keys(new)
+    )
 
 
 def update_security(

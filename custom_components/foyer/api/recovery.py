@@ -22,6 +22,7 @@ from functools import partial
 
 from homeassistant.core import HomeAssistant
 
+from .. import i18n
 from ..core.models import Permission
 from ..runtime.system import FoyerSystem
 from ..security import codes
@@ -39,13 +40,15 @@ RELOADING = "reloading"
 
 
 async def async_accounts(hass: HomeAssistant) -> dict[str, str]:
-    """The accounts a person can sign in with, administrators first."""
+    """The administrators' accounts: the recovery is an administrator's own
+    access (decisions 109, 110). Anybody else is given a way in from the
+    Users page, with the permissions that takes."""
     users = [
         u
         for u in await hass.auth.async_get_users()
-        if u.is_active and not u.system_generated
+        if u.is_active and not u.system_generated and u.is_admin
     ]
-    users.sort(key=lambda u: (not u.is_admin, (u.name or "").casefold()))
+    users.sort(key=lambda u: (u.name or "").casefold())
     return {u.id: u.name or u.id for u in users}
 
 
@@ -54,7 +57,12 @@ async def async_recover(
 ) -> str | None:
     """Recover access for this account with this code, or say why not."""
     account = await hass.auth.async_get_user(account_id)
-    if account is None or account.system_generated or not account.is_active:
+    if (
+        account is None
+        or account.system_generated
+        or not account.is_active
+        or not account.is_admin
+    ):
         return UNKNOWN_ACCOUNT
     config = system.config
     try:
@@ -101,22 +109,39 @@ async def async_recover(
     if result.config is None:
         return INVALID
     person = result.config.user(result.id)
-    # Said before it is written: the write reloads the integration, and what
-    # this is must reach the log and the household whatever happens next.
-    await system.async_access_recovered(
+    strings = await hass.async_add_executor_job(i18n.load_strings, system.language)
+    # Announced once the write has been tried, whatever it answered: a
+    # recovery announced and then not written would tell the household about
+    # a code that does not exist (review), and one written and not announced
+    # would be the quiet way round a code.
+    try:
+        answer = await async_write(
+            hass,
+            system,
+            result,
+            operation="recover",
+            kind="user",
+            channel="ha_config",
+            user_id=None,
+            user_name=None,
+        )
+    except Exception:
+        system.access_recovered(
+            strings,
+            account=account.name or account.id,
+            user_id=result.id,
+            user_name=person.name if person else None,
+            created=linked is None,
+            written=False,
+        )
+        raise
+    written = bool(answer.get("success"))
+    system.access_recovered(
+        strings,
         account=account.name or account.id,
         user_id=result.id,
         user_name=person.name if person else None,
         created=linked is None,
+        written=written,
     )
-    answer = await async_write(
-        hass,
-        system,
-        result,
-        operation="recover",
-        kind="user",
-        channel="ha_config",
-        user_id=None,
-        user_name=None,
-    )
-    return None if answer.get("success") else RELOADING
+    return None if written else RELOADING

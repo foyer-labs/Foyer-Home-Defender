@@ -135,9 +135,10 @@ class FoyerRecoveryFlow(OptionsFlow):
     """Recover access for an administrator's account, loudly (§8.2).
 
     Home Assistant opens this step to administrators only and does not say
-    which one: the step asks for the account. What it does is said in the
-    log, in a Home Assistant notification and to every enabled contact
-    before it is written (api/recovery).
+    which one: the step asks for the account, among administrators' only.
+    Once the write has been tried it is said in the log — as failed, if it
+    failed — and, when written, in a Home Assistant notification and to
+    every enabled contact (api/recovery).
     """
 
     async def async_step_init(

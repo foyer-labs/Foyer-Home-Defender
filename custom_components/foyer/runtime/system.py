@@ -32,7 +32,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .. import i18n, repairs
-from ..const import CHANNEL_HA_UI, SIGNAL_UPDATE
+from ..const import CHANNEL_HA_UI, DOMAIN, SIGNAL_UPDATE
 from ..core import authz, health as health_engine, rules as rules_engine
 from ..core.conditions import condition_entities
 from ..core.diagnostics import as_dict as diagnostics_dict, diagnose
@@ -1262,20 +1262,26 @@ class FoyerSystem:
         )
         return simulation_dict(simulation, self.config)
 
-    async def async_access_recovered(
+    @callback
+    def access_recovered(
         self,
+        strings: Mapping[str, Any],
         *,
         account: str,
         user_id: str | None,
         user_name: str | None,
         created: bool,
+        written: bool,
     ) -> None:
         """Say, everywhere, that an administrator recovered access (§8.2).
 
-        A `security` row, a Home Assistant notification, and a message to
-        every enabled contact over their first channel, through quiet hours
-        like an alarm: the recovery is the one way round a code, and it must
-        never be the quiet one (decision 109).
+        Called once the write has been tried, and synchronously: the write
+        schedules a reload, and nothing here may wait for it. A `security`
+        row either way — a recovery that could not be written is recorded as
+        failed, never as done — and, when it was written, a Home Assistant
+        notification of its own and a message to every enabled contact over
+        their first channel, through quiet hours like an alarm (decision
+        109).
         """
         from . import notices
 
@@ -1288,21 +1294,22 @@ class FoyerSystem:
                     channel="ha_config",
                     user_id=user_id,
                     user_name=user_name,
-                    outcome=Outcome.OK.value,
+                    outcome=(Outcome.OK if written else Outcome.FAILED).value,
                     detail={"account": account, "created": str(created).lower()},
                 ),
             )
         )
-        strings = await self.hass.async_add_executor_job(
-            i18n.load_strings, self.language
-        )
+        if not written:
+            return
         notices.async_create(
             self.hass,
             i18n.translate(
                 strings, "notification.access_recovered.message", account=account
             ),
             title=i18n.translate(strings, "notification.access_recovered.title"),
-            notification_id="foyer_access_recovered",
+            # One of its own each time: a second recovery must not quietly
+            # replace the notice of the first.
+            notification_id=f"foyer_access_recovered_{int(now.timestamp())}",
         )
         refs = [
             {"contact_id": c.id, "channel_id": None}
@@ -1332,8 +1339,18 @@ class FoyerSystem:
                 ),
             ),
         )
-        results = await self._executor.async_run(decision)
-        self.async_record(_action_rows(decision, results))
+        executor = self._executor
+
+        async def tell() -> None:
+            # Beside the reload the write scheduled, not in front of it, and
+            # filed with whichever system is running when the answers come
+            # back: this one's log may have closed by then.
+            results = await executor.async_run(decision)
+            current = self.hass.data.get(DOMAIN)
+            if isinstance(current, FoyerSystem):
+                current.async_record(_action_rows(decision, results))
+
+        self.hass.async_create_task(tell(), "foyer_access_recovered")
 
     async def async_test_action(
         self,

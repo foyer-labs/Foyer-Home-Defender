@@ -47,13 +47,13 @@
           "code": "Nuovo codice"
         },
         "data_description": {
-          "account": "Home Assistant non dice a Foyer chi ha aperto questa finestra: scegli l'account da recuperare.",
+          "account": "Sono elencati solo gli account amministratore: Home Assistant non dice a Foyer chi ha aperto questa finestra, quindi scegli il tuo. Per chiunque altro si passa dalla pagina Utenti.",
           "code": "Esattamente {length} cifre, non già di qualcun altro."
         }
       }
     },
     "error": {
-      "unknown_account": "Quell'account non esiste o non può accedere.",
+      "unknown_account": "Quell'account non è amministratore di Home Assistant, oppure non può accedere.",
       "invalid_code": "Il codice deve avere solo cifre, della lunghezza impostata in Foyer.",
       "code_in_use": "Quel codice non è disponibile. Scegline un altro.",
       "invalid": "Foyer non è riuscito a salvare questa persona. Apri la pagina Utenti per vedere perché.",
