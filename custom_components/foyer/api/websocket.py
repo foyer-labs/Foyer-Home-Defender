@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, replace
 from functools import partial
+from pathlib import Path
 from typing import Any
 import uuid
 
@@ -359,6 +360,7 @@ def async_register(hass: HomeAssistant) -> None:
         ws_auto_cancel,
         ws_auto_switch,
         ws_auto_suspend,
+        ws_api_document,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -1530,6 +1532,30 @@ def ws_propose_zone(
             "zone_type": proposal.zone_type.value if proposal.zone_type else None,
         },
     )
+
+
+# --- the API contract (§9.2.2, decision 122) ----------------------------------------
+
+# The copy that travels with the integration: docs/ is not installed by HACS.
+# A test keeps it identical to docs/api/openapi.yaml.
+API_DOCUMENT = Path(__file__).parent / "openapi.yaml"
+
+
+@websocket_api.websocket_command({vol.Required("type"): "foyer/api/document"})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_api_document(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """The OpenAPI document, for the administrators' API page.
+
+    Over the authenticated WebSocket and nowhere else: a documentation page
+    served to anybody would tell a scanner that an alarm lives here.
+    """
+    text = await hass.async_add_executor_job(API_DOCUMENT.read_text, "utf-8")
+    connection.send_result(msg["id"], {"document": text})
 
 
 # --- per-user panel preferences (§15.2) -----------------------------------------------

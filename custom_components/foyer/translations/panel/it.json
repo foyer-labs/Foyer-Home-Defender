@@ -95,7 +95,11 @@
     "not_loaded": "Foyer si stava ricaricando, quindi non è stato fatto nulla. Riprova.",
     "bad_token": "Il token del dispositivo mancava o era sbagliato.",
     "walk_test_active": "È in corso un walk test. Terminalo, poi inserisci: quando finisce, disinserisce le aree che aveva inserito.",
-    "cancelled": "Annullato — non è stato cambiato nulla."
+    "cancelled": "Annullato — non è stato cambiato nulla.",
+    "scope_not_granted": "Questo dispositivo non ha il permesso di farlo. I suoi permessi si impostano nella pagina Dispositivi di inserimento.",
+    "unlock_required": "Digita un codice sul dispositivo per vederlo.",
+    "plain_http_not_confirmed": "Questa lettura viaggia senza cifratura e non è stata confermata nella pagina Dispositivi di inserimento.",
+    "unknown_action": "Il dispositivo ha inviato una richiesta che Foyer non conosce."
   },
   "problem": {
     "duplicate_id": "Due oggetti hanno lo stesso identificativo.",
@@ -1689,7 +1693,8 @@
     "config_new_token": "Token del tastierino generato",
     "config_revoke_token": "Token del tastierino revocato",
     "tokens_rejected": "Token di tastierino rifiutati",
-    "access_recovered": "Accesso recuperato da un amministratore"
+    "access_recovered": "Accesso recuperato da un amministratore",
+    "device_unlocked": "Dispositivo sbloccato con un codice"
   },
   "log": {
     "filters": "Filtri",

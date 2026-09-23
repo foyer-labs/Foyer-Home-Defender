@@ -62,6 +62,7 @@ from ..core.models import (
     CodeResult,
     Decision,
     DeviceContact,
+    DeviceScope,
     DeviceTransport,
     Moment,
     MqttDetail,
@@ -70,21 +71,23 @@ from ..core.models import (
 )
 from ..runtime import notices
 from ..runtime.mqtt import (
+    RESULT_BAD_CODE,
     RESULT_BLOCKED,
     RESULT_OK,
-    UNKNOWN_ACTION,
     as_code,
-    command_event,
     result_of,
     state_payload,
 )
 from ..runtime.system import FoyerSystem
 from ..security.devices import TRANSPORT_HTTP, async_requester, device_by_token
+from . import device_api
 
 _LOGGER = logging.getLogger(__name__)
 
 URL = "/api/foyer/device"
 STATE_URL = "/api/foyer/device/state"
+# The sections of §9.2.2, by name: `state` is the stream's, above.
+SECTION_URL = "/api/foyer/device/{section:zones|batteries|health|log}"
 
 # How often a quiet stream says it is still there (§9.2.1). Under the idle
 # timeout of every common reverse proxy, which is the only reason it exists.
@@ -437,12 +440,19 @@ class DeviceCommandView(HomeAssistantView):
             data = None
         if not isinstance(data, dict):
             return web.Response(status=HTTPStatus.BAD_REQUEST)
-        if str(data.get("action") or "") == "status":
+        action = str(data.get("action") or "")
+        if action == "status":
             # Not a command: "tell me again", for a keypad that has just
-            # booted — answered with what it was last told.
+            # booted — answered with what it was last told. A read, so it
+            # needs the `status` scope (§9.2.2).
+            if not device.may(DeviceScope.STATUS):
+                return self.json(_refused(system, Reason.SCOPE_NOT_GRANTED))
             last = hass.data.get(_LAST, {}).get(device.id, (RESULT_OK, None))
             answer = device_result(system, None, None, last)
             return self.json({**answer, "success": True, "reason": None})
+        if action == "lock":
+            device_api.lock(hass, device.id)
+            return self.json({"success": True, "reason": None, "until": None})
         requester = await async_requester(
             hass,
             system.config,
@@ -452,14 +462,33 @@ class DeviceCommandView(HomeAssistantView):
             encrypted=request.secure,
         )
         assert requester.actor is not None
-        event = command_event(system.config, data, requester.actor)
+        if action == "unlock":
+            reason, until = await device_api.async_unlock(
+                hass, system, device, requester.actor
+            )
+            return self.json(
+                {
+                    "success": reason is None,
+                    "reason": reason.value if reason else None,
+                    "until": until.isoformat() if until else None,
+                }
+            )
+        event, reason = device_api.command(system.config, device, data, requester.actor)
         if event is None:
-            last = (RESULT_BLOCKED, UNKNOWN_ACTION)
+            assert reason is not None
+            last = (
+                RESULT_BAD_CODE if reason is Reason.CODE_REQUIRED else RESULT_BLOCKED,
+                reason.value,
+            )
             _remember(hass, device.id, last)
-            return self.json(device_result(system, None, None, last))
+            return self.json(device_result(system, None, reason, last))
         decision = await system.async_handle(event)
         last = result_of(decision)
         _remember(hass, device.id, last)
+        if decision.accepted and action in ("arm", "disarm"):
+            # The unlock ends with every arming or disarming made through
+            # the device (decision 118): what it showed was for before.
+            device_api.lock(hass, device.id)
         return self.json(device_result(system, decision, None, last))
 
 
@@ -491,6 +520,57 @@ class DeviceStateView(HomeAssistantView):
         return response
 
 
+def _refused(system: FoyerSystem, reason: Reason) -> dict[str, Any]:
+    last = (RESULT_BLOCKED, reason.value)
+    return device_result(system, None, reason, last)
+
+
+class DeviceSectionView(HomeAssistantView):
+    """``GET /api/foyer/device/<section>`` (§9.2.2, decision 120)."""
+
+    url = SECTION_URL
+    name = "api:foyer:device:section"
+    requires_auth = False
+    cors_allowed = False
+
+    async def get(self, request: web.Request, section: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        system, device, refusal = await _async_authenticate(hass, request)
+        if refusal is not None:
+            return refusal
+        assert system is not None and device is not None
+        scope = device_api.SECTIONS.get(section)
+        if scope is None:
+            return web.Response(status=HTTPStatus.NOT_FOUND)
+        reason = device_api.read_refusal(hass, device, scope, request.secure)
+        if reason is not None:
+            # A stable reason and nothing else: which one it is tells the
+            # device's owner what to switch on, and a guesser nothing a
+            # valid token did not already establish.
+            return self.json(
+                {"success": False, "reason": reason.value}, HTTPStatus.FORBIDDEN
+            )
+        if section == "zones":
+            body = device_api.zones_section(system)
+        elif section == "batteries":
+            body = device_api.batteries_section(system)
+        elif section == "health":
+            body = device_api.health_section(system)
+        else:
+            try:
+                limit = int(request.query.get("limit", device_api.DEFAULT_LOG_ROWS))
+            except ValueError:
+                limit = device_api.DEFAULT_LOG_ROWS
+            body = await device_api.async_log_section(
+                system,
+                system.config,
+                device_api.reader(hass, system, device),
+                request.query.get("before"),
+                limit,
+            )
+        return self.json({"success": True, "reason": None, **body})
+
+
 def _still_valid(system: FoyerSystem, device_id: str, token_hash: str | None) -> bool:
     """Whether the keypad this stream was opened for still answers to its token."""
     device = system.config.device(device_id)
@@ -518,6 +598,10 @@ async def _async_stream(
 
     remove = async_dispatcher_connect(hass, SIGNAL, wake)
     sent: str | None = None
+    # What each section the device reads looked like, so the stream can say
+    # which one changed (decision 120). Not announced on connect: a device
+    # reads what it needs once it is connected.
+    seen: dict[str, str] | None = None
     orphaned: float | None = None
     loop = asyncio.get_running_loop()
     try:
@@ -536,13 +620,24 @@ async def _async_stream(
                 return
             else:
                 orphaned = None
+                device = system.config.device(device_id)
+                assert device is not None
                 last = hass.data.get(_LAST, {}).get(device_id)
-                payload = json.dumps(
-                    state_payload(system, detail_of(system), last, dt_util.utcnow())
-                )
-                if payload != sent:
-                    await response.write(f"data: {payload}\n\n".encode())
-                    sent = payload
+                if device.may(DeviceScope.STATUS):
+                    payload = json.dumps(
+                        state_payload(system, detail_of(system), last, dt_util.utcnow())
+                    )
+                    if payload != sent:
+                        await response.write(f"data: {payload}\n\n".encode())
+                        sent = payload
+                now_seen = device_api.fingerprints(system, device)
+                if seen is not None:
+                    for section, print_ in now_seen.items():
+                        if seen.get(section) != print_:
+                            await response.write(
+                                f"event: changed\ndata: {section}\n\n".encode()
+                            )
+                seen = now_seen
             if hass.is_stopping:
                 return
             changed.clear()
@@ -568,6 +663,7 @@ def async_start(hass: HomeAssistant, system: FoyerSystem) -> Any:
     if not hass.data.get(_REGISTERED):
         hass.http.register_view(DeviceCommandView())
         hass.http.register_view(DeviceStateView())
+        hass.http.register_view(DeviceSectionView())
         hass.data[_REGISTERED] = True
 
     @callback

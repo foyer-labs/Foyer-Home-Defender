@@ -497,6 +497,14 @@ class Reason(StrEnum):
     # disarms them all, so an arming now would be undone without a word: the
     # walk test is ended first, then the house is armed.
     WALK_TEST_ACTIVE = "walk_test_active"
+    # An API device asked for what its scopes do not give (§9.2.2, decision
+    # 115); a scope after a code read with no unlock running (decision 117);
+    # a scope beyond `status` read in the clear with no confirmation from
+    # the owner (decision 119); an action nobody defined.
+    SCOPE_NOT_GRANTED = "scope_not_granted"
+    UNLOCK_REQUIRED = "unlock_required"
+    PLAIN_HTTP_NOT_CONFIRMED = "plain_http_not_confirmed"
+    UNKNOWN_ACTION = "unknown_action"
 
 
 # Entity states that mean "we do not know" — a fault, never calm (INV-4).

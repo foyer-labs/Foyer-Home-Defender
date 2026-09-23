@@ -161,6 +161,18 @@
     },
     "service_refused": {
       "message": "Foyer refused the request: {reason}."
+    },
+    "rejected_scope_not_granted": {
+      "message": "This device is not allowed to do that."
+    },
+    "rejected_unlock_required": {
+      "message": "Type a code on the device to see this."
+    },
+    "rejected_plain_http_not_confirmed": {
+      "message": "This reading travels unencrypted and has not been confirmed."
+    },
+    "rejected_unknown_action": {
+      "message": "Foyer does not know that request."
     }
   },
   "entity": {

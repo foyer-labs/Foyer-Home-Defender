@@ -95,7 +95,11 @@
     "not_loaded": "Foyer was reloading, so nothing was done. Try again.",
     "bad_token": "The device's token was missing or wrong.",
     "walk_test_active": "A walk test is running. End it first, then arm: when it ends, it disarms the areas it armed.",
-    "cancelled": "Cancelled — nothing was changed."
+    "cancelled": "Cancelled — nothing was changed.",
+    "scope_not_granted": "This device is not allowed to do that. Its permissions are set on the Arming devices page.",
+    "unlock_required": "Type a code on the device to see this.",
+    "plain_http_not_confirmed": "This reading travels unencrypted and its owner has not confirmed that on the Arming devices page.",
+    "unknown_action": "The device sent a request Foyer does not know."
   },
   "problem": {
     "duplicate_id": "Two objects share the same identifier.",
@@ -1689,7 +1693,8 @@
     "config_new_token": "Keypad token generated",
     "config_revoke_token": "Keypad token revoked",
     "tokens_rejected": "Keypad tokens refused",
-    "access_recovered": "Access recovered by an administrator"
+    "access_recovered": "Access recovered by an administrator",
+    "device_unlocked": "Device unlocked with a code"
   },
   "log": {
     "filters": "Filters",

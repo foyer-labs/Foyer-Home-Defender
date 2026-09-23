@@ -161,6 +161,18 @@
     },
     "service_refused": {
       "message": "Foyer ha rifiutato la richiesta: {reason}."
+    },
+    "rejected_scope_not_granted": {
+      "message": "Questo dispositivo non ha il permesso di farlo."
+    },
+    "rejected_unlock_required": {
+      "message": "Digita un codice sul dispositivo per vederlo."
+    },
+    "rejected_plain_http_not_confirmed": {
+      "message": "Questa lettura viaggia senza cifratura e non è stata confermata."
+    },
+    "rejected_unknown_action": {
+      "message": "Foyer non conosce quella richiesta."
     }
   },
   "entity": {

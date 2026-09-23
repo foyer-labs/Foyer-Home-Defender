@@ -183,7 +183,14 @@ async def endpoint(hass, hass_ws_client, hass_client_no_auth, loaded):
         hass,
         client,
         "device",
-        {"name": "Hall keypad", "kind": "keypad", "ref": KEYPAD, "transport": "http"},
+        {
+            "name": "Hall keypad",
+            "kind": "keypad",
+            "ref": KEYPAD,
+            "transport": "http",
+            # What a keypad does (§9.2.2): every scope is off until switched on.
+            "scopes": ["status", "arm", "disarm"],
+        },
         code=CODE,
     )
     device_id = (await _config(client))["devices"][0]["id"]
