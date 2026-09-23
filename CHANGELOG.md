@@ -5,6 +5,63 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.15] — what the second review left to decide
+
+No new features beyond one moment. Beta.14 fixed what the second full review
+found and left a handful of questions that were decisions rather than
+defects; they are settled in SPEC §21 (decisions 100–107) and built here. A
+dedicated review of the dashboard card found five more defects, fixed below.
+The stored configuration stays at schema 8.1.
+
+### Changed — read these before you update
+- **A Home Assistant administrator is asked for the code** to change the
+  configuration, when the code policy asks for one — like anybody else.
+  Being an administrator identifies nobody: the unlocked wall tablet is
+  almost always signed in as one. Reading pages still asks for nothing, and
+  an administrator is still never locked out. If you are the only person
+  with a code, the panel now asks for yours when you save, and when you
+  download a backup.
+- **A `user_id` named in a service call grants nothing**, on any service —
+  `foyer.export_log`, `foyer.export_config` and `foyer.import_config`
+  included. It is still recorded as a claim in the log. An automation that
+  read the log by naming a person must now send that person's code.
+
+### Added
+- **`alarm_ended`**, a moment for each area an alarm touched: raised when its
+  siren cutoff runs, or when it is disarmed during the alarm — never on an
+  ordinary disarm. It is the moment for "switch the light off when the alarm
+  is over". The Alarmo importer now maps `untriggered` to it, instead of to
+  every disarm.
+
+### Fixed
+- **The card sent digits left on the pad with the next button pressed**,
+  including Cancel on an automatic countdown, Acknowledge and End walk
+  test: refused as a wrong code, counted towards the lockout, or acting in
+  the name of whoever typed them. Banner buttons no longer take the pad's
+  digits, and typed digits are forgotten after 30 seconds without a key and
+  when the card leaves the screen.
+- **The card's keypad on the whole house showed no countdown** during an
+  entry delay.
+- **A renamed master entity broke the card**: the keypad showed
+  "disarmed" and the full layout never loaded.
+- **The card's badge said "arming"** for a rule about to disarm, and lost the
+  area's name when narrow.
+- **Once the device endpoint's shared counter was locked**, further guesses
+  left no trace. They are now counted and written as one `security` row a
+  minute: how many, from how many addresses.
+- The card shows until when a lockout lasts, takes digits, Backspace and
+  Enter from a keyboard, says in your language when a command did not
+  arrive, and its editor no longer looks set when it is not.
+- Rows for a refused device, and the new summary row, show "Refused" in the
+  log like every other refusal, rather than a raw word the filter could not
+  find.
+- Configuration rows about contacts and automatic rules name the field that
+  changed, not its value: a notify service is named after somebody's phone,
+  and a rule's trigger names the people it watches.
+- Internal: one gate for the configuration and the log, shared by the panel
+  and the services; one path for wrong codes and one for tags and key
+  switches, each with tests that pin the merge changed nothing.
+
 ## [0.1.0-beta.14] — what a second full review found
 
 No new features. Six reviewers read the whole repository again after beta.13
