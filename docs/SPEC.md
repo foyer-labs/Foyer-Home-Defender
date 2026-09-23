@@ -1755,6 +1755,13 @@ confirmed trigger specs → create one scenario → create one user with a code 
 send a test notification. An empty panel on first open is how projects lose users
 in the first five minutes.
 
+**A code typed in the panel is kept for a short while and then forgotten**
+(decision 114): so that twenty saves do not ask for it twenty times, and so
+that the unlocked wall tablet INV-6 names does not keep it for whoever comes
+next. It is forgotten after two minutes unused, after every arming or
+disarming, and when the panel is closed. The card keeps no code at all
+beyond the command it was typed for.
+
 **Config backup/restore** (JSON export/import) is not optional: nobody who has
 configured forty zones will do it twice. The exported document carries its
 schema version: a restore migrates an older one through the same steps a real
@@ -1783,7 +1790,7 @@ timeout`), and a user who guesses wrong finds out during a burglary.
 |---|---|
 | Content | One short paragraph on what the section does, then a compact list — one line per setting — saying **what changes if you change it** |
 | Source | `translations/panel/<lang>.json` under `help.<page>`, next to the file Home Assistant itself reads, so it follows the Home Assistant user's language automatically and a translator gets it with no extra machinery. Not in `translations/<lang>.json`: hassfest validates that file against a closed schema and rejects a top-level `help` key (decision 35) |
-| State | Expanded on first visit, then remembers the user's choice **per Home Assistant user** (stored in Foyer config, not `localStorage`) so it follows them from desktop to wall tablet |
+| State | Expanded on first visit, then remembers the user's choice **per Home Assistant user** (stored in Foyer config, not `localStorage`) so it follows them from desktop to wall tablet. **Except the Overview**, which starts collapsed: it is the page opened to arm or disarm in a hurry, and on a phone the help pushed the controls off the screen (decision 113) |
 | Global toggle | A `?` button in the panel toolbar shows or hides every help panel at once |
 | Deep link | A "Learn more" link to the matching page under `docs/` |
 
@@ -2250,3 +2257,5 @@ document should make one of them on purpose.
 | 110 | The recovery enables the account's linked user, removes its validity window and sets its code, or creates the user with every permission; only administrators' accounts are offered | An administrator whose own user was disabled could not undo it; Home Assistant does not say who opened the step, so it asks for the account — and a way in for anybody else is the Users page's, with its permissions |
 | 111 | A restore that touches people, tags or a key switch's person needs `manage_users` | `edit_config` alone let a backup file grant any permission, or give somebody's tag to somebody else; the Alarmo importer already asked for it |
 | 112 | Every change that touches people — a person, a tag, a key switch's person, a scenario's allowed people — needs `manage_users`, however it is made | Decision 111 closed the restore; the editor still let `edit_config` alone give a key switch to somebody or put somebody on a scenario's list |
+| 113 | The Overview's help panel starts collapsed | It is the page opened to arm or disarm in a hurry; on a phone the help pushed the controls off the screen |
+| 114 | The panel forgets a typed code after two minutes unused, after every arming or disarming, and when it closes | Kept for the whole visit, it let whoever came to the unlocked wall tablet next disarm or reconfigure without typing it |
