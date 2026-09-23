@@ -5,6 +5,20 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.17] — manage_users, wherever people are touched
+
+One open item from beta.16, closed. The stored configuration stays at schema
+8.1.
+
+### Changed — read this before you update
+- **Changing who may do what needs `manage_users`, from any page.** Beta.16
+  asked for it when a restored backup changed people; the editor still let
+  `edit_config` alone give a key switch to somebody or add a name to the
+  people allowed to use a scenario. Now every save, deletion or restore that
+  touches a person, a tag, the person a key switch acts as, or a scenario's
+  list of people asks for `manage_users` as well (decision 112). Renaming a
+  scenario or moving a zone still needs `edit_config` only.
+
 ## [0.1.0-beta.16] — a way back in, and what a restore may touch
 
 Beta.15 asked an administrator for the code like anybody else and left four
