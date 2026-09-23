@@ -21,6 +21,7 @@ import string
 import pytest
 
 from custom_components.foyer.core.models import Moment, Reason
+from custom_components.foyer.core.validation import KEPT_WHILE_ARMED
 from custom_components.foyer.store.seed import seed_config
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -300,6 +301,18 @@ def test_every_problem_and_reason_the_backend_returns_is_translated():
             fields - panel["field"].keys(),
         )
         assert {r.value for r in Reason} <= panel["reason"].keys()
+
+
+def test_every_setting_an_armed_house_keeps_has_a_label():
+    """The armed guard names its fields from a table (SPEC §15.1), which the
+    search for literal Problem(...) calls above cannot see. Each needs a
+    field.* label in every language, or the refusal names a key instead of
+    the setting somebody just tried to change."""
+    names = {path.rsplit(".", 1)[-1] for path in KEPT_WHILE_ARMED}
+    assert {"siren_duration", "code_policy", "radios"} <= names
+    for language in LANGUAGES:
+        labels = load(TRANSLATIONS / "panel", language)["field"]
+        assert not names - labels.keys(), (language, names - labels.keys())
 
 
 # --- placeholders, between the code and the string --------------------------------

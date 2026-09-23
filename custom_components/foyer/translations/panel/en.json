@@ -260,7 +260,11 @@
     "unknown_scope": "That permission does not exist.",
     "scopes_need_endpoint": "Permissions apply only to a device on the HTTP endpoint.",
     "free_scope_not_a_read": "Only a reading can be free: every action needs a code.",
-    "unlock_out_of_range": "The unlock lasts from 30 seconds to 10 minutes."
+    "unlock_out_of_range": "The unlock lasts from 30 seconds to 10 minutes.",
+    "armed_setting": "{field}: an area is armed, and the house keeps what it was armed with. Disarm every area first.",
+    "profile_armed": "While an area is armed, a profile the house could answer with keeps what it was armed with. Disarm before changing this one.",
+    "contact_armed": "While an area is armed, a profile the house could answer with notifies this contact: it cannot be changed, switched off or deleted until you disarm.",
+    "last_usable_code": "An area is armed, and this would leave nobody with a usable code, which switches the code policy off. Give somebody else a code first, or disarm."
   },
   "field": {
     "name": "Name",
@@ -407,7 +411,10 @@
     "arm_area_ids": "Areas it may arm",
     "disarm_area_ids": "Areas it may disarm",
     "clear_text_confirmed": "I know these readings cross the network unencrypted",
-    "exclude_open_zones": "Arm anyway, excluding open zones"
+    "exclude_open_zones": "Arm anyway, excluding open zones",
+    "allow_auto_disarm": "Allow rules to disarm",
+    "code_policy": "Code policy",
+    "radios": "Radios"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -854,7 +861,7 @@
         },
         "backup": {
           "term": "Backup",
-          "text": "A JSON file of the whole configuration. Restoring it goes through the same validation as any edit, and is refused while an area it would change is armed."
+          "text": "A JSON file of the whole configuration. Restoring it goes through the same validation as any edit, and while an area is armed it is refused wherever the same change made on its own page would be."
         },
         "alarmo": {
           "term": "Import from Alarmo",
@@ -867,6 +874,10 @@
         "privacy": {
           "term": "Personal data in the log",
           "text": "Replace names in rows older than a chosen number of days, and decide now whether removing Foyer should take the log database with it. The first costs you the answer to “who disarmed that night”."
+        },
+        "armed": {
+          "term": "While an area is armed",
+          "text": "The siren, the delays, the response defaults and the camera folder keep the values the house was armed with. The language, the log, privacy, the chime and the backup download stay free."
         }
       }
     },
@@ -897,6 +908,10 @@
         "images": {
           "term": "Pictures",
           "text": "A notification can carry the cameras of the zones behind the alarm, one picture each after the text. Only at an alarm, never when somebody comes home."
+        },
+        "armed": {
+          "term": "While an area is armed",
+          "text": "A profile the house could answer with cannot be changed until every area is disarmed: an armed area's own chain, the default, the technical channel's, and one an alarm is running on."
         }
       }
     },
@@ -940,7 +955,7 @@
         },
         "policy": {
           "term": "Code policy",
-          "text": "Which operations ask for a code. An area or a scenario can ask for more; where they disagree, the one that asks wins."
+          "text": "Which operations ask for a code. An area or a scenario can ask for more; where they disagree, the one that asks wins. It cannot change while an area is armed; people and their codes can."
         },
         "identified": {
           "term": "Where a code can be skipped",
@@ -1079,6 +1094,10 @@
         "test": {
           "term": "Test channels",
           "text": "Really sends. Use it — an untested emergency channel is one you discover during the emergency."
+        },
+        "armed": {
+          "term": "While an area is armed",
+          "text": "A contact that a profile the house could answer with notifies, at once or as a step, cannot be changed, switched off or deleted until every area is disarmed."
         }
       }
     },
@@ -1108,7 +1127,7 @@
         },
         "disarming": {
           "term": "Automatic disarming",
-          "text": "Off until you turn it on, and never on a perimeter area. A scenario switch that would leave an armed area disarmed counts as disarming."
+          "text": "Off until you turn it on, and never on a perimeter area. A scenario switch that would leave an armed area disarmed counts as disarming. It cannot change while an area is armed; a rule can always be switched off or suspended."
         },
         "next": {
           "term": "Next automatic action",
@@ -1138,7 +1157,7 @@
         },
         "radio": {
           "term": "Radios",
-          "text": "Zones are grouped by the integration they come from. Interference is suspected, never proven."
+          "text": "Zones are grouped by the integration they come from. Interference is suspected, never proven. Radios and thresholds cannot change while an area is armed."
         },
         "coordinator": {
           "term": "Coordinator entity",
@@ -1559,7 +1578,9 @@
     "delete_on_uninstall_hint": "Off, removing Foyer leaves the database where it is, in the configuration directory, as foyer-log.db. Home Assistant's own confirmation is the last dialogue there is, so this is where the question gets answered — and keeping is the answer that destroys nothing.",
     "uninstall_snapshots_hint": "Camera snapshots are never deleted with it. They are pictures of the inside of the house, in a folder you chose, which may hold files that are not Foyer's — so removing them is yours to do.",
     "pseudonymise_confirm": "From the next start — and saving any setting is a start — every row older than {days} days loses the name on it, and the name inside its detail. It cannot be undone by switching this off again. The log will no longer answer who disarmed on those nights.",
-    "pseudonymise_yes": "Switch it on"
+    "pseudonymise_yes": "Switch it on",
+    "defaults_armed": "An area is armed: the siren time, how long arming waits for a zone to close, the default delays and the walk test timeout keep their values until every area is disarmed. The battery threshold can still be changed.",
+    "response_armed": "An area is armed: the default and technical profiles, what a silent zone keeps quiet and the camera folder keep their values until every area is disarmed."
   },
   "action_kind": {
     "notify": "Notification",
@@ -2189,7 +2210,8 @@
     "lockout_hint": "Each further lockout from the same source lasts twice as long. The Home Assistant admin path is never locked, so nobody can shut themselves out.",
     "code_repeat": "Repeat the code",
     "code_hint_new": "{n} digits, different from everyone else's.",
-    "confirm_delete": "Delete {name}? This cannot be undone. Their code stops working at once; their history stays in the log."
+    "confirm_delete": "Delete {name}? This cannot be undone. Their code stops working at once; their history stays in the log.",
+    "policy_armed": "An area is armed: the code policy, the code length and the lockout keep their values until every area is disarmed. People and their codes can still be changed."
   },
   "device_kind": {
     "keypad": "Keypad",
@@ -2673,7 +2695,8 @@
     "exclude_open_hint": "Only zones that are open and may be excluded. A zone in fault, or one that may not be excluded, still stops the arming. An excluded zone is watched again as soon as it closes.",
     "exclude_open_warning": "This is a forced arming nobody types a code for: the house arms with that window uncovered. The countdown and the message afterwards name what was excluded.",
     "exclude_open_no_effect": "With “only if every zone is ready” on, the rule never starts while a zone is open, so this has no effect.",
-    "notify_outcome_hint": "They receive the countdown, and a second message when the arming did not go as announced: not armed and why, armed later, or armed with zones excluded. That one reaches them even in their quiet hours."
+    "notify_outcome_hint": "They receive the countdown, and a second message when the arming did not go as announced: not armed and why, armed later, or armed with zones excluded. That one reaches them even in their quiet hours.",
+    "allow_disarm_armed": "An area is armed: whether rules may disarm cannot change until every area is disarmed. A rule can still be switched off or suspended, and the global switch still stops them all."
   },
   "health": {
     "settings": "System health settings",
@@ -2748,7 +2771,8 @@
     "no_zones": "No zones on it",
     "last_result": "Last result",
     "url_set_placeholder": "Set — type a new URL to replace it",
-    "url_set_hint": "A URL is saved. Foyer never shows it again, because whoever holds it can keep the check green for ever; leave this empty to keep it."
+    "url_set_hint": "A URL is saved. Foyer never shows it again, because whoever holds it can keep the check green for ever; leave this empty to keep it.",
+    "radios_armed": "An area is armed: the radios and the thresholds keep their values until every area is disarmed. The mains, the watchdog and the channel checks can still be changed."
   },
   "images": {
     "zone": "The cameras of the zones behind the alarm",

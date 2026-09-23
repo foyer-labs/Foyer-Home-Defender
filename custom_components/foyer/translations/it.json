@@ -564,7 +564,7 @@
     },
     "import_config": {
       "name": "Ripristina la configurazione",
-      "description": "Ripristina una configurazione esportata. Viene migrata, validata e rifiutata se cambierebbe un'area inserita.",
+      "description": "Ripristina una configurazione esportata. Viene migrata, validata e, mentre un'area è inserita, rifiutata se cambierebbe ciò che la casa fa o ciò per cui chiede un codice.",
       "fields": {
         "document": {
           "name": "Documento",

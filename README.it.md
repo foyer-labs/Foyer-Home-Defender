@@ -247,6 +247,15 @@ già intelligente.
   delle persone di uno scenario — richiede *Gestire utenti e codici* oltre a
   *Modificare la configurazione*, da qualunque pagina e nel ripristino di un
   backup.
+- **Una casa inserita mantiene la risposta con cui è stata inserita.** Finché
+  un'area è inserita non si possono cambiare la durata delle sirene, i
+  ritardi, i profili con cui potrebbe rispondere e i contatti che avvisano, la
+  politica dei codici e il blocco, se una regola possa disinserire e le soglie
+  delle radio: prima si disinserisce. Chi può comandare la casa resta invece
+  modificabile: il codice di un ospite, la regola di un telefono perso o il
+  token di un tastierino si tolgono da ovunque, qualunque cosa sia inserita —
+  tranne l'ultimo codice che qualcuno può usare, perché senza nessuno la
+  politica dei codici si spegne da sola.
 - **Pannello in italiano e in inglese**, con aiuto contestuale in ogni pagina,
   un Elimina che chiede prima conferma, lì accanto al pulsante, e una card
   nelle disposizioni `full`, `compact`, `keypad` e `badge` — l'ultima è di

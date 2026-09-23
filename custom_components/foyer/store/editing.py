@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, fields, replace
+from datetime import datetime
 import re
 from typing import Any
 import uuid
@@ -224,6 +225,7 @@ def upsert(
     *,
     trigger_confirmed: bool = False,
     new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
+    now: datetime | None = None,
 ) -> EditResult:
     """Create or replace one area, zone or scenario."""
     if kind not in KINDS:
@@ -318,11 +320,16 @@ def upsert(
             new = replace(config, zones=_replace_in(config.zones, obj))
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", kind, data["id"]))
-    return _check(config, new, state, data["id"])
+    return _check(config, new, state, data["id"], now)
 
 
 def delete(
-    config: FoyerConfig, state: RuntimeState, kind: str, item_id: str
+    config: FoyerConfig,
+    state: RuntimeState,
+    kind: str,
+    item_id: str,
+    *,
+    now: datetime | None = None,
 ) -> EditResult:
     """Remove one object. Refused while something still depends on it."""
     if kind == "area":
@@ -411,7 +418,7 @@ def delete(
         )
     else:
         return _fail(Problem("unknown_kind", kind))
-    return _check(config, new, state, item_id)
+    return _check(config, new, state, item_id, now)
 
 
 def _referenced_profiles(config: FoyerConfig) -> set[str]:
@@ -441,6 +448,7 @@ def update_settings(
     settings: dict[str, Any],
     *,
     webhook_id: str | object | None = KEEP_WEBHOOK,
+    now: datetime | None = None,
 ) -> EditResult:
     """The global settings block. Unknown keys are ignored; known ones keep
     their current value when the caller leaves them out."""
@@ -530,7 +538,7 @@ def update_settings(
         return _fail(
             Problem("retention_out_of_range", "settings", None, "pseudonymise_after")
         )
-    return _check(config, new, state, None)
+    return _check(config, new, state, None, now)
 
 
 def _policy_from(data: Any, current: CodePolicy) -> CodePolicy:
@@ -650,7 +658,12 @@ def _fields(was: dict[str, Any], now: dict[str, Any]) -> dict[str, list[Any]]:
 
 
 def set_device_token(
-    config: FoyerConfig, state: RuntimeState, device_id: str, token_hash: str | None
+    config: FoyerConfig,
+    state: RuntimeState,
+    device_id: str,
+    token_hash: str | None,
+    *,
+    now: datetime | None = None,
 ) -> EditResult:
     """Store a keypad's new token hash, or none (§9.2.1).
 
@@ -672,7 +685,7 @@ def set_device_token(
         config,
         devices=_replace_in(config.devices, replace(device, token_hash=token_hash)),
     )
-    return _check(config, new, state, device_id)
+    return _check(config, new, state, device_id, now)
 
 
 # The configuration holds three credentials, and a log row is a place none of
@@ -895,7 +908,11 @@ def touches_people(old: FoyerConfig, new: FoyerConfig) -> bool:
 
 
 def update_security(
-    config: FoyerConfig, state: RuntimeState, data: dict[str, Any]
+    config: FoyerConfig,
+    state: RuntimeState,
+    data: dict[str, Any],
+    *,
+    now: datetime | None = None,
 ) -> EditResult:
     """The code policy and the code and lockout settings (§8.2, §8.4).
 
@@ -920,22 +937,30 @@ def update_security(
         code_policy=policy,
         settings=replace(config.settings, security=security),
     )
-    return _check(config, new, state, None)
+    return _check(config, new, state, None, now)
 
 
 def update_chime(
-    config: FoyerConfig, state: RuntimeState, chime: dict[str, Any]
+    config: FoyerConfig,
+    state: RuntimeState,
+    chime: dict[str, Any],
+    *,
+    now: datetime | None = None,
 ) -> EditResult:
     """The global chime block (§6.6). Whether each zone chimes is on the zone."""
     try:
         new = replace(config, chime=chime_from_dict(chime))
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "chime"))
-    return _check(config, new, state, None)
+    return _check(config, new, state, None, now)
 
 
 def update_health(
-    config: FoyerConfig, state: RuntimeState, health: dict[str, Any]
+    config: FoyerConfig,
+    state: RuntimeState,
+    health: dict[str, Any],
+    *,
+    now: datetime | None = None,
 ) -> EditResult:
     """The system-health block (§12): the mains, the watchdog, the radios.
 
@@ -968,7 +993,7 @@ def update_health(
         new = replace(config, health=health_from_dict({**health, "watchdog": watchdog}))
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "health"))
-    return _check(config, new, state, None)
+    return _check(config, new, state, None, now)
 
 
 def _replace_in(items: tuple, obj) -> tuple:
@@ -978,9 +1003,16 @@ def _replace_in(items: tuple, obj) -> tuple:
 
 
 def _check(
-    old: FoyerConfig, new: FoyerConfig, state: RuntimeState, item_id: str | None
+    old: FoyerConfig,
+    new: FoyerConfig,
+    state: RuntimeState,
+    item_id: str | None,
+    now: datetime | None = None,
 ) -> EditResult:
-    problems = validate(new) + edit_conflicts(old, new, state)
+    # `now` is the caller's clock, handed down rather than read here: this
+    # module is pure, and the one rule that needs a time — nobody left with
+    # a usable code while armed — reads a person's validity window.
+    problems = validate(new) + edit_conflicts(old, new, state, now=now)
     if problems:
         return EditResult(config=None, problems=tuple(problems), id=item_id)
     return EditResult(config=new, id=item_id)

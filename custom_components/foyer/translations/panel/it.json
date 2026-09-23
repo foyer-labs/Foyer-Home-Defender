@@ -260,7 +260,11 @@
     "unknown_scope": "Quel permesso non esiste.",
     "scopes_need_endpoint": "I permessi valgono solo per un dispositivo sull'endpoint HTTP.",
     "free_scope_not_a_read": "Solo una lettura può essere libera: ogni azione richiede un codice.",
-    "unlock_out_of_range": "Lo sblocco dura da 30 secondi a 10 minuti."
+    "unlock_out_of_range": "Lo sblocco dura da 30 secondi a 10 minuti.",
+    "armed_setting": "{field}: un'area è inserita, e la casa mantiene ciò con cui è stata inserita. Disinserisci prima tutte le aree.",
+    "profile_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere resta com'era all'inserimento. Disinserisci prima di modificare questo.",
+    "contact_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere avvisa questo contatto: non si può modificare, disattivare né eliminare finché non disinserisci.",
+    "last_usable_code": "Un'area è inserita e nessuno resterebbe con un codice valido, il che spegne la politica dei codici. Dai prima un codice a qualcun altro, oppure disinserisci."
   },
   "field": {
     "name": "Nome",
@@ -407,7 +411,10 @@
     "arm_area_ids": "Aree che può inserire",
     "disarm_area_ids": "Aree che può disinserire",
     "clear_text_confirmed": "So che queste letture attraversano la rete senza cifratura",
-    "exclude_open_zones": "Inserisci comunque, escludendo le zone aperte"
+    "exclude_open_zones": "Inserisci comunque, escludendo le zone aperte",
+    "allow_auto_disarm": "Permetti alle regole di disinserire",
+    "code_policy": "Politica dei codici",
+    "radios": "Radio"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -854,7 +861,7 @@
         },
         "backup": {
           "term": "Backup",
-          "text": "Un file JSON dell'intera configurazione. Il ripristino passa dalla stessa validazione di ogni modifica, e viene rifiutato se toccherebbe un'area inserita."
+          "text": "Un file JSON dell'intera configurazione. Il ripristino passa dalla stessa validazione di ogni modifica e, mentre un'area è inserita, viene rifiutato dove lo sarebbe la stessa modifica fatta nella sua pagina."
         },
         "alarmo": {
           "term": "Importa da Alarmo",
@@ -867,6 +874,10 @@
         "privacy": {
           "term": "Dati personali nel registro",
           "text": "Sostituisci i nomi nelle righe più vecchie di un certo numero di giorni, e decidi da adesso se rimuovere Foyer debba portarsi via il database del registro. La prima cosa ti costa la risposta a «chi ha disinserito quella notte»."
+        },
+        "armed": {
+          "term": "Mentre un'area è inserita",
+          "text": "Sirene, ritardi, risposta predefinita e cartella telecamere restano come all'inserimento. Lingua, registro, privacy, campanello e download del backup restano liberi."
         }
       }
     },
@@ -897,6 +908,10 @@
         "images": {
           "term": "Immagini",
           "text": "Una notifica può portare le telecamere delle zone che hanno dato l'allarme, una foto ciascuna dopo il testo. Solo in un allarme, mai quando qualcuno torna a casa."
+        },
+        "armed": {
+          "term": "Mentre un'area è inserita",
+          "text": "Un profilo con cui la casa potrebbe rispondere non si può modificare finché tutte le aree non sono disinserite: la catena di un'area inserita, il predefinito, quello del canale tecnico e quello di un allarme in corso."
         }
       }
     },
@@ -940,7 +955,7 @@
         },
         "policy": {
           "term": "Politica dei codici",
-          "text": "Quali operazioni chiedono un codice. Un'area o uno scenario possono chiedere di più; se non concordano, vince chi lo chiede."
+          "text": "Quali operazioni chiedono un codice. Un'area o uno scenario possono chiedere di più; se non concordano, vince chi lo chiede. Non cambia mentre un'area è inserita; le persone e i loro codici sì."
         },
         "identified": {
           "term": "Dove il codice si può saltare",
@@ -1079,6 +1094,10 @@
         "test": {
           "term": "Prova i canali",
           "text": "Invia davvero. Usalo: un canale d'emergenza mai provato è un canale che si scopre durante l'emergenza."
+        },
+        "armed": {
+          "term": "Mentre un'area è inserita",
+          "text": "Un contatto avvisato da un profilo con cui la casa potrebbe rispondere, subito o come passo, non si può modificare, disattivare né eliminare finché tutte le aree non sono disinserite."
         }
       }
     },
@@ -1108,7 +1127,7 @@
         },
         "disarming": {
           "term": "Disinserimento automatico",
-          "text": "Disattivato finché non lo attivi, e mai su un'area perimetrale. Un cambio di scenario che lascerebbe disinserita un'area inserita conta come disinserimento."
+          "text": "Disattivato finché non lo attivi, e mai su un'area perimetrale. Un cambio di scenario che lascerebbe disinserita un'area inserita conta come disinserimento. Non cambia mentre un'area è inserita; una regola si può sempre disattivare o sospendere."
         },
         "next": {
           "term": "Prossima azione automatica",
@@ -1138,7 +1157,7 @@
         },
         "radio": {
           "term": "Radio",
-          "text": "Le zone sono raggruppate per l'integrazione da cui provengono. L'interferenza è sospetta, mai dimostrata."
+          "text": "Le zone sono raggruppate per l'integrazione da cui provengono. L'interferenza è sospetta, mai dimostrata. Radio e soglie non cambiano mentre un'area è inserita."
         },
         "coordinator": {
           "term": "Entità coordinatore",
@@ -1559,7 +1578,9 @@
     "delete_on_uninstall_hint": "Se è disattivato, rimuovere Foyer lascia il database dov'è, nella cartella di configurazione, come foyer-log.db. La conferma di Home Assistant è l'ultima finestra che c'è, quindi è qui che si risponde alla domanda — e tenere è la risposta che non distrugge niente.",
     "uninstall_snapshots_hint": "Gli scatti delle telecamere non vengono mai cancellati insieme. Sono fotografie dell'interno della casa, in una cartella che hai scelto tu e che può contenere file che non sono di Foyer — rimuoverli sta a te.",
     "pseudonymise_confirm": "Dal prossimo avvio — e salvare una qualsiasi impostazione è un avvio — ogni riga più vecchia di {days} giorni perde il nome che porta, e il nome dentro il suo dettaglio. Non si torna indietro disattivando di nuovo questa opzione. Il registro non risponderà più a chi ha disinserito quelle notti.",
-    "pseudonymise_yes": "Attiva"
+    "pseudonymise_yes": "Attiva",
+    "defaults_armed": "Un'area è inserita: durata delle sirene, attesa della chiusura, ritardi predefiniti e timeout del walk test restano come sono finché tutte le aree non sono disinserite. La soglia della batteria si può ancora cambiare.",
+    "response_armed": "Un'area è inserita: profilo predefinito e tecnico, ciò che una zona silenziosa tace e cartella telecamere restano come sono finché tutte le aree non sono disinserite."
   },
   "action_kind": {
     "notify": "Notifica",
@@ -2189,7 +2210,8 @@
     "lockout_hint": "Ogni blocco successivo dalla stessa origine dura il doppio. Il percorso dell'amministratore Home Assistant non viene mai bloccato, così nessuno può chiudersi fuori.",
     "code_repeat": "Ripeti il codice",
     "code_hint_new": "{n} cifre, diverso da quello di chiunque altro.",
-    "confirm_delete": "Eliminare {name}? Non si può annullare. Il suo codice smette subito di funzionare; la sua storia resta nel registro."
+    "confirm_delete": "Eliminare {name}? Non si può annullare. Il suo codice smette subito di funzionare; la sua storia resta nel registro.",
+    "policy_armed": "Un'area è inserita: politica dei codici, lunghezza del codice e blocco restano come sono finché tutte le aree non sono disinserite. Le persone e i loro codici si possono ancora cambiare."
   },
   "device_kind": {
     "keypad": "Tastierino",
@@ -2673,7 +2695,8 @@
     "exclude_open_hint": "Solo le zone aperte che si possono escludere. Una zona guasta, o una che non si può escludere, blocca comunque l'inserimento. Una zona esclusa torna sorvegliata appena si chiude.",
     "exclude_open_warning": "È un inserimento forzato che nessuno conferma con un codice: la casa si inserisce con quella finestra scoperta. Il conto alla rovescia e il messaggio dopo dicono cosa è stato escluso.",
     "exclude_open_no_effect": "Con «solo se ogni zona è pronta» attivo, la regola non parte mai con una zona aperta, quindi questa opzione non ha effetto.",
-    "notify_outcome_hint": "Ricevono il conto alla rovescia, e un secondo messaggio quando l'inserimento non va come annunciato: non inserita e perché, inserita più tardi, o inserita con zone escluse. Quello arriva anche nelle ore di silenzio."
+    "notify_outcome_hint": "Ricevono il conto alla rovescia, e un secondo messaggio quando l'inserimento non va come annunciato: non inserita e perché, inserita più tardi, o inserita con zone escluse. Quello arriva anche nelle ore di silenzio.",
+    "allow_disarm_armed": "Un'area è inserita: se le regole possano disinserire non cambia finché tutte le aree non sono disinserite. Una regola si può ancora disattivare o sospendere, e l'interruttore generale le ferma ancora tutte."
   },
   "health": {
     "settings": "Impostazioni dello stato del sistema",
@@ -2748,7 +2771,8 @@
     "no_zones": "Nessuna zona",
     "last_result": "Ultimo esito",
     "url_set_placeholder": "Impostato — scrivi un nuovo URL per sostituirlo",
-    "url_set_hint": "Un URL è salvato. Foyer non lo mostra più, perché chi lo possiede può tenere il controllo verde per sempre; lascia vuoto per tenerlo."
+    "url_set_hint": "Un URL è salvato. Foyer non lo mostra più, perché chi lo possiede può tenere il controllo verde per sempre; lascia vuoto per tenerlo.",
+    "radios_armed": "Un'area è inserita: radio e soglie restano come sono finché tutte le aree non sono disinserite. Rete elettrica, watchdog e controlli dei canali si possono ancora cambiare."
   },
   "images": {
     "zone": "Le telecamere delle zone che hanno dato l'allarme",

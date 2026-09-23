@@ -23,6 +23,7 @@ import type {
 } from "../../shared/types";
 import { entityTargets } from "../ha-targets";
 import {
+  anyArmed,
   optionalNumber,
   problemText,
   type PanelContext,
@@ -967,6 +968,9 @@ class FoyerPageRules extends LitElement {
         </div>
         <div class="card-bd">
           <div class="notice">${t(s, "rules.disarming_warning")}</div>
+          ${anyArmed(ctx)
+            ? html`<div class="notice" role="note">${t(s, "rules.allow_disarm_armed")}</div>`
+            : nothing}
           <label class="check">
             <input
               type="checkbox"

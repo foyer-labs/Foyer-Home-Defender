@@ -158,6 +158,14 @@ export function download(filename: string, content: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Whether any area is not disarmed, which is when an armed house keeps the
+ * answer and the codes it was armed with (SPEC §15.1, decision 138). Only
+ * for the notice that says so before a save: the backend decides, and its
+ * refusal is what the page shows after one (INV-2). */
+export function anyArmed(ctx: PanelContext): boolean {
+  return ctx.status.areas.some((a) => a.state !== "disarmed");
+}
+
 /** Seconds left on a timer, never negative. */
 export function remaining(ctx: PanelContext, due: string): number {
   return Math.max(0, Math.round((Date.parse(due) - ctx.now()) / 1000));

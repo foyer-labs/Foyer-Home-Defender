@@ -263,7 +263,9 @@ def restore(system: FoyerSystem, document: dict[str, Any]) -> EditResult:
         seen.add(pseudonym)
         users.append(replace(user, pseudonym=pseudonym))
     config = replace(config, users=tuple(users))
-    problems = validate(config) + edit_conflicts(system.config, config, system.state)
+    problems = validate(config) + edit_conflicts(
+        system.config, config, system.state, now=dt_util.utcnow()
+    )
     return EditResult(None if problems else config, tuple(problems))
 
 

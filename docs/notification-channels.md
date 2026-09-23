@@ -39,6 +39,14 @@ The rule behind the table: put the channel that survives a cut internet
 connection **somewhere in the list**, not at the bottom. A list whose first
 three steps all depend on the same router is one step long.
 
+**Set the list up with the house disarmed.** While any area is armed, a
+contact that a profile the house could answer with names — at once or as an
+escalation step — cannot be changed, switched off or deleted: the number, the
+service, the quiet hours and the person it is linked to all decide who hears
+the alarm. Every one of its channels counts, because a step that names none,
+or names one switched off, goes over the first channel still enabled. A
+rule's contacts are not held: they hear the rule, not the alarm.
+
 **A note on the service names below.** The Companion app, Pushover and the GSM
 modem create a service with a fixed name. The rest are YAML `notify:`
 platforms, whose service is named after the `name:` you give the platform —

@@ -944,6 +944,7 @@ async def ws_config_save(
         msg["kind"],
         msg["item"],
         trigger_confirmed=msg["trigger_confirmed"],
+        now=dt_util.utcnow(),
     )
     # A key switch given to somebody, a name added to a scenario's list:
     # manage_users', whichever page it was saved from (decision 112).
@@ -991,7 +992,13 @@ async def ws_config_delete(
         )
     ) is None:
         return
-    result = delete(system.config, system.state, msg["kind"], msg["item_id"])
+    result = delete(
+        system.config,
+        system.state,
+        msg["kind"],
+        msg["item_id"],
+        now=dt_util.utcnow(),
+    )
     if (
         result.config is not None
         and touches_people(system.config, result.config)
@@ -1035,7 +1042,9 @@ async def ws_settings_save(
         )
     ) is None:
         return
-    result = update_settings(system.config, system.state, msg["settings"])
+    result = update_settings(
+        system.config, system.state, msg["settings"], now=dt_util.utcnow()
+    )
     _record_pseudonymisation(system, connection, result)
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="settings"
@@ -1130,6 +1139,7 @@ async def ws_ack_webhook(
         system.state,
         settings_to_dict(system.config.settings),
         webhook_id=webhook_id,
+        now=dt_util.utcnow(),
     )
     me = system.config.user_of_ha(connection.user.id)
     answer = await async_write(
@@ -1204,7 +1214,9 @@ async def ws_device_token(
     ) is None:
         return
     token, hashed = (None, None) if msg["revoke"] else new_token()
-    result = set_device_token(system.config, system.state, msg["device_id"], hashed)
+    result = set_device_token(
+        system.config, system.state, msg["device_id"], hashed, now=dt_util.utcnow()
+    )
     me = system.config.user_of_ha(connection.user.id)
     answer = await async_write(
         hass,
@@ -1248,7 +1260,9 @@ async def ws_chime_save(
         )
     ) is None:
         return
-    result = update_chime(system.config, system.state, msg["chime"])
+    result = update_chime(
+        system.config, system.state, msg["chime"], now=dt_util.utcnow()
+    )
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="chime"
     )
@@ -1321,7 +1335,9 @@ async def ws_health_save(
         )
     ) is None:
         return
-    result = update_health(system.config, system.state, msg["health"])
+    result = update_health(
+        system.config, system.state, msg["health"], now=dt_util.utcnow()
+    )
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="health"
     )
@@ -1439,7 +1455,7 @@ async def ws_user_save(
     # reached only by a save that would otherwise be stored: before it, a
     # save built to fail validation made every probe free, and the check an
     # unlimited way of testing codes against the household (second review).
-    trial = upsert(system.config, system.state, "user", item)
+    trial = upsert(system.config, system.state, "user", item, now=dt_util.utcnow())
     if trial.config is None:
         connection.send_result(
             msg["id"],
@@ -1509,7 +1525,7 @@ async def ws_user_save(
                 codes.hash_code, new_codes[field]
             )
 
-    result = upsert(system.config, system.state, "user", item)
+    result = upsert(system.config, system.state, "user", item, now=dt_util.utcnow())
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="user"
     )
@@ -1547,6 +1563,7 @@ async def ws_security_save(
         system.config,
         system.state,
         {"code_policy": msg["code_policy"], "security": msg["security"]},
+        now=dt_util.utcnow(),
     )
     await _apply(
         hass, connection, msg["id"], system, result, operation="save", kind="security"

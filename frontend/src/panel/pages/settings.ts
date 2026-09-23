@@ -16,7 +16,14 @@ import type {
   Problem,
   SettingsConfig,
 } from "../../shared/types";
-import { download, optionalNumber, problemText, type PanelContext, whenNumber } from "../context";
+import {
+  anyArmed,
+  download,
+  optionalNumber,
+  problemText,
+  type PanelContext,
+  whenNumber,
+} from "../context";
 import { chimeTargets, entityTargets } from "../ha-targets";
 
 // What the switch starts at when somebody turns it on. Thirty days is the
@@ -215,6 +222,9 @@ class FoyerPageSettings extends LitElement {
         <div class="card-hd"><h2>${t(s, "settings.defaults_title")}</h2></div>
         <div class="card-bd">
           <p class="intro">${t(s, "settings.defaults_intro")}</p>
+          ${anyArmed(ctx)
+            ? html`<div class="notice" role="note">${t(s, "settings.defaults_armed")}</div>`
+            : nothing}
           <div class="grid-form">
             ${number("siren_duration", bounds.siren_duration, t(s, "settings.siren_duration_hint"))}
             ${number("arm_hold_timeout", bounds.arm_hold_timeout, t(s, "settings.arm_hold_hint"))}
@@ -736,6 +746,9 @@ class FoyerPageSettings extends LitElement {
         <div class="card-hd"><h2>${t(s, "settings.response_title")}</h2></div>
         <div class="card-bd">
           <p class="intro">${t(s, "settings.response_intro")}</p>
+          ${anyArmed(ctx)
+            ? html`<div class="notice" role="note">${t(s, "settings.response_armed")}</div>`
+            : nothing}
           <div class="grid-form">
             ${pick("default_profile_id", t(s, "settings.default_profile_hint"))}
             ${pick("technical_profile_id", t(s, "settings.technical_profile_hint"))}

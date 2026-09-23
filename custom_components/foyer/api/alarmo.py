@@ -22,6 +22,7 @@ from typing import Any
 import uuid
 
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from ..core.models import FoyerConfig
 from ..core.validation import edit_conflicts, validate
@@ -172,7 +173,7 @@ async def async_plan(
     except Refused as refused:
         return None, {"success": False, "refused": _line(refused.line)}
     problems = validate(result.config) + edit_conflicts(
-        system.config, result.config, system.state
+        system.config, result.config, system.state, now=dt_util.utcnow()
     )
     return result, {
         "success": not problems,

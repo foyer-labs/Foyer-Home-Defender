@@ -18,6 +18,7 @@ import type {
   UserConfig,
 } from "../../shared/types";
 import {
+  anyArmed,
   problemText,
   type PanelContext,
   whenNumber,
@@ -502,6 +503,9 @@ class FoyerPageUsers extends LitElement {
         </div>
         <div class="card-bd">
           <p class="hint">${t(s, "users.policy_hint")}</p>
+          ${anyArmed(ctx)
+            ? html`<div class="notice" role="note">${t(s, "users.policy_armed")}</div>`
+            : nothing}
           <div class="table-wrap">
             <table>
               <thead>

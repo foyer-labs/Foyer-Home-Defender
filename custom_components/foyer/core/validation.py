@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 import re
 
 from .clock import parse_hhmm
@@ -94,6 +95,7 @@ from .models import (
     StateCondition,
     StateTrigger,
     TimeCondition,
+    User,
     Zone,
 )
 from .privacy import MAX_PSEUDONYMISE_DAYS, MIN_PSEUDONYMISE_DAYS
@@ -147,12 +149,76 @@ PRESENCE_DOMAINS: frozenset[str] = frozenset({"person", "device_tracker"})
 # that never arrives or one that never stops.
 BATTERY_DOMAINS: frozenset[str] = frozenset({"sensor", "binary_sensor"})
 
+# What an armed house keeps, and what stays free (SPEC §15.1, decisions 138
+# and 139), as paths into the configuration. A path that names a block
+# classifies all of it. Every field of the global settings, the code and
+# lockout numbers and the health block is on one side or the other, and a
+# pure test fails on a field that is on neither: a setting added later is
+# classified by whoever adds it, rather than landing on the free side
+# because nobody thought of it — which is how the siren, the disarm policy
+# and the lockout stayed editable under a house nobody had disarmed.
+KEPT_WHILE_ARMED: tuple[str, ...] = (
+    # How long it sounds and how it waits (§5.3). The default delays are
+    # only what a new area starts with, and a new area is disarmed; they are
+    # kept anyway, so that "the siren and the delays" is one sentence.
+    "settings.siren_duration",
+    "settings.arm_hold_timeout",
+    "settings.default_entry_delay",
+    "settings.default_exit_delay",
+    # How long a walk test may keep an armed house quiet between two
+    # detections (§8.3): the test reaches areas somebody else armed.
+    "settings.walk_test_timeout",
+    # How it answers: where every chain ends, what silence leaves out and
+    # where the camera writes.
+    "settings.default_profile_id",
+    "settings.technical_profile_id",
+    "settings.silent_suppresses",
+    "settings.camera_dir",
+    # Whether a rule may disarm (§9.4 point 2): a disarm with no code at
+    # all. A lost phone is answered by the kill switch, a suspension or the
+    # rule switched off, none of which is refused.
+    "settings.allow_auto_disarm",
+    # What it asks a code for, raised as well as lowered (§8.2, §8.4).
+    "code_policy",
+    "settings.security.code_length",
+    "settings.security.lockout_failures",
+    "settings.security.lockout_window",
+    "settings.security.lockout_duration",
+    # Whether interference opens an incident on an armed house (§12.5), as
+    # a zone's trigger decides whether a window does.
+    "health.radios",
+    "health.rf_zones",
+    "health.rf_window",
+    "health.rf_confirm",
+)
+FREE_WHILE_ARMED: tuple[str, ...] = (
+    # What changes nothing about the answer: the language it is sent in,
+    # the log and personal data in it, the chime, the battery warning (it
+    # never blocks), whether the wizard is done.
+    "settings.language",
+    "settings.log",
+    "settings.wizard_done",
+    "settings.low_battery_threshold",
+    "chime",
+    # Who may command the house (decision 139): an arming channel and a
+    # credential, each of whose commands still meets the policy above.
+    "settings.mqtt",
+    "settings.ack_webhook_id",
+    # What reports and never opens an incident (§12).
+    "health.mains_entity_id",
+    "health.mains_lost_states",
+    "health.watchdog",
+    "health.channel_sweep",
+    "health.channel_failures",
+    "health.repair_after",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class Problem:
     code: str
     # "area" | "zone" | "scenario" | "group" | "profile" | "user" | "device"
-    # | "settings" | "chime"
+    # | "contact" | "settings" | "chime" | "health"
     kind: str
     ref: str | None = None  # the id of the offending object
     field: str | None = None
@@ -1325,14 +1391,34 @@ def _zone_problems(
 
 
 def edit_conflicts(
-    old: FoyerConfig, new: FoyerConfig, state: RuntimeState
+    old: FoyerConfig,
+    new: FoyerConfig,
+    state: RuntimeState,
+    *,
+    now: datetime | None = None,
 ) -> list[Problem]:
-    """Changes refused while the parts they touch are live.
+    """Changes refused while the parts they touch are live (SPEC §15.1).
 
     An area that is not disarmed — or a scenario that is running — keeps the
-    configuration it was armed with: editing a zone under an armed area changes
-    what is protecting the house right now, without anyone disarming. Areas
-    that are disarmed can be programmed while others stay armed.
+    configuration it was armed with: editing a zone under an armed area
+    changes what is protecting the house right now, without anyone
+    disarming. While any area is not disarmed the house keeps the rest of
+    its answer and its codes too (decision 138): the settings in
+    KEPT_WHILE_ARMED, every profile it could answer with and every contact
+    such a profile names. Otherwise whoever holds `edit_config` could lower
+    the guard of a house nobody disarmed, and nothing in the log would read
+    as a disarm.
+
+    Who may command the house stays free (decision 139): people, their
+    codes, tags, keypads, tokens, the webhook, the rules. Revoking a guest's
+    code from abroad, or the recovery of §8.2, is the edit an armed house
+    needs most. The one refusal among them is an edit that leaves nobody
+    with a usable code, because the policy then switches itself off
+    (decision 78) — the policy changed by another route. ``now`` is what
+    "usable" is read at; without it a validity window is not read, and the
+    rule falls back to enabled people holding a code.
+
+    Areas that are disarmed can be programmed while others stay armed.
     """
     live_areas = {
         a.id for a in old.areas if state.area(a.id).state is not AreaState.DISARMED
@@ -1390,47 +1476,114 @@ def edit_conflicts(
 
     # A response profile is what an armed area would do if something happened
     # now: changing it under an armed area changes that, without a disarm.
-    live_profiles = _live_profiles(old, live_areas) | _live_profiles(new, live_areas)
+    live_profiles = _live_profiles(old, live_areas, state) | _live_profiles(
+        new, live_areas, state
+    )
     old_profiles = {p.id: p for p in old.profiles}
     new_profiles = {p.id: p for p in new.profiles}
-    for profile_id in old_profiles.keys() | new_profiles.keys():
+    for profile_id in sorted(old_profiles.keys() | new_profiles.keys()):
         if old_profiles.get(profile_id) == new_profiles.get(profile_id):
             continue
         if profile_id in live_profiles:
-            problems.append(Problem("area_not_disarmed", "profile", profile_id))
-    if live_areas and old.settings != new.settings:
-        for field in (
-            "default_profile_id",
-            "technical_profile_id",
-            "silent_suppresses",
-        ):
-            if getattr(old.settings, field) != getattr(new.settings, field):
-                problems.append(Problem("area_not_disarmed", "settings", None, field))
+            problems.append(Problem("profile_armed", "profile", profile_id))
+
+    # Whoever such a profile would call (§7.1). The whole contact is
+    # compared, not a list of fields: the number, the service, the quiet
+    # hours and the person it is linked to all decide who hears the alarm,
+    # and so does every channel, because a notification naming none, or one
+    # switched off, goes over the first channel still enabled. A rule's
+    # contacts are not here: they hear the rule, not the alarm.
+    live_contacts = {
+        ref["contact_id"]
+        for config in (old, new)
+        for profile_id in live_profiles
+        if (profile := config.profile(profile_id)) is not None
+        for action in profile.actions
+        for ref in notify_contacts(action)
+    }
+    for contact_id in sorted(live_contacts):
+        if old.contact(contact_id) != new.contact(contact_id):
+            problems.append(Problem("contact_armed", "contact", contact_id))
+
+    if not live_areas:
+        return problems
+    for path in KEPT_WHILE_ARMED:
+        if _setting(old, path) != _setting(new, path):
+            problems.append(
+                Problem(
+                    "armed_setting",
+                    "health" if path.startswith("health.") else "settings",
+                    None,
+                    path.rsplit(".", 1)[-1],
+                )
+            )
+
+    def usable(user: User) -> bool:
+        if now is None:
+            return user.enabled and bool(user.code_hash)
+        return user.usable(now)
+
+    if any(usable(u) for u in old.users) and not any(usable(u) for u in new.users):
+        problems.append(Problem("last_usable_code", "user"))
     return problems
 
 
-def _live_profiles(config: FoyerConfig, live_areas: set[str]) -> set[str]:
-    """Every profile an area that is not disarmed could run right now."""
-    out: set[str] = set()
+def _setting(config: FoyerConfig, path: str) -> object:
+    """The value at a path of KEPT_WHILE_ARMED, read off the configuration."""
+    value = config
+    for name in path.split("."):
+        value = getattr(value, name)
+    return value
+
+
+def _live_profiles(
+    config: FoyerConfig, live_areas: set[str], state: RuntimeState
+) -> set[str]:
+    """Every profile the house could answer with while an area is not disarmed.
+
+    What response.resolve_profile could return for something happening now,
+    and what is already running: an armed area's own chain and its
+    scenarios', its zones' and groups' — a group with none of its own
+    answering with its area's chain, which need not be the armed one (§4.8)
+    — the default, the technical channel's and its zones' wherever they are,
+    because that channel is live whatever the arming state (§5.5), and the
+    profiles an escalation or an incident is running on. Nothing at all
+    while every area is disarmed: the technical channel alone does not
+    freeze the configuration.
+    """
+    if not live_areas:
+        return set()
+    out: set[str] = {
+        ref
+        for ref in (
+            config.settings.default_profile_id,
+            config.settings.technical_profile_id,
+        )
+        if ref
+    }
     for area_id in live_areas:
         area = config.area(area_id)
         if area is None:
             continue
-        out.update(
-            ref
-            for ref in (area.response_profile_id, config.settings.default_profile_id)
-            if ref
-        )
+        if area.response_profile_id:
+            out.add(area.response_profile_id)
         for scenario in config.scenarios:
             if area_id in scenario.areas and scenario.response_profile_id:
                 out.add(scenario.response_profile_id)
     for zone in config.zones:
-        if zone.area_id in live_areas and zone.response_profile_id:
+        if zone.response_profile_id and (
+            zone.area_id in live_areas or zone.channel is Channel.TECHNICAL
+        ):
             out.add(zone.response_profile_id)
     for group in config.groups:
         members = {config.zone(m) for m in group.members}
-        if group.response_profile_id and any(
-            z is not None and z.area_id in live_areas for z in members
-        ):
+        if not any(z is not None and z.area_id in live_areas for z in members):
+            continue
+        if group.response_profile_id:
             out.add(group.response_profile_id)
+        elif (area := config.area(group.area_id)) and area.response_profile_id:
+            out.add(area.response_profile_id)
+    out.update(e.profile_id for e in state.escalations)
+    if state.incident is not None:
+        out.update(c.profile_id for c in state.incident.contributors if c.profile_id)
     return out

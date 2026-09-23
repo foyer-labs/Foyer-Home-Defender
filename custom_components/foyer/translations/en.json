@@ -564,7 +564,7 @@
     },
     "import_config": {
       "name": "Restore the configuration",
-      "description": "Restore an exported configuration. It is migrated, validated, and refused if it would change an armed area.",
+      "description": "Restore an exported configuration. It is migrated, validated, and, while an area is armed, refused if it would change what the house does or what it asks a code for.",
       "fields": {
         "document": {
           "name": "Document",

@@ -20,7 +20,7 @@ import type {
   RadioCandidate,
   RadioConfig,
 } from "../../shared/types";
-import { problemText, type PanelContext, whenNumber } from "../context";
+import { anyArmed, problemText, type PanelContext, whenNumber } from "../context";
 
 /** A timestamp as the rest of the panel writes one. An absent one is a dash
  * rather than an empty cell: "nothing has happened yet" is an answer. */
@@ -564,6 +564,9 @@ class FoyerPageHealth extends LitElement {
         <fieldset>
           <legend>${t(s, "health.radios")}</legend>
           <p class="hint">${t(s, "health.radios_hint")}</p>
+          ${anyArmed(this.ctx!)
+            ? html`<div class="notice" role="note">${t(s, "health.radios_armed")}</div>`
+            : nothing}
           ${draft.radios.map((radio, index) => this._renderRadioEditor(s, radio, index))}
           <button class="btn" @click=${() => this._addRadio()}>${t(s, "health.add_radio")}</button>
           <div class="grid-form">

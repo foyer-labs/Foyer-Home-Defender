@@ -21,6 +21,7 @@ from dataclasses import replace
 from functools import partial
 
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .. import i18n
 from ..core.models import Actor, CodeAttempt, CodeResult, Permission
@@ -121,7 +122,10 @@ async def async_recover(
             "code_hash": hashed,
             "enabled": True,
         }
-    result = upsert(config, system.state, "user", item)
+    # Through the armed guard like any edit, and never refused by it: the
+    # recovery enables a person and gives them a code, so it cannot leave
+    # the house with nobody holding one (§15.1, decision 139).
+    result = upsert(config, system.state, "user", item, now=dt_util.utcnow())
     if result.config is None:
         return INVALID
     person = result.config.user(result.id)

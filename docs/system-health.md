@@ -261,6 +261,13 @@ during which the radio was already deaf.
 
 The incident carries no zone, because no zone did this — the radio did.
 
+**The radios and the thresholds cannot change while any area is armed.** On an
+armed house they decide whether an incident opens, as a zone's trigger decides
+whether a window does, and changing them there would lower the guard of a
+house nobody disarmed. Page 14 says so above the radios, and a save that
+tries is refused with the setting named. The mains, the watchdog and the
+channel checks never open an incident, and stay editable whatever is armed.
+
 **A walk test never sounds for this.** A walk test arms every area itself, so
 "the house is armed" there is not the household's arming: the moment is still
 raised and still logged, and no incident opens.

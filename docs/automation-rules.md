@@ -263,7 +263,11 @@ So:
 
 1. Automatic **arming** is fully supported.
 2. Automatic **disarming exists and is disabled by default.** Turning it on is
-   a deliberate act on page 12, beside the paragraph above.
+   a deliberate act on page 12, beside the paragraph above. It cannot be
+   turned on or off while any area is armed, because it decides whether the
+   armed house can be opened with no code at all. A phone lost while the
+   house is armed is answered by `switch.foyer_auto_arming`, a suspension or
+   switching the rule off, none of which is refused.
 3. **A perimeter area is never disarmed by a rule.** Mark an area as the
    perimeter on page 2, and no rule can open it, whatever the rule says.
    Whoever walks in on a stolen phone still finds every external door and
