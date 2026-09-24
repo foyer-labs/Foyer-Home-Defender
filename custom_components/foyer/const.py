@@ -30,7 +30,7 @@ PANEL_TITLE: Final = "Foyer"  # brand name, identical in every language
 # when it starts from a cached page — Home Assistant falls back to a legacy
 # element and never retries, so the panel shows an empty square for ever.
 # The shield stays where our own modules are certainly loaded: the panel
-# header and the card. `foyer:shield` is still registered for anyone who
+# header. `foyer:shield` is still registered for anyone who
 # wants it on a dashboard of their own.
 PANEL_ICON: Final = "mdi:shield-home"
 STATIC_URL: Final = "/foyer_static"

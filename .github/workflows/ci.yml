@@ -37,7 +37,7 @@ jobs:
       - run: pip install ruff shapely
       - run: ruff check .
       - run: ruff format --check .
-      - name: Sidebar icon path matches docs/logo/foyer-hd-icon.svg
+      - name: foyer:shield icon path matches docs/logo/foyer-hd-icon.svg
         run: |
           python scripts/build_sidebar_icon.py
           git diff --exit-code frontend/src/icons/icon-path.ts

@@ -5,8 +5,8 @@
 // once, and if this module has not run yet — the companion app starting from
 // a cached page — it falls back to a legacy element and never retries, which
 // leaves an empty square in the sidebar. The sidebar uses an mdi icon; the
-// Foyer shield is drawn directly, as an inline SVG, in the panel header and
-// the card, where our own modules are certainly loaded.
+// Foyer shield is drawn directly, as an inline SVG, in the panel header,
+// where our own modules are certainly loaded.
 import { ICON_PATH, ICON_VIEWBOX } from "./icon-path";
 
 interface CustomIconSet {

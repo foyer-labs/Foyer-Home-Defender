@@ -1,4 +1,4 @@
-"""Convert docs/logo/foyer-hd-icon.svg into a filled path for the HA sidebar.
+"""Convert docs/logo/foyer-hd-icon.svg into a filled path for `foyer:shield`.
 
 Home Assistant renders custom icons as filled SVG paths in ``currentColor``;
 strokes are not supported. This script outlines the icon's strokes with the same

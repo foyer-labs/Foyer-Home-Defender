@@ -45,7 +45,7 @@ async def async_register_frontend(hass: HomeAssistant) -> None:
             [StaticPathConfig(STATIC_URL, str(FRONTEND_DIR), cache_headers=True)]
         )
         # Loaded on every frontend page: the card must be available on any
-        # dashboard, and the sidebar icon must exist before the panel is opened.
+        # dashboard, and the foyer:shield icon on any dashboard that uses it.
         frontend.add_extra_js_url(hass, _url(versions, "foyer-icons.js"))
         frontend.add_extra_js_url(hass, _url(versions, "foyer-card.js"))
         hass.data[_VERSIONS_KEY] = versions
