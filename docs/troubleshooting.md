@@ -153,7 +153,8 @@ order it joined, under one incident id. Then:
 A zone is in fault when its entity is `unavailable` or `unknown` or missing,
 when a numeric trigger reads something that is not a number, when it has been
 silent past its *Silence limit*, or when its battery entity cannot be read.
-A fault is never "all quiet": it blocks arming the zone's area, it is
+An `event` or `tag` entity reading `unknown` has simply never fired, and is
+not a fault; `unavailable` still is. A fault is never "all quiet": it blocks arming the zone's area, it is
 announced as *Zone fault*, and *Test & diagnostics* shows *Blocks: fault*.
 When the zone's own entity has been unavailable or unknown for two days (by
 default), it also becomes a Home Assistant repair issue; a silence-limit fault,
@@ -193,7 +194,7 @@ show the same reason in their own words.
 | *Arming failed: zone still open: …* | An *Arm after closing* zone stayed open past *Wait for it to close, at most* (300 s by default) after the exit delay | Close it sooner, or raise the limit |
 | *Not armed — not responding: …* | A zone in fault | See [Faults](#faults-a-zone-that-cannot-be-read) |
 | *Cannot force arming: these zones may not be excluded: …* | A forced arming met a zone that is not *May be excluded* | Close or repair it |
-| *A code is required.* | The code policy, an area or a scenario asks for one | Type it: the panel and the card ask by themselves. From Home Assistant's own cards, see below |
+| *A code is required.* | The code policy, an area or a scenario asks for one; or the scenario has a *Who may use it* list and the request established nobody — a codeless arming, or a `user_id` merely claimed — which is refused while codes are in force even where arming asks no code | Type it: the panel and the card ask by themselves. From Home Assistant's own cards, see below |
 | *That code is not right.* | The code matched nobody | Retype it; every wrong code counts towards the lockout |
 | *Too many wrong codes…* | Locked out, see below | Wait, or use another channel |
 | *Your Foyer user does not have permission for this.* | The person lacks the permission (arming, forced arming, changing scenario…) | Tick it on the *Users* page |
@@ -208,7 +209,8 @@ show the same reason in their own words.
 
 **Locked out.** After five wrong codes within 300 seconds, codes from that
 channel are refused for 300 seconds; each further lockout doubles, up to an
-hour, and the doubling starts again after a day without one. All three
+hour — or up to the configured length, if that is longer — and the doubling
+starts again after a day without one. All three
 numbers are on the *Users* page. A correct code ends the run of failures but
 not a lockout already running. What is locked is narrow: the panel, the card
 and Home Assistant's own alarm panels share one counter **per Home Assistant
@@ -217,21 +219,22 @@ service calls keep a counter of their own per account, and calls with no user
 behind them, such as automations, share one; a keypad counts per device; the
 device endpoint counts a missing or wrong token per source address, and a
 device with its right token is never refused for its address. A Home
-Assistant **administrator is never locked out of the panel, the card or Home
-Assistant's own alarm panels** — the attempts are counted and logged, and the
-account stays open — so nobody can shut themselves out of their own house. A
-`foyer.*` service call is counted like anybody's, administrator or not. The card says
+Assistant **administrator is never locked out of the panel, the card, Home
+Assistant's own alarm panels or the `foyer.*` services called from their
+account** — the attempts are counted and logged, and the account stays open —
+so nobody can shut themselves out of their own house. The card says
 until when; the panel says *Codes from this account are blocked until …*.
 
 **Home Assistant's own cards refuse a codeless arming.** Home Assistant asks
 Foyer one question for everybody — does arming need a code? — and acts on it
 before Foyer sees who is asking. Foyer answers yes while the policy asks for
-a code to arm and nobody has *Skip the code where this person is identified*
-switched on; *Whole house* answers yes as soon as one mode it can still arm
+a code to arm and nobody could use *Skip the code where this person is
+identified* — it counts only for an enabled person, linked to a Home Assistant
+account and inside their validity window; *Whole house* answers yes as soon as one mode it can still arm
 asks for one. Then Home Assistant's dialog and tile buttons ask for the code,
 and a mode that needs none is refused by Home Assistant until a code is typed —
 from an automation too, which arms it through `foyer.arm` instead. When
-somebody is exempt, those buttons stop asking, and a person Foyer does want a
+somebody can use the exemption, those buttons stop asking, and a person Foyer does want a
 code from is refused with *A code is required to arm*, and told where it can
 be typed: Foyer's card, the Foyer panel, or Home Assistant's *Alarm panel*
 card while the panel is disarmed, which is the only time that card offers
@@ -258,7 +261,9 @@ wrong path. See [keypads](keypads.md).
   rule's name; and when a tag or a key zone failed to arm;
 - *Code rejected* under *Security*, when the refusal was about who was asking —
   a wrong code, a lockout, a permission or an area — with the reason in the
-  row's detail;
+  row's detail. Its outcome reads *Wrong code* only when a code was typed and
+  was wrong; a code that was needed and not given, a permission, a validity
+  window, an area or a scenario reads *Refused*;
 - *Automatic action held back* under *System*, when an automatic rule was
   stopped by one of its safety checks, a suspension or the kill switch. See
   [automation rules](automation-rules.md).
@@ -318,8 +323,8 @@ their validity window.
 administrator identifies nobody: the unlocked wall tablet is almost always
 signed in as one. So the panel asks an administrator for the code wherever
 the policy asks, a configuration save included. What an administrator keeps
-is that wrong codes never lock them out of the panel, the card or Home
-Assistant's own alarm panels. An administrator who holds no code, in a
+is that wrong codes never lock them out of the panel, the card, Home
+Assistant's own alarm panels or the `foyer.*` services. An administrator who holds no code, in a
 house where others do, or whose own Foyer user was disabled or ran out,
 recovers access from **Settings → Devices & services → Foyer Home Defender →
 Configure**: it enables that account's Foyer user, removes its validity

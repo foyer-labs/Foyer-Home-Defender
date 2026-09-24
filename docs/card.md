@@ -115,8 +115,10 @@ there, and says *Type the code again for this action*.
 
 While nobody holds a code, the code policy is inert and nothing will ask for
 one ([security model](security-model.md)), so the card shows no keypad in
-*Full* and *Compact* and no *Type the code* link. The moment the backend asks
-for a code, the keypad appears.
+*Full* and *Compact* and no *Type the code* link. Instead every layout but
+*Badge* says so, as the Overview does: *Nobody holds a code yet, so nothing
+asks for one…*. The moment the backend asks for a code, the notice goes and
+the keypad appears.
 
 ## Entry delay and alarm
 
@@ -126,8 +128,8 @@ for a code, the keypad opens by itself as the countdown starts, because the
 seconds spent unfolding it are the ones the person at the door does not have.
 Fold it away and it stays folded for that countdown.
 
-During an entry delay or an alarm the scenario buttons of *Full* and *Keypad*
-step aside, because the one thing left to do is disarm, and *Disarm* becomes
+During an entry delay or an alarm the scenario buttons of *Full* and *Keypad*,
+and the scenario drop-down of *Compact*, step aside, because the one thing left to do is disarm, and *Disarm* becomes
 the primary button. The card looks only where it points: the *Whole house*
 card reacts to any area, an area's card to its own, so an alarm in the garage
 does not take the hall keypad's buttons away.

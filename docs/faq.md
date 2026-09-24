@@ -84,8 +84,8 @@ disarms.
 Being a Home Assistant administrator identifies nobody: the unlocked wall tablet
 is almost always signed in as one. So an administrator is asked for the code
 like anybody else whenever the policy asks for one. What an administrator keeps
-is that wrong codes never lock them out of the panel, the card or Home
-Assistant's own alarm panels. The full picture is in the
+is that wrong codes never lock them out of the panel, the card, Home
+Assistant's own alarm panels or the `foyer.*` services. The full picture is in the
 [security model](security-model.md).
 
 ## Can I arm from Home Assistant's own cards, or by voice?
@@ -96,7 +96,9 @@ assistants all talk to Foyer's alarm panel entities (one per area, plus
 
 What Home Assistant asks for first depends on one thing Foyer tells it: whether
 arming needs a code. Foyer says yes only while your code policy asks for one to
-arm (it does not, by default) and nobody has the exemption above switched on.
+arm (it does not, by default) and nobody could use the exemption above: it
+counts only for a person who has it switched on, is enabled, is linked to a
+Home Assistant account and is inside their validity window.
 The reason is that Home Assistant acts on that answer before Foyer sees who is
 asking: while it is yes, Home Assistant refuses every arming that comes without
 a code, the exempt person's included.
@@ -106,7 +108,7 @@ a code, the exempt person's included.
   code, so a mode that needs none is then refused by Home Assistant until a code
   is typed, even from an automation. Give that automation the code, or arm the
   scenario with Foyer's own `foyer.arm` service.
-- **While somebody is exempt**, Home Assistant asks for nothing. The exempt
+- **While somebody can use the exemption**, Home Assistant asks for nothing. The exempt
   person arms with no code; anybody else Foyer wants a code from is refused by
   Foyer, with a row in the log and a message saying where to type one: Foyer's
   card, the Foyer panel, or Home Assistant's *Alarm panel* card, which shows

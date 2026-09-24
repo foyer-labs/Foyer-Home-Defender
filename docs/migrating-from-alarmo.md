@@ -40,7 +40,7 @@ Alarmo*, and — once there is something to apply — *Apply*.
 
 | Step | What it needs |
 |---|---|
-| *Read from Alarmo* (the preview) | *Edit the configuration*. It writes nothing, so it asks no code. |
+| *Read from Alarmo* (the preview) | *Edit the configuration*. It writes nothing, so it asks no code. If the import would bring people, *Manage users and codes* as well, because the preview names them. |
 | *Apply* | *Edit the configuration*, and your code when Foyer asks for one to change the configuration. If the import would create people, *Manage users and codes* as well, because bringing people in is a change to who can command the house however it is made. |
 
 A Home Assistant administrator is never refused for want of a permission, but

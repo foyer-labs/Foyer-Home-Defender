@@ -64,7 +64,9 @@ Two other chains exist, each for a reason:
 
 Where you can see the answer: the *Areas* editor shows the profile an area
 would answer with and where it comes from ("Effective profile: Full —
-inherited from the scenario"); the list on this page says, under *Used by*,
+inherited from the scenario") — for an armed area, from the scenario it was
+armed with; for a disarmed one, from the first scenario that arms it with a
+profile of its own; the list on this page says, under *Used by*,
 which areas, zones, scenarios and groups name each profile, and whether it is
 the default or the technical one; and the simulator's trace names the profile
 and its source on every step it takes, read off the same function the engine
@@ -187,7 +189,10 @@ A walk test holds back the response of the house: the actions are built and
 recorded, and none of them runs. Four things are never held back: 24h,
 tamper, technical and panic zones, which stay fully live; an incident that
 was already open; the walk test's own *Walk test started* and *Walk test
-ended*, because the test must announce itself; and *Duress code used*.
+ended*, because the test must announce itself; and *Duress code used*. If
+no action of any profile answers *Walk test started* or *Walk test ended*
+with a notification, Foyer puts up a Home Assistant notification itself, so
+unticking them does not make a walk test silent.
 
 ---
 
@@ -302,8 +307,8 @@ moment.
 ### The test button
 
 Beside every saved action, *Test* really runs it: the siren really sounds —
-for three seconds on a siren that accepts a duration; one driven by a switch,
-or one that takes no duration, stays on until you switch it off — the notification
+for three seconds, after which Foyer switches it off, whether it takes a
+duration or is driven by a switch — the notification
 really arrives, the light really comes on. It asks first, needs the *Test
 actions* permission and a code, and leaves a row in the log marked as a test.
 Conditions and quiet hours are not asked, because they are rules about

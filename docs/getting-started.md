@@ -113,8 +113,11 @@ When you finish, Foyer creates:
 
 - **one area**, with a 30-second exit delay and a 30-second entry delay, which
   reports as *Armed away* when armed;
-- **one zone** on the entity you chose, named after it, of type *instant*,
-  with the trigger states you confirmed;
+- **one zone** on the entity you chose, named after it, with the trigger
+  states you confirmed, and of the type the *Zones* page would propose for
+  that sensor: *Delayed* for a door, a garage door, a cover or a lock,
+  *Technical* for a smoke or gas detector, *Instant* for a window, a motion
+  sensor or a switch;
 - **one scenario** that arms that area, and makes *Whole house* report *Armed
   away*;
 - **one response profile**, *Default*, whose single action is a Home
@@ -164,7 +167,9 @@ the config flow made rather than starting again, in five short steps:
    because you are the one setting the system up; everybody else is added on
    the *Users* page, each with a code of their own. The button reads *Create
    and continue* once something is typed, and *Skip* while both fields are
-   empty.
+   empty. A name without a code is refused with a message: this step is for
+   a person with a code. If somebody is already on the *Users* page but holds
+   no code, the step says so rather than announcing them as the code holder.
 5. **Test notification.** Choose a notification service under *Send to* and
    press *Send the test*. It goes through Foyer as a real alarm message
    would, is checked like any other action test, and is recorded in the log
@@ -178,8 +183,8 @@ not cover, each with a button to the page that does: fewer than three zones
 mapped, nobody holding a code, or no contacts to reach when nobody
 acknowledges an alarm.
 
-*Finish* and *Not now* both close the wizard for the whole installation, not
-for this visit only: the flag is stored in the configuration, and the panel
+*Finish* and *Don't show again* both close the wizard for the whole
+installation, not for this visit only: the flag is stored in the configuration, and the panel
 has no button that brings it back. Everything it does is on the ordinary
 pages, so stopping early loses nothing but the list.
 
@@ -222,9 +227,10 @@ has the detail, and what a code does and does not protect against.
 4. **Send the test notification** the wizard offers. If it does not arrive,
    nothing else in Foyer matters.
 5. **Let it fire once, on purpose, while you are standing there.** Arm, walk
-   in, and — through a delayed zone — let the entry delay run out; an instant
-   zone sounds at once. Then open the *Log* and read what it says about the
-   last two minutes, and whom it credits.
+   in, and — through a delayed zone, which is what the config flow makes of a
+   door — let the entry delay run out; an instant zone sounds at once. Then
+   open the *Log* and read what it says about the last two minutes, and whom
+   it credits.
 
 ## Areas, scenarios and the whole house
 
@@ -261,9 +267,10 @@ acts at once. The page decides nothing: each button sends a command, and what
 you see is the backend's answer.
 
 **Whole house.** The house's state, and the mode Home Assistant is shown,
-then one button per scenario — *Arm “Night”* — each with a lock when arming it
-from a disarmed house asks for a code; switching to it from another running
-scenario asks for the *Change scenario* code even where no lock is shown. Beside each button: *Ready to arm*, *Not ready* followed by
+then one button per scenario — *Arm “Night”* — each with a lock when pressing
+it would ask for a code: arming it from a disarmed house, or, while another
+scenario is running, switching to it, which asks for the *Change scenario*
+code. Beside each button: *Ready to arm*, *Not ready* followed by
 the zones that stand in the way, or *running* for the scenario that is armed.
 The readiness line is advice, not a gate: pressing a button that says *Not
 ready* still sends the command, and the refusal, if there is one, comes from

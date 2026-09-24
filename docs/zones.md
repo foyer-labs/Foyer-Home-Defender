@@ -67,8 +67,8 @@ there, and says so.
 |---|---|
 | *Name* | Also names its entities: `alarm_control_panel.foyer_<name>`, `binary_sensor.foyer_ready_to_arm_<name>`, `sensor.foyer_countdown_<name>` |
 | *Reports to Home Assistant as* | The state the area's panel shows when armed — *Armed away* for a new area — and the one arm action it offers. What Home Assistant, HomeKit and voice assistants see; it changes nothing about behaviour |
-| *Default entry delay* | Time to disarm after a delayed zone opens, for zones that do not set their own. 30 s for a new area, 0–300 s |
-| *Default exit delay* | Time to leave after arming, unless the scenario sets its own. 30 s for a new area, 0–300 s; at 0 the area arms at once |
+| *Default entry delay* | Time to disarm after a delayed zone opens, for zones that do not set their own. A new area starts from *Default entry delay* on *Settings* (30 s unless changed), 0–300 s |
+| *Default exit delay* | Time to leave after arming, unless the scenario sets its own. A new area starts from *Default exit delay* on *Settings* (30 s unless changed), 0–300 s; at 0 the area arms at once |
 | *Response profile* | What answers for everything that happens in the area. Empty: the scenario's, then the global default. The editor shows the effective profile and where it comes from |
 | *Code to arm*, *Code to disarm* | *As the global policy*, *Code required* or *No code* |
 | *Perimeter area* | The outer defence ring |
@@ -114,9 +114,12 @@ channel. Changing the list needs *Manage users and codes* as well as *Edit the
 configuration*, because it decides what a person may do. Moving off *Everyone
 with permission* starts with every person ticked, and the last one cannot be
 unticked: an empty list saved by accident would lock the household out. The
-list is checked against the person a request identifies; where arming asks no
-code, a request that identifies nobody is not held to it — give the scenario
-*Code to arm* if the list must hold.
+list is checked against the person a request establishes, by a code, a tag or
+a linked account. While codes are in force, a request that establishes nobody
+— a codeless arming, or a `user_id` a message merely claims — is refused
+arming the scenario, forcing it or switching to it, with *A code is required*,
+even where arming asks no code: the way through is a code. An automatic rule
+still arms it.
 
 ### Switching scenario while armed
 
@@ -290,8 +293,11 @@ in the hall?" has an answer.
 A zone Foyer cannot read is a **fault**, never "all quiet": its entity is
 `unavailable`, `unknown` or missing (*Fault: not reachable*), a number trigger
 reads something that is not a number, it has been silent past its *Silence
-limit*, or its battery entity cannot be read. A fault **blocks arming its
-area**, raises *Zone fault* once, lights `binary_sensor.foyer_fault`, and shows
+limit*, or its battery entity cannot be read. The one exception is an
+`event` or `tag` entity reading `unknown`: that is one that has never fired,
+not one that cannot be read, so a new panic button does not hold its area
+unarmed until somebody presses it; `unavailable` is still a fault for it. A
+fault **blocks arming its area**, raises *Zone fault* once, lights `binary_sensor.foyer_fault`, and shows
 on the Overview, the *Zones* page and in
 [Test & diagnostics](simulator.md#diagnostics-am-i-looking-at-the-right-sensor).
 An entity that goes unavailable keeps its last reading, so it never closes an
@@ -375,6 +381,7 @@ wired as an entity.
 |---|---|
 | *When activated* | *Arm the scenario*, *Disarm everything*, *Arm or disarm* |
 | *Scenario* | Which scenario it arms |
+| *Acts as* | The person the log credits for what the key does, or *Nobody named: the log credits the key*. Changing it needs *Manage users and codes*. A key that names nobody establishes nobody, so it cannot arm a scenario limited by *Who may use it*: name the person it belongs to |
 | *When released* | *Nothing*, or *Disarm everything* — for a switch that stays on while the house is armed |
 
 A key's command is not tied to its area, so it disarms every area, as *Whole

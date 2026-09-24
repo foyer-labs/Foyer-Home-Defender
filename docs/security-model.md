@@ -56,13 +56,17 @@ uses its own surfaces:
 - **An administrator is asked for the code like anybody else**, whenever the
   policy asks for one. Being an administrator identifies nobody: the unlocked
   wall tablet this page is about is almost always signed in as one.
-- **An administrator is never locked out** of the panel, the card or the alarm
-  panel entities. Their wrong codes are counted and logged, but the counter never
+- **An administrator is never locked out** of the panel, the card, the alarm
+  panel entities or the `foyer.*` services called from their account. Their
+  wrong codes are counted and logged, but the counter never
   shuts them out, because an administrator who could not get back in would
   disable the integration instead.
 - **On the panel's configuration and log commands, an administrator is never
   refused for want of a permission** — refusing would buy nothing the
-  paragraph above does not already give them. The code still applies.
+  paragraph above does not already give them. The code still applies. The
+  `foyer.*` services that export the log, export the configuration or import
+  one are not the panel: there the permission applies to an administrator's
+  account as to anybody's.
 - **An administrator with no way in can recover access, loudly** — one who
   holds no code in a house where others do, or whose own Foyer user was
   disabled or ran past its validity window. *Settings → Devices & services →
@@ -71,8 +75,9 @@ uses its own surfaces:
   step) and a new code, nobody else's. That account's Foyer user is enabled,
   its validity window removed and its code replaced; an account with none gets
   a new person with every permission. Once written, it is announced in a row
-  under *Security*, a Home Assistant notification and a message to every
-  enabled contact, each naming the account; one whose write failed leaves its
+  under *Security* — written even with that category switched off — a Home
+  Assistant notification and a message to every enabled contact, each naming
+  the account; one whose write failed leaves its
   row, marked failed, and one refused before anything is written — a code
   that is invalid or already in use — is answered in the form. Anybody else is given a way in from
   the *Users* page.
@@ -224,7 +229,7 @@ Below the table:
 | *Code length* | 6 | 4–12 | The same for everybody, because a keypad has to know how many digits to collect. Four digits is ten thousand combinations, and leans entirely on the lockout. |
 | *Failed attempts* | 5 | 2–20 | How many wrong codes shut the channel... |
 | *Within (seconds)* | 300 | 10–86 400 | ...inside this window. |
-| *Lock for (seconds)* | 300 | 10–86 400 | How long it stays shut, never more than one hour whatever is set here. Each further lockout of the same channel doubles, up to that hour; a channel that has gone a day without one starts again from the first step. |
+| *Lock for (seconds)* | 300 | 10–86 400 | How long it stays shut. Each further lockout of the same channel doubles, up to an hour — or up to the length set here, if that is longer, which is then honoured as set; a channel that has gone a day without one starts again from the first step. |
 
 ### Where a code can be skipped
 
@@ -253,7 +258,11 @@ A service call may say who is acting with `user_id`, because an adapter needs
 some way to say it. That name **grants nothing** — not on arming, not on the
 services that read the log or the configuration: a permission comes from a
 code or a linked account, never from an id somebody typed. Claiming to be
-somebody brings their restrictions, never their exemptions. And because
+somebody brings their restrictions, never their exemptions, and never a
+place on a scenario's *Who may use it* list: while codes are in force, a
+request that establishes nobody, or only claims a name, is refused arming such
+a scenario, forcing it or switching to it with *A code is required*, even
+where arming asks no code. An automatic rule still arms it. And because
 arming needs no code by default, such a row could otherwise credit a person on
 nothing but the caller's word, so every row whose person was named rather than
 established is marked *(not verified)* beside the name. A code or a tag
@@ -273,8 +282,9 @@ itself out and not the household:
 
 A lockout raises the `lockout` moment, which a response profile can answer —
 somebody guessing at a keypad is a tamper signal — and is recorded under
-*Security*. An administrator's wrong codes on the panel, the card and the
-alarm panel entities are counted and recorded, and never lock them out.
+*Security*. An administrator's wrong codes on the panel, the card, the
+alarm panel entities and the `foyer.*` services are counted and recorded, and
+never lock them out.
 
 ---
 
@@ -292,7 +302,8 @@ test*, not *Disarm*.
 It is kept that way on purpose, and it is never quiet about itself: it asks
 for a code by default, it puts a banner on every screen, the default profile
 sends a Home Assistant notification when it starts and when it ends (untick
-those two moments and it starts and ends unannounced), and both of its rows in
+those two moments and, unless another action sends a message for them, Foyer
+puts up a Home Assistant notification itself), and both of its rows in
 the log, under *System*, name the person when a code or a linked account said
 who that was. What stays live through it: 24h, tamper, technical and panic
 zones, an alarm already under way, and a duress code. The *Users* page warns
@@ -338,9 +349,10 @@ The row is on the *Log* page and in an export, never on the Overview, in
 `sensor.foyer_last_event` or in an API device's log. It is also on Home
 Assistant's event bus as `foyer_event`, which is how an automation of yours
 can answer it: one that shows security events somewhere in the house should
-leave `duress` out. The bus carries only what the log writes, so switching the
-*Security* category off under *Settings* stops that event too; the default
-profile's answer does not depend on the log. Emptying the log with a duress
+leave `duress` out. The bus carries only what the log writes, but a `duress`
+row is written, and sent on the bus, even with the *Security* category
+switched off under *Settings*; the default profile's answer does not depend
+on the log. Emptying the log with a duress
 code does not erase that request's own `duress` row.
 
 [Answering it](notification-channels.md#answering-a-duress-code).
@@ -388,8 +400,9 @@ again, you generate a new one.
 ## Devices
 
 - **Declared before they may command.** A `device_id` this installation does
-  not carry is refused whatever code it brings. On the arming services and
-  over MQTT the refusal is also recorded under *Security*, at most once a
+  not carry is refused whatever code it brings. On every `foyer.*` service —
+  the action test, the exports and the import included — and over MQTT the
+  refusal is also recorded under *Security*, at most once a
   minute per name, and raised as a Home Assistant notification. The lockout counts per device, so a
   caller free to invent a device name would be a caller who is never locked
   out.
@@ -405,7 +418,8 @@ again, you generate a new one.
   reverse proxy or IPv6 /64 as somebody guessing, a device with its right token
   keeps working while that address is locked out, and its requests neither add
   to the address's count nor clear it. The rows recording what such a request
-  asked for say the address was locked.
+  asked for say the address was locked, and so do the rows of the actions it
+  set off.
 - **A stolen tag arms and disarms without a code.** A tag carries no code:
   possession is the credential, and the tag is its person's identity, so the
   code policy cannot reach it. Their permissions, areas and validity window
@@ -423,12 +437,13 @@ Home Assistant's alarm cards, dialogs and tiles talk to Foyer's
 `alarm_control_panel` entities, and there Home Assistant decides before Foyer
 does: an entity that says arming needs a code is refused a codeless arming by
 Home Assistant itself, for everybody, before Foyer can see that the person
-asking is exempt. So a panel says arming needs a code only while no enabled
-person has the exemption switched on and an arming it offers asks for one —
-for *Whole house*, as soon as one mode it can still arm asks. While anybody is
-exempt, Home Assistant passes every arming on, and Foyer answers it: an exempt
-person arms with no code, and anybody else it wants a code from is refused,
-with a row in the log and a message saying where a code can be typed. An
+asking is exempt. So a panel says arming needs a code only while nobody
+could use the exemption — it counts only for a person who is enabled, linked
+to a Home Assistant account and inside their validity window — and an arming
+it offers asks for one — for *Whole house*, as soon as one mode it can still
+arm asks. While anybody can use the exemption, Home Assistant passes every
+arming on, and Foyer answers it: an exempt person arms with no code, and
+anybody else it wants a code from is refused, with a row in the log and a message saying where a code can be typed. An
 automation calling the same actions identifies nobody, and is asked for the
 code whenever the policy asks. How this looks from each card is in
 [faq.md](faq.md).
@@ -445,7 +460,9 @@ counts towards the lockout. Link voice assistants through an account that is
 not linked to an exempt person, and give Google's PIN, if it is a Foyer code,
 to a person who holds only what you would let anybody near the speaker do —
 *Arm*, say. Through Home Assistant Cloud they act as the Cloud's own account,
-which the *Users* page does not offer to link.
+which cannot be linked to a person: the *Users* page does not offer it, and
+Foyer refuses it on save, as it refuses every account Home Assistant runs
+itself.
 
 ---
 

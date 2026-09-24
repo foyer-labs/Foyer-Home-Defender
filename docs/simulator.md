@@ -277,7 +277,9 @@ Six things worth knowing before you start one:
 - **It ends itself, and you cannot stop it ending.** The timeout runs from the
   last detection, so a large house can be walked in one pass, and an absolute
   cap ends it whatever happens. While it runs, a real intrusion produces
-  nothing — which is why the banner is on every screen and why entry and exit
+  nothing — which is why the banner is on every screen, why its start and end
+  are announced (by the profile, or by a Home Assistant notification Foyer
+  puts up itself when no profile action sends one), and why entry and exit
   are both in the log with your name.
 - **An area that cannot arm stays out**, and the page names the zones that
   kept it out. Its other zones are still recorded when they detect you; the
@@ -299,8 +301,8 @@ Six things worth knowing before you start one:
 ### Action test — press the button before the night you need it
 
 A test button beside every action, and it really executes: the siren really
-sounds — for three seconds on a siren that accepts a duration; one driven by a
-switch, or one that takes no duration, stays on until you switch it off — and
+sounds — for three seconds, after which Foyer switches it off, whether it
+takes a duration or is driven by a switch — and
 the notification really sends. It asks first, it needs the `test_actions`
 permission and a code, and every run leaves a row in the log marked as a test.
 

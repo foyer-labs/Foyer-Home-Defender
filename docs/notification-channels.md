@@ -328,10 +328,11 @@ like every row, which is how an automation of yours can answer it too — and
 why an automation that shows security events somewhere in the house must
 leave `duress` out.
 
-The bus hears only what the log writes. With the `security` category switched
-off under *Settings*, or with a log that could not be opened, there is no
-`duress` row and no `foyer_event` for it either; the default profile's answer
-does not depend on the log, and is the one to rely on.
+The bus hears only what the log writes. A `duress` row is written, and sent
+as `foyer_event`, even with the `security` category switched off under
+*Settings*; with a log that could not be opened there is no `duress` row and
+no `foyer_event` for it either. The default profile's answer does not depend
+on the log, and is the one to rely on.
 
 What a duress answer sends is judged by the channel sweep alone
 ([system health](system-health.md#notification-channel-health)): a channel it

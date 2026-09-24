@@ -215,14 +215,14 @@ already.
   token keeps working while that address is locked out: a token is 32 random
   bytes, and nobody guesses one. The rows that record its requests — the
   arming, the disarm, the refusal — carry the address and say it was locked,
-  so a device sharing its address with a guesser shows up there; the rows of
-  the actions those requests set off, under `action`, do not. Its requests
+  so a device sharing its address with a guesser shows up there, and so do
+  the rows of the actions those requests set off, under `action`. Its requests
   neither add to the address's count nor clear it.
 - **Plain HTTP is accepted, and said.** A device whose last request arrived
   unencrypted carries an *Unencrypted* warning under *Arming devices*, until a
   request from it arrives encrypted,
   and the rows that record its requests say that the request was not
-  encrypted (the rows of the actions they set off, under `action`, do not). Many home-made devices cannot do TLS at all; refusing them would
+  encrypted, as do the rows of the actions they set off, under `action`. Many home-made devices cannot do TLS at all; refusing them would
   take the feature away from the people who asked for it.
 - **Tags are not allowed on it.** A tag carries no code, so on the endpoint the
   token by itself would be the key to the house. Tags stay `tag.*` and
