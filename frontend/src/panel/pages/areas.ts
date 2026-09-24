@@ -46,7 +46,16 @@ class FoyerPageAreas extends LitElement {
     // Not while a save or a delete is on its way: its answer would land in
     // this editor, closing it or showing the other item's problems here.
     if (this._busy) return;
-    this._draft = area ? { ...area } : { ...NEW_AREA };
+    // A new area starts from the defaults on Settings, which say they are
+    // what new areas start with; the constants are only the fallback.
+    const settings = this.ctx?.config?.settings;
+    this._draft = area
+      ? { ...area }
+      : {
+          ...NEW_AREA,
+          default_entry_delay: settings?.default_entry_delay ?? NEW_AREA.default_entry_delay,
+          default_exit_delay: settings?.default_exit_delay ?? NEW_AREA.default_exit_delay,
+        };
     this._problems = [];
     void revealEditor(this);
   }

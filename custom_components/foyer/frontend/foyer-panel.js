@@ -1857,7 +1857,13 @@ var lt = {
 		};
 	}
 	_edit(e) {
-		this._busy || (this._draft = e ? { ...e } : { ...lt }, this._problems = [], R(this));
+		if (this._busy) return;
+		let t = this.ctx?.config?.settings;
+		this._draft = e ? { ...e } : {
+			...lt,
+			default_entry_delay: t?.default_entry_delay ?? lt.default_entry_delay,
+			default_exit_delay: t?.default_exit_delay ?? lt.default_exit_delay
+		}, this._problems = [], R(this);
 	}
 	_set(e, t) {
 		this._draft &&= {

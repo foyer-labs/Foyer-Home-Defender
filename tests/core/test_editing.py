@@ -592,3 +592,16 @@ def test_a_radio_list_that_is_not_a_list_of_maps_is_refused_not_a_traceback(conf
         result = update_health(config, RuntimeState(), health)
         assert result.config is None
         assert result.problems[0].code == "invalid"
+
+
+def test_the_default_delays_are_held_to_what_an_area_may_have(config):
+    """Fix phase: the Settings defaults are what a new area starts with, so
+    they obey the area's 0–300 s. Before, any integer was stored."""
+    base = {"siren_duration": 180, "arm_hold_timeout": 300}
+    for field, value in (("default_entry_delay", 301), ("default_exit_delay", -5)):
+        bad = update_settings(config, RuntimeState(), {**base, field: value})
+        assert [(p.code, p.field) for p in bad.problems] == [
+            ("delay_out_of_range", field)
+        ]
+    good = update_settings(config, RuntimeState(), {**base, "default_entry_delay": 45})
+    assert good.config.settings.default_entry_delay == 45

@@ -314,6 +314,11 @@ def validate(config: FoyerConfig) -> list[Problem]:
         add(Problem("camera_dir_invalid", "settings", None, "camera_dir"))
     if not _in_range(settings.siren_duration, 1, MAX_SIREN_DURATION):
         add(Problem("siren_out_of_range", "settings", None, "siren_duration"))
+    # What a new area starts with, so the bounds every area is held to.
+    if not _in_range(settings.default_entry_delay, 0, MAX_ENTRY_DELAY):
+        add(Problem("delay_out_of_range", "settings", None, "default_entry_delay"))
+    if not _in_range(settings.default_exit_delay, 0, MAX_EXIT_DELAY):
+        add(Problem("delay_out_of_range", "settings", None, "default_exit_delay"))
     if not _in_range(
         settings.arm_hold_timeout, MIN_ARM_HOLD_TIMEOUT, MAX_ARM_HOLD_TIMEOUT
     ):
