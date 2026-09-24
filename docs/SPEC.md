@@ -361,8 +361,9 @@ Event triggers are momentary: an event zone is never "open" at arming. A
 change out of `unavailable` is Home Assistant restoring the last event at
 startup, not a new event, and does not fire.
 
-The zone creation wizard proposes a `TriggerSpec` from the entity's
-`device_class` and current state, and requires explicit confirmation (INV-5).
+The zone creation wizard proposes a type from the entity's `device_class`,
+and trigger states from its domain and current state, and requires explicit
+confirmation (INV-5).
 
 ### 4.5 Area
 
@@ -594,7 +595,8 @@ A zone can also be excluded **by hand**, from the panel, the card or a service
 - an exclusion **without a duration** lasts for this arming and ends when the
   area is disarmed;
 - an exclusion **with a duration** outlives the disarm and ends when its time is
-  up, announcing the zone's return — because a zone excluded and forgotten is
+  up, raising *Zone included again* (`zone_rejoined`) for any profile to
+  announce, and a row in the log — because a zone excluded and forgotten is
   exactly the window somebody comes through.
 
 Closing the zone never cancels a manual exclusion; that is what it was excluded
@@ -697,7 +699,8 @@ a dedicated global technical profile, then the default (§5.5, decision 62): a
 smoke detector must not respond differently depending on how the house is armed,
 and the scenario is meaningless to it.
 
-The UI must always show the *effective* profile and where it was inherited from,
+The UI must always show the *effective* profile and where it was inherited from
+— the Areas editor does, from the scenario an armed area was armed with —
 otherwise the behaviour looks arbitrary.
 
 ### 6.1 Trigger moments
@@ -1162,11 +1165,17 @@ the code whenever the policy does.
 
 `manage_users` owns people, and everything that decides what a person may
 do or which key opens the house as whom: a person, a tag, the person a key
-switch acts as, and the list of people allowed to use a scenario. Any change
-that touches one of them — saved, deleted, restored or imported — needs
-`manage_users` as well as `edit_config`; otherwise `edit_config` is a way to
-hand oneself, or somebody else, what `manage_users` withholds (decisions
-111, 112).
+switch acts as, and the list of people allowed to use a scenario. Saving or
+deleting a person, saving a tag and the code policy need `manage_users`; any
+change made under `edit_config` that also touches one of them — a key
+switch's person, a scenario's list, a deleted tag, a restore, an import —
+needs both; otherwise `edit_config` is a way to hand oneself, or somebody
+else, what `manage_users` withholds (decisions 111, 112).
+
+A scenario's list binds a request that establishes nobody too (fix phase):
+while codes are in force, a codeless arming or a `user_id` a message only
+claimed is asked for a code before it may use a scenario limited to some
+people; an automatic rule, the household's own configuration, is not.
 
 **`walk_test` reaches further than its name** (decision 137). A walk test is
 walked through the whole house, so it arms every disarmed area that can arm —
@@ -1260,9 +1269,10 @@ Three rules the contract needs that the shape above does not carry:
   at; one that asks gets the structured result, refusal and all (decision
   106).
 - **`skip_exit_delay` needs no permission of its own** (decision 85): whoever
-  may arm may arm at once, and it uncovers nothing — it closes sooner. It does
-  turn every delayed zone into an instant one, so the `armed` row records that
-  it happened, and "why did it sound while I was still in the hall?" has an
+  may arm may arm at once, and it uncovers nothing — it closes sooner. But
+  every zone is watched from that instant — a delayed zone still starts the
+  entry delay, and an instant one alarms — so the `armed` row records that it
+  happened, and "why did it sound while I was still in the hall?" has an
   answer.
 
 `foyer.walk_test` and `foyer.test_action` are **not registered until Phase 3**
@@ -1537,8 +1547,10 @@ refuses to do when no keypad uses the endpoint.
 Every device that commands the alarm is **declared before it may** (decision
 81): a `device_id` this installation does not carry is refused, whatever code
 it brings, the refusal is recorded under `security`, and it is raised as a Home
-Assistant notification — once per device, so a keypad configured with the wrong
-name does not bury the notification that matters. The reason is narrow: the
+Assistant notification — one per channel, replaced by the next, with its row
+written at most once a minute per name, so a keypad configured with the wrong
+name does not bury the notification that matters. Every service refuses and
+records it, the configuration and export services included. The reason is narrow: the
 lockout of §8.4 counts per channel *and* per device, so a caller free to invent
 a device id is a caller who is never locked out.
 
@@ -2053,7 +2065,7 @@ enough for the user to tell the cases apart.
 | `alarm_control_panel.foyer_<area>` | area | real area state; arms and disarms that area. Whether a code is needed is Foyer's answer (§8.2) |
 | `alarm_control_panel.foyer_master` | 1 | aggregated state, reports the active scenario's `ha_master_state`; the surface voice assistants and HomeKit see |
 | `select.foyer_scenario` | 1 | active scenario by name; the persistent record of *which* scenario is running |
-| `binary_sensor.foyer_zone_<zone>` | zone | normalised zone state (`on` = triggered), with attributes for bypass, fault, last trigger |
+| `binary_sensor.foyer_zone_<zone>` | zone | normalised zone state (`on` = triggered), with attributes for bypass, fault and the source entity |
 | `binary_sensor.foyer_ready_to_arm` | 1 + per area | whether arming would succeed right now |
 | `binary_sensor.foyer_fault` | 1 | any zone in fault |
 | `sensor.foyer_open_zones` | 1 | count, with the list as an attribute |
@@ -2216,12 +2228,13 @@ somebody else's key (decision 111).
 **The language setting is not the panel's.** The panel follows each Home
 Assistant user's own language, so a second selector for it would be a bug
 generator. What it sets is the language of what Foyer *sends out* —
-notifications, the zone name the chime speaks — which the house has one of
-even when the phone reading it does not (decision 73).
+the words of its notifications and their buttons — which the house has one
+of even when the phone reading it does not (decision 73). The chime speaks a
+zone's own name, as the household typed it.
 
 ### 15.2 Contextual help
 
-Every panel page opens with a collapsible **"About this section"** panel above its
+Every panel page opens with a collapsible **help panel** — its title names the page's subject, *What a zone is* — above its
 content. This is not decoration: an alarm panel has settings whose effect is not
 guessable from their label (`arm policy`, `follower`, `cross-zone`, `supervision
 timeout`), and a user who guesses wrong finds out during a burglary.
@@ -2373,9 +2386,9 @@ problem, and produce an issue that is answerable.
 
 ## 17. Visual identity
 
-The mark extends the existing **Foyer** symbol — three nested arches receding into
+The mark extends the existing **Foyer** symbol — nested arches receding into
 the distance, a lit arched doorway, a threshold line — by enclosing it in a
-shield. Direction: *shield frame*, chosen for immediate legibility as a security
+shield; inside the shield it is reduced to two arches and the doorway. Direction: *shield frame*, chosen for immediate legibility as a security
 product, which matters more for a project nobody has heard of yet than an internal
 geometric echo would.
 
@@ -2394,7 +2407,7 @@ rendition.
 | File | Where it appears | Constraint |
 |---|---|---|
 | `foyer-hd-icon.svg` | The `foyer:shield` icon, for dashboards | **24 px, single colour, `currentColor`.** No gradient, no fill colours, no opacity ladder — a *separate drawing*, carrying the shield outline, one arch and a solid doorway. The faded arches vanish at this size, so they are not in this file. **Not the sidebar icon:** see below |
-| `foyer-hd-symbol-dark-bg.svg`<br>`foyer-hd-symbol-light-bg.svg` | Panel header, card header, loading state | Full colour, transparent ground, 32 px and up |
+| `foyer-hd-symbol-dark-bg.svg`<br>`foyer-hd-symbol-light-bg.svg` | Panel header | Full colour, transparent ground, 32 px and up |
 | `foyer-hd-app.svg` → `foyer-hd-app-512.png`, `-192.png` | HACS listing, repository social preview, favicon | Dark rounded tile, symbol scaled to 0.84 for a proper safe margin |
 | `foyer-hd-lockup-dark-bg.svg` / `-light-bg.svg` (+ PNG) | README header, documentation | Two files, not one recoloured |
 
@@ -2406,8 +2419,8 @@ rendition.
   and when the sidebar draws before that module has run — which is what the
   companion app does when it starts from a cached page — it falls back to a
   legacy element and never retries, leaving an empty square for ever. The
-  Foyer shield is drawn as an inline SVG in the panel header and the card,
-  where the modules are certainly loaded, and `foyer:shield` stays registered
+  Foyer shield is drawn as an inline SVG in the panel header, where the
+  modules are certainly loaded, and `foyer:shield` stays registered
   for anyone who wants it on a dashboard of their own.
 - **The `foyer:shield` drawing is redrawn, never scaled.** It renders at 24 px
   and inherits the theme colour, so it cannot use amber or the opacity ladder
@@ -2452,7 +2465,7 @@ and the Italian README says so where it links them.
 | `docs/notification-channels.md` | Recipes: Companion app + critical alerts, Pushover priority 2, Twilio SMS, Twilio voice, GSM modem, Telegram, Signal |
 | `docs/resilience.md` | Cut power and cut fibre; UPS on the router; why a local GSM channel is the only one that survives |
 | `docs/keypads.md` | Hardware comparison, the MQTT contract, writing your own adapter |
-| `docs/reusing-existing-sensors.md` (+ `.it.md`) | Reusing an existing alarm's sensors: native panel integrations, programmable relay outputs, wired-bus sniffing, 433 MHz reception via rtl_433 or an RF bridge, and why 868 MHz encrypted systems (Ajax, Verisure, Inim Air) cannot be sniffed. Includes the honest caveats: wireless sensors sleep for minutes after a detection, passive reception loses supervision, and tampering with a monitored panel may void the contract |
+| `docs/reusing-existing-sensors.md` (+ `.it.md`) | Reusing an existing alarm's sensors: native panel integrations, programmable relay outputs, wired-bus sniffing, 433 MHz reception via rtl_433 or an RF bridge, and why 868 MHz systems whose radio is encrypted (Ajax, by its maker's own documentation) cannot be sniffed. Includes the honest caveats: wireless sensors sleep for minutes after a detection, passive reception loses supervision, and tampering with a monitored panel may void the contract |
 | `docs/automation-rules.md` | Presence-based arming, the guards, suspensions and expected-visitor windows, and an unhedged explanation of why automatic disarming is restricted |
 | `docs/brand.md` (+ `.it.md`) | The asset set, the palette, and the rule that the sidebar icon is redrawn rather than scaled |
 | `docs/privacy.md` | What the log contains, the GDPR household exemption, and the point at which it stops applying — logging a cleaner, a B&B guest or an employee |
@@ -2567,7 +2580,7 @@ sensors remaps them by hand to try something new, however much better it is.
 
 **Scoped honestly, and this wording belongs in `docs/migrating-from-alarmo.md`**,
 which the README's one line about the importer links (decision 148). It reads
-`.storage/alarmo.*`, an internal format its author may change in any release,
+`.storage/alarmo.storage`, an internal format its author may change in any release,
 without notice and without fault. It is therefore a **best-effort tool that
 reports what it could not convert**, never a guaranteed migration. Framed any
 other way it becomes a permanent source of issues that are nobody's bug.
@@ -2762,7 +2775,7 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 82 | A tag always names a person, and never answers to a typed name | §8.2 calls it a *per-user* tag, which is the whole of why it identifies; and a token that answered to a name anybody could type would be an identity with no code in front of it |
 | 83 | The retained MQTT state message has three levels and starts at the least | It is retained on a broker that is often shared, so everything in it is told to whoever connects next — the same reasoning as the watchdog's empty payload (decision 29) |
 | 84 | The channel is the registered device's, never the message's claim | Otherwise an automation buys the per-user exemption of §8.2, or chooses which lockout counter to spend, by typing a word |
-| 85 | `skip_exit_delay` needs no permission of its own, and is recorded | It uncovers nothing; it closes sooner. But it turns every delayed zone into an instant one, and "why did it sound while I was still in the hall?" must have an answer |
+| 85 | `skip_exit_delay` needs no permission of its own, and is recorded | It uncovers nothing; it closes sooner. But every zone is watched at once, and "why did it sound while I was still in the hall?" must have an answer |
 | 86 | `foyer.walk_test` and `foyer.test_action` are registered when Phase 3 builds them | A service that exists and does nothing answers its caller with silence, which is the answer that gets mistaken for success |
 | 87 | `last_result` is four words for ever, and `last_reason` carries the precise why | An adapter written today must never meet a word it does not know: a keypad that goes quiet when something new happens is worse than one that says "blocked" — and the detail is still there for whoever wants it |
 | 88 | A `user_id` nothing established marks its log row `attributed: claimed` | Arming needs no code, so a caller could otherwise write a name the log had no reason to believe; a wrong answer to "who disarmed at 03:14?" is worse than no answer, and the capability is worth keeping |
