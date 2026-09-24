@@ -878,6 +878,10 @@ class FoyerSystem:
             self.async_record(rows)
         except Exception:
             _LOGGER.exception("Foyer could not record a decision in its log")
+        try:
+            self._announce_walk_test(decision)
+        except Exception:
+            _LOGGER.exception("Foyer could not announce a walk test")
         if decision.actions:
             # The sirens first, the file second: a save that blocks — a full
             # card, a slow disk — must not stand between a decision and its
@@ -1811,6 +1815,47 @@ class FoyerSystem:
             "kind": intent.kind,
             "error": result.error,
         }
+
+    def _announce_walk_test(self, decision: Decision) -> None:
+        """A walk test always says that it started and that it ended (§11.3).
+
+        Among the safeguards §11.3 calls mandatory, because for as long as it
+        runs a real intrusion produces nothing. The default profile answers
+        both moments; a household may untick them, and a safeguard that one
+        untick removes is not one. So when no action of any profile answers
+        the moment with a message, Foyer puts up a Home Assistant
+        notification itself — only then, so it never says it twice.
+        """
+        said = {
+            intent.moment
+            for intent in decision.actions
+            if intent.kind
+            in (ActionKind.NOTIFY.value, ActionKind.PERSISTENT_NOTIFICATION.value)
+        }
+        moments = [
+            occ.moment
+            for occ in decision.occurrences
+            if occ.moment in (Moment.WALK_TEST_STARTED, Moment.WALK_TEST_ENDED)
+            and occ.moment not in said
+        ]
+        if not moments:
+            return
+
+        async def announce() -> None:
+            from . import notices
+
+            strings = await self.hass.async_add_executor_job(
+                i18n.load_strings, self.language
+            )
+            for moment in moments:
+                notices.async_create(
+                    self.hass,
+                    i18n.translate(strings, f"notification.{moment.value}.message"),
+                    title=i18n.translate(strings, f"notification.{moment.value}.title"),
+                    notification_id="foyer_walk_test",
+                )
+
+        self.hass.async_create_task(announce(), "foyer walk test notice")
 
     async def _async_test_message(self) -> str:
         """What a test notification says, in the language Foyer speaks

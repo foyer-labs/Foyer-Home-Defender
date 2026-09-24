@@ -102,3 +102,38 @@ async def test_a_key_zone_keeps_its_person_through_a_panel_save(
     await hass.async_block_till_done()
     zone = next(z for z in hass.data[DOMAIN].config.zones if z.name == "Key switch")
     assert zone.key.user_id == luca
+
+
+async def test_a_walk_test_announces_itself_even_when_no_profile_does(
+    hass, loaded, hass_ws_client
+):
+    """§11.3 calls the notification on start and on end mandatory. It came from
+    the default profile alone, and unticking two moments removed it."""
+    client = await hass_ws_client(hass)
+    config = (await _ws(client, {"type": "foyer/config"}))["config"]
+    profile = config["profiles"][0]
+    for action in profile["actions"]:
+        action["moments"] = [
+            m
+            for m in action["moments"]
+            if m not in ("walk_test_started", "walk_test_ended")
+        ]
+    saved = await _ws(
+        client, {"type": "foyer/config/save", "kind": "profile", "item": profile}
+    )
+    assert saved["success"], saved
+    await hass.async_block_till_done()
+
+    started = await hass.services.async_call(
+        DOMAIN, "walk_test", {"enable": True}, blocking=True, return_response=True
+    )
+    assert started["success"] is True
+    await hass.async_block_till_done()
+    notes = hass.data["persistent_notification"]
+    assert "foyer_walk_test" in notes
+
+    await hass.services.async_call(
+        DOMAIN, "walk_test", {"enable": False}, blocking=True, return_response=True
+    )
+    await hass.async_block_till_done()
+    assert "over" in notes["foyer_walk_test"]["title"]
