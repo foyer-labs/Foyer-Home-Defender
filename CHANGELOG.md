@@ -5,6 +5,115 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.22] — what the third review left open
+
+The questions beta.21 left for the household, answered: SPEC decisions
+128–147. Credentials stop coming back to the panel, a duress code is heard
+whatever it is used for, an armed house keeps the answer and the codes it was
+armed with, and an arming starts a clean watch. The stored configuration keeps
+its schema.
+
+### Changed — read these before you update
+- **Home Assistant 2026.6 or later is required.** Earlier releases list every
+  webhook to any signed-in account, and the acknowledgement webhook stops an
+  alarm in progress (decision 147).
+- **The acknowledgement webhook's address is shown once**, when you switch it
+  on or press *Generate a new address* on the Contacts page — the full URL
+  when Home Assistant knows its external address, the path otherwise. Copy it
+  into the voice provider then; to see it again, generate a new one, which
+  stops the old one at once. **If you switched the webhook on before beta.13,
+  generate a new address**: older log rows printed it in full, and anyone who
+  read or exported them may still hold it. Foyer now takes it out of those
+  rows when the log opens.
+- **The watchdog URL is never shown again once saved.** Page 14 says one is
+  set and takes a new one typed over it; saving with the field empty, or
+  switching the watchdog off, keeps it. The panel's `foyer/config` read carries
+  `settings.ack_webhook_enabled` and `health.watchdog.url_set` instead of the
+  id and the URL.
+- **A duress code raises the silent `duress` event on every request it comes
+  with** — arming, excluding, acknowledging, a walk test, the automatic rules,
+  unlocking an API device, the panel's configuration and log commands,
+  services — accepted or refused, a locked channel included. It is answered by
+  the global default profile only and **always runs silent**: the kinds on the
+  silent list (siren, TTS and chime by default) are left out, and the profile
+  editor warns against a Home Assistant notification. It is never held back by
+  a walk test. Its row stays on the log page, in exports and on the bus as
+  `foyer_event`, but no longer appears among the Overview's recent events, in
+  `sensor.foyer_last_event` or in an API device's log; switching the security
+  log category off also stops its `foyer_event`. The row names what the
+  request asked for, and a new template variable `{{ operation }}` lets a
+  message say it. Emptying the log with a duress code keeps that request's own
+  duress row.
+- **While any area is armed, an edit that changes the answer or the codes is
+  refused**: siren duration, the hold after the exit delay, the default
+  delays, the walk test timeout, the default and technical profiles, the
+  silent list, the camera folder, *Allow rules to disarm*, the code policy,
+  code length and lockout, what any area or scenario asks a code for (a
+  disarmed area and an idle scenario included), the radios and their
+  thresholds, every profile the house could answer with, and any contact such
+  a profile names. People, codes, tags, keypads, API devices, MQTT, the
+  webhook and the automatic rules stay editable, except an edit that would
+  leave nobody with a usable code. A restore is refused exactly where the same
+  change would be.
+- **Arming clears alarm memory**, with *Alarm memory cleared*, as a disarm
+  does — an automatic rule's arming included — for each area it takes out of
+  disarmed. It is not taking note of the alarm: the incident and its
+  escalation carry on. A refused arming, the cutoff resuming an arming, an area
+  staying armed through a scenario switch, a walk test, and an arming made as a
+  walk test ends all keep the memory.
+- **Home Assistant's alarm panels say arming needs a code only while nobody
+  has the per-person exemption on.** Then the pop-up dialog and tile buttons
+  stop asking, the exempt person arms with none, and anybody else is refused
+  by Foyer with a message saying where to type the code. Alexa and Google
+  Assistant read the same attribute. The *Whole house* panel says a code is
+  needed as soon as one mode it can arm asks; a mode needing none then arms
+  from an automation through Foyer's own `foyer.arm` service.
+- **A keypad or API device with its right token is never refused because its
+  address is locked** for wrong tokens; the rows it causes say the address was
+  locked.
+- **The walk test's reach is stated where it is granted**, unchanged: it arms
+  every area it can whatever the person's areas, and keeps every area quiet,
+  one somebody else armed included, for up to three hours. The Users page
+  warns while *Walk test* is ticked.
+
+### Added
+- A one-time address box with a Copy button, and a confirmed *Generate a new
+  address*, on the Contacts page.
+- Notices on the Settings, code policy, automatic disarming and radio forms
+  while an area is armed, and help entries on Settings, Contacts and Profiles.
+- The log page shows a duress row's operation and target in words, and
+  *Yes/No* for flags such as *address locked* and *encrypted*.
+
+### Fixed
+- A warning that a notification channel broke could report its own send and
+  mark the next channel broken in turn, one after another; it is now counted
+  with the next real send or channel sweep.
+- A decision started from inside another — a zone or rule watching one of
+  Foyer's own entities — recorded its rows and ran its actions before the one
+  that caused it.
+- A zone changing during the last save before a reload was decided by the
+  system going away; nothing more is decided once a reload begins.
+- `sensor.foyer_last_event` showed the event before the one that had just
+  happened.
+- The test button beside a channel now counts as a real send: a tested
+  channel stops reading "never used", and a failed test counts.
+- The `device_unlocked` row now records a request that was not encrypted.
+- A watchdog error no longer keeps a host name that carries the token, and a
+  URL that is not `http(s)` is refused when typed.
+- A radio added on the System health page could not be saved.
+- Arming over alarm memory kept the memory but forgot which zones had alarmed.
+- The card's keypad layout offers *Arm* while an area holds alarm memory, as
+  the other layouts do.
+- The *Whole house* panel showed no code field where only an area or a
+  scenario asked for one, and an area's panel none where its scenario asks a
+  code to disarm.
+- When the shared counter of many addresses sending wrong tokens locks, the
+  notification says so instead of naming the address `*`.
+- The built-in duress message no longer leaves an empty place for the area,
+  and a switch answering duress no longer writes a visible cutoff row.
+- The walk test's texts no longer say it arms and disarms every area, or that
+  the zones of an area it left out cannot detect anything.
+
 ## [0.1.0-beta.21] — the third review
 
 A full review of the code, engine to card, looking for bugs. Everything it
