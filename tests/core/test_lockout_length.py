@@ -13,7 +13,7 @@ def _lock(duration: int, strikes_before: int = 0):
     lock = None
     for _ in range(strikes_before + 1):
         for _ in range(5):
-            lock, shut = register_failure(
+            lock, _shut = register_failure(
                 lock, NOW, failures=5, window=300, duration=duration
             )
     return lock
