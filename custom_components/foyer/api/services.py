@@ -557,6 +557,13 @@ def async_register(hass: HomeAssistant) -> None:
                     ref=requester.device.ref,
                     wrong_transport=True,
                 )
+            elif requester.ref is not None:
+                # And a name nobody declared, as the arming services do
+                # (decision 81): refused here without a word, it was the one
+                # way to try names without anybody hearing of it.
+                await async_report_unknown_device(
+                    hass, system, channel=CHANNEL_API, ref=requester.ref
+                )
             return system.refusal(requester.reason)
         actor = requester.actor
         now = dt_util.utcnow()

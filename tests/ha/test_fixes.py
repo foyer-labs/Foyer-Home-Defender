@@ -166,3 +166,25 @@ async def test_an_administrator_calling_the_services_is_never_locked_out(
         reasons.append(result["reason"])
     assert "locked_out" not in reasons
     assert set(reasons) == {"bad_code"}
+
+
+async def test_an_undeclared_device_is_heard_of_on_every_service(hass, loaded):
+    """Decision 81: an undeclared device is refused, recorded and notified. On
+    the action test and the export and import services it was only refused,
+    which made them the quiet place to try names."""
+    result = await hass.services.async_call(
+        DOMAIN,
+        "export_log",
+        {"device_id": "made_up_keypad"},
+        blocking=True,
+        return_response=True,
+    )
+    assert result["reason"] == "device_not_registered"
+    await hass.async_block_till_done()
+    system = hass.data[DOMAIN]
+    await system.log.async_flush()
+    rows = (await system.log.async_query(limit=100))["rows"]
+    assert any(
+        r["event_type"] == "device_rejected" and r["device_id"] == "made_up_keypad"
+        for r in rows
+    )

@@ -75,6 +75,9 @@ class Requester:
     # 98). The caller is answered exactly as for an unknown device; the row
     # and the notification say this instead.
     wrong_transport: bool = False
+    # The name the message gave, for the row and the notice that a refused
+    # device leaves wherever it was refused.
+    ref: str | None = None
 
 
 def new_token() -> tuple[str, str]:
@@ -155,7 +158,7 @@ async def async_requester(
     elif ref is not None:
         device = config.device_by_ref(ref)
         if device is None:
-            return Requester(reason=Reason.DEVICE_NOT_REGISTERED)
+            return Requester(reason=Reason.DEVICE_NOT_REGISTERED, ref=ref)
         if device.transport is DeviceTransport.HTTP:
             # Its name, over a path that is not its own (decision 98).
             return Requester(
