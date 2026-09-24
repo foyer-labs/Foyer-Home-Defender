@@ -55,7 +55,10 @@ does not address:
 | **Simulator and walk test** | Nobody can currently answer "what would happen if the kitchen window opened right now, in this scenario, at this hour?" without actually opening it. |
 | **Escalation with acknowledgement** | Notifications that keep escalating across channels and people until a human acknowledges. This is what a real dialler does and what Home Assistant has no ready-made answer for. |
 
-The README must credit Alarmo as prior art and state plainly how Foyer differs.
+This section is where the comparison lives, and the only place. The README is a
+front door, not a positioning document: it describes Foyer on its own terms and
+names no other product, except one neutral line pointing at the importer of
+§20.2 (decision 148).
 
 ---
 
@@ -1572,7 +1575,7 @@ HACS installs `custom_components/` and nothing else, so a blueprint in this
 repository does not arrive anywhere on its own. **Every shipped adapter
 therefore carries a one-click import link** — the `my.home-assistant.io`
 blueprint-import redirect, which opens the import dialogue on the reader's own
-installation — in `docs/keypads.md` and in the README. Copying the file by hand
+installation — in `docs/keypads.md`, which the README links. Copying the file by hand
 still works and is documented beside it; it is simply not the step a reader is
 asked to take first, because it is the step at which people stop.
 
@@ -2229,7 +2232,7 @@ timeout`), and a user who guesses wrong finds out during a burglary.
 | Source | `translations/panel/<lang>.json` under `help.<page>`, next to the file Home Assistant itself reads, so it follows the Home Assistant user's language automatically and a translator gets it with no extra machinery. Not in `translations/<lang>.json`: hassfest validates that file against a closed schema and rejects a top-level `help` key (decision 35) |
 | State | Expanded on first visit, then remembers the user's choice **per Home Assistant user** (stored in Foyer config, not `localStorage`) so it follows them from desktop to wall tablet. **Except the Overview**, which starts collapsed: it is the page opened to arm or disarm in a hurry, and on a phone the help pushed the controls off the screen (decision 113) |
 | Global toggle | A `?` button in the panel toolbar shows or hides every help panel at once |
-| Deep link | A "Learn more" link to the matching page under `docs/` |
+| Deep link | A "Learn more" link to the matching page under `docs/`, in the panel's language when that page has a translation (`<page>.it.md`), in English otherwise. A page gets its link when its document exists, never before: a link that 404s is worse than none (decision 149) |
 
 Division of labour: the help panel explains the **section**, the hint under a
 field explains the **field**. Neither repeats the other.
@@ -2421,25 +2424,45 @@ rendition.
 
 ## 18. Documentation plan
 
+**The README is a front door, not a manual** (decision 148). `README.md` and
+`README.it.md` are short pages — roughly 150–200 lines each, pictures included
+— that make somebody want to use Foyer and able to start it: what it is, what
+the household gets, what it looks like, how to start, the security model in
+one paragraph, and where to read more. The reasoning lives in the documents
+below, each linked from the feature it explains. The two READMEs carry the
+same sections, the same claims and the same pictures in their own language.
+**Neither compares Foyer with any other product**: no table, no "compared
+with", no "if you want X use Y". The importer of §20.2 may appear as one
+neutral line among the features, linking its document; §1.3 is where prior
+art is discussed.
+
+**Every document added from Phase 5 part 4 on is written in English and in
+Italian** (`<name>.md` and `<name>.it.md`), with a link to the other language
+at the top (decision 149). The documents written before it stay in English,
+and the Italian README says so where it links them.
+
 | File | Content |
 |---|---|
-| `README.md` | What it is, honest comparison with Alarmo, screenshots, install, quick start, **security model summary**, licence |
-| `docs/security-model.md` | The full threat model (INV-6), what codes protect against, what an HA admin can do, why the log is audit-useful but not tamper-proof |
-| `docs/getting-started.md` | Wizard walkthrough, first area, first zones, first scenario |
-| `docs/zones.md` | Zone types, trigger specs, NC vs NO contacts, supervision, cross-zone verification |
-| `docs/response-profiles.md` | Inheritance, actions, conditions, templates |
+| `README.md`, `README.it.md` | The front door: one-line pitch, a picture, what the household gets (each point linking its document), getting started in a few lines, the **security model in one paragraph** (INV-6), the documentation index, a factual status line, contributing, security reporting, licence |
+| `docs/README.md` (+ `.it.md`) | The index of `docs/`: every document, one line each, and which panel page it explains |
+| `docs/security-model.md` (+ `.it.md`) | The full threat model (INV-6): what codes protect against and what they do not, what a Home Assistant administrator can do regardless, the duress code, the walk test's reach, credentials shown once, how the configuration can be checked rather than trusted, why the log is audit-useful but not tamper-proof |
+| `docs/getting-started.md` (+ `.it.md`) | Requirements, install (HACS and manual), the config flow and the first-run wizard: first area, first zones, first scenario, first person with a code, first test notification; the first fifteen minutes |
+| `docs/card.md` (+ `.it.md`) | The card: its four layouts, its editor, how it asks for a code and forgets it, what it shows during a delay, an alarm and a walk test |
+| `docs/zones.md` (+ `.it.md`) | Zone types, trigger specs, NC vs NO contacts, supervision, arm policies, exclusions, key zones, the technical channel, chime, cross-zone verification and groups |
+| `docs/response-profiles.md` (+ `.it.md`) | Inheritance (the area is the unit of response), incidents, moments, actions, conditions, templates including `{{ operation }}`, silent zones, cameras |
 | `docs/notification-channels.md` | Recipes: Companion app + critical alerts, Pushover priority 2, Twilio SMS, Twilio voice, GSM modem, Telegram, Signal |
 | `docs/resilience.md` | Cut power and cut fibre; UPS on the router; why a local GSM channel is the only one that survives |
 | `docs/keypads.md` | Hardware comparison, the MQTT contract, writing your own adapter |
-| `docs/reusing-existing-sensors.md` | Reusing an existing alarm's sensors: native panel integrations, programmable relay outputs, wired-bus sniffing, 433 MHz reception via rtl_433 or an RF bridge, and why 868 MHz encrypted systems (Ajax, Verisure, Inim Air) cannot be sniffed. Includes the honest caveats: wireless sensors sleep for minutes after a detection, passive reception loses supervision, and tampering with a monitored panel may void the contract |
+| `docs/reusing-existing-sensors.md` (+ `.it.md`) | Reusing an existing alarm's sensors: native panel integrations, programmable relay outputs, wired-bus sniffing, 433 MHz reception via rtl_433 or an RF bridge, and why 868 MHz encrypted systems (Ajax, Verisure, Inim Air) cannot be sniffed. Includes the honest caveats: wireless sensors sleep for minutes after a detection, passive reception loses supervision, and tampering with a monitored panel may void the contract |
 | `docs/automation-rules.md` | Presence-based arming, the guards, suspensions and expected-visitor windows, and an unhedged explanation of why automatic disarming is restricted |
-| `docs/brand.md` | The asset set, the palette, and the rule that the sidebar icon is redrawn rather than scaled |
+| `docs/brand.md` (+ `.it.md`) | The asset set, the palette, and the rule that the sidebar icon is redrawn rather than scaled |
 | `docs/privacy.md` | What the log contains, the GDPR household exemption, and the point at which it stops applying — logging a cleaner, a B&B guest or an employee |
 | `docs/system-health.md` | Mains power and UPS, notification channel health, the external watchdog and its limits, and RF interference detection stated plainly as a heuristic |
-| `docs/choosing-sensors.md` | What makes a sensor suitable for alarm use rather than automation: tamper, supervision interval, magnet defeat, radio band. Why a layered zone beats a better sensor, and why the cheapest real upgrade is usually a second sensor in a verification group rather than a more expensive contact |
-| `docs/migrating-from-alarmo.md` | What the importer converts, what it cannot, and what to check afterwards |
+| `docs/choosing-sensors.md` (+ `.it.md`) | What makes a sensor suitable for alarm use rather than automation: tamper, supervision interval, magnet defeat, radio band. Why a layered zone beats a better sensor, and why the cheapest real upgrade is usually a second sensor in a verification group rather than a more expensive contact |
+| `docs/migrating-from-alarmo.md` (+ `.it.md`) | What the importer converts, what it cannot, and what to check afterwards (imported zones start disabled until their trigger is confirmed); running both side by side |
 | `docs/simulator.md` | How to read a decision trace |
-| `docs/troubleshooting.md` | Zone never triggers (check the trigger spec), false alarms, faults |
+| `docs/troubleshooting.md` (+ `.it.md`) | Zone never triggers (the trigger spec, first paragraph), false alarms, faults, the refusals people meet (armed-house edits, codes, lockouts), the card missing after an install, how to open an answerable issue |
+| `docs/faq.md` (+ `.it.md`) | The questions people ask: who can disarm, Home Assistant's own cards and voice assistants, the administrator with no code, working without internet, updates, why not automations alone |
 
 ---
 
@@ -2543,7 +2566,8 @@ areas, zones and scenarios, reporting everything it could not map.
 This is the strongest adoption lever the project has: nobody with forty configured
 sensors remaps them by hand to try something new, however much better it is.
 
-**Scoped honestly, and this wording belongs in the README.** It reads
+**Scoped honestly, and this wording belongs in `docs/migrating-from-alarmo.md`**,
+which the README's one line about the importer links (decision 148). It reads
 `.storage/alarmo.*`, an internal format its author may change in any release,
 without notice and without fault. It is therefore a **best-effort tool that
 reports what it could not convert**, never a guaranteed migration. Framed any
@@ -2758,3 +2782,5 @@ document should make one of them on purpose.
 | 145 | Emptying the log with a duress code keeps that request's `duress` row | The one request a coerced person cannot refuse must not erase its own record; the count of rows removed is the ordinary code's, so nothing on the screen differs |
 | 146 | A decision's rows are written before its state is saved, and a process killed between the two is left to the restart-gap row | A slow disk must never delay a siren; the next start restores the state that was, and the gap row says when the house stopped being watched |
 | 147 | The minimum Home Assistant is 2026.6 | Earlier releases list every webhook to any signed-in account, and one of them stops an alarm in progress |
+| 148 | The READMEs are a short front door, and compare Foyer with no other product; everything else they said moves into `docs/` | A thousand-line README was a manual nobody reads to the end, and a comparison table describes a product by somebody else's; the reasoning is worth keeping, in the documents where the person deciding a setting finds it. The importer keeps one neutral line, and §1.3 keeps the prior art |
+| 149 | Documents from Phase 5 part 4 on are written in English and Italian, and the panel's "Learn more" opens the Italian one when the panel speaks Italian | The panel and both READMEs are already bilingual; a help link that drops an Italian household into English at the moment it is deciding a setting undoes that. The older documents stay English until somebody translates them, and the link falls back to them |
