@@ -119,9 +119,20 @@ class _Panel(FoyerEntity, AlarmControlPanelEntity):
     @property
     def code_arm_required(self) -> bool:
         config = self._system.config
-        if any(u.enabled and u.code_exempt_when_identified for u in config.users):
+        now = dt_util.utcnow()
+        if any(
+            u.enabled
+            and u.code_exempt_when_identified
+            and u.ha_user_id
+            and u.in_window(now)
+            for u in config.users
+        ):
             # Somebody may arm from Home Assistant with no code, and Home
-            # Assistant cannot tell them from anybody else.
+            # Assistant cannot tell them from anybody else. Only somebody the
+            # exemption can reach counts: it applies through a linked account,
+            # to a person enabled and inside their window (fix phase). An
+            # expired guest with the switch left on no longer changes what
+            # Home Assistant asks everybody else.
             return False
         return any(self._asks(Operation.ARM, target) for target in self._arms())
 
@@ -297,10 +308,11 @@ class FoyerMasterPanel(_Panel):
 
     def _arms(self) -> list[_Target]:
         # Every scenario it can arm, each with the areas the engine would
-        # arm now: those still disarmed. All of them must ask for a code
-        # before Home Assistant is told arming needs one: a mode whose
-        # arming asks none would otherwise be refused by Home Assistant, an
-        # automation arming it included, where Foyer would have armed it.
+        # arm now: those still disarmed. One of them asking for a code is
+        # enough for Home Assistant to be told arming needs one (decision
+        # 143): a mode whose arming asks none is then refused by Home
+        # Assistant until a code is passed, an automation arming it included,
+        # which arms it through Foyer's own service instead.
         # That holds for a garage asking a code that is already armed on its
         # own: arming the scenario leaves it as it is, so its setting has no
         # say. A running scenario with nothing left to arm is refused

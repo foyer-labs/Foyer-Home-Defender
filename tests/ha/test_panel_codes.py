@@ -481,3 +481,25 @@ async def test_an_area_panel_offers_a_field_for_the_scenario_that_armed_it(
     )
     await hass.async_block_till_done()
     assert hass.states.get(PANEL_ENTITY).state == AlarmControlPanelState.DISARMED
+
+
+async def test_an_exemption_nobody_can_use_does_not_stop_the_dialog_asking(
+    hass, hass_ws_client, loaded, hass_read_only_user
+):
+    """Fix phase: an exempt guest whose validity window is over cannot be
+    reached by the exemption, and must not make Home Assistant stop asking
+    everybody else for the code."""
+    client = await hass_ws_client(hass)
+    await _make_user(hass, client, new_code=CODE)
+    await _make_user(
+        hass,
+        client,
+        name="Guest",
+        new_code=OTHER,
+        ha_user_id=hass_read_only_user.id,
+        exempt=True,
+        valid_until="2020-01-01T00:00:00+00:00",
+        code=CODE,
+    )
+    await _arming_asks_a_code(hass, client)
+    assert _attrs(hass, PANEL_ENTITY)["code_arm_required"] is True
