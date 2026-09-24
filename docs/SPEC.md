@@ -2366,9 +2366,7 @@ rely on.
   the same reason (decision 123).
 - **The disclaimers, last of all** (§20.4). The wording that says what this is
   and what it is not, everywhere somebody meets it rather than only in the
-  licence. **Still to be agreed** — it is a conversation, not a task with a
-  known answer — so what §20.4 records is the shape of it and the reasons,
-  not the sentences.
+  licence — agreed, and accepted with a tick before setup (decisions 150–155).
 
 **Acceptance:** a person who has never spoken to the author can install it, hit a
 problem, and produce an issue that is answerable.
@@ -2586,7 +2584,8 @@ other way it becomes a permanent source of issues that are nobody's bug.
 
 ### 20.4 Disclaimers, and what this software is not
 
-**To be written and agreed, last of all.** Apache-2.0 already disclaims
+**Agreed after the documentation, and written below** (decisions 150–155).
+Apache-2.0 already disclaims
 warranty and liability, and §1.2, §5.5 and INV-6 already state parts of this
 in the places where the decision is being made. What is missing is one settled
 wording, said everywhere a person actually meets the product rather than only
@@ -2631,6 +2630,49 @@ One thing to settle when the wording is: whether the strongest sentences
 belong to the reader ("do not rely on this alone") or to the author ("this is
 not offered as a certified alarm"). They are not the same promise, and the
 document should make one of them on purpose.
+
+**Settled: both, the author's first** (decision 150). The author says what is
+offered and what is not; the reader is then told what not to do. The text, in
+full, everywhere it appears:
+
+> Foyer is offered as software that automates actions on rules, not as an
+> alarm system. It is not certified (EN 50131, CEI 79-3), not monitored, not a
+> fire alarm, and comes with no warranty and no promise of support
+> (Apache-2.0, sections 7 and 8). Do not rely on it alone to protect people or
+> property: keep certified smoke alarms, and a professional installation where
+> a policy or a risk calls for one.
+
+> Foyer è offerto come software che automatizza azioni su regole, non come
+> impianto d'allarme. Non è certificato (EN 50131, CEI 79-3), non è
+> sorvegliato, non è un sistema antincendio, ed è fornito senza garanzie né
+> impegno di supporto (Apache-2.0, sezioni 7 e 8). Non affidarti solo a lui per
+> proteggere persone o beni: tieni rilevatori di fumo certificati, e un
+> impianto professionale dove una polizza o un rischio lo richiedono.
+
+**Where it is read** (decisions 151, 152):
+
+- **The config flow's first step**, with a tick, *I have read this and accept
+  it*: nothing is set up until it is ticked. The entry keeps the version of
+  the text accepted and when — Home Assistant does not say which account
+  opened the flow, so "when" is all there is to keep — and the installation's
+  first log rows include `config_disclaimer_accepted`. A new version of the
+  text asks again.
+- **An installation older than the tick** gets a repair card with the same
+  text and the same tick, which records the acceptance the same way. The alarm
+  keeps working until somebody ticks it: an alarm switched off by an update to
+  its documentation would be a worse outcome than the one the text warns about.
+- The Overview's help panel, the READMEs, `docs/security-model.md` and
+  `SECURITY.md` carry the same text. The first-run wizard does not: the config
+  flow before it already asked, with a tick, and "Not now" skips the wizard.
+  HACS shows the README.
+
+**The project around it** (decisions 153–155): Foyer is the personal,
+non-commercial project of one individual publishing as Foyer Labs; there is
+no company behind it. Support is best effort, with no promise of an answer or
+a fix (`SUPPORT.md`); a donation is a gift and buys neither. That is also
+what keeps it inside the exclusions the EU's product-liability and
+cyber-resilience rules make for free software supplied outside a commercial
+activity — which is a reason to keep it that way, not a legal opinion.
 
 ## 21. Decision log
 
@@ -2785,3 +2827,9 @@ document should make one of them on purpose.
 | 147 | The minimum Home Assistant is 2026.6 | Earlier releases list every webhook to any signed-in account, and one of them stops an alarm in progress |
 | 148 | The READMEs are a short front door, and compare Foyer with no other product; everything else they said moves into `docs/` | A thousand-line README was a manual nobody reads to the end, and a comparison table describes a product by somebody else's; the reasoning is worth keeping, in the documents where the person deciding a setting finds it. The importer keeps one neutral line, and §1.3 keeps the prior art |
 | 149 | Documents from Phase 5 part 4 on are written in English and Italian, and the panel's "Learn more" opens the Italian one when the panel speaks Italian | The panel and both READMEs are already bilingual; a help link that drops an Italian household into English at the moment it is deciding a setting undoes that. The older documents stay English until somebody translates them, and the link falls back to them |
+| 150 | The disclaimer speaks as the author first, then to the reader, in one text used everywhere | "Not offered as an alarm system" is the author's promise about what is offered; "do not rely on it alone" is what the reader has to do about it. Either alone leaves half unsaid |
+| 151 | It is accepted with a tick in the config flow's first step, and the entry keeps the version and the date | Where the decision to install is made, and a tick is an act a button is not. The account is not kept because Home Assistant does not tell an integration who opened the flow |
+| 152 | An installation older than the tick gets a repair card, and keeps working until it is ticked | The acceptance matters; an alarm that stopped because its documentation changed would be the failure the text warns about |
+| 153 | Support is best effort, with no promise of an answer or a fix, and says so in `SUPPORT.md`, the issue forms and the README | A promise nobody made is still read into silence; saying it once, where a person asks, costs nothing and sets the expectation |
+| 154 | Issues labelled `needs info` close by themselves after 14 days without the author; nothing else closes by itself | The one wait that is the reporter's; a real defect the maintainer has not reached must not vanish on a timer |
+| 155 | Foyer is the personal, non-commercial project of one individual publishing as Foyer Labs; donations are gifts and buy no support or priority | That is what it is, and the exclusions for free software supplied outside a commercial activity depend on it staying so |
