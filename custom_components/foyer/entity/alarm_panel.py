@@ -102,8 +102,11 @@ class _Panel(FoyerEntity, AlarmControlPanelEntity):
     code *may* be asked, so the alarm panel card draws its field wherever one
     could be. ``code_arm_required`` is acted on: while it is true, Home
     Assistant refuses a codeless arming itself, for everybody, before Foyer
-    sees who is asking. So it is true only where that refuses nobody Foyer
-    would let through.
+    sees who is asking. So it is false while anybody is exempt; otherwise it
+    is true when any arming the entity offers asks for a code (decision 143),
+    so Home Assistant's dialog and tiles ask for it. A mode that needs none
+    is then refused by Home Assistant until a code is passed: the household
+    chose the dialog asking over the mode arming bare.
     """
 
     @property
@@ -120,10 +123,7 @@ class _Panel(FoyerEntity, AlarmControlPanelEntity):
             # Somebody may arm from Home Assistant with no code, and Home
             # Assistant cannot tell them from anybody else.
             return False
-        targets = self._arms()
-        return bool(targets) and all(
-            self._asks(Operation.ARM, target) for target in targets
-        )
+        return any(self._asks(Operation.ARM, target) for target in self._arms())
 
     def _asks(self, operation: Operation, target: _Target) -> bool:
         areas, scenario = target

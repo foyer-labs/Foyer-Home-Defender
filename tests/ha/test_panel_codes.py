@@ -333,10 +333,10 @@ async def test_a_running_mode_with_nothing_left_to_arm_has_no_say(
     away = (await _config(client))["scenarios"][0]
     await _save(hass, client, "scenario", {**away, "require_code_to_arm": True})
     await _home_mode(hass, client)
-    # In casa asks nothing: one answer for both modes cannot be "a code".
-    assert _attrs(hass, MASTER)["code_arm_required"] is False
+    # Away asks: with one answer for both modes, the dialog asks (decision 143).
+    assert _attrs(hass, MASTER)["code_arm_required"] is True
 
-    await _arm(hass, MASTER, me, "alarm_arm_home")
+    await _arm(hass, MASTER, me, "alarm_arm_home", code=CODE)
     assert _attrs(hass, MASTER)["code_arm_required"] is True
 
     with pytest.raises(ServiceValidationError) as refused:
@@ -370,12 +370,13 @@ async def test_the_master_offers_a_field_where_only_a_scenario_asks(
     assert _attrs(hass, PANEL_ENTITY)["code_arm_required"] is False
 
 
-async def test_the_master_asks_only_when_every_scenario_it_arms_asks(
+async def test_the_master_asks_as_soon_as_one_scenario_it_arms_asks(
     hass, hass_ws_client, loaded
 ):
-    """One answer for every mode: true while one mode needs no code, Home
-    Assistant would refuse that mode's codeless arming, an automation's
-    included, where Foyer would have armed it."""
+    """Decision 143: one answer for every mode, and the household chose the
+    dialog asking. While one mode needs a code, Home Assistant asks for it —
+    and refuses a codeless arming of the mode that needs none, which still
+    arms through Foyer's own service."""
     client = await hass_ws_client(hass)
     await _make_user(hass, client, new_code=CODE, ha_user_id=await _me(client))
     await _policy(hass, client, arm=False, disarm=False)
@@ -394,15 +395,25 @@ async def test_the_master_asks_only_when_every_scenario_it_arms_asks(
         {**home, "name": "In casa", "ha_master_state": "armed_home"},
     )
 
-    assert _attrs(hass, MASTER)["code_arm_required"] is False
+    assert _attrs(hass, MASTER)["code_arm_required"] is True
     assert _attrs(hass, MASTER)["code_format"] == "number"
 
-    # The mode that needs no code arms from an automation, as before.
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            "alarm_control_panel",
+            "alarm_arm_home",
+            {"entity_id": MASTER},
+            blocking=True,
+        )
+    await hass.async_block_till_done()
+    assert hass.states.get(PANEL_ENTITY).state == AlarmControlPanelState.DISARMED
+
+    # The same mode, through Foyer's service, needs no code.
+    home_id = next(
+        s["id"] for s in (await _config(client))["scenarios"] if s["name"] == "In casa"
+    )
     await hass.services.async_call(
-        "alarm_control_panel",
-        "alarm_arm_home",
-        {"entity_id": MASTER},
-        blocking=True,
+        "foyer", "arm", {"scenario_id": home_id}, blocking=True
     )
     await hass.async_block_till_done()
     assert hass.states.get(PANEL_ENTITY).state == AlarmControlPanelState.ARMING
