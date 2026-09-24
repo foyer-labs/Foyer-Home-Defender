@@ -30,6 +30,7 @@ is the answer that gets mistaken for success. Both are ``code required`` in
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -532,8 +533,9 @@ def async_register(hass: HomeAssistant) -> None:
         The state-changing services are gated by the engine, which is the one
         place §8.2 and §8.3 are resolved for them (part 1). These three never
         reach the engine, so they ask core/authz the panel's question — with
-        no administrator in it: a service call is not the admin path of §8.4,
-        so the permission bites in full.
+        no administrator in it: a service call is not the panel, so the
+        permission bites in full. Only the lockout spares an administrator's
+        account here, as §8.4 says of the admin path.
 
         ``purpose`` is the service's own name where §8.2's operation does not
         say what it is — a `duress` row names the log export, not "the
@@ -571,9 +573,12 @@ def async_register(hass: HomeAssistant) -> None:
         # core/authz decides, as it does for the panel. A claimed `user_id`
         # grants nothing here (decision 102); before the first code exists
         # an automation may read and write the configuration (decision 78).
+        # An administrator's account is never locked out on a service (§8.4),
+        # but a service call is not the panel: the permission bites in full,
+        # so the administrator's pass on permissions is taken away here.
         reason = authz.may_configure(
             system.config,
-            actor,
+            replace(actor, is_admin=False),
             operation,
             permission,
             now,
