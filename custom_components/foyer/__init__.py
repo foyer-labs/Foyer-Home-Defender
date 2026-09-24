@@ -63,12 +63,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # From here on .storage/foyer.config is the source of truth.
         zone_entity = entry.data[CONF_ZONE_ENTITY]
         state = hass.states.get(zone_entity)
+        from .core.models import ZoneType
+        from .core.proposals import propose_zone
+
+        proposal = propose_zone(
+            zone_entity,
+            state.state if state else None,
+            dict(state.attributes) if state else {},
+        )
         config = seed_config(
             area_name=entry.data[CONF_AREA_NAME],
             scenario_name=entry.data[CONF_SCENARIO_NAME],
             zone_entity_id=zone_entity,
             zone_name=state.name if state else zone_entity,
             trigger_states=entry.data[CONF_TRIGGER_STATES],
+            zone_type=proposal.zone_type or ZoneType.INSTANT,
         )
         await store.async_save(config)
 

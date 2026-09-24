@@ -216,3 +216,20 @@ async def test_a_person_cannot_be_linked_to_an_account_home_assistant_runs(
     )
     assert result["success"] is False
     assert [p["code"] for p in result["problems"]] == ["unknown_ha_user"]
+
+
+async def test_the_first_zone_takes_the_type_proposed_for_its_sensor(hass, entry):
+    """The config flow's zone was always instant, so a front door had no entry
+    delay until somebody changed it. It now takes the type the zone editor
+    proposes: delayed for a door."""
+    from .conftest import ZONE
+
+    hass.states.async_set(
+        ZONE, "off", {"friendly_name": "Front door", "device_class": "door"}
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    (zone,) = hass.data[DOMAIN].config.zones
+    assert zone.type.value == "delayed"
+    assert zone.entry_mode.value == "delayed"

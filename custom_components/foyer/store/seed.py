@@ -24,6 +24,7 @@ from ..core.models import (
     Zone,
     ZoneType,
 )
+from ..core.presets import PRESETS
 
 # What the default response profile does on a new installation. zone_fault is
 # not optional: INV-4 requires a fault to be announced. A failed arming and an
@@ -79,6 +80,7 @@ def seed_config(
     zone_entity_id: str,
     zone_name: str,
     trigger_states: Iterable[str],
+    zone_type: ZoneType = ZoneType.INSTANT,
     new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
 ) -> FoyerConfig:
     area = Area(id=new_id(), name=area_name, ha_state_when_armed="armed_away")
@@ -104,7 +106,11 @@ def seed_config(
                 entity_id=zone_entity_id,
                 area_id=area.id,
                 trigger=StateTrigger(states=frozenset(trigger_states)),
-                type=ZoneType.INSTANT,
+                # What the zone editor proposes for this entity: a door is
+                # the way in and starts the entry delay, a smoke detector is
+                # the technical channel and never a break-in (fix phase).
+                type=zone_type,
+                **PRESETS[zone_type],
             ),
         ),
         scenarios=(
