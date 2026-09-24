@@ -116,9 +116,18 @@ def fault_cause(
     one of the two faults this function reports. It is passed in rather than
     looked up, like everything else the engine reads (INV-1).
     """
+    trigger = zone.trigger
+    # An event or tag entity that has never fired reads `unknown`: it is there
+    # and has had nothing to report, which is not "cannot be read" (INV-4 is
+    # about a sensor gone quiet, not one never used). Only `unavailable`, or
+    # no entity at all, is a fault for it — otherwise a new panic button
+    # blocked its area from arming until somebody pressed it (fix phase).
+    if isinstance(trigger, EventTrigger) and entity.state == NEVER_FIRED:
+        return (
+            supervision_lapsed(zone, entity, now) and "supervision"
+        ) or battery_fault(zone, battery)
     if is_unavailable(entity):
         return "unavailable"
-    trigger = zone.trigger
     if isinstance(trigger, NumericTrigger) and numeric_value(trigger, entity) is None:
         return "not_numeric"
     if supervision_lapsed(zone, entity, now):
