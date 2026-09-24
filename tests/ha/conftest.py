@@ -49,6 +49,23 @@ def isolated_log(monkeypatch, request) -> Generator[None]:
 
 
 @pytest.fixture(autouse=True)
+async def settled(request):
+    """Wait, at the end of every test, for what the test left running.
+
+    A configuration save reloads the entry, and a test that ends on one
+    returned while the reload was still opening the new event log: the
+    teardown then found a log writer "lingering", or unlinked the database
+    under it. It failed on CI now and then, one test at a time, three times
+    over. Waiting here covers every test, the ones not yet written included.
+    """
+    # Asked for before the test runs, so this teardown comes before hass's.
+    hass = request.getfixturevalue("hass") if "hass" in request.fixturenames else None
+    yield
+    if hass is not None:
+        await hass.async_block_till_done()
+
+
+@pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(
     enable_custom_integrations: None,
 ) -> Generator[None]:
