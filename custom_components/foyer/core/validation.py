@@ -1479,6 +1479,28 @@ def edit_conflicts(
     if active is not None and old.scenario(active) != new.scenario(active):
         problems.append(Problem("scenario_active", "scenario", active))
 
+    # What an area or a scenario asks a code for is the code policy too
+    # (decision 142). A scenario that is not running, or an area that is
+    # disarmed, still takes part in the strictest-wins resolution of §8.2 for
+    # a command that touches the armed area — a switch to that scenario, a
+    # disarm naming both areas — so lowering it there opened the armed house
+    # without a code. Refused both ways while any area is armed.
+    if live_areas:
+        for kind, olds, news in (
+            ("area", old.areas, new.areas),
+            ("scenario", old.scenarios, new.scenarios),
+        ):
+            before = {o.id: o for o in olds}
+            after = {o.id: o for o in news}
+            for item_id in sorted(before.keys() | after.keys()):
+                for field_name in ("require_code_to_arm", "require_code_to_disarm"):
+                    if getattr(before.get(item_id), field_name, None) != getattr(
+                        after.get(item_id), field_name, None
+                    ):
+                        problems.append(
+                            Problem("armed_code_policy", kind, item_id, field_name)
+                        )
+
     # A response profile is what an armed area would do if something happened
     # now: changing it under an armed area changes that, without a disarm.
     live_profiles = _live_profiles(old, live_areas, state) | _live_profiles(

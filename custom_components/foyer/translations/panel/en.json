@@ -265,7 +265,8 @@
     "profile_armed": "While an area is armed, a profile the house could answer with keeps what it was armed with. Disarm before changing this one.",
     "contact_armed": "While an area is armed, a profile the house could answer with notifies this contact: it cannot be changed, switched off or deleted until you disarm.",
     "last_usable_code": "An area is armed, and this would leave nobody with a usable code, now or sooner than before when a validity period ends, which switches the code policy off. Give somebody else a code first, or disarm.",
-    "watchdog_url_invalid": "The watchdog URL has to start with http:// or https://."
+    "watchdog_url_invalid": "The watchdog URL has to start with http:// or https://.",
+    "armed_code_policy": "While an area is armed, what an area or a scenario asks a code for cannot change: it takes part in every command that touches the armed area. Disarm every area first."
   },
   "field": {
     "name": "Name",
@@ -2517,7 +2518,7 @@
     "never": "never detected",
     "never_reacted": "{n} zones have not reacted yet. A door nobody opened reads the same as a PIR pointing at the wrong wall — walk them again before you trust the list.",
     "all_reacted": "Every zone under test has detected you at least once.",
-    "partly_armed": "The walk test is running, but these zones kept their area out of it: {zones}. Those areas were never armed, so their zones cannot detect anything.",
+    "partly_armed": "The walk test is running, but these zones kept their area from arming: {zones}. The area's other zones are still recorded when they detect you; the zone holding it open cannot change until you close it.",
     "col": {
       "area": "Area",
       "result": "Result",

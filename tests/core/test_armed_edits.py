@@ -232,6 +232,38 @@ def test_the_code_policy_is_kept_raised_as_well_as_lowered():
     assert codes(edit_conflicts(world.config, raised, world.state)) == ["armed_setting"]
 
 
+@pytest.mark.parametrize(
+    "field_name", ["require_code_to_arm", "require_code_to_disarm"]
+)
+@pytest.mark.parametrize("value", [False, True])
+def test_a_code_setting_of_a_disarmed_area_or_idle_scenario_is_kept(field_name, value):
+    """Decision 142: the garage is disarmed and Away is not running, but both
+    take part in the strictest-wins resolution of a command that touches the
+    armed ground floor; lowering either opened it without a code."""
+    world = armed()
+    for kind, item_id in (("areas", "garage"), ("scenarios", "away")):
+        changed = replace(
+            world.config,
+            **{
+                kind: tuple(
+                    replace(o, **{field_name: value}) if o.id == item_id else o
+                    for o in getattr(world.config, kind)
+                )
+            },
+        )
+        problems = edit_conflicts(world.config, changed, world.state, now=world.now)
+        assert [(p.code, p.ref, p.field) for p in problems] == [
+            ("armed_code_policy", item_id, field_name)
+        ]
+        disarmed_world = disarmed(armed())
+        assert (
+            edit_conflicts(
+                disarmed_world.config, changed, disarmed_world.state, now=world.now
+            )
+            == []
+        )
+
+
 # --- what stays free -----------------------------------------------------------------
 
 

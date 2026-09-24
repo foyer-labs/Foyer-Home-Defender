@@ -278,9 +278,9 @@ Six things worth knowing before you start one:
   nothing — which is why the banner is on every screen and why entry and exit
   are both in the log with your name.
 - **An area that cannot arm stays out**, and the page names the zones that
-  kept it out. Those zones were never armed, so they cannot have detected
-  anything: close the window and run it again rather than reading the row as
-  a dead sensor.
+  kept it out. Its other zones are still recorded when they detect you; the
+  zone holding the area open cannot change until it is closed, so close the
+  window and run it again rather than reading that row as a dead sensor.
 - **So does an area still holding alarm memory.** The test arms for a walk,
   not for a watch, so it is not the arming that clears the memory, and the
   area keeps it after the test. Its zones are still recorded when they

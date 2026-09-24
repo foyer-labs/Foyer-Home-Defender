@@ -265,7 +265,8 @@
     "profile_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere resta com'era all'inserimento. Disinserisci prima di modificare questo.",
     "contact_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere avvisa questo contatto: non si può modificare, disattivare né eliminare finché non disinserisci.",
     "last_usable_code": "Un'area è inserita e nessuno resterebbe con un codice valido, subito o, alla fine di un periodo di validità, prima del previsto: il che spegne la politica dei codici. Dai prima un codice a qualcun altro, oppure disinserisci.",
-    "watchdog_url_invalid": "L'URL del watchdog deve iniziare con http:// o https://."
+    "watchdog_url_invalid": "L'URL del watchdog deve iniziare con http:// o https://.",
+    "armed_code_policy": "Finché un'area è inserita, non si può cambiare per cosa un'area o uno scenario chiede il codice: vale per ogni comando che tocca l'area inserita. Disinserisci prima tutte le aree."
   },
   "field": {
     "name": "Nome",
@@ -2517,7 +2518,7 @@
     "never": "mai rilevata",
     "never_reacted": "{n} zone non hanno ancora reagito. Una porta che nessuno ha aperto sembra identica a un PIR puntato sulla parete sbagliata: ripassale prima di fidarti dell'elenco.",
     "all_reacted": "Ogni zona sotto test ti ha rilevato almeno una volta.",
-    "partly_armed": "Il walk test è in corso, ma queste zone hanno tenuto fuori la loro area: {zones}. Quelle aree non sono mai state inserite, quindi le loro zone non possono rilevare nulla.",
+    "partly_armed": "Il walk test è in corso, ma queste zone hanno impedito alla loro area di inserirsi: {zones}. Le altre zone dell'area vengono comunque registrate quando ti rilevano; la zona che la tiene aperta non può cambiare finché non la chiudi.",
     "col": {
       "area": "Area",
       "result": "Esito",
