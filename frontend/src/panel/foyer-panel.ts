@@ -120,14 +120,46 @@ const HELP_ITEMS: Record<PageId, string[]> = {
 // rendered without a link: a link to a file nobody has written yet is worse
 // than none, because it teaches the reader that the links do not work.
 const DOCS = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs";
-const HELP_DOCS: Partial<Record<PageId, string>> = {
+// The anchors are HTML ids both languages carry, so one map serves both.
+const HELP_DOCS: Record<PageId, string> = {
+  overview: "getting-started.md#the-overview",
+  areas: "zones.md#areas",
+  zones: "zones.md#zones",
+  scenarios: "zones.md#scenarios",
+  groups: "zones.md#verification-groups",
+  profiles: "response-profiles.md",
+  users: "security-model.md",
   devices: "keypads.md",
   contacts: "notification-channels.md",
   rules: "automation-rules.md",
   test: "simulator.md",
   log: "privacy.md",
+  settings: "settings.md",
   health: "system-health.md",
+  api: "keypads.md#api-devices-displays-relays-and-modules-of-your-own",
 };
+/** The documents that also exist in a language other than English, as
+ * `<name>.<lang>.md` (SPEC §15.2, decision 149). A page whose document has no
+ * translation links the English one: a link that 404s is worse than English. */
+const TRANSLATED_DOCS: Record<string, ReadonlySet<string>> = {
+  it: new Set<string>([
+    "getting-started.md",
+    "zones.md",
+    "response-profiles.md",
+    "security-model.md",
+    "settings.md",
+  ]),
+};
+
+/** Where a page's "Learn more" goes, in the reader's language when it can. */
+function helpDocUrl(page: PageId, language: string | undefined): string | undefined {
+  const doc = HELP_DOCS[page];
+  if (!doc) return undefined;
+  const [file, anchor] = doc.split("#");
+  const lang = (language ?? "en").split("-")[0];
+  const name = TRANSLATED_DOCS[lang]?.has(file) ? file.replace(/\.md$/, `.${lang}.md`) : file;
+  return `${DOCS}/${name}${anchor ? `#${anchor}` : ""}`;
+}
 
 /** How long a code typed into the panel is remembered with nothing using it.
  * Long enough to save three edits in a row without typing it three times;
@@ -1002,7 +1034,7 @@ class FoyerPanel extends LitElement {
               ${HELP_DOCS[page]
                 ? html`<a
                     class="learn-more"
-                    href=${`${DOCS}/${HELP_DOCS[page]}`}
+                    href=${helpDocUrl(page, this.hass?.language)}
                     target="_blank"
                     rel="noreferrer noopener"
                     >${t(s, "help.learn_more")}</a
