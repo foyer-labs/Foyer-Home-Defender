@@ -595,7 +595,7 @@ class FoyerPageLog extends LitElement {
                   (line, index) => html`<dt>${index ? "" : t(s, "log.changes")}</dt>
                     <dd>${line}</dd>`,
                 )}
-                ${this._plainDetail(row).map(
+                ${this._plainDetail(s, row).map(
                   ([key, value]) => html`<dt>${this._detailLabel(s, key)}</dt>
                     <dd class="mono">${value}</dd>`,
                 )}
@@ -782,14 +782,20 @@ class FoyerPageLog extends LitElement {
   }
 
   /** Everything else in the detail, as it is: one line per key, so a row is
-   * readable without a JSON parser in the reader's head. */
-  private _plainDetail(row: LogRow): [string, string][] {
+   * readable without a JSON parser in the reader's head. A flag the backend
+   * writes as "true" or "false" — `encrypted`, `address_locked` — is a yes or
+   * a no in the reader's language, not an English literal (found in review). */
+  private _plainDetail(s: Strings, row: LogRow): [string, string][] {
     const skip = new Set(["changes", "zone_ids", "blocking_zones"]);
     return Object.entries(row.detail ?? {})
       .filter(([key, value]) => !skip.has(key) && value !== null && value !== "")
       .map(([key, value]) => [
         key,
-        typeof value === "object" ? JSON.stringify(value) : String(value),
+        value === "true" || value === "false"
+          ? this._value(s, value === "true")
+          : typeof value === "object"
+            ? JSON.stringify(value)
+            : this._value(s, value),
       ]);
   }
 

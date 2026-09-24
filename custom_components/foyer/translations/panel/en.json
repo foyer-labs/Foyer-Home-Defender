@@ -1419,7 +1419,11 @@
     },
     "token_lockout": {
       "title": "Foyer: wrong tokens refused from one address",
-      "message": "Too many requests with a wrong or missing token came from {address}. Until the lockout ends, a wrong or missing token from that address is refused. A device there with its right token keeps working, and its rows in the log say the address was locked. A keypad configured with an old token does this too; so does somebody guessing."
+      "message": "Too many requests with a wrong or missing token came from {address}. Until the lockout ends, a wrong or missing token from that address is refused. A device at that address with its right token keeps working, and its rows in the log say the address was locked. A keypad configured with an old token does this too; so does somebody guessing."
+    },
+    "token_lockout_shared": {
+      "title": "Foyer: wrong tokens refused from many addresses",
+      "message": "Too many requests with a wrong or missing token came from more addresses than Foyer counts one by one, and those addresses share a single count. Until the lockout ends, a wrong or missing token from any of them is refused, and the refusals are counted in one log row a minute. A device with its right token keeps working. This many addresses usually means somebody guessing from a whole range of them."
     },
     "alarm_ended": {
       "title": "Foyer: alarm over",

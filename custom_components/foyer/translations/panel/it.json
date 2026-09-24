@@ -1419,7 +1419,11 @@
     },
     "token_lockout": {
       "title": "Foyer: token sbagliati rifiutati da un indirizzo",
-      "message": "Troppe richieste con un token sbagliato o mancante sono arrivate da {address}. Fino alla fine del blocco, un token sbagliato o mancante da quell'indirizzo è rifiutato. Un dispositivo lì con il suo token giusto continua a funzionare, e le sue righe nel registro dicono che l'indirizzo era bloccato. Lo fa anche un tastierino configurato con un token vecchio; lo fa anche qualcuno che tira a indovinare."
+      "message": "Troppe richieste con un token sbagliato o mancante sono arrivate da {address}. Fino alla fine del blocco, un token sbagliato o mancante da quell'indirizzo è rifiutato. Un dispositivo che usa quell'indirizzo con il token giusto continua a funzionare, e le sue righe nel registro dicono che l'indirizzo era bloccato. Lo fa anche un tastierino configurato con un token vecchio; lo fa anche qualcuno che tira a indovinare."
+    },
+    "token_lockout_shared": {
+      "title": "Foyer: token sbagliati rifiutati da molti indirizzi",
+      "message": "Troppe richieste con un token sbagliato o mancante sono arrivate da più indirizzi di quanti Foyer ne conti uno per uno, e quegli indirizzi condividono un unico conteggio. Fino alla fine del blocco, un token sbagliato o mancante da uno qualsiasi di essi è rifiutato, e i rifiuti sono contati in una riga del registro al minuto. Un dispositivo con il token giusto continua a funzionare. Così tanti indirizzi di solito vogliono dire qualcuno che tira a indovinare da un'intera serie di indirizzi."
     },
     "alarm_ended": {
       "title": "Foyer: allarme finito",

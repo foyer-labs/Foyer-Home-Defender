@@ -286,10 +286,19 @@ async def _async_bad_token(
     if Moment.LOCKOUT not in decision.moments:
         return
     strings = await hass.async_add_executor_job(i18n.load_strings, system.language)
+    # The shared counter has its own words: it is no address anybody can look
+    # up, and no device's rows ever say it was locked (decision 135), so the
+    # per-address text would name "*" and promise a note the log never writes
+    # (found in review).
+    key = (
+        "notification.token_lockout_shared"
+        if address == OVERFLOW_ADDRESS
+        else "notification.token_lockout"
+    )
     notices.async_create(
         hass,
-        i18n.translate(strings, "notification.token_lockout.message", address=address),
-        title=i18n.translate(strings, "notification.token_lockout.title"),
+        i18n.translate(strings, f"{key}.message", address=address),
+        title=i18n.translate(strings, f"{key}.title"),
         # One notification, replaced by the next lockout rather than added
         # to: a guesser rotating addresses must not be able to bury the
         # notifications that matter under a pile of these.

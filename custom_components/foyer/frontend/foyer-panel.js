@@ -8744,7 +8744,7 @@ var X = 50, vn = class extends j {
                       <dd>${bn(e, t.channel)}</dd>` : E}
                 ${this._changeLines(e, t).map((t, n) => w`<dt>${n ? "" : N(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
-                ${this._plainDetail(t).map(([t, n]) => w`<dt>${this._detailLabel(e, t)}</dt>
+                ${this._plainDetail(e, t).map(([t, n]) => w`<dt>${this._detailLabel(e, t)}</dt>
                     <dd class="mono">${n}</dd>`)}
               </dl>
             </td>
@@ -8823,13 +8823,13 @@ var X = 50, vn = class extends j {
 		let n = N(e, `detail.${t}`);
 		return n === `detail.${t}` ? t : n;
 	}
-	_plainDetail(e) {
-		let t = /* @__PURE__ */ new Set([
+	_plainDetail(e, t) {
+		let n = /* @__PURE__ */ new Set([
 			"changes",
 			"zone_ids",
 			"blocking_zones"
 		]);
-		return Object.entries(e.detail ?? {}).filter(([e, n]) => !t.has(e) && n !== null && n !== "").map(([e, t]) => [e, typeof t == "object" ? JSON.stringify(t) : String(t)]);
+		return Object.entries(t.detail ?? {}).filter(([e, t]) => !n.has(e) && t !== null && t !== "").map(([t, n]) => [t, n === "true" || n === "false" ? this._value(e, n === "true") : typeof n == "object" ? JSON.stringify(n) : this._value(e, n)]);
 	}
 	static {
 		this.styles = [

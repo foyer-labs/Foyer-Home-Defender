@@ -181,6 +181,55 @@ async def test_a_full_overflow_counter_never_refuses_the_right_token(
     assert rows and not any("address_locked" in (r["detail"] or {}) for r in rows)
 
 
+async def test_the_shared_counter_s_lockout_is_notified_in_its_own_words(
+    hass,
+    endpoint,  # noqa: F811 - the fixture imported above
+):
+    """Found in review: the shared counter's lockout sent the per-address
+    notification, which named "*" as the address and promised rows saying
+    the address was locked, which no row carries for the shared counter
+    (decision 135)."""
+    from homeassistant.util import dt as dt_util
+
+    from custom_components.foyer import i18n
+    from custom_components.foyer.core import authz
+    from custom_components.foyer.core.models import Lockout
+
+    from .test_part12 import _post
+
+    http, _token, _device_id, _client = endpoint
+    system = hass.data[DOMAIN]
+    # Sixty-four addresses already counted one by one, each with a failure
+    # recent enough that it is not dropped as idle.
+    now = dt_util.utcnow()
+    locks = {f"http:198.51.100.{i}": Lockout(failures=(now,)) for i in range(64)}
+    system.state = replace(system.state, lockouts={**system.state.lockouts, **locks})
+
+    for _ in range(5):
+        response = await _post(http, "wrong", {"action": "status"})
+        assert response.status == 401
+    await hass.async_block_till_done()
+    assert authz.address_locked_until(
+        hass.data[DOMAIN].state.lockouts, "*", dt_util.utcnow()
+    )
+
+    (shown,) = [
+        n
+        for n in hass.data[NOTIFICATIONS].values()
+        if n["notification_id"] == "foyer_token_lockout"
+    ]
+    strings = await hass.async_add_executor_job(
+        i18n.load_strings, hass.data[DOMAIN].language
+    )
+    assert shown["message"] == i18n.translate(
+        strings, "notification.token_lockout_shared.message"
+    )
+    assert shown["title"] == i18n.translate(
+        strings, "notification.token_lockout_shared.title"
+    )
+    assert "*" not in shown["message"]
+
+
 async def test_tokens_refused_on_the_locked_shared_counter_leave_one_row_a_minute(
     hass,
     endpoint,  # noqa: F811 - the fixture imported above

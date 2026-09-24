@@ -315,6 +315,20 @@ def test_a_right_token_from_a_locked_address_says_so_on_every_row_it_causes():
     assert all(_noted(r.detail) for r in rows)
 
 
+def test_an_arming_that_fails_after_its_exit_delay_says_so_too():
+    """The `arm_failed` row is written thirty seconds after the request, from
+    the area, as the `armed` one is; nothing pinned it (found in review)."""
+    from .helpers import WINDOW
+
+    world = World(house())
+    _locked(world)
+    world.arm("away", channel="keypad", device_id="hall", locked_address="192.0.2.7")
+    world.set(WINDOW, "on")
+    decision = world.advance(31)
+    failed = [o for o in decision.occurrences if o.moment is Moment.ARM_FAILED]
+    assert failed and all(_noted(row_for(o, world.now).detail) for o in failed)
+
+
 def test_a_keypad_whose_address_is_not_locked_says_nothing_about_it():
     world = World(house())
     world.arm("night", channel="keypad", device_id="hall")

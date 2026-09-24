@@ -259,6 +259,15 @@ async def test_a_wrong_or_missing_token_is_401_and_counted_per_address(hass, end
     http, token, _device_id, _client = endpoint
     key = await _lock_out(hass, http)
     counter = hass.data[DOMAIN].state.lockouts[key]
+    # Notified once, naming the address: the shared counter has words of its
+    # own (tests/ha/test_part13.py).
+    await hass.async_block_till_done()
+    (shown,) = [
+        n
+        for n in hass.data[NOTIFICATIONS].values()
+        if n["notification_id"] == "foyer_token_lockout"
+    ]
+    assert "127.0.0.1" in shown["message"]
     # Past the threshold a wrong token from the address is refused, and not
     # counted again: the lockout is a brake on the log.
     response = await _post(http, "still-guessing", {"action": "status"})
