@@ -17,6 +17,16 @@ body:
         to read what should not be readable is not an ordinary bug.** Please report
         it privately instead: the link is on the page before this one.
 
+  - type: checkboxes
+    id: understood
+    attributes:
+      label: Before you open this
+      options:
+        - label: I have read [troubleshooting](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs/troubleshooting.md) and the log page's rows around the moment.
+          required: true
+        - label: I understand Foyer is a personal, non-commercial project, answered on a best-effort basis, with no promise of a reply or a fix ([SUPPORT.md](https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/SUPPORT.md)).
+          required: true
+
   - type: input
     id: foyer_version
     attributes:

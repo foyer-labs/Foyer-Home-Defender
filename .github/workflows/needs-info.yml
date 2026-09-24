@@ -1,0 +1,33 @@
+# Closes an issue that is waiting on its author (SPEC decision 154). Only issues
+# labelled `needs info` are touched: a real defect nobody has reached yet must
+# never close on a timer.
+name: Close issues waiting on their author
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          only-labels: "needs info"
+          days-before-issue-stale: 7
+          days-before-issue-close: 7
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          stale-issue-label: "no answer"
+          remove-stale-when-updated: true
+          labels-to-remove-when-unstale: "needs info"
+          stale-issue-message: >
+            This issue is waiting for information from its author. It will close
+            by itself in seven days without an answer; replying keeps it open.
+          close-issue-message: >
+            Closed after fourteen days without the information it was waiting
+            for. Reopening it with that information is welcome.

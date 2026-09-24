@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: What to expect
+    url: https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/SUPPORT.md
+    about: Best effort, with no promise of an answer or a fix. Read this, and troubleshooting, first.
   - name: Report a vulnerability privately
     url: https://github.com/foyer-labs/Foyer-Home-Defender/security/advisories/new
     about: Disarming without a code, keeping it quiet when it should sound, reading what should not be readable. Visible only to the maintainers until there is a fix.

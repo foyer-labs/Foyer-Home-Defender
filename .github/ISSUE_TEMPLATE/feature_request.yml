@@ -12,6 +12,11 @@ body:
         to a closed rule model rather than growing into a second automation engine
         (§1.2, §6.3). A request that fits inside those is much more likely to land.
 
+        **Most requests will not be built.** Foyer is a personal, non-commercial
+        project looked after on a best-effort basis, and a request may be closed
+        without discussion. It is still read, and a good idea described by the
+        situation behind it is the most useful thing an issue can be.
+
         English or Italian, whichever you prefer.
 
   - type: textarea

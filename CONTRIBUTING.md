@@ -6,11 +6,13 @@ Python at all — exactly how to add a language.
 
 ## Before you start
 
-Foyer is a beta with one author. There is no promised turnaround on issues or
-pull requests: everything gets read, and some of it takes a while. For anything
-bigger than a small fix, open an issue first and say what you have in mind, so
-that neither of us spends an evening on something that collides with the
-design.
+Foyer is a beta, and the personal, non-commercial project of one person.
+Issues and pull requests are looked at on a best-effort basis, with no promise
+of an answer, a review or a merge: some of it takes a while, and some of it
+does not happen. A pull request is merged at the maintainer's discretion. For
+anything bigger than a small fix, open an issue first and say what you have
+in mind, so that neither of us spends an evening on something that collides
+with the design.
 
 The design is written down in [docs/SPEC.md](docs/SPEC.md), with the reasoning
 behind the decisions that look arbitrary until you know why. It is long on
