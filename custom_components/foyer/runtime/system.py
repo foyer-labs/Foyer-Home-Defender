@@ -124,6 +124,15 @@ _QUIET_CATEGORIES = frozenset(
     {LogCategory.ZONE_ARMED, LogCategory.ZONE_DISARMED, LogCategory.ACTION}
 )
 
+# The moments that are about a notification channel itself (§12.2): the
+# warning that one broke and the note that it is back. What their sends did
+# is held for the next report whenever they run — in the decision on a report
+# of sends, or later, in the Tick that resumes a step a `delay` held back
+# (_async_execute).
+_CHANNEL_MOMENTS = frozenset(
+    {Moment.NOTIFICATION_CHANNEL_DOWN, Moment.NOTIFICATION_CHANNEL_RESTORED}
+)
+
 
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
@@ -321,8 +330,9 @@ class FoyerSystem:
         self._started = False
         # What sends did that the engine has not been told yet, one batch per
         # decision, oldest first: those of a decision that was itself the
-        # answer to a report of sends (§12.2, _async_execute). They travel
-        # with the next report, or with the next channel sweep.
+        # answer to a report of sends, and those of a warning about a channel
+        # wherever it ran (§12.2, _async_execute). They travel with the next
+        # report of a real send, or with the next channel sweep.
         self._held_sends: list[dict[str, bool]] = []
         # True while one call holds the turn to decide: its synchronous half
         # is running, or it has just handed the turn to the first call in
@@ -653,8 +663,9 @@ class FoyerSystem:
         # exactly the evidence that a second channel is going too: until it
         # is counted, the alarm is planned over that channel as if it worked.
         # The sweep that carries it is a report of sends like any other, so
-        # its own sends are held in turn, and what a warning's send sets off
-        # can never run faster than one step per sweep.
+        # its own sends are held in turn: what a warning's send sets off
+        # never feeds itself, and moves no faster than the house's own real
+        # sends and this sweep.
         reports = _send_reports(self._held_sends)
         self._held_sends = []
         if present or reports:
@@ -801,6 +812,23 @@ class FoyerSystem:
             self._reschedule()
         except Exception:
             _LOGGER.exception("Foyer could not schedule its next wake-up")
+        rows: tuple[LogRow, ...] = ()
+        try:
+            rows = rows_for(
+                event,
+                decision,
+                self.config,
+                old_state=old_state,
+                was_active=was_active,
+            )
+            # Before the notify, because sensor.foyer_last_event is one of the
+            # entities it writes. Pointed at this decision's row only when the
+            # row was recorded, after that notify, the sensor showed the
+            # decision before until something else happened — all night,
+            # after an exit delay that ran out in an empty house.
+            self._glance(rows)
+        except Exception:
+            _LOGGER.exception("Foyer could not record a decision in its log")
         # Before the rows: `foyer_event` must not fire before Foyer's own
         # entities show the state it describes, or an automation reading them
         # on that event would read the state before it.
@@ -815,15 +843,7 @@ class FoyerSystem:
         # the log hears of a decision, and a caller cancelled while the file
         # was writing lost the rows.
         try:
-            self.async_record(
-                rows_for(
-                    event,
-                    decision,
-                    self.config,
-                    old_state=old_state,
-                    was_active=was_active,
-                )
-            )
+            self.async_record(rows)
         except Exception:
             _LOGGER.exception("Foyer could not record a decision in its log")
         if decision.actions:
@@ -850,39 +870,52 @@ class FoyerSystem:
         """Run a decision's actions, record how they went, and say what the
         sends did (§12.2).
 
-        ``report`` is False when the decision answered a report of sends. Its
-        actions are then the warning that a channel broke, said over one that
-        still works, and their sends are held for the next report instead of
-        becoming one: fed straight back, a warning that failed would mark the
-        channel it went over as broken, and that channel's own warning would
-        be fed back in turn, through the whole address book. Held, not
-        dropped, because each is evidence about a real send. No default, so
-        no caller can forget to say.
+        Some sends are held for the next report instead of becoming one:
+        every send of a decision that answered a report of sends (``report``
+        is False), and every send of an action answering a channel's own
+        moments — the warning that one broke, the note that it is back —
+        wherever it runs, the step a ``delay`` held back included. Fed
+        straight back, a warning that failed would mark the channel it went
+        over as broken, and that channel's own warning would be fed back in
+        turn, through the whole address book. Held, not dropped, because
+        each is evidence about a real send. No default, so no caller can
+        forget to say.
         """
         results = await self._executor.async_run(decision)
         self.async_record(_action_rows(decision, results))
         sends: dict[str, bool] = {}
-        for result in results:
-            sends.update(result.sends)
-        if not report:
-            if sends:
-                self._held_sends.append(sends)
-            return
-        await self._async_report_sends(sends)
+        held: dict[str, bool] = {}
+        # By position: the executor answers in the Decision's order, one
+        # result per intent, and one profile action answering two moments in
+        # one decision is two intents with one id.
+        for intent, result in zip(decision.actions, results, strict=False):
+            answers = not report or intent.moment in _CHANNEL_MOMENTS
+            (held if answers else sends).update(result.sends)
+        await self._async_report_sends(sends, held)
 
-    async def _async_report_sends(self, sends: Mapping[str, bool]) -> None:
+    async def _async_report_sends(
+        self, sends: Mapping[str, bool], held: Mapping[str, bool]
+    ) -> None:
         """Tell the engine how each notification channel actually did (§12.2).
 
-        With it goes whatever was held since the last report, older first.
-        One level deep and no further, by where a decision came from rather
-        than by timing: every decision made here answers a report of sends,
-        so what its own sends did is held (``_async_execute``). A flag raised
-        for the length of this call used to guard it, and was down again by
-        the time the report's actions had run and come back to report (third
-        review).
+        A real send goes with whatever was held since the last report, older
+        first; then what this decision's warnings did joins what is held, for
+        the next one. One level deep and no further, by what a send answered
+        rather than by timing: a flag raised for the length of this call used
+        to guard it, and was down again by the time the report's actions had
+        run and come back to report (third review).
+
+        Nothing is reported when nothing real was sent. A siren going back,
+        a chime or a switch is no news about any channel, and carried by
+        them, a warning's failure went straight back on the warning's own
+        auto-revert — the loop, at the pace of the revert.
         """
-        batches = [*self._held_sends, sends]
-        self._held_sends = []
+        batches: list[Mapping[str, bool]] = []
+        if sends:
+            batches = [*self._held_sends, sends]
+            self._held_sends = []
+        if held:
+            self._held_sends.append(dict(held))
         for report in _send_reports(batches):
             await self.async_handle(HealthReport(channel_sends=report))
 
@@ -924,17 +957,29 @@ class FoyerSystem:
             return
         if self.log is not None:
             self.log.async_write(rows, self.config.settings.log)
-        # sensor.foyer_last_event shows the last row that is worth showing,
-        # which is not the thousandth motion of the day — and never one a
-        # glance may not find: the dashboard and the device stream's log
-        # notice both read this, on the tablet a duress code was typed at
-        # (decision 133).
+        if self._glance(rows):
+            # Recorded outside a decision's notify — how an action went, a
+            # test, a recovery — and nothing else may be coming to show it.
+            # A decision's own rows were shown by its notify (``_apply``).
+            self.async_notify_soon()
+
+    def _glance(self, rows: Sequence[LogRow]) -> bool:
+        """Point sensor.foyer_last_event at the last row worth showing, and
+        say whether it moved.
+
+        Worth showing is not the thousandth motion of the day — and never a
+        row a glance may not find: the dashboard and the device stream's log
+        notice both read this, on the tablet a duress code was typed at
+        (decision 133).
+        """
+        before = self.last_row
         for row in rows:
             if not glanceable(row):
                 continue
             quiet = row.category in _QUIET_CATEGORIES
             if not quiet or (row.category is LogCategory.ACTION and not _ok(row)):
                 self.last_row = row
+        return self.last_row is not before
 
     @callback
     def async_heartbeat(self, entity_id: str) -> None:

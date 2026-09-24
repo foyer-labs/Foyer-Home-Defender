@@ -83,13 +83,17 @@ working channel of the same contact and tells the response profile answering
 `notification_channel_down` which one that is. When a contact has nothing left
 that works, the message says so.
 
-The send that carries that warning is the one send not counted at once. It
-is counted with the next report of a real send, or at the next sweep,
-whichever comes first. Counted at once, a warning that failed would mark the
-channel it went over as broken, whose own warning could fail over the next,
-one channel after another through a whole address book. Held, it is still
-counted — a second channel failing is still found — but never faster than
-one step per sweep.
+The sends that are about channels themselves — the warning that one broke,
+and the note that it is back, including any step of theirs a `delay` held
+back — are not counted at once, and neither is anything else sent by a
+decision made on a report of sends. They are counted with the next real
+send, or at the next sweep, whichever comes first; a siren, a chime or a
+switch sends nothing and carries nothing. Counted at once, a warning that
+failed would mark the channel it went over as broken, whose own warning could
+fail over the next, one channel after another through a whole address book.
+Held, they are still counted — a second channel failing is still found — but
+the chain never feeds itself: each step waits for something the house sends
+for its own reasons, or for a sweep.
 
 **Who is told is yours to configure.** `notification_channel_down` and
 `notification_channel_restored` are ordinary moments: attach them to a
