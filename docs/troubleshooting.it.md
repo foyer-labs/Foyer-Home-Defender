@@ -55,9 +55,10 @@ Se gli stati di scatto sono giusti, scorri questo elenco.
   confermati. Vedi
   [portare in Foyer una configurazione esistente](migrating-from-alarmo.it.md).
 - **La sua area non la sta sorvegliando.** Una zona antintrusione dà l'allarme
-  solo mentre la sua area è inserita. Un'area non compresa nello scenario in
-  corso, un'area che sta ancora contando il suo ritardo d'uscita e un'area
-  disinserita non sorvegliano le loro zone; lì una zona che si apre può solo
+  solo mentre la sua area è inserita. Un'area disinserita — compresa una
+  lasciata fuori dallo scenario in corso e non inserita per conto suo — e
+  un'area che sta ancora contando il suo ritardo d'uscita non sorvegliano le
+  loro zone; lì una zona che si apre può solo
   suonare il campanello. Solo le zone con *Sempre attiva (24h)* spuntato — per
   impostazione predefinita le zone 24h, di manomissione e di panico — e le zone
   tecniche rispondono qualunque cosa stia facendo l'area.
@@ -411,9 +412,9 @@ stato digitato.
   Home Assistant; Telegram ha bisogno di un file, scritto nella *Cartella
   telecamere* (`media/foyer` per impostazione predefinita, mai `www`), che deve
   stare in `allowlist_external_dirs` altrimenti non viene scritto niente. Con
-  *Le telecamere delle zone che hanno dato l'allarme*, solo i canali push e di
-  chat ricevono immagini, solo a un allarme, e mai quando parte un ritardo
-  d'ingresso; *Sempre la stessa telecamera* allega la sua unica immagine alla
+  *Le telecamere delle zone che hanno dato l'allarme*, le immagini partono
+  solo a un allarme, mai quando parte un ritardo d'ingresso, e a un contatto
+  solo su un canale push o di chat; *Sempre la stessa telecamera* allega la sua unica immagine alla
   notifica stessa, in qualunque momento l'azione venga eseguita. Una telecamera che non risponde costa la sua immagine,
   mai il testo.
 - **Ore di silenzio.** Dentro le *Ore di silenzio* di un contatto passa solo

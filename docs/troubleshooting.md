@@ -50,9 +50,9 @@ If the trigger is right, work down this list.
   until the trigger is confirmed. See
   [migrating an existing configuration](migrating-from-alarmo.md).
 - **Its area is not watching it.** An intrusion zone alarms only while its own
-  area is armed. An area not included in the scenario that is running, an
-  area still counting down its exit delay, and a disarmed area are not
-  monitoring their zones; there, a zone opening can only chime. Only zones
+  area is armed. A disarmed area — one left out of the running scenario and
+  not armed on its own included — and an area still counting down its exit
+  delay are not monitoring their zones; there, a zone opening can only chime. Only zones
   with *Always on (24h)* ticked — 24h, tamper and panic zones by default — and
   technical zones answer whatever the area is doing.
 - **It was already open.** A zone that is triggered when its area arms does
@@ -364,9 +364,9 @@ the card keeps none beyond the command it was typed for.
   Companion app fetches a live link through Home Assistant's camera proxy;
   Telegram needs a file, written to the *Camera folder* (`media/foyer` by
   default, never `www`), which must be in `allowlist_external_dirs` or nothing
-  is written. With *The cameras of the zones behind the alarm*, only push
-  and chat channels receive pictures, only at an alarm, and never when an
-  entry delay starts; *Always the same camera* attaches its one picture to the
+  is written. With *The cameras of the zones behind the alarm*, pictures go
+  only at an alarm, never when an entry delay starts, and to a contact only
+  over a push or chat channel; *Always the same camera* attaches its one picture to the
   notification itself, at whatever moment the action runs. A camera that does not answer costs
   its own picture, never the text.
 - **Quiet hours.** Inside a contact's *Quiet hours*, only what reaches
