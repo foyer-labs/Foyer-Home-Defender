@@ -340,6 +340,15 @@ def row_for(occurrence: Occurrence, at: datetime) -> LogRow:
     if occurrence.group_id:
         detail["group_id"] = occurrence.group_id
     outcome = OUTCOME.get(occurrence.moment)
+    if (
+        occurrence.moment is Moment.CODE_REJECTED
+        and occurrence.detail.get("reason", Reason.BAD_CODE.value)
+        != Reason.BAD_CODE.value
+    ):
+        # Refused for who was asking — a permission, a validity window, an
+        # area — rather than for a wrong code: "wrong code" would send
+        # somebody to retype a code that was never the problem.
+        outcome = Outcome.BLOCKED
     event_type, severity = (
         event_type_of(occurrence.moment),
         severity_of(occurrence.moment),
@@ -423,10 +432,9 @@ def rejection_row(
         user_name=user.name if user else None,
         channel=actor.channel,
         device_id=actor.device_id,
+        # A code nobody typed is not a wrong one: only BAD_CODE is.
         outcome=(
-            Outcome.BAD_CODE
-            if decision.reason in (Reason.BAD_CODE, Reason.CODE_REQUIRED)
-            else Outcome.BLOCKED
+            Outcome.BAD_CODE if decision.reason is Reason.BAD_CODE else Outcome.BLOCKED
         ).value,
         detail=detail,
     )
