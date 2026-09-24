@@ -10391,7 +10391,7 @@ var X = [
           <span class="spacer"></span>
           ${this._step === "test" ? w`<button class="btn primary" ?disabled=${this._busy} @click=${this._finish}>
                 ${N(t, "wizard.done")}
-              </button>` : this._step === "user" && !this.ctx?.config?.users.length ? this._renderUserAction(t) : w`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
+              </button>` : this._step === "user" && !this.ctx?.config?.users.some((e) => e.enabled && e.has_code) ? this._renderUserAction(t) : w`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
                   ${N(t, "wizard.next")}
                 </button>`}
         </div>
@@ -10639,6 +10639,15 @@ var X = [
 				}];
 				return;
 			}
+			if (!this._userCode) {
+				this._problems = [{
+					code: "code_required_here",
+					kind: "user",
+					ref: null,
+					field: null
+				}];
+				return;
+			}
 			this._busy = !0;
 			try {
 				let t = await e.saveUser({
@@ -10661,14 +10670,15 @@ var X = [
 		}
 	}
 	_renderUser(e) {
-		let t = this.ctx?.config?.users ?? [], n = this.ctx?.status.security.code_length ?? 6;
-		return t.length ? w`
+		let t = this.ctx?.config?.users ?? [], n = this.ctx?.status.security.code_length ?? 6, r = t.find((e) => e.enabled && e.has_code);
+		return r ? w`
         <p>${N(e, "wizard.user_text")}</p>
-        <div class="notice">
-          ${N(e, "wizard.user_done", { name: t[0].name })}
-        </div>
+        <div class="notice">${N(e, "wizard.user_done", { name: r.name })}</div>
       ` : w`
       <p>${N(e, "wizard.user_text")}</p>
+      ${t.length ? w`<div class="notice">
+            ${N(e, "wizard.user_no_code", { name: t[0].name })}
+          </div>` : E}
       <div class="grid-form">
         <label class="field">
           <span class="lbl">${N(e, "field.name")}</span>

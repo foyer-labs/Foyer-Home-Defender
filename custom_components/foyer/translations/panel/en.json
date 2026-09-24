@@ -266,7 +266,8 @@
     "contact_armed": "While an area is armed, a profile the house could answer with notifies this contact: it cannot be changed, switched off or deleted until you disarm.",
     "last_usable_code": "An area is armed, and this would leave nobody with a usable code, now or sooner than before when a validity period ends, which switches the code policy off. Give somebody else a code first, or disarm.",
     "watchdog_url_invalid": "The watchdog URL has to start with http:// or https://.",
-    "armed_code_policy": "While an area is armed, what an area or a scenario asks a code for cannot change: it takes part in every command that touches the armed area. Disarm every area first."
+    "armed_code_policy": "While an area is armed, what an area or a scenario asks a code for cannot change: it takes part in every command that touches the armed area. Disarm every area first.",
+    "code_required_here": "This step is for a person with a code: type one, twice, or skip the step."
   },
   "field": {
     "name": "Name",
@@ -2063,7 +2064,8 @@
       "contacts": "No contacts yet: nobody to reach when nobody acknowledges an alarm.",
       "none": "Nothing obvious left. Everything else is on the pages above."
     },
-    "no_proposal_elsewhere": "Foyer has no state to propose for this kind of entity: set it up on the Zones page, where you choose what it means."
+    "no_proposal_elsewhere": "Foyer has no state to propose for this kind of entity: set it up on the Zones page, where you choose what it means.",
+    "user_no_code": "{name} is here but holds no code yet, so nothing asks for one. Give them a code on the Users page, or create a person with a code here."
   },
   "config_kind": {
     "areas": "Area",

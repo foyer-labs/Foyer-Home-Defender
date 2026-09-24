@@ -266,7 +266,8 @@
     "contact_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere avvisa questo contatto: non si può modificare, disattivare né eliminare finché non disinserisci.",
     "last_usable_code": "Un'area è inserita e nessuno resterebbe con un codice valido, subito o, alla fine di un periodo di validità, prima del previsto: il che spegne la politica dei codici. Dai prima un codice a qualcun altro, oppure disinserisci.",
     "watchdog_url_invalid": "L'URL del watchdog deve iniziare con http:// o https://.",
-    "armed_code_policy": "Finché un'area è inserita, non si può cambiare per cosa un'area o uno scenario chiede il codice: vale per ogni comando che tocca l'area inserita. Disinserisci prima tutte le aree."
+    "armed_code_policy": "Finché un'area è inserita, non si può cambiare per cosa un'area o uno scenario chiede il codice: vale per ogni comando che tocca l'area inserita. Disinserisci prima tutte le aree.",
+    "code_required_here": "Questo passo serve a una persona con un codice: digitalo due volte, oppure salta il passo."
   },
   "field": {
     "name": "Nome",
@@ -2063,7 +2064,8 @@
       "contacts": "Ancora nessun contatto: nessuno da raggiungere quando nessuno prende atto di un allarme.",
       "none": "Niente di evidente da fare. Tutto il resto è nelle pagine qui sopra."
     },
-    "no_proposal_elsewhere": "Per questo tipo di entità Foyer non ha stati da proporre: configurala nella pagina Zone, dove scegli cosa significa."
+    "no_proposal_elsewhere": "Per questo tipo di entità Foyer non ha stati da proporre: configurala nella pagina Zone, dove scegli cosa significa.",
+    "user_no_code": "{name} c'è ma non ha ancora un codice, quindi nulla lo chiede. Dagliene uno nella pagina Utenti, oppure crea qui una persona con un codice."
   },
   "config_kind": {
     "areas": "Area",

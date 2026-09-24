@@ -141,7 +141,8 @@ class FoyerWizard extends LitElement {
             ? html`<button class="btn primary" ?disabled=${this._busy} @click=${this._finish}>
                 ${t(s, "wizard.done")}
               </button>`
-            : this._step === "user" && !this.ctx?.config?.users.length
+            : this._step === "user" &&
+                !this.ctx?.config?.users.some((u) => u.enabled && u.has_code)
               ? this._renderUserAction(s)
               : html`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
                   ${t(s, "wizard.next")}
@@ -480,6 +481,12 @@ class FoyerWizard extends LitElement {
       this._problems = [{ code: "code_mismatch", kind: "user", ref: null, field: null }];
       return;
     }
+    // The step is "User and code": a person saved without one would leave the
+    // policy switched off while the next screen says a code is in force.
+    if (!this._userCode) {
+      this._problems = [{ code: "code_required_here", kind: "user", ref: null, field: null }];
+      return;
+    }
     this._busy = true;
     try {
       const result = await ctx.saveUser(
@@ -514,16 +521,22 @@ class FoyerWizard extends LitElement {
   private _renderUser(s: Strings) {
     const users = this.ctx?.config?.users ?? [];
     const length = this.ctx?.status.security.code_length ?? 6;
-    if (users.length) {
+    // Only somebody who actually holds a code switches the policy on: a person
+    // saved without one must not be announced as if they did.
+    const holder = users.find((u) => u.enabled && u.has_code);
+    if (holder) {
       return html`
         <p>${t(s, "wizard.user_text")}</p>
-        <div class="notice">
-          ${t(s, "wizard.user_done", { name: users[0].name })}
-        </div>
+        <div class="notice">${t(s, "wizard.user_done", { name: holder.name })}</div>
       `;
     }
     return html`
       <p>${t(s, "wizard.user_text")}</p>
+      ${users.length
+        ? html`<div class="notice">
+            ${t(s, "wizard.user_no_code", { name: users[0].name })}
+          </div>`
+        : nothing}
       <div class="grid-form">
         <label class="field">
           <span class="lbl">${t(s, "field.name")}</span>
