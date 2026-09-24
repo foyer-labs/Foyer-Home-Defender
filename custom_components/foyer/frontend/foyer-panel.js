@@ -1104,12 +1104,18 @@ var Qe = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), $e = class extend
       ${n.security.enforced ? E : w`<div class="notice" role="note">
             ${N(t, "overview.no_codes_warning")}
           </div>`}
-      ${r.map((e) => w`<div class="alarm-memory" role="alert">
-          ${e.causes.length ? N(t, "overview.memory_banner", {
-			area: e.name,
-			zones: this._zoneNames(e.causes)
-		}) : N(t, "overview.memory_banner_plain", { area: e.name })}
-        </div>`)}
+      ${r.map((e) => {
+			let n = this._zoneNames(e.causes), r = e.state !== "disarmed";
+			return w`<div class="alarm-memory" role="alert">
+          ${e.causes.length ? r ? N(t, "overview.memory_banner_armed", {
+				area: e.name,
+				zones: n
+			}) : N(t, "overview.memory_banner", {
+				area: e.name,
+				zones: n
+			}) : r ? N(t, "overview.memory_banner_armed_plain", { area: e.name }) : N(t, "overview.memory_banner_plain", { area: e.name })}
+        </div>`;
+		})}
       ${this._renderMaster(t)} ${this._renderFeedback(t)}
       <div class="tiles">${n.areas.map((e) => this._renderArea(t, e))}</div>
       ${this._renderNotReady(t)} ${this._renderRecent(t)}

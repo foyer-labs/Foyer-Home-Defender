@@ -196,19 +196,26 @@ class FoyerPageOverview extends LitElement {
         : html`<div class="notice" role="note">
             ${t(s, "overview.no_codes_warning")}
           </div>`}
-      ${memory.map(
-        (area) => html`<div class="alarm-memory" role="alert">
+      ${memory.map((area) => {
+        // Only an arming out of disarmed clears the memory (§5.2): an area
+        // still armed, or in alarm, clears it with a disarm alone, and its
+        // banner says only that — "or armed again" would send somebody to
+        // pick the scenario again and watch the banner stay.
+        const zones = this._zoneNames(area.causes);
+        const armed = area.state !== "disarmed";
+        return html`<div class="alarm-memory" role="alert">
           ${area.causes.length
-            ? t(s, "overview.memory_banner", {
-                area: area.name,
-                zones: this._zoneNames(area.causes),
-              })
+            ? armed
+              ? t(s, "overview.memory_banner_armed", { area: area.name, zones })
+              : t(s, "overview.memory_banner", { area: area.name, zones })
             : // A memory whose zones are no longer known — a restart, a zone
               // deleted since — still has to say the alarm went off, without
               // a dangling colon where the names should be.
-              t(s, "overview.memory_banner_plain", { area: area.name })}
-        </div>`,
-      )}
+              armed
+              ? t(s, "overview.memory_banner_armed_plain", { area: area.name })
+              : t(s, "overview.memory_banner_plain", { area: area.name })}
+        </div>`;
+      })}
       ${this._renderMaster(s)} ${this._renderFeedback(s)}
       <div class="tiles">${status.areas.map((area) => this._renderArea(s, area))}</div>
       ${this._renderNotReady(s)} ${this._renderRecent(s)}

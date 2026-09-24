@@ -365,7 +365,10 @@ What the log records:
   nobody has acknowledged stays open and its escalation carries on: a rule
   has seen nothing. An area that stays armed through a rule's scenario
   switch — the perimeter it may not disarm included — keeps its memory,
-  because nothing armed it again.
+  because nothing armed it again. So does an area a rule arms the instant a
+  walk test ends: the response to that instant is still held back, and an
+  *Alarm memory cleared* nobody hears would take the memory away unseen, so
+  the next disarm or arming clears it instead.
 - **An arming the house refused is not retried on a timer.** If a window was
   open — or a zone in fault, or an open zone the rule could not exclude — the
   rule tries again when the areas it wants are ready, and not before. Anything else it was refused for waits like a rule that has had its

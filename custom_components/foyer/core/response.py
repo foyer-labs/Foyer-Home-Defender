@@ -1135,7 +1135,14 @@ def answer_for(ctx: PlanContext, occurrence: Occurrence) -> Answer | None:
     """The profile that answers this occurrence, or None when none does."""
     zone = ctx.config.zone(occurrence.zone_id)
     area = ctx.areas.get(occurrence.area_id or "")
-    scenario_id = occurrence.scenario_id or (area.scenario_id if area else None)
+    # `alarm_cleared` names the scenario its memory was set under, and means
+    # it when it names none: the arming that clears a disarmed area's memory
+    # has put the area in the new watch's scenario by now, whose profile never
+    # answered that alarm and would leave its lamp on for good (§5.2, found
+    # in review). A disarm has emptied the area, so it asks the same chain.
+    scenario_id = occurrence.scenario_id
+    if scenario_id is None and occurrence.moment is not Moment.ALARM_CLEARED:
+        scenario_id = area.scenario_id if area else None
     profile, source = resolve_profile(
         ctx.config,
         area_id=occurrence.area_id,

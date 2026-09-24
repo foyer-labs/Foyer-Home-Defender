@@ -10,13 +10,14 @@ or disarms. Nothing else that looks like arming clears it.
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from custom_components.foyer.core.engine import AUTO_RULE_CHANNEL, KEY_ZONE_CHANNEL
 from custom_components.foyer.core.journal import rows_for
 from custom_components.foyer.core.models import (
+    AcknowledgeIncident,
     ActionKind,
     Actor,
     AlarmKind,
@@ -45,7 +46,7 @@ from .helpers import (
     zone,
 )
 from .test_escalation import escalating_house, notified, step
-from .test_profiles import LAMP, action, house as profile_house, profile
+from .test_profiles import LAMP, action, house as profile_house, profile, siren
 from .test_review_2_followup import KEY, TAG, _key_world, _tag_world
 from .test_rules import empty, house as rule_house, perimeter_house
 
@@ -90,6 +91,52 @@ def vault_house():
         bypassable=False,
     )
     return replace(config, zones=(*config.zones, vault))
+
+
+def both_remembered() -> World:
+    """The tamper and the vault fire on a disarmed house: after the cutoff,
+    both floors are disarmed and each holds the memory of its own alarm."""
+    world = World(vault_house())
+    world.set(TAMPER, "on")
+    world.set(VAULT, "on")
+    world.advance(180)
+    world.set(TAMPER, "off")
+    world.set(VAULT, "off")
+    assert world.area("ground").memory and world.area("upstairs").memory
+    return world
+
+
+LAMP_ON = action(
+    "lamp_on", ActionKind.SWITCH, Moment.TRIGGERED, entity_ids=(LAMP,), state="on"
+)
+LAMP_OFF = action(
+    "lamp_off",
+    ActionKind.SWITCH,
+    Moment.ALARM_CLEARED,
+    entity_ids=(LAMP,),
+    state="off",
+)
+
+
+def lamp_off(decision) -> list[str]:
+    return [a.action_id for a in decision.actions if a.moment is Moment.ALARM_CLEARED]
+
+
+def lamp_house():
+    """Decision 108's lamp on the default profile, which answers an alarm on
+    the disarmed house through the area chain; Away has a profile of its own,
+    and it knows nothing about the lamp."""
+    config = profile_house(
+        profile("house", LAMP_ON, LAMP_OFF),
+        profile("away_loud", siren("bell", Moment.TRIGGERED)),
+    )
+    return replace(
+        config,
+        scenarios=tuple(
+            replace(s, response_profile_id="away_loud") if s.id == "away" else s
+            for s in config.scenarios
+        ),
+    )
 
 
 # --- an accepted arming clears it (decision 140) -------------------------------------
@@ -138,24 +185,35 @@ def test_the_log_row_is_the_alarm_row_a_disarm_writes():
 
 
 def test_it_is_raised_once_for_each_area_the_arming_clears():
-    world = World(vault_house())
-    world.set(TAMPER, "on")
-    world.set(VAULT, "on")
-    world.advance(180)
-    world.set(TAMPER, "off")
-    world.set(VAULT, "off")
-    assert world.area("ground").memory and world.area("upstairs").memory
+    world = both_remembered()
 
     decision = world.arm("away")
 
     assert decision.accepted
     assert cleared(decision) == ["ground", "upstairs"]
+    # Raised as a disarm raises it (§5.2): the memory belongs to the night it
+    # was set, on a disarmed area outside any scenario, and not to the watch
+    # that starts. The `armed` rows are the ones that name Away.
     assert all(
-        o.scenario_id == "away"
+        o.scenario_id is None
         for o in decision.occurrences
         if o.moment is Moment.ALARM_CLEARED
     )
     assert not world.area("ground").memory and not world.area("upstairs").memory
+
+
+def test_a_disarm_clears_each_area_holding_memory_once():
+    world = both_remembered()
+
+    decision = world.disarm()
+
+    assert decision.accepted
+    assert cleared(decision) == ["ground", "upstairs"]
+    assert not world.area("ground").memory and not world.area("upstairs").memory
+    # Nothing is left to clear, so a second disarm is refused and says nothing.
+    again = world.disarm()
+    assert again.reason is Reason.INVALID_STATE
+    assert cleared(again) == []
 
 
 def test_only_the_areas_holding_memory_are_cleared():
@@ -213,9 +271,31 @@ def test_a_profile_hears_it_at_the_arming():
     )
     world = remembered(World(config))
     decision = world.arm("away")
+    assert lamp_off(decision) == ["lamp_off"]
+
+
+def test_the_arming_asks_the_profile_a_disarm_would_ask():
+    """The scenario being armed answers with a profile of its own, which
+    knows nothing about the lamp the alarm switched on. Asked for the arming's
+    scenario, the arming cleared the memory and left the lamp on for good:
+    no later disarm had a memory left to clear (found in review)."""
+    by_disarm = World(lamp_house())
     assert [
-        a.action_id for a in decision.actions if a.moment is Moment.ALARM_CLEARED
-    ] == ["lamp_off"]
+        a.action_id
+        for a in by_disarm.set(TAMPER, "on").actions
+        if a.moment is Moment.TRIGGERED
+    ] == ["lamp_on"]
+    by_disarm.advance(180)
+    by_disarm.set(TAMPER, "off")
+    assert lamp_off(by_disarm.disarm()) == ["lamp_off"]
+
+    by_arming = remembered(World(lamp_house()))
+    decision = by_arming.arm("away")
+
+    assert decision.accepted
+    assert cleared_row(decision).scenario_id is None
+    assert lamp_off(decision) == ["lamp_off"]
+    assert not by_arming.area("ground").memory
 
 
 # --- whoever armed, an automatic rule included ---------------------------------------
@@ -490,3 +570,64 @@ def test_a_walk_test_neither_arms_nor_clears_an_area_holding_memory():
     assert rt.memory and rt.causes == ("tamper",)
     # And a real arming afterwards clears it as any arming does.
     assert cleared(world.arm("away")) == ["ground"]
+
+
+def remembered_and_seen(config) -> World:
+    """Memory left by the tamper, and its incident acknowledged: closed, so
+    the `alarm_cleared` that clears the memory belongs to no incident, and a
+    walk test holds back whatever does not (§11.3)."""
+    world = remembered(World(config))
+    assert world.send(AcknowledgeIncident()).accepted
+    assert world.state.incident is None
+    return world
+
+
+def test_an_arming_in_the_decision_that_ends_a_walk_test_leaves_the_memory():
+    """The auto-exit falls due and an arming arrives before the tick that
+    would have ended the test: the test ends in the arming's own decision,
+    whose response is still held back from beginning to end. The memory
+    must not vanish with an `alarm_cleared` nothing answers (decision 141,
+    found in review)."""
+    world = remembered_and_seen(profile_house(profile("house", LAMP_OFF)))
+    world.walk_test()
+    assert "ground" not in world.state.walk_test.armed_areas
+    world.now += timedelta(minutes=15, seconds=1)
+
+    decision = world.arm("away")
+
+    assert decision.accepted
+    assert Moment.WALK_TEST_ENDED in decision.moments
+    assert cleared(decision) == []
+    rt = world.area("ground")
+    assert rt.state is AreaState.ARMING
+    assert rt.memory and rt.causes == ("tamper",)
+    # Whoever disarms next clears it, and the lamp hears it this time.
+    world.advance(30)
+    decision = world.disarm()
+    assert cleared(decision) == ["ground"]
+    assert lamp_off(decision) == ["lamp_off"]
+    assert not decision.inhibited
+
+
+def test_a_rule_arming_as_the_walk_test_times_out_leaves_the_memory():
+    """The same, from a rule the walk test kept waiting: it arms in the
+    decision the auto-exit ends the test in."""
+    config = rule_house(rule(grace=0, minutes=10))
+    config = replace(
+        config,
+        profiles=(profile("house", LAMP_OFF),),
+        settings=replace(config.settings, default_profile_id="house"),
+    )
+    world = remembered_and_seen(config)
+    world.walk_test()
+    empty(world)
+    world.advance(11 * 60)
+    assert "walk_test" in world.blocked()
+
+    decision = world.advance(4 * 60)
+
+    assert Moment.WALK_TEST_ENDED in decision.moments
+    assert world.area("ground").state is AreaState.ARMING
+    assert cleared(decision) == []
+    assert world.area("ground").memory
+    assert not [a for a in decision.inhibited if a.moment is Moment.ALARM_CLEARED]

@@ -1525,28 +1525,28 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	_renderKeypadLayout(e) {
 		let t = this._status;
 		if (!t) return this._message(Z(e, "common.loading"));
-		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = {
+		let n = this._area, r = this._isMaster ? t.master.state : n?.state ?? "disarmed", i = this._isMaster ? t.areas.some((e) => e.memory) : !!n?.memory, a = r !== "disarmed" || i, o = r === "disarmed", s = {
 			type: "foyer/arm",
 			area_id: n?.id
-		}, s = {
+		}, c = {
 			type: "foyer/disarm",
 			...this._isMaster || !n ? {} : { area_ids: [n.id] }
-		}, c = t.scenarios.find((e) => e.id === t.active_scenario_id);
+		}, l = t.scenarios.find((e) => e.id === t.active_scenario_id);
 		return F`
       <ha-card>
         <div class="content">
           ${this._renderAlerts(e)}
-          ${this._head(this._isMaster ? c?.name ?? Z(e, "overview.master") : n?.name ?? "", r, i)}
+          ${this._head(this._isMaster ? l?.name ?? Z(e, "overview.master") : n?.name ?? "", r, i)}
           ${this._isMaster ? t.areas.filter((e) => e.timer && e.timer.kind !== "siren").map((t) => this._countdown(e, t, !0)) : n ? this._countdown(e, n) : L}
           ${this._renderPad(e)}
           <div class="buttons">
-            ${a || this._alarmRunning ? L : this._isMaster ? t.scenarios.length ? this._scenarioButtons(e) : L : this._isPending(o) ? L : F`<button ?disabled=${this._busy} @click=${() => this._run(o)}>
+            ${!o || this._alarmRunning ? L : this._isMaster ? t.scenarios.length ? this._scenarioButtons(e) : L : this._isPending(s) ? L : F`<button ?disabled=${this._busy} @click=${() => this._run(s)}>
                       ${Z(e, "card.arm")}
                     </button>`}
-            ${a && !this._isPending(s) ? F`<button
+            ${a && !this._isPending(c) ? F`<button
                   class=${this._primary(!0)}
                   ?disabled=${this._busy}
-                  @click=${() => this._run(s)}
+                  @click=${() => this._run(c)}
                 >
                   ${this._disarmLabel(r, i)}
                 </button>` : L}

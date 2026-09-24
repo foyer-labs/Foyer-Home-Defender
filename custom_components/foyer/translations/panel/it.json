@@ -523,7 +523,9 @@
     "not_ready_plain": "Non pronto per l'inserimento",
     "one_area": "Solo un'area…",
     "one_area_hide": "Nascondi l'inserimento di una sola area",
-    "code_needed": "Chiede un codice"
+    "code_needed": "Chiede un codice",
+    "memory_banner_armed": "Memoria d'allarme in {area}: {zones}. Disinserisci l'area per azzerarla.",
+    "memory_banner_armed_plain": "Memoria d'allarme in {area}. Disinserisci l'area per azzerarla."
   },
   "areas": {
     "title": "Aree",
@@ -711,7 +713,7 @@
         },
         "memory": {
           "term": "Memoria d'allarme",
-          "text": "Mostra quali zone hanno dato l'allarme. Resta dopo che le sirene si fermano, finché l'area non viene disinserita o inserita di nuovo."
+          "text": "Mostra quali zone hanno dato l'allarme. Resta dopo che le sirene si fermano, finché l'area non viene disinserita — o, se è già disinserita, inserita di nuovo."
         },
         "technical": {
           "term": "Allarme tecnico",

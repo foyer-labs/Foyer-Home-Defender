@@ -342,13 +342,14 @@ The simulator answers *what would the alarm do*. Two things it cannot answer:
 whether that PIR is aimed at the hallway, and whether your notification
 actually arrives. Those need the house and the channel themselves.
 
-**The walk test** arms every area for real and reads every sensor for real —
-and holds the whole response back. Walk from room to room and the page fills
-in live. What matters is not the zones that detected you but the ones that
-never did, which are listed first: a door nobody opened and a PIR pointing at
-the wrong wall look identical there — and a sensor that has simply stopped
-reporting is marked as a fault beside them, which is the one case of the three
-the list can tell apart for you.
+**The walk test** arms every disarmed area that can arm and holds no alarm
+memory, for real, and reads every sensor for real — and holds the whole
+response back. Walk from room to room and the page fills in live. What
+matters is not the zones that detected you but the ones that never did, which
+are listed first: a door nobody opened and a PIR pointing at the wrong wall
+look identical there — and a sensor that has simply stopped reporting is
+marked as a fault beside them, which is the one case of the three the list can
+tell apart for you.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-walktest-en.png" alt="A walk test running: a banner saying every response is held back and what stays live, and the zone that never reacted at the top of the table while the four that did carry the time they first saw somebody" width="900">
@@ -370,11 +371,15 @@ real intrusion produces nothing:
 
 A detection during a walk test is recorded and moves nothing else: no alarm,
 no incident, no alarm memory, and nothing tells HomeKit or Alexa that somebody
-has broken in. Leaving disarms exactly the areas the walk test armed.
+has broken in. Leaving disarms exactly the areas the walk test armed. An area
+still holding alarm memory is not one of them: the test arms for a walk, not
+for a watch, so it leaves that area disarmed with its memory, and its zones
+are still recorded when they see you.
 
 It walks the whole house, whoever starts it: every disarmed area it can arm
-is armed, areas outside that person's own included, and an area somebody else
-had armed stops answering too until the test ends. So *Walk test* is a
+is armed, areas outside that person's own included but not one still holding
+alarm memory, and an area somebody else had armed stops answering too until
+the test ends. So *Walk test* is a
 permission to give as you would give *Disarm* —
 [what the codes are for](#what-the-codes-are-for-and-what-they-are-not) says
 why, and the *Users* page says so when you tick it.
@@ -743,14 +748,14 @@ answer it: one that shows security events somewhere in the house should leave
 
 **Whoever may start a walk test may keep the house quiet.** A walk test is
 walked through the whole house, so it arms every disarmed area it can — the
-areas the person starting it is not allowed included — and until it ends no
-area answers an ordinary detection, not even one somebody else armed. That
-lasts fifteen minutes after the last detection by default, never more than
-three hours from the start, and it needs *Walk test*, not *Disarm*. It is
-kept that way on purpose, and it is never quiet about itself: it asks for a
-code by default, it puts a banner on every screen, it sends a notification
-when it starts and when it ends, and both of its rows in the log name the
-person. What stays live through it: 24h, tamper, technical and panic zones,
+areas the person starting it is not allowed included, though not one still
+holding alarm memory — and until it ends no area answers an ordinary
+detection, not even one somebody else armed. That lasts fifteen minutes after the last
+detection by default, never more than three hours from the start, and it
+needs *Walk test*, not *Disarm*. It is kept that way on purpose, and it is
+never quiet about itself: it asks for a code by default, it puts a banner on
+every screen, it sends a notification when it starts and when it ends, and
+both of its rows in the log name the person. What stays live through it: 24h, tamper, technical and panic zones,
 an alarm already under way, and a duress code. Give *Walk test* to the people
 you would give *Disarm* to. And unticking *Code required* beside *Start a walk
 test* hands it to anything that can reach a Foyer service or

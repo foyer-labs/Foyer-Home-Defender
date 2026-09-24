@@ -3007,18 +3007,28 @@ class _Run:
             area = self.config.area(area_id)
             assert area is not None
             rt = self.areas[area_id]
-            if rt.memory:
-                # An arming starts a new watch, and a memory carried into it
-                # would describe an earlier night on a house armed since
-                # (§5.2, decision 140) — whoever armed, a rule included. Said
-                # as a disarm says it, before the `armed` row an arming with
-                # no exit delay writes below. It acknowledges nothing: arming
-                # asks no code by default, so the incident and its escalation
-                # go on until somebody acknowledges or disarms (§5.6).
+            # An arming starts a new watch, and a memory carried into it would
+            # describe an earlier night on a house armed since (§5.2, decision
+            # 140) — whoever armed, a rule included. Not in a decision a walk
+            # test began, though: one that ended the test on its way in still
+            # holds its whole response back, and a memory nobody has seen
+            # must not vanish with an `alarm_cleared` nothing answers
+            # (decision 141, found in review). The area keeps it, and the next
+            # disarm or arming clears it out loud.
+            kept = rt.memory and self.inhibiting
+            if rt.memory and not kept:
+                # Raised as a disarm raises it (§5.2), before the `armed` row
+                # an arming with no exit delay writes below — the scenario
+                # included: the memory belongs to the night it was set, and
+                # the profile that switched the lamp on is the one that
+                # switches it off, not the one the new watch answers with
+                # (found in review). It acknowledges nothing: arming asks no
+                # code by default, so the incident and its escalation go on
+                # until somebody acknowledges or disarms (§5.6).
                 self.occur(
                     Moment.ALARM_CLEARED,
                     area_id=area_id,
-                    scenario_id=scenario.id if scenario else None,
+                    scenario_id=rt.scenario_id,
                     zone_ids=rt.causes,
                     channel=channel,
                 )
@@ -3035,8 +3045,8 @@ class _Run:
                 claimed=self.actor.claimed,
                 locked_address=self.actor.locked_address,
                 skipped_exit=skip_exit_delay,
-                memory=False,
-                causes=(),
+                memory=kept,
+                causes=rt.causes if kept else (),
                 rule_id=self.rule_detail.get("rule_id"),
                 rule_name=self.rule_detail.get("rule"),
             )
@@ -3303,9 +3313,10 @@ class _Run:
         if self.config.area(event.area_id) is None:
             return _reject(Reason.UNKNOWN_AREA)
         if self.walk_test is not None:
-            # Every area is already armed by the walk test, and its end
-            # disarms them all: an arming accepted now would be a house its
-            # owner believes armed that is not (found in review).
+            # The test arms every area it can and its end disarms what it
+            # armed: an arming accepted now would be undone by that end, or
+            # answer nothing until it (decision 107) — an area the test left
+            # disarmed for its alarm memory included (decision 141).
             return _reject(Reason.WALK_TEST_ACTIVE)
         if self.areas[event.area_id].state is not AreaState.DISARMED:
             return _reject(Reason.INVALID_STATE)

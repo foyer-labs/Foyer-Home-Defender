@@ -1182,6 +1182,11 @@ class FoyerCard extends LitElement {
       ? status.areas.some((a) => a.memory)
       : Boolean(area?.memory);
     const armed = state !== "disarmed" || memory;
+    // Arm is offered over alarm memory, as every other layout offers it: an
+    // accepted arming clears the memory without acknowledging anything
+    // (§5.2), where "Clear alarm memory" is a disarm, and a disarm of an area
+    // the incident touched is its acknowledgement (§5.6).
+    const canArm = state === "disarmed";
     const arm = { type: "foyer/arm", area_id: area?.id };
     const disarm = {
       type: "foyer/disarm",
@@ -1212,7 +1217,7 @@ class FoyerCard extends LitElement {
               : nothing}
           ${this._renderPad(s)}
           <div class="buttons">
-            ${armed || this._alarmRunning
+            ${!canArm || this._alarmRunning
               ? nothing
               : this._isMaster
                 ? // The master arms a scenario, and with none configured
