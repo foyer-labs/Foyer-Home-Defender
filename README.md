@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=version" alt="Latest version"></a>
-  <img src="https://img.shields.io/badge/status-beta-yellow" alt="Beta">
+  <img src="https://img.shields.io/badge/status-release%20candidate-yellow" alt="Release candidate">
   <img src="https://img.shields.io/badge/Home%20Assistant-2026.6%2B-41BDF5" alt="Home Assistant 2026.6 or later">
   <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5" alt="HACS custom repository">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Apache-2.0"></a>
@@ -129,7 +129,9 @@ alarm system. [The security model](docs/security-model.md) says the rest.
 
 ## Status
 
-Beta. Foyer is the personal, non-commercial project of one person, published
+Release candidate for 1.0: it becomes 1.0.0 once people other than its
+author have used it for some weeks without a serious problem. Foyer is the
+personal, non-commercial project of one person, published
 as Foyer Labs; there is no company behind it. Every release is an ordinary
 GitHub release that HACS offers by version. The stored configuration carries a schema
 version and is migrated forward on update, and the

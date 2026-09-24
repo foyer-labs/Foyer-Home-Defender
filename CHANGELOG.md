@@ -5,6 +5,67 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [1.0.0-rc.1] — the fix phase
+
+The defects found while the documentation was written, corrected. This is
+the release candidate for 1.0: once people other than its author have used it
+for some weeks without a serious problem, 1.0.0 follows, and with it a
+promise that the services, the device and MQTT contracts (v1) and the stored
+configuration stay compatible. The stored configuration keeps its schema.
+
+### Changed — read these before you update
+- **A scenario limited by *Who may use it* now needs somebody established.**
+  While codes are in force, a request that identifies nobody — a codeless
+  arming from an automation, or a `user_id` a message only claims — is
+  refused with *A code is required* for arming, forcing or switching to it.
+  Give such an automation a code, or remove the list. An automatic rule still
+  arms it, and so does a key zone whose *Acts as* names a person on the list.
+- **The first zone the config flow creates takes the type proposed for its
+  sensor**: a door becomes *Delayed*, a smoke detector *Technical*. It was
+  always *Instant*.
+- **A walk test is always announced.** When no profile answers its start or
+  end with a message, Foyer puts up a Home Assistant notification itself.
+- **An administrator's account is never locked out on the `foyer.*`
+  services either**, as on the panel and the card. It is still asked for the
+  code, and the export, import and action-test services still check its
+  permissions.
+- **A *Lock for* longer than an hour is honoured.** Every lockout used to stop
+  at an hour whatever was set.
+- **A *duress* row is written, and fired as `foyer_event`, even with the
+  *Security* log category switched off**; so are the recovery of access and
+  the accepted disclaimer.
+
+### Fixed
+- The action test switched a switch-driven siren, or one that takes no
+  duration, on and never off; it is now switched off after its three seconds.
+- The first-run wizard could create a person without a code and then say
+  that person held one. The step now asks for the code.
+- The zone editor had no field for the person a key zone acts as; it has one
+  now, *Acts as*.
+- The Areas page ignored the Settings default delays; a new area now starts
+  from them, and the defaults are held to 0–300 s.
+- An event or tag zone that had never fired was a fault and blocked its area
+  from arming.
+- The rows of the actions a request set off now carry, like the request's own
+  rows, that it arrived unencrypted or from an address locked for wrong
+  tokens.
+- A refusal for a missing code, a permission, a validity window, an area or a
+  scenario was recorded with the outcome *wrong code*; it is now *blocked*.
+- An undeclared device on the action-test, export and import services was
+  refused without a row or a notice.
+- A person could be linked, around the Users page, to an account Home
+  Assistant runs itself (Home Assistant Cloud's); the backend now refuses it.
+- The Alarmo preview listed the people it would bring in to somebody without
+  *Manage users and codes*.
+- An exempt person out of their validity window still made Home Assistant's
+  dialogs stop asking everybody for a code.
+- The Overview's lock ignored the code for switching scenario; the card now
+  says when no code is in force, and its compact layout clears its scenario
+  menu during an entry delay or an alarm; the Areas editor shows an armed
+  area's profile from the scenario that armed it.
+- Panel texts that described what the code does not do, and the wizard's
+  *Not now*, which closes it for good and now says *Don't show again*.
+
 ## [0.1.0-beta.24] — what Foyer is, and what to expect
 
 The disclaimer SPEC §20.4 left open is agreed, and asked for before setup.
