@@ -2314,7 +2314,7 @@ async def ws_alarmo_preview(
     if (system := _system(hass, connection, msg["id"])) is None:
         return
     if (
-        await _gate(
+        actor := await _gate(
             hass,
             system,
             connection,
@@ -2325,7 +2325,16 @@ async def ws_alarmo_preview(
         )
     ) is None:
         return
-    _, answer = await async_alarmo_plan(hass, system, msg.get("labels"))
+    result, answer = await async_alarmo_plan(hass, system, msg.get("labels"))
+    # The preview names the people it would bring in, and people are
+    # manage_users' (decision 111): whoever may not apply them may not read
+    # them either (fix phase).
+    if (
+        result is not None
+        and result.counts["people"]
+        and _refuse_people(system, connection, msg["id"], actor)
+    ):
+        return
     connection.send_result(msg["id"], answer)
 
 

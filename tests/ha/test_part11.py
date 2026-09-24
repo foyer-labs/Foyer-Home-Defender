@@ -233,3 +233,24 @@ async def test_a_restored_backup_cannot_confirm_a_zone_nobody_checked(
     result = await _ws(client, {"type": "foyer/config/import", "document": backup})
     assert not result["success"]
     assert "trigger_not_confirmed" in [p["code"] for p in result["problems"]]
+
+
+async def test_a_preview_naming_people_needs_the_permission_that_owns_them(
+    hass, hass_ws_client, alarmo, hass_read_only_user, hass_read_only_access_token
+):
+    """Fix phase: the preview listed the names of the people it would bring in
+    to somebody who may edit the configuration but not people (decision 111)."""
+    from .test_phase2 import CODE, _make_user
+
+    admin = await hass_ws_client(hass)
+    await _make_user(
+        hass,
+        admin,
+        new_code=CODE,
+        permissions=["edit_config"],
+        ha_user_id=hass_read_only_user.id,
+    )
+    client = await hass_ws_client(hass, hass_read_only_access_token)
+    preview = await _ws(client, {"type": "foyer/alarmo/preview", "labels": LABELS})
+    assert preview["success"] is False
+    assert "created" not in preview
