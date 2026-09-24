@@ -904,20 +904,40 @@ Yes, and Foyer answers, as it does everywhere else. What Home Assistant asks
 for first depends on one thing Foyer tells it: that arming needs a code. That
 is said only while your policy asks for a code to arm and nobody has the
 exemption above switched on, because Home Assistant would refuse everybody who
-typed none, the exempt person included. While it is said, Home Assistant's
-pop-up dialog and a tile's arm buttons ask for the code themselves. Once
-somebody is exempt they stop asking: that person arms with no code, and
-anybody else is refused by Foyer, with a row in the log and a message saying
-where a code can be typed — Home Assistant's *Alarm panel* card, which shows
-a code field wherever a code may be asked, Foyer's card, or the panel.
+typed none, the exempt person included. The *Whole house* panel says it only
+when every mode it can still arm asks for a code: where one mode needs none,
+Home Assistant would refuse that mode too. While it is said, Home Assistant's
+pop-up dialog and a tile's arm buttons ask for the code themselves. When it is
+not — somebody is exempt, or the modes disagree — they do not ask: an exempt
+person arms with no code, and anybody else Foyer wants a code from is refused
+by Foyer, with a row in the log and a message saying where a code can be
+typed — Foyer's card, the panel, or Home Assistant's *Alarm panel* card, which
+shows a code field wherever a code may be asked but offers arming only while
+the panel is disarmed. Choosing another mode while the house is already armed
+is a change of scenario, which asks for a code by default even where arming
+does not; the dialog asks for a code only while arming is said to need one,
+so where only the change asks, the code is typed in Foyer's card or the panel.
 
 Voice assistants read the same answer. Alexa is offered a panel only while
 arming it needs no code, sends none, and does not wait for Foyer's answer, so
 a refusal shows only in the panel's state and in the log. Google Assistant
 asks for its PIN before arming only while a code is needed, and sends the PIN
-stored in its own configuration either way: if that is somebody's Foyer code,
-the arming is in their name; if it is not, it is a wrong code, and counts
-towards the lockout.
+stored in its own configuration, if there is one, whether it asked for it or
+not: if that is somebody's Foyer code, what it asks for is done in their name;
+if it is not, it is a wrong code, and counts towards the lockout.
+
+Mind which account a voice assistant is linked with, because it acts as that
+Home Assistant account for whoever is speaking. Linked through an account
+that belongs to an exempt person, it hands that exemption to anybody within
+earshot: arming with no code, and switching the house to another mode, which
+disarms the areas only the old mode armed. A Google PIN that is a Foyer code
+does the same, and is sent without anybody saying it while arming needs no
+code. Link voice assistants through an account that is not linked to an
+exempt person, and give Google's PIN, if it is a Foyer code, to a person who
+holds only what you would let anybody near the speaker do — *Arm*, say.
+Through Home Assistant Cloud they act as the Cloud's own account, which the
+*Users* page does not offer to link, so the exemption never reaches them
+there.
 
 </details>
 

@@ -973,23 +973,45 @@ Sì, e risponde Foyer, come ovunque. Che cosa chiede prima Home Assistant
 dipende da una sola cosa che Foyer gli dice: che per inserire serve un codice.
 Lo dice solo finché la tua politica chiede un codice per inserire e nessuno ha
 attivato l'esenzione qui sopra, perché Home Assistant rifiuterebbe chiunque non
-ne digiti uno, anche la persona esentata. Finché lo dice, la finestra a
-comparsa di Home Assistant e i pulsanti di inserimento di una card *Riquadro*
-chiedono il codice da sé. Appena qualcuno è esentato smettono di chiederlo:
-quella persona inserisce senza codice, e chiunque altro viene rifiutato da
-Foyer, con una riga nel registro e un messaggio che dice dove digitare il
-codice — la card *Pannello degli Allarmi* di Home Assistant, che mostra il
-campo del codice dovunque un codice possa essere chiesto, la card di Foyer, o
-il pannello.
+ne digiti uno, anche la persona esentata. Il pannello *Tutta la casa* lo dice
+solo quando ogni modalità che può ancora inserire chiede un codice: dove una
+modalità non ne chiede, Home Assistant rifiuterebbe anche quella. Finché lo
+dice, la finestra a comparsa di Home Assistant e i pulsanti di inserimento di
+una card *Mosaico* chiedono il codice da sé. Quando non lo dice — qualcuno è
+esentato, o le modalità non sono d'accordo — non lo chiedono: una persona
+esentata inserisce senza codice, e chiunque altro a cui Foyer chieda un codice
+viene rifiutato da Foyer, con una riga nel registro e un messaggio che dice
+dove digitarlo — la card di Foyer, il pannello, o la card *Pannello degli
+Allarmi* di Home Assistant, che mostra il campo del codice dovunque un codice
+possa essere chiesto ma offre l'inserimento solo finché il pannello è
+disinserito. Scegliere un'altra modalità con la casa già inserita è un cambio
+di scenario, che per impostazione predefinita chiede un codice anche dove
+inserire non lo chiede; la finestra a comparsa chiede un codice solo finché
+Foyer dice che per inserire ne serve uno, quindi dove lo chiede solo il cambio
+il codice si digita nella card di Foyer o nel pannello.
 
 Gli assistenti vocali leggono la stessa risposta. Ad Alexa un pannello viene
 offerto solo finché inserirlo non chiede un codice; Alexa non ne manda
 nessuno, e non aspetta la risposta di Foyer, quindi un rifiuto si vede solo
 nello stato del pannello e nel registro. Google Assistant chiede il suo PIN
-prima di inserire solo finché serve un codice, e in ogni caso manda il PIN
-salvato nella propria configurazione: se è il codice Foyer di qualcuno,
-l'inserimento è a suo nome; se non lo è, è un codice sbagliato, e conta per il
-blocco.
+prima di inserire solo finché serve un codice, e manda il PIN salvato nella
+propria configurazione, se ce n'è uno, che l'abbia chiesto o no: se è il
+codice Foyer di qualcuno, ciò che chiede viene fatto a suo nome; se non lo è,
+è un codice sbagliato, e conta per il blocco.
+
+Fai attenzione all'account con cui è collegato un assistente vocale, perché
+agisce come quell'account di Home Assistant per chiunque stia parlando.
+Collegato tramite l'account di una persona esentata, passa quell'esenzione a
+chiunque sia a portata di voce: inserire senza codice, e passare la casa a
+un'altra modalità, che disinserisce le aree inserite solo dalla modalità
+precedente. Un PIN di Google che è un codice Foyer fa lo stesso, e viene
+mandato senza che nessuno lo pronunci finché per inserire non serve un codice.
+Collega gli assistenti vocali con un account che non sia collegato a una
+persona esentata, e se il PIN di Google è un codice Foyer, dallo a una persona
+che abbia solo ciò che lasceresti fare a chiunque vicino all'altoparlante —
+*Inserire*, per esempio. Tramite Home Assistant Cloud agiscono come l'account
+del Cloud, che la pagina *Utenti* non propone di collegare, quindi lì
+l'esenzione non li raggiunge mai.
 
 </details>
 

@@ -105,6 +105,9 @@
     "panel_arm_code_required": {
       "message": "Per inserire serve un codice. Digitalo nella card Pannello degli Allarmi di Home Assistant, nella card di Foyer o nel pannello di Foyer."
     },
+    "panel_arm_code_required_not_disarmed": {
+      "message": "Per inserire serve un codice. Digitalo nella card di Foyer o nel pannello di Foyer."
+    },
     "rejected_zone_fault": {
       "message": "Impossibile inserire: zona in guasto: {zones}."
     },

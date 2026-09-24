@@ -19,7 +19,7 @@ from custom_components.foyer.const import DOMAIN
 
 from .conftest import MASTER, PANEL_ENTITY
 from .test_part2 import _ws
-from .test_phase2 import CODE, _config, _make_user, _me
+from .test_phase2 import CODE, OTHER, _config, _make_user, _me
 
 
 def _attrs(hass, entity_id: str) -> dict:
@@ -57,15 +57,34 @@ async def _arming_asks_a_code(hass, client) -> None:
     await _save(hass, client, "area", {**area, "require_code_to_arm": True})
 
 
-async def _arm(hass, entity_id: str, user_id: str | None, **data) -> None:
+async def _arm(
+    hass, entity_id: str, user_id: str | None, service: str = "alarm_arm_away", **data
+) -> None:
     await hass.services.async_call(
         "alarm_control_panel",
-        "alarm_arm_away",
+        service,
         {"entity_id": entity_id, **data},
         blocking=True,
         context=Context(user_id=user_id),
     )
     await hass.async_block_till_done()
+
+
+async def _home_mode(hass, client) -> None:
+    """A second scenario on the same area, armed as armed_home, asking
+    nothing of its own."""
+    away = (await _config(client))["scenarios"][0]
+    home = {
+        key: value
+        for key, value in away.items()
+        if key not in ("id", "require_code_to_arm", "require_code_to_disarm")
+    }
+    await _save(
+        hass,
+        client,
+        "scenario",
+        {**home, "name": "In casa", "ha_master_state": "armed_home"},
+    )
 
 
 async def _rows(hass, event_type: str) -> list[dict]:
@@ -212,6 +231,121 @@ async def test_a_disarm_keeps_the_message_every_other_path_gives(
     assert refused.value.translation_key == "rejected_code_required"
 
 
+async def test_a_disabled_exempt_person_exempts_nobody(
+    hass, hass_ws_client, loaded, hass_read_only_user
+):
+    """§13 says no *enabled* user: a disabled person cannot arm at all, so
+    their exemption must not stop Home Assistant asking everybody else."""
+    client = await hass_ws_client(hass)
+    await _make_user(hass, client, new_code=CODE, ha_user_id=await _me(client))
+    guest = await _make_user(
+        hass,
+        client,
+        name="Ospite",
+        new_code=OTHER,
+        ha_user_id=hass_read_only_user.id,
+        exempt=True,
+        enabled=False,
+        code=CODE,
+    )
+    await _arming_asks_a_code(hass, client)
+
+    for entity_id in (PANEL_ENTITY, MASTER):
+        assert _attrs(hass, entity_id)["code_arm_required"] is True
+
+    await _make_user(
+        hass,
+        client,
+        id=guest,
+        name="Ospite",
+        ha_user_id=hass_read_only_user.id,
+        exempt=True,
+        code=CODE,
+    )
+    for entity_id in (PANEL_ENTITY, MASTER):
+        assert _attrs(hass, entity_id)["code_arm_required"] is False
+
+
+# --- the master follows the house --------------------------------------------------
+
+
+async def test_a_change_of_mode_is_not_sent_to_the_alarm_panel_card(
+    hass, hass_ws_client, loaded
+):
+    """Home Assistant's alarm panel card offers arming only while the entity
+    is disarmed. With the house already armed, arming another mode from the
+    master is a change of scenario, which asks a code by default while
+    arming does not: the refusal names only the places that can take it."""
+    client = await hass_ws_client(hass)
+    me = await _me(client)
+    await _make_user(hass, client, new_code=CODE, ha_user_id=me)
+    await _home_mode(hass, client)
+
+    await _arm(hass, MASTER, me, "alarm_arm_home")
+    assert hass.states.get(MASTER).state == AlarmControlPanelState.ARMING
+    # Arming asks no code, so Home Assistant passes the change on.
+    assert _attrs(hass, MASTER)["code_arm_required"] is False
+
+    with pytest.raises(ServiceValidationError) as refused:
+        await _arm(hass, MASTER, me)
+    assert refused.value.translation_domain == DOMAIN
+    assert refused.value.translation_key == "panel_arm_code_required_not_disarmed"
+    rows = await _rows(hass, "arm_rejected")
+    assert [r["detail"]["reason"] for r in rows] == ["code_required"]
+
+    # With the code, from wherever it was typed, the change goes through.
+    await _arm(hass, MASTER, me, code=CODE)
+    away = hass.data[DOMAIN].config.scenarios[0]
+    assert hass.data[DOMAIN].state.active_scenario_id == away.id
+
+
+async def test_an_area_armed_on_its_own_no_longer_asks_through_the_master(
+    hass, hass_ws_client, loaded
+):
+    """Arming the scenario leaves an area already armed on its own as it is,
+    so that area's setting has no say: Foyer arms the rest with no code, and
+    Home Assistant must not refuse it first."""
+    client = await hass_ws_client(hass)
+    me = await _me(client)
+    await _make_user(hass, client, new_code=CODE, ha_user_id=me)
+    await _arming_asks_a_code(hass, client)
+    assert _attrs(hass, MASTER)["code_arm_required"] is True
+
+    await _arm(hass, PANEL_ENTITY, me, code=CODE)
+    assert hass.states.get(PANEL_ENTITY).state == AlarmControlPanelState.ARMING
+    assert _attrs(hass, MASTER)["code_arm_required"] is False
+
+    await _arm(hass, MASTER, me)
+    away = hass.data[DOMAIN].config.scenarios[0]
+    assert hass.data[DOMAIN].state.active_scenario_id == away.id
+    assert not await _rows(hass, "arm_rejected")
+
+
+async def test_a_running_mode_with_nothing_left_to_arm_has_no_say(
+    hass, hass_ws_client, loaded
+):
+    """Once In casa runs, arming it again is refused whatever the code, and
+    the only mode still to arm asks for one: Home Assistant's dialog and
+    tiles are told so, and ask."""
+    client = await hass_ws_client(hass)
+    me = await _me(client)
+    await _make_user(hass, client, new_code=CODE, ha_user_id=me)
+    away = (await _config(client))["scenarios"][0]
+    await _save(hass, client, "scenario", {**away, "require_code_to_arm": True})
+    await _home_mode(hass, client)
+    # In casa asks nothing: one answer for both modes cannot be "a code".
+    assert _attrs(hass, MASTER)["code_arm_required"] is False
+
+    await _arm(hass, MASTER, me, "alarm_arm_home")
+    assert _attrs(hass, MASTER)["code_arm_required"] is True
+
+    with pytest.raises(ServiceValidationError) as refused:
+        await _arm(hass, MASTER, me)
+    # Refused by Home Assistant itself, as Foyer would have refused it.
+    assert refused.value.translation_domain == "alarm_control_panel"
+    assert refused.value.translation_key == "code_arm_required"
+
+
 # --- the master reads every area and scenario -------------------------------------
 
 
@@ -272,3 +406,67 @@ async def test_the_master_asks_only_when_every_scenario_it_arms_asks(
     )
     await hass.async_block_till_done()
     assert hass.states.get(PANEL_ENTITY).state == AlarmControlPanelState.ARMING
+
+
+async def test_the_master_offers_a_field_where_only_an_area_asks(
+    hass, hass_ws_client, loaded
+):
+    """An area in no scenario is disarmed by the master's disarm, on its own
+    terms: its setting alone has to draw the master's field."""
+    client = await hass_ws_client(hass)
+    await _make_user(hass, client, new_code=CODE, ha_user_id=await _me(client))
+    await _policy(hass, client, arm=False, disarm=False)
+    assert _attrs(hass, MASTER)["code_format"] is None
+
+    await _save(
+        hass,
+        client,
+        "area",
+        {
+            "name": "Garage",
+            "ha_state_when_armed": "armed_away",
+            "require_code_to_disarm": True,
+        },
+    )
+
+    assert _attrs(hass, MASTER)["code_format"] == "number"
+    assert _attrs(hass, "alarm_control_panel.foyer_garage")["code_format"] == "number"
+    assert _attrs(hass, PANEL_ENTITY)["code_format"] is None
+
+
+async def test_an_area_panel_offers_a_field_for_the_scenario_that_armed_it(
+    hass, hass_ws_client, loaded
+):
+    """The area's disarm hears the scenario that armed it (§8.2). Home
+    Assistant's dialog asks for a disarm code only while there is a field, so
+    without one no Home Assistant screen could disarm this area."""
+    client = await hass_ws_client(hass)
+    me = await _me(client)
+    await _make_user(hass, client, new_code=CODE, ha_user_id=me)
+    await _policy(hass, client, arm=False, disarm=False)
+    assert _attrs(hass, PANEL_ENTITY)["code_format"] is None
+
+    away = (await _config(client))["scenarios"][0]
+    await _save(hass, client, "scenario", {**away, "require_code_to_disarm": True})
+    assert _attrs(hass, PANEL_ENTITY)["code_format"] == "number"
+
+    await _arm(hass, MASTER, me)
+    with pytest.raises(ServiceValidationError) as refused:
+        await hass.services.async_call(
+            "alarm_control_panel",
+            "alarm_disarm",
+            {"entity_id": PANEL_ENTITY},
+            blocking=True,
+            context=Context(user_id=me),
+        )
+    assert refused.value.translation_key == "rejected_code_required"
+
+    await hass.services.async_call(
+        "alarm_control_panel",
+        "alarm_disarm",
+        {"entity_id": PANEL_ENTITY, "code": CODE},
+        blocking=True,
+        context=Context(user_id=me),
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get(PANEL_ENTITY).state == AlarmControlPanelState.DISARMED

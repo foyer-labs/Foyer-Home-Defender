@@ -59,6 +59,8 @@ _NOT_ARMED: dict[AreaState, AlarmControlPanelState] = {
 
 # One request as §8.2 resolves it: the areas it acts on, and its scenario.
 _Target = tuple[tuple[Area, ...], Scenario | None]
+# One request the policy may ask a code for: the operation, and its target.
+_Reading = tuple[Operation, _Target]
 
 
 def _armable(scenarios: tuple[Scenario, ...]) -> list[Scenario]:
@@ -107,9 +109,7 @@ class _Panel(FoyerEntity, AlarmControlPanelEntity):
     @property
     def code_format(self) -> CodeFormat | None:
         wants = any(
-            self._asks(operation, target)
-            for operation in (Operation.ARM, Operation.DISARM)
-            for target in self._readings()
+            self._asks(operation, target) for operation, target in self._readings()
         )
         return CodeFormat.NUMBER if wants else None
 
@@ -139,23 +139,30 @@ class _Panel(FoyerEntity, AlarmControlPanelEntity):
         """What this entity's arm actions arm, one request each."""
         raise NotImplementedError
 
-    def _readings(self) -> list[_Target]:
+    def _readings(self) -> list[_Reading]:
         """Every request of this entity that the policy may ask a code for."""
         raise NotImplementedError
+
+    def _where_to_type(self) -> str:
+        """The message for an arming refused for want of a code."""
+        return "panel_arm_code_required"
 
     async def _actor(self, code: str | None) -> Actor:
         return await actor_of(self.hass, self._system, self._context, code)
 
     async def _run(self, event: Any, *, arming: bool = False) -> None:
+        # Read before the request: where a code can be typed depends on the
+        # state the arming was refused in.
+        key = self._where_to_type() if arming else None
         decision = await self._system.async_handle(event)
-        if arming and not decision.accepted and decision.reason is Reason.CODE_REQUIRED:
+        if key and not decision.accepted and decision.reason is Reason.CODE_REQUIRED:
             # Home Assistant's dialog and tiles ask for a code to arm only
             # while code_arm_required is true, and it is false once anybody
             # is exempt: without this the person is told a code is needed
             # and not where it can be typed (§13).
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
-                translation_key="panel_arm_code_required",
+                translation_key=key,
             )
         raise_if_rejected(self._system, decision)
 
@@ -203,8 +210,24 @@ class FoyerAreaPanel(_Panel):
     def _arms(self) -> list[_Target]:
         return [((self._area,), None)]
 
-    def _readings(self) -> list[_Target]:
-        return self._arms()
+    def _readings(self) -> list[_Reading]:
+        # Its arm is the area's alone, but its disarm also hears the
+        # scenario that armed the area (§8.2): a scenario asking a code to
+        # disarm where the area and the policy ask none had no field here,
+        # and nowhere in Home Assistant to type the code it was refused for.
+        # Every scenario the area is in is read, whichever armed it: the
+        # field may be drawn where no code is asked, never missing where one
+        # is.
+        area = (self._area,)
+        return [
+            (Operation.ARM, (area, None)),
+            (Operation.DISARM, (area, None)),
+            *(
+                (Operation.DISARM, (area, scenario))
+                for scenario in self._system.config.scenarios
+                if self._area.id in scenario.areas
+            ),
+        ]
 
     async def _arm(self, code: str | None) -> None:
         await self._run(
@@ -273,28 +296,62 @@ class FoyerMasterPanel(_Panel):
         }
 
     def _arms(self) -> list[_Target]:
-        # Every scenario it can arm, each with its own areas. All of them
-        # must ask for a code before Home Assistant is told arming needs
-        # one: a mode whose scenario asks none would otherwise be refused by
-        # Home Assistant, an automation arming it included, where Foyer
-        # would have armed it.
+        # Every scenario it can arm, each with the areas the engine would
+        # arm now: those still disarmed. All of them must ask for a code
+        # before Home Assistant is told arming needs one: a mode whose
+        # arming asks none would otherwise be refused by Home Assistant, an
+        # automation arming it included, where Foyer would have armed it.
+        # That holds for a garage asking a code that is already armed on its
+        # own: arming the scenario leaves it as it is, so its setting has no
+        # say. A running scenario with nothing left to arm is refused
+        # whatever the code, so it has no say either. The answer is written
+        # again on every change of state, so it follows the house.
         config = self._system.config
-        return [
-            (self._areas_of(scenario), scenario)
-            for scenario in _armable(config.scenarios)
-        ]
+        state = self._system.state
+        targets: list[_Target] = []
+        for scenario in _armable(config.scenarios):
+            to_arm = tuple(
+                area
+                for area in self._areas_of(scenario)
+                if state.area(area.id).state is AreaState.DISARMED
+            )
+            if scenario.id == state.active_scenario_id and not to_arm:
+                continue
+            targets.append((to_arm, scenario))
+        return targets
 
-    def _readings(self) -> list[_Target]:
+    def _readings(self) -> list[_Reading]:
         # Every area and every scenario as well as the installation's
         # policy: read from the policy alone, a house where only an area or
         # a scenario asks for a code had no field on the master's card, and
         # nowhere there to type the code it was then refused for.
+        #
+        # A change of scenario is not read. It is asked only while the
+        # master is not disarmed, when the alarm panel card offers no
+        # arming, and Home Assistant's dialog asks for an arming code by
+        # code_arm_required, not by this: a field for it would carry that
+        # code nowhere, and would have the dialog ask for a disarm code in a
+        # house whose policy asks none.
         config = self._system.config
-        return [
+        targets: list[_Target] = [
             ((), None),
             *(((area,), None) for area in config.areas),
             *((self._areas_of(s), s) for s in config.scenarios),
         ]
+        return [
+            (operation, target)
+            for target in targets
+            for operation in (Operation.ARM, Operation.DISARM)
+        ]
+
+    def _where_to_type(self) -> str:
+        # Home Assistant's alarm panel card offers arming only while the
+        # entity is disarmed; an armed or arming master shows it Disarm and
+        # nothing else, so it cannot take this code. Only Foyer's card and
+        # the panel can, a change of scenario included.
+        if self._system.master()[0] is AreaState.DISARMED:
+            return "panel_arm_code_required"
+        return "panel_arm_code_required_not_disarmed"
 
     def _areas_of(self, scenario: Scenario) -> tuple[Area, ...]:
         config = self._system.config

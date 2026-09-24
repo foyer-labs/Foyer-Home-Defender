@@ -105,6 +105,9 @@
     "panel_arm_code_required": {
       "message": "A code is required to arm. Type it in Home Assistant's Alarm panel card, in Foyer's card or in the Foyer panel."
     },
+    "panel_arm_code_required_not_disarmed": {
+      "message": "A code is required to arm. Type it in Foyer's card or in the Foyer panel."
+    },
     "rejected_zone_fault": {
       "message": "Cannot arm: zone in fault: {zones}."
     },
