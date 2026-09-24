@@ -10,9 +10,7 @@ from .helpers import World, make_house, user
 
 
 def _house():
-    config = replace(
-        make_house(), users=(user("luca", "Luca"), user("guest", "Guest"))
-    )
+    config = replace(make_house(), users=(user("luca", "Luca"), user("guest", "Guest")))
     return replace(
         config,
         scenarios=tuple(

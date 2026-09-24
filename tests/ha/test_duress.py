@@ -161,9 +161,7 @@ async def test_switching_the_security_log_off_does_not_silence_it(hass, house):
     hass.bus.async_listen("foyer_event", listen)
     await _ws(house.client, {"type": "foyer/config/export", "code": DURESS})
     await hass.async_block_till_done()
-    assert [e["event_type"] for e in heard if e["event_type"] == "duress"] == [
-        "duress"
-    ]
+    assert [e["event_type"] for e in heard if e["event_type"] == "duress"] == ["duress"]
 
 
 async def test_a_log_emptied_under_it_keeps_its_duress_row(hass, house):
