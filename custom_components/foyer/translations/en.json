@@ -632,7 +632,7 @@
         "step": {
           "confirm": {
             "title": "Mark as seen",
-            "description": "Not one ping has succeeded since it was switched on. Almost always a mistyped URL or an endpoint that was never created. Last error: {error}. Until it works, nothing outside the house knows whether Home Assistant is still alive.\n\nConfirming closes this notice. It comes back if the problem returns."
+            "description": "Not one ping has succeeded since it was switched on. Almost always a mistyped URL or an endpoint that was never created. Foyer does not show the saved URL, so there is nothing to check it against: type it again on the System health page. Last error: {error}. Until it works, nothing outside the house knows whether Home Assistant is still alive.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
         }
       }

@@ -264,7 +264,8 @@
     "armed_setting": "{field}: un'area è inserita, e la casa mantiene ciò con cui è stata inserita. Disinserisci prima tutte le aree.",
     "profile_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere resta com'era all'inserimento. Disinserisci prima di modificare questo.",
     "contact_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere avvisa questo contatto: non si può modificare, disattivare né eliminare finché non disinserisci.",
-    "last_usable_code": "Un'area è inserita e nessuno resterebbe con un codice valido, il che spegne la politica dei codici. Dai prima un codice a qualcun altro, oppure disinserisci."
+    "last_usable_code": "Un'area è inserita e nessuno resterebbe con un codice valido, il che spegne la politica dei codici. Dai prima un codice a qualcun altro, oppure disinserisci.",
+    "watchdog_url_invalid": "L'URL del watchdog deve iniziare con http:// o https://."
   },
   "field": {
     "name": "Nome",
@@ -414,7 +415,10 @@
     "exclude_open_zones": "Inserisci comunque, escludendo le zone aperte",
     "allow_auto_disarm": "Permetti alle regole di disinserire",
     "code_policy": "Politica dei codici",
-    "radios": "Radio"
+    "radios": "Radio",
+    "ack_webhook_id": "Indirizzo del webhook di presa d'atto",
+    "watchdog": "Watchdog",
+    "watchdog_url": "URL del watchdog"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -2611,7 +2615,7 @@
     "webhook_once": "L'indirizzo, mostrato questa sola volta",
     "webhook_once_hint": "Copialo adesso nel provider vocale. Foyer non può mostrarlo di nuovo; se va perso, generane uno nuovo.",
     "webhook_path_hint": "Home Assistant non conosce un indirizzo esterno, quindi questo è solo il percorso: mettici davanti l'indirizzo con cui il tuo Home Assistant si raggiunge da internet.",
-    "webhook_exists": "Il webhook è attivo. Il suo indirizzo non può essere mostrato di nuovo: uno nuovo lo sostituisce subito.",
+    "webhook_exists": "Il webhook è attivo. Il suo indirizzo non può essere mostrato di nuovo. Se ti serve, genera un nuovo indirizzo: quello vecchio smette subito di funzionare.",
     "webhook_regenerate": "Genera un nuovo indirizzo",
     "webhook_confirm": "L'indirizzo che ha il provider vocale smette subito di funzionare, e dovrai dargli quello nuovo.",
     "webhook_copy": "Copia",
@@ -2800,7 +2804,7 @@
     "no_zones": "Nessuna zona",
     "last_result": "Ultimo esito",
     "url_set_placeholder": "Impostato — scrivi un nuovo URL per sostituirlo",
-    "url_set_hint": "Un URL è salvato. Foyer non lo mostra più, perché chi lo possiede può tenere il controllo verde per sempre; lascia vuoto per tenerlo.",
+    "url_set_hint": "C'è un URL salvato. Foyer non lo mostra più, perché chi lo possiede può tenere verde il controllo per sempre. Lascia il campo vuoto per mantenerlo, o scrivi di nuovo l'URL intero per correggerlo.",
     "radios_armed": "Un'area è inserita: radio e soglie restano come sono finché tutte le aree non sono disinserite. Rete elettrica, watchdog e controlli dei canali si possono ancora cambiare."
   },
   "images": {

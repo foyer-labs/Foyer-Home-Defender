@@ -150,7 +150,8 @@ call would go out either. The watchdog failing is the earliest warning you get
 that the alarm has gone deaf.
 
 "It has never worked" is reported as a different thing from "it has stopped
-working", because it is almost always a mistyped URL.
+working", because it is almost always a mistyped URL. Foyer cannot show you the
+saved URL to check it (see below), so the remedy is to type it again on page 14.
 
 ### The URL is a credential
 
@@ -160,8 +161,11 @@ shows it again — not on page 14, not in the configuration any page reads, not
 in a backup or the diagnostics download. Page 14 says only that a URL is set,
 and to change it you type a new one over it. Saving the page with the field
 left empty keeps the one stored, and so does switching the watchdog off:
-switching it back on needs nothing typed again. If the watchdog cannot be
-reached, the error it reports is stored with the URL taken out of it.
+switching it back on needs nothing typed again. Because nobody can read it
+back to spot a mistake, a URL that does not start with `http://` or
+`https://` is refused as it is typed, with the watchdog on or off. If the
+watchdog cannot be reached, the error it reports is stored with the URL taken
+out of it — its host included, which some services put the token in.
 
 ### Two limits, stated so they do not arrive as surprises
 

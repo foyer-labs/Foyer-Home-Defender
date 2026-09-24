@@ -748,11 +748,10 @@ class FoyerPageLog extends LitElement {
   ): string[] {
     // Rows written before values were recorded carry a list of field names.
     if (Array.isArray(fields)) {
-      return fields.map((field) => `${prefix} · ${t(s, `field.${field}`)}`);
+      return fields.map((field) => `${prefix} · ${this._fieldLabel(s, field)}`);
     }
     return Object.entries(fields).map(([field, pair]) => {
-      const name = t(s, `field.${field}`);
-      const label = name.startsWith("field.") ? field : name;
+      const label = this._fieldLabel(s, field);
       if (Array.isArray(pair) && pair.length === 2) {
         return `${prefix} · ${label}: ${this._value(s, pair[0])} → ${this._value(
           s,
@@ -761,6 +760,14 @@ class FoyerPageLog extends LitElement {
       }
       return `${prefix} · ${label}: ${t(s, "log.changed")}`;
     });
+  }
+
+  private _fieldLabel(s: Strings, field: string): string {
+    // A field inside a block is written with a dot ("watchdog.url"), which
+    // t() would read as a path into the strings: its label is kept flat,
+    // under an underscore, so "watchdog" can have one of its own.
+    const name = t(s, `field.${field.replace(/\./g, "_")}`);
+    return name.startsWith("field.") ? field : name;
   }
 
   private _value(s: Strings, value: unknown): string {

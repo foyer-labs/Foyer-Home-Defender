@@ -294,6 +294,36 @@ def test_the_url_is_taken_out_of_an_error_in_every_form_it_comes_back_in():
     assert _without_url("Timeout at /", "https://hc-ping.example") == "Timeout at /"
 
 
+def test_a_token_in_the_host_is_taken_out_of_a_connection_error():
+    """A DNS, connection or TLS failure quotes host and port alone, and some
+    endpoints carry the token there. This is aiohttp's own message for a
+    host that does not resolve, lower-cased as yarl gives it."""
+    typed = "https://EO1SECRETTOKEN42.m.pipedream.example/"
+    message = (
+        "ClientConnectorDNSError: Cannot connect to host "
+        "eo1secrettoken42.m.pipedream.example:443 ssl:default "
+        "[Domain name not found]"
+    )
+    cleaned = _without_url(message, typed)
+    assert "secrettoken42" not in cleaned.lower()
+    # What says why is still there.
+    assert cleaned == (
+        "ClientConnectorDNSError: Cannot connect to host <host>:443 ssl:default "
+        "[Domain name not found]"
+    )
+    # A host that is a piece of a longer name leaves that name alone.
+    assert (
+        _without_url("redirected to ping.example.org", "https://ping.example/x")
+        == "redirected to ping.example.org"
+    )
+    # An internationalised host goes in both of its spellings.
+    accented = "https://gestión.example/abc"
+    for host in ("gestión.example", URL(accented).raw_host):
+        assert _without_url(f"cannot reach {host}:443", accented) == (
+            "cannot reach <host>:443"
+        )
+
+
 async def test_a_ping_error_in_the_normalised_form_is_stored_without_it(
     hass, loaded, hass_ws_client, aioclient_mock
 ):

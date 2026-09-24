@@ -8811,10 +8811,14 @@ var X = 50, vn = class extends j {
 		return r;
 	}
 	_fieldLines(e, t, n) {
-		return Array.isArray(n) ? n.map((n) => `${t} · ${N(e, `field.${n}`)}`) : Object.entries(n).map(([n, r]) => {
-			let i = N(e, `field.${n}`), a = i.startsWith("field.") ? n : i;
-			return Array.isArray(r) && r.length === 2 ? `${t} · ${a}: ${this._value(e, r[0])} → ${this._value(e, r[1])}` : `${t} · ${a}: ${N(e, "log.changed")}`;
+		return Array.isArray(n) ? n.map((n) => `${t} · ${this._fieldLabel(e, n)}`) : Object.entries(n).map(([n, r]) => {
+			let i = this._fieldLabel(e, n);
+			return Array.isArray(r) && r.length === 2 ? `${t} · ${i}: ${this._value(e, r[0])} → ${this._value(e, r[1])}` : `${t} · ${i}: ${N(e, "log.changed")}`;
 		});
+	}
+	_fieldLabel(e, t) {
+		let n = N(e, `field.${t.replace(/\./g, "_")}`);
+		return n.startsWith("field.") ? t : n;
 	}
 	_value(e, t) {
 		return t == null || t === "" ? "—" : typeof t == "boolean" ? N(e, t ? "common.yes" : "common.no") : Array.isArray(t) ? t.length ? t.map((t) => this._value(e, t)).join(", ") : "—" : String(t);

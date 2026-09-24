@@ -316,6 +316,31 @@ def test_every_problem_and_reason_the_backend_returns_is_translated():
         assert {r.value for r in Reason} <= panel["reason"].keys()
 
 
+def test_every_credential_a_config_row_names_has_a_label():
+    """config_diff puts a changed credential back by name alone (§9.2.1), and
+    for the webhook's new_webhook and forget_webhook rows that name is all
+    the row says. Page 10 labels a field inside a block ("watchdog.url")
+    under an underscore; without one it prints the key in every language."""
+    text = (ROOT / "custom_components" / "foyer" / "store" / "editing.py").read_text(
+        encoding="utf-8"
+    )
+    fields = set(
+        re.findall(
+            r"""changes\.setdefault\(\s*"\w+",\s*\{\}\s*\)\[\s*"([\w.]+)"\]""", text
+        )
+    )
+    assert {"ack_webhook_id", "watchdog.url"} <= fields
+    for language in LANGUAGES:
+        labels = load(TRANSLATIONS / "panel", language)["field"]
+        for field in fields:
+            assert isinstance(labels.get(field.replace(".", "_")), str), (
+                language,
+                field,
+            )
+        # And the block it sits in, which the same row names beside it.
+        assert isinstance(labels.get("watchdog"), str), language
+
+
 def test_every_setting_an_armed_house_keeps_has_a_label():
     """The armed guard names its fields from a table (SPEC §15.1), which the
     search for literal Problem(...) calls above cannot see. Each needs a

@@ -264,7 +264,8 @@
     "armed_setting": "{field}: an area is armed, and the house keeps what it was armed with. Disarm every area first.",
     "profile_armed": "While an area is armed, a profile the house could answer with keeps what it was armed with. Disarm before changing this one.",
     "contact_armed": "While an area is armed, a profile the house could answer with notifies this contact: it cannot be changed, switched off or deleted until you disarm.",
-    "last_usable_code": "An area is armed, and this would leave nobody with a usable code, which switches the code policy off. Give somebody else a code first, or disarm."
+    "last_usable_code": "An area is armed, and this would leave nobody with a usable code, which switches the code policy off. Give somebody else a code first, or disarm.",
+    "watchdog_url_invalid": "The watchdog URL has to start with http:// or https://."
   },
   "field": {
     "name": "Name",
@@ -414,7 +415,10 @@
     "exclude_open_zones": "Arm anyway, excluding open zones",
     "allow_auto_disarm": "Allow rules to disarm",
     "code_policy": "Code policy",
-    "radios": "Radios"
+    "radios": "Radios",
+    "ack_webhook_id": "Acknowledgement webhook address",
+    "watchdog": "Watchdog",
+    "watchdog_url": "Watchdog URL"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -2611,7 +2615,7 @@
     "webhook_once": "The address, shown this once",
     "webhook_once_hint": "Copy it into the voice provider now. Foyer cannot show it again; if it is lost, generate a new one.",
     "webhook_path_hint": "Home Assistant knows no external address, so this is the path alone: put in front of it the address your Home Assistant is reached at from the internet.",
-    "webhook_exists": "The webhook is on. Its address cannot be shown again: a new one replaces it at once.",
+    "webhook_exists": "The webhook is on. Its address cannot be shown again. If you need it, generate a new address: the old one stops working at once.",
     "webhook_regenerate": "Generate a new address",
     "webhook_confirm": "The address the voice provider holds stops working at once, and it will need the new one.",
     "webhook_copy": "Copy",
@@ -2800,7 +2804,7 @@
     "no_zones": "No zones on it",
     "last_result": "Last result",
     "url_set_placeholder": "Set — type a new URL to replace it",
-    "url_set_hint": "A URL is saved. Foyer never shows it again, because whoever holds it can keep the check green for ever; leave this empty to keep it.",
+    "url_set_hint": "A URL is saved. Foyer never shows it again, because whoever holds it can keep the check green for ever. Leave the field empty to keep it, or type the whole URL again to correct it.",
     "radios_armed": "An area is armed: the radios and the thresholds keep their values until every area is disarmed. The mains, the watchdog and the channel checks can still be changed."
   },
   "images": {

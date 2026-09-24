@@ -1115,6 +1115,11 @@ def _group_problems(
     return problems
 
 
+def watchdog_url_valid(url: str) -> bool:
+    """Whether a watchdog URL is one Foyer can ping (§12.3): http or https."""
+    return url.startswith(("http://", "https://"))
+
+
 def _health_problems(config: FoyerConfig) -> list[Problem]:
     """System health (§12): the mains entity, the watchdog and the radios.
 
@@ -1139,7 +1144,7 @@ def _health_problems(config: FoyerConfig) -> list[Problem]:
         add("mains_states_required", "mains_lost_states")
 
     watchdog = health.watchdog
-    if watchdog.enabled and not watchdog.url.startswith(("http://", "https://")):
+    if watchdog.enabled and not watchdog_url_valid(watchdog.url):
         add("watchdog_url_required", "url")
     if not _in_range(watchdog.interval, MIN_WATCHDOG_INTERVAL, MAX_WATCHDOG_INTERVAL):
         add("health_out_of_range", "interval")

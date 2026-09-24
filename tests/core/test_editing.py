@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import itertools
 
+import pytest
+
 from custom_components.foyer.core.models import (
     Channel,
     EntryMode,
@@ -497,6 +499,46 @@ def test_a_watchdog_switched_on_with_no_url_anywhere_is_still_refused(config):
     result = update_health(config, RuntimeState(), _panel_health(config, enabled=True))
     assert result.config is None
     assert result.problems[0].code == "watchdog_url_required"
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+@pytest.mark.parametrize("typed", ["hc-ping.com/9f8c-uuid", "ftp://x.example/", 42])
+def test_a_malformed_url_is_refused_when_typed_even_with_the_watchdog_off(
+    config, enabled, typed
+):
+    """Nobody can read it back to see what is wrong with it: kept while the
+    watchdog is off, it would come back as "a switched-on watchdog needs a
+    URL" beside a page saying one is set. The stored one stays."""
+    from custom_components.foyer.store.editing import update_health
+
+    config = _watched(config)
+    result = update_health(
+        config, RuntimeState(), _panel_health(config, enabled=enabled, url=typed)
+    )
+    assert result.config is None
+    assert [(p.code, p.field) for p in result.problems] == [
+        ("watchdog_url_invalid", "url")
+    ]
+
+
+def test_a_malformed_url_already_stored_blocks_no_other_edit(config):
+    """Only what is typed now is refused: a stored one, saved with the
+    watchdog off before the rule existed, must not lock the page."""
+    from dataclasses import replace
+
+    from custom_components.foyer.core.models import WatchdogSettings
+    from custom_components.foyer.store.editing import update_health
+
+    config = replace(
+        config,
+        health=replace(
+            config.health,
+            watchdog=WatchdogSettings(enabled=False, url="hc-ping.com/uuid"),
+        ),
+    )
+    result = update_health(config, RuntimeState(), _panel_health(config, interval=600))
+    assert result.config is not None, result.problems
+    assert result.config.health.watchdog.url == "hc-ping.com/uuid"
 
 
 def test_a_watchdog_block_that_is_not_a_map_is_refused_not_a_traceback(config):

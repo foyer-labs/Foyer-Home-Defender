@@ -13,6 +13,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from datetime import datetime, timedelta
 import logging
+import re
 from typing import Any
 
 from aiohttp import ClientError, ClientTimeout
@@ -147,8 +148,14 @@ def _without_url(error: str, url: str) -> str:
     healthchecks.io or Uptime Kuma token lives. The error reaches page 14,
     the log row and the repair issue, all of them read without the code
     that setting the URL needed.
+
+    And the host on its own: a connection, DNS or TLS failure quotes only
+    host and port, and some endpoints carry the token there — a
+    Pipedream-style `<token>.m.pipedream.net`, a self-hosted catch-all. What
+    is left, the error's class and the resolver's reason, is what says why.
     """
     forms = {url}
+    hosts: set[str] = set()
     try:
         parsed = URL(url)
     except (TypeError, ValueError):
@@ -162,10 +169,21 @@ def _without_url(error: str, url: str) -> str:
             for tail in (parsed.raw_path_qs, parsed.path_qs)
             if tail and tail != "/"
         }
+        # As Unicode and as IDNA, for a host typed with accents.
+        hosts = {host for host in (parsed.host, parsed.raw_host) if host}
     # Longest first, so the whole URL goes as one "<url>" before its path is
     # looked for in what is left.
     for form in sorted(forms, key=len, reverse=True):
         error = error.replace(form, "<url>")
+    for host in sorted(hosts, key=len, reverse=True):
+        # In any case, since yarl lower-cases what was typed; and whole, so a
+        # host that is a piece of a longer name leaves that name alone.
+        error = re.sub(
+            rf"(?<![\w.-]){re.escape(host)}(?![\w-]|\.\w)",
+            "<host>",
+            error,
+            flags=re.IGNORECASE,
+        )
     return error
 
 

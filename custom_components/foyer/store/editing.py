@@ -38,7 +38,13 @@ from ..core.privacy import (
     MIN_PSEUDONYMISE_DAYS,
     new_pseudonym,
 )
-from ..core.validation import Problem, edit_conflicts, notify_contacts, validate
+from ..core.validation import (
+    Problem,
+    edit_conflicts,
+    notify_contacts,
+    validate,
+    watchdog_url_valid,
+)
 from .schema import (
     ConfigError,
     area_from_dict,
@@ -987,7 +993,15 @@ def update_health(
         # Not left to health_from_dict: it would read null as the string
         # "None", which is a URL that is set and pings nothing.
         watchdog["url"] = config.health.watchdog.url
-    elif isinstance(url, str):
+    elif not isinstance(url, str) or not watchdog_url_valid(url.strip()):
+        # Refused whether the watchdog is on or off, where validate() asks
+        # only of one switched on: nobody can read the URL back to see what
+        # is wrong with it, so a malformed one kept while it is off would
+        # surface later as "a switched-on watchdog needs a URL", beside a
+        # page saying one is set. Only what is typed now: refusing a stored
+        # one would block every edit of the configuration.
+        return _fail(Problem("watchdog_url_invalid", "health", None, "url"))
+    else:
         watchdog["url"] = url.strip()
     try:
         new = replace(config, health=health_from_dict({**health, "watchdog": watchdog}))

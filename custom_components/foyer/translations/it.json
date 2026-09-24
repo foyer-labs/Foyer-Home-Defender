@@ -632,7 +632,7 @@
         "step": {
           "confirm": {
             "title": "Segna come visto",
-            "description": "Da quando è stato attivato non è riuscito nemmeno un ping. Quasi sempre un URL sbagliato o un endpoint mai creato. Ultimo errore: {error}. Finché non funziona, niente fuori casa sa se Home Assistant è ancora attivo.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
+            "description": "Da quando è stato attivato non è riuscito nemmeno un ping. Quasi sempre un URL sbagliato o un endpoint mai creato. Foyer non mostra l'URL salvato, quindi non c'è niente da controllare: scrivilo di nuovo nella pagina Stato del sistema. Ultimo errore: {error}. Finché non funziona, niente fuori casa sa se Home Assistant è ancora attivo.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
         }
       }
