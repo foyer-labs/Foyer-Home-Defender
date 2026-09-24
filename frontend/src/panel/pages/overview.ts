@@ -433,7 +433,11 @@ class FoyerPageOverview extends LitElement {
         ?disabled=${this._busy}
         @click=${() => this._arm({ scenario_id: scenario.id })}
       >
-        ${scenario.require_code.arm
+        ${(
+          status.active_scenario_id && !active
+            ? (scenario.require_code.change ?? scenario.require_code.arm)
+            : scenario.require_code.arm
+        )
           ? html`<ha-icon
               icon="mdi:lock-outline"
               title=${t(s, "overview.code_needed")}

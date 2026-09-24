@@ -2074,7 +2074,17 @@ class FoyerSystem:
                     "icon": s.icon,
                     "areas": list(s.areas),
                     "ha_master_state": s.ha_master_state,
-                    "require_code": self._require_code(scenario=s, user=me, now=now),
+                    "require_code": {
+                        **self._require_code(scenario=s, user=me, now=now),
+                        # Choosing it while another runs is a change of
+                        # scenario, which asks by its own entry (§8.2).
+                        "change": self._require_code(
+                            scenario=s,
+                            user=me,
+                            now=now,
+                            operation=Operation.CHANGE_SCENARIO,
+                        ),
+                    },
                 }
                 for s in self.config.scenarios
             ],

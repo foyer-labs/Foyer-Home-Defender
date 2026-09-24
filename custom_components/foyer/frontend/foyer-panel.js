@@ -1273,7 +1273,7 @@ var Qe = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), $e = class extend
         ?disabled=${this._busy}
         @click=${() => this._arm({ scenario_id: t.id })}
       >
-        ${t.require_code.arm ? w`<ha-icon
+        ${(n.active_scenario_id && !r ? t.require_code.change ?? t.require_code.arm : t.require_code.arm) ? w`<ha-icon
               icon="mdi:lock-outline"
               title=${N(e, "overview.code_needed")}
               aria-label=${N(e, "overview.code_needed")}

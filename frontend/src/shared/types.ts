@@ -110,7 +110,8 @@ export interface StatusScenario {
   icon: string | null;
   areas: string[];
   ha_master_state: string;
-  require_code: { arm: boolean; disarm: boolean };
+  /** `change`: choosing it while another scenario runs (§8.2). */
+  require_code: { arm: boolean; disarm: boolean; change?: boolean };
 }
 
 /** What the connected user needs to know about codes (SPEC §8.2, §8.4). */
