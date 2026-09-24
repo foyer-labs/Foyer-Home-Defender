@@ -231,11 +231,12 @@ good result for the money, on a house that is already smart.
 - **An armed house keeps the answer it was armed with.** While any area is
   armed, the siren time, the delays, the profiles it could answer with and
   the contacts they call, the code policy and the lockout, whether a rule may
-  disarm and the radio thresholds cannot be changed: disarm first. Who may
-  command the house stays editable: a guest's code, a lost phone's rule or a
-  keypad's token can be taken away from anywhere, whatever is armed — except
-  the last code anybody can use, because with none the code policy switches
-  itself off.
+  disarm, and the radios and their thresholds cannot be changed: disarm
+  first. Who may command the house stays editable: a guest's code, a lost
+  phone's rule or a keypad's token can be taken away from anywhere, whatever
+  is armed — except the last code anybody can use, or a validity window that
+  would end it sooner, because with none the code policy switches itself
+  off.
 - **`skip_exit_delay`**, for the last person out who is already outside. It
   needs no permission of its own, and it is recorded on the arming row, because
   it turns every delayed zone into an instant one.

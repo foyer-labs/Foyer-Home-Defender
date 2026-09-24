@@ -264,7 +264,7 @@
     "armed_setting": "{field}: an area is armed, and the house keeps what it was armed with. Disarm every area first.",
     "profile_armed": "While an area is armed, a profile the house could answer with keeps what it was armed with. Disarm before changing this one.",
     "contact_armed": "While an area is armed, a profile the house could answer with notifies this contact: it cannot be changed, switched off or deleted until you disarm.",
-    "last_usable_code": "An area is armed, and this would leave nobody with a usable code, which switches the code policy off. Give somebody else a code first, or disarm.",
+    "last_usable_code": "An area is armed, and this would leave nobody with a usable code, now or sooner than before when a validity period ends, which switches the code policy off. Give somebody else a code first, or disarm.",
     "watchdog_url_invalid": "The watchdog URL has to start with http:// or https://."
   },
   "field": {

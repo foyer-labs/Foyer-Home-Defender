@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 import re
 
 from .clock import parse_hhmm
@@ -95,7 +95,6 @@ from .models import (
     StateCondition,
     StateTrigger,
     TimeCondition,
-    User,
     Zone,
 )
 from .privacy import MAX_PSEUDONYMISE_DAYS, MIN_PSEUDONYMISE_DAYS
@@ -1419,7 +1418,8 @@ def edit_conflicts(
     code from abroad, or the recovery of §8.2, is the edit an armed house
     needs most. The one refusal among them is an edit that leaves nobody
     with a usable code, because the policy then switches itself off
-    (decision 78) — the policy changed by another route. ``now`` is what
+    (decision 78) — the policy changed by another route, whether at once or
+    when a validity window shortened by the edit ends. ``now`` is what
     "usable" is read at; without it a validity window is not read, and the
     rule falls back to enabled people holding a code.
 
@@ -1523,14 +1523,38 @@ def edit_conflicts(
                 )
             )
 
-    def usable(user: User) -> bool:
-        if now is None:
-            return user.enabled and bool(user.code_hash)
-        return user.usable(now)
-
-    if any(usable(u) for u in old.users) and not any(usable(u) for u in new.users):
+    if now is None:
+        if any(u.enabled and u.code_hash for u in old.users) and not any(
+            u.enabled and u.code_hash for u in new.users
+        ):
+            problems.append(Problem("last_usable_code", "user"))
+        return problems
+    # Not only whether somebody holds a usable code now, but until when: a
+    # window on the last usable person ending a minute from now passes a
+    # check made at this instant, and a minute later the policy is off all
+    # the same (third review). So the edit may not bring that moment any
+    # nearer. Revoking a guest while an open-ended code remains moves it
+    # nowhere, and the recovery of §8.2 removes a window, so both pass.
+    before, after = _codes_last_until(old, now), _codes_last_until(new, now)
+    if before is not None and (after is None or after < before):
         problems.append(Problem("last_usable_code", "user"))
     return problems
+
+
+# A validity window with no end, for comparing how long codes last.
+_OPEN_ENDED = datetime.max.replace(tzinfo=UTC)
+
+
+def _codes_last_until(config: FoyerConfig, now: datetime) -> datetime | None:
+    """Until when somebody holds a usable code, reading from ``now``.
+
+    None while nobody does now; otherwise the latest end among the validity
+    windows of the people usable now, _OPEN_ENDED if one has none. A person
+    whose window opens later does not count: until it opens they verify
+    nothing, and the policy is off in between (decision 78).
+    """
+    ends = [u.valid_until or _OPEN_ENDED for u in config.users if u.usable(now)]
+    return max(ends, default=None)
 
 
 def _setting(config: FoyerConfig, path: str) -> object:

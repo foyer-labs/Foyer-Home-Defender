@@ -264,7 +264,7 @@
     "armed_setting": "{field}: un'area è inserita, e la casa mantiene ciò con cui è stata inserita. Disinserisci prima tutte le aree.",
     "profile_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere resta com'era all'inserimento. Disinserisci prima di modificare questo.",
     "contact_armed": "Finché un'area è inserita, un profilo con cui la casa potrebbe rispondere avvisa questo contatto: non si può modificare, disattivare né eliminare finché non disinserisci.",
-    "last_usable_code": "Un'area è inserita e nessuno resterebbe con un codice valido, il che spegne la politica dei codici. Dai prima un codice a qualcun altro, oppure disinserisci.",
+    "last_usable_code": "Un'area è inserita e nessuno resterebbe con un codice valido, subito o, alla fine di un periodo di validità, prima del previsto: il che spegne la politica dei codici. Dai prima un codice a qualcun altro, oppure disinserisci.",
     "watchdog_url_invalid": "L'URL del watchdog deve iniziare con http:// o https://."
   },
   "field": {

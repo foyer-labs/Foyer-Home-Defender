@@ -41,7 +41,6 @@ from custom_components.foyer.core.models import (
     Radio,
     ResponseProfile,
     RuntimeState,
-    Settings,
     ZoneType,
 )
 from custom_components.foyer.core.validation import (
@@ -100,7 +99,7 @@ def _paths(cls: type, prefix: str, classified: set[str]) -> list[str]:
     hints = typing.get_type_hints(cls)
     out = []
     for f in fields(cls):
-        path = f"{prefix}.{f.name}"
+        path = f"{prefix}.{f.name}" if prefix else f.name
         kind = hints[f.name]
         if path not in classified and is_dataclass(kind):
             out.extend(_paths(kind, path, classified))
@@ -109,23 +108,43 @@ def _paths(cls: type, prefix: str, classified: set[str]) -> list[str]:
     return out
 
 
+# The lists of things a household creates, each with a guard of its own: the
+# armed areas and their zones and groups, the running scenario, the profiles
+# in use and their contacts, the last usable code among the people. Only
+# these are left out of the walk; a new block of settings on the
+# configuration is walked into like any other.
+COLLECTIONS = frozenset(
+    {
+        "areas",
+        "zones",
+        "scenarios",
+        "profiles",
+        "groups",
+        "users",
+        "devices",
+        "contacts",
+        "rules",
+    }
+)
+
+
 def test_every_global_setting_is_kept_while_armed_or_free():
     """A setting added later cannot arrive unclassified: it has to be put on
     one side, by whoever adds it, rather than landing on the free side
-    because nobody thought of it."""
+    because nobody thought of it — a new field of the settings, or a new
+    block of them on the configuration itself."""
     kept, free = set(KEPT_WHILE_ARMED), set(FREE_WHILE_ARMED)
     assert len(kept) == len(KEPT_WHILE_ARMED) and len(free) == len(FREE_WHILE_ARMED)
     assert not kept & free
     classified = kept | free
-    every = _paths(Settings, "settings", classified) + _paths(
-        HealthSettings, "health", classified
-    )
+    assert {f.name for f in fields(FoyerConfig)} >= COLLECTIONS
+    every = [p for p in _paths(FoyerConfig, "", classified) if p not in COLLECTIONS]
     assert not set(every) - classified, set(every) - classified
     # The code policy and the chime are whole blocks of the configuration.
     assert "code_policy" in kept and "chime" in free
     # Every path the tables name exists: a renamed field would otherwise be
     # guarded under a name nothing has.
-    assert classified - {"code_policy", "chime"} <= set(every)
+    assert classified <= set(every), classified - set(every)
 
 
 # --- what an armed house keeps ------------------------------------------------------
@@ -511,6 +530,11 @@ def test_a_profile_the_house_could_answer_with_is_refused_while_armed(profile_id
     assert edit_conflicts(world.config, new, state, now=world.now) == [
         Problem("profile_armed", "profile", profile_id)
     ]
+    # And accepted once every area is disarmed, the escalation and the
+    # incident still running: they alone do not freeze it (§19).
+    disarmed(world)
+    state = _running(world.state)
+    assert edit_conflicts(world.config, new, state, now=world.now) == []
 
 
 @pytest.mark.parametrize("profile_id", ["upstairs_profile", "spare"])
@@ -820,6 +844,58 @@ def test_a_code_nobody_can_use_does_not_count_as_the_last_one():
     assert codes(edit_conflicts(world.config, new, world.state, now=world.now)) == [
         "last_usable_code"
     ]
+
+
+@pytest.mark.parametrize(
+    ("guest", "change"),
+    [
+        # A minute from now on the last person who holds one ...
+        (
+            {"code_hash": None},
+            lambda c, now: _user(c, "luca", valid_until=now + timedelta(minutes=1)),
+        ),
+        # ... or the last open-ended code revoked, with a guest's week left.
+        (
+            {"valid_until": NOW + timedelta(days=7)},
+            lambda c, now: _user(c, "luca", code_hash=None),
+        ),
+    ],
+)
+def test_an_edit_leaving_nobody_with_a_usable_code_later_is_refused_while_armed(
+    guest, change
+):
+    """Usable now is not enough: a window ending a minute after the save
+    passes a check made at the save, and a minute later the policy is off
+    and a codeless disarm is accepted (third review). The edit may not
+    bring nearer the moment nobody holds a usable code."""
+    world = armed(_user(_people_house(), "guest", **guest))
+    new = change(world.config, world.now)
+    assert edit_conflicts(world.config, new, world.state, now=world.now) == [
+        Problem("last_usable_code", "user")
+    ]
+    disarmed(world)
+    assert edit_conflicts(world.config, new, world.state, now=world.now) == []
+
+
+def test_a_window_that_moves_nothing_nearer_is_accepted_while_armed():
+    """A guest's window shortened while an open-ended code remains: nobody
+    runs out of codes any sooner. A window lengthened on the last usable
+    person pushes that moment further away, and an edit that leaves it
+    where it was moves nothing."""
+    world = armed(_user(_people_house(), "guest", valid_until=NOW + timedelta(days=7)))
+    now = world.now
+    shorter = _user(world.config, "guest", valid_until=now + timedelta(minutes=1))
+    assert edit_conflicts(world.config, shorter, world.state, now=now) == []
+    alone = armed(
+        replace(
+            make_house(),
+            users=(user("luca", "Luca", valid_until=NOW + timedelta(days=1)),),
+        )
+    )
+    longer = _user(alone.config, "luca", valid_until=None)
+    assert edit_conflicts(alone.config, longer, alone.state, now=alone.now) == []
+    renamed = _user(alone.config, "luca", name="Luca C.")
+    assert edit_conflicts(alone.config, renamed, alone.state, now=alone.now) == []
 
 
 def test_a_house_that_had_no_usable_code_is_not_refused_for_having_none():
