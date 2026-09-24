@@ -109,6 +109,8 @@ happened, and "why did it sound while I was still in the hall?" has an answer.
 
 ## The MQTT contract
 
+<p align="center"><img src="screenshots/panel-devices-en.png" alt="Arming devices: two keypads and a tag, each declared before it may command anything, and the MQTT contract with the message it will actually publish" width="900"></p>
+
 Switched off until you switch it on, under *Arming devices*. A broker is often
 somebody else's machine.
 
@@ -217,7 +219,8 @@ already.
   the actions those requests set off, under `action`, do not. Its requests
   neither add to the address's count nor clear it.
 - **Plain HTTP is accepted, and said.** A device whose last request arrived
-  unencrypted carries a permanent *Unencrypted* warning under *Arming devices*,
+  unencrypted carries an *Unencrypted* warning under *Arming devices*, until a
+  request from it arrives encrypted,
   and the rows that record its requests say that the request was not
   encrypted (the rows of the actions they set off, under `action`, do not). Many home-made devices cannot do TLS at all; refusing them would
   take the feature away from the people who asked for it.
@@ -228,6 +231,8 @@ already.
   it did not exist.
 
 ## API devices: displays, relays and modules of your own
+
+<p align="center"><img src="screenshots/panel-api-device-en.png" alt="A device on the endpoint and what it may read and do: the state readable without a code, the zones, batteries and log only after a code, arming and disarming allowed, excluding zones and taking note not, and the confirmation that these readings cross the network unencrypted" width="900"></p>
 
 Every device on the endpoint is an **API device**, and may do exactly what its
 **scopes** say — a touch display in the hall, a relay that lights an "armed"
@@ -375,6 +380,8 @@ The log is paged by an opaque cursor: send the `next` of one answer as
 
 ### The full contract
 
+<p align="center"><img src="screenshots/panel-api-en.png" alt="The API page for administrators: the device contract, version v1, rendered with Swagger UI, with the Authorize button for a device token and the three routes of the endpoint" width="900"></p>
+
 The endpoint and its stream are described in
 [`docs/api/openapi.yaml`](api/openapi.yaml), and the MQTT contract in
 [`docs/api/asyncapi.yaml`](api/asyncapi.yaml), both at contract version **v1**.
@@ -434,6 +441,8 @@ correct the action names in the blueprint's `variables` block. This is not a
 defect in the blueprint; it is what that market is.
 
 ### NFC tags and remotes
+
+<p align="center"><img src="screenshots/panel-tag-en.png" alt="The tag editor: a warning that a stolen tag arms and disarms without knowing any code, above the field that says whose tag it is" width="900"></p>
 
 [![Open your Home Assistant instance and show the blueprint import dialog](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Ffoyer-labs%2FFoyer-Home-Defender%2Fblob%2Fmaster%2Fblueprints%2Fautomation%2Ffoyer%2Fnfc_tag_and_remote.yaml)
 

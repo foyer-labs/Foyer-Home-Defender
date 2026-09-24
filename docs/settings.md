@@ -64,8 +64,8 @@ says which.
 |---|---|---|---|
 | *Sirens sound for* | 180 s | 1–900 s | kept |
 | *Wait for it to close, at most* | 300 s | 60–1800 s | kept |
-| *Default entry delay* | 30 s | 0–300 s | kept |
-| *Default exit delay* | 30 s | 0–300 s | kept |
+| *Default entry delay* | 30 s | 0–300 s in the panel | kept |
+| *Default exit delay* | 30 s | 0–300 s in the panel | kept |
 | *Low battery below* | 20 % | 1–100 % | free |
 | *Walk test timeout* | 900 s | 60–3600 s | kept |
 
@@ -83,9 +83,12 @@ armed again.
 before the arming fails as if the zone had blocked it. A zone can carry its
 own value; this is what it uses when it does not. See [zones](zones.md).
 
-**Default entry delay** and **Default exit delay** are what an area starts
-with when it is created without delays of its own. Existing areas keep theirs,
-and every area's delays are edited on the *Areas* page; a zone can override
+**Default entry delay** and **Default exit delay** are what the backend gives
+an area saved without delays of its own. The *Areas* page does not send one
+that way: it starts every new area at 30 s for both, whatever these settings
+say, so set a new area's delays there. The panel offers 0–300 s for both;
+each area's own delays are held to 0–300 s when saved. Existing areas keep
+theirs; a zone can override
 the entry delay and a scenario the exit delay. See [zones](zones.md).
 
 **Low battery below** decides when a numeric battery entity counts as low. A
@@ -143,8 +146,8 @@ chimes. The whole block is free while armed, and it is saved with its own
   *until* of its own, which replaces the global window for that target.
 - **Mode** — *Single sound*, or *Speak the zone name* through the
   *Text-to-speech* entity chosen beside it. With a single sound, *Media to
-  play* is what a media player plays; a siren sounds for one second if it
-  supports a set duration, and is skipped otherwise.
+  play* is what a media player plays. In either mode, a siren sounds for one
+  second if it supports a set duration, and is skipped otherwise.
 - **Volume** — per cent, 0–100. Empty leaves the player's volume as it is.
 - **Quiet from** / **until** — no chime inside this window, which may cross
   midnight. Empty: never quiet.

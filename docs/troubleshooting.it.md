@@ -26,14 +26,15 @@ magnetico normalmente chiuso (NC) legge `off` quando la porta è aperta, uno
 normalmente aperto (NA) legge `on`, e una serratura legge `unlocked`; una zona
 i cui stati di scatto indicano lo stato sbagliato non scatta mai, e niente
 sembra fuori posto fino alla notte in cui conta. Apri *Test e diagnostica*,
-mettiti davanti al sensore, apri la porta o passaci davanti, e leggi la colonna
-*Valutazione del trigger*
+apri la porta o passaci davanti, premi *Aggiorna* mentre il sensore è ancora
+scattato — la tabella è un'istantanea e non si aggiorna da sola — e leggi la
+colonna *Valutazione del trigger*
 ([come leggerla](simulator.md#diagnostics-am-i-looking-at-the-right-sensor),
 in inglese). Se dice *Non scatterebbe* mentre la porta è aperta, gli stati di
 scatto sono sbagliati: correggili nella pagina *Zone* e spunta di nuovo *Ho
-verificato questi stati sul sensore reale*. Anche cambiare l'entità che una
-zona osserva chiede di nuovo quella conferma, perché stati di scatto letti su
-un'entità non significano niente su un'altra.
+verificato questi stati sul sensore reale*. L'editor della zona non cambia
+l'entità di una zona esistente: per osservare un'altra entità, crea di nuovo la
+zona e conferma allora i suoi stati di scatto.
 
 Se gli stati di scatto sono giusti, scorri questo elenco.
 
@@ -41,7 +42,8 @@ Se gli stati di scatto sono giusti, scorri questo elenco.
   Assistant non ce l'ha più, *Test e diagnostica* elenca l'entità sopra la
   tabella, la sua riga dice *Entità inesistente*, e la zona è in guasto —
   *Guasto: non raggiungibile* — il che blocca l'inserimento della sua area.
-  Torna a scattare solo quando la zona punta al nuovo id. Se la zona ha
+  Foyer non segue una rinomina: ridai all'entità il suo vecchio id in Home
+  Assistant, oppure elimina la zona e creala di nuovo sul nuovo id. Se la zona ha
   spuntato *Consenti l'inserimento anche in guasto*, l'area si inserisce lo
   stesso, e quella zona non sorveglia niente.
 - **La zona è disattivata.** *Una zona disattivata viene ignorata del tutto*:
@@ -56,7 +58,8 @@ Se gli stati di scatto sono giusti, scorri questo elenco.
   solo mentre la sua area è inserita. Un'area non compresa nello scenario in
   corso, un'area che sta ancora contando il suo ritardo d'uscita e un'area
   disinserita non sorvegliano le loro zone; lì una zona che si apre può solo
-  suonare il campanello. Solo le zone 24h, di manomissione, di panico e
+  suonare il campanello. Solo le zone con *Sempre attiva (24h)* spuntato — per
+  impostazione predefinita le zone 24h, di manomissione e di panico — e le zone
   tecniche rispondono qualunque cosa stia facendo l'area.
 - **Era già aperta.** Una zona che è scattata quando la sua area si inserisce
   non scatta finché non si chiude e si riapre: con *Se aperta all'inserimento*
@@ -73,10 +76,12 @@ Se gli stati di scatto sono giusti, scorri questo elenco.
   chiudono.
 - **Le serve più di un'attivazione.** *Attivazioni necessarie* sopra 1 vuol
   dire che la zona non fa niente finché non è scattata quel numero di volte
-  dentro la sua finestra, e un PIR tenuto su `on` conta una volta sola. Lo
-  stesso vale per un gruppo di verifica con *I membri non producono nulla sotto
-  la soglia*: un membro da solo tace finché un altro non gli si aggiunge dentro
-  la finestra.
+  dentro la sua finestra, e un PIR tenuto su `on` conta una volta sola. Contano
+  solo le attivazioni che darebbero subito l'allarme: la prima apertura di una
+  zona ritardata avvia comunque il suo ritardo d'ingresso. Anche un gruppo di
+  verifica con *I membri non producono nulla sotto la soglia* trattiene un
+  membro, finché non rilevano dentro la finestra abbastanza membri da
+  raggiungere la soglia.
 - **È un evento o un tag.** Un'entità `event` ha bisogno del suo *Tipo di
   evento* — il pulsante che conta — e scatta solo a un nuovo evento di quel
   tipo; un `tag` scatta a ogni lettura e non prende un tipo. La tabella mostra
@@ -114,9 +119,12 @@ Poi:
   predefinita ogni membro dà comunque l'allarme da solo e il gruppo aggiunge la
   sua conferma, quindi la risposta graduata si ottiene dando ai membri un
   profilo di risposta più discreto di quello del gruppo. Con *I membri non
-  producono nulla sotto la soglia*, un membro da solo non fa proprio niente —
-  nemmeno un intruso vero visto dall'unico sensore che funziona, ed è per
-  questo che è spento per impostazione predefinita. La *Verifica incrociata* su
+  producono nulla sotto la soglia*, un membro da solo non fa niente finché
+  abbastanza altri membri sono leggibili e sorvegliati — nemmeno per un intruso
+  vero visto da uno solo dei tanti sensori che funzionano, ed è per questo che
+  è spento per impostazione predefinita. Quando restano troppo pochi membri in
+  grado di contare, un membro da solo dà l'allarme per conto suo. La *Verifica
+  incrociata* su
   una zona è lo stesso motore di un gruppo di due: registra la conferma e non
   zittisce nessuna delle due zone. Contano solo le attivazioni che darebbero
   subito l'allarme, quindi rientrare a casa attraverso il ritardo d'ingresso
@@ -137,7 +145,8 @@ Poi:
   un sensore istantaneo nell'ingresso dà l'allarme. La riga *Inserito* registra
   che il ritardo d'uscita è stato saltato.
 - **Una zona è stata riattivata mentre era scattata.** Solo la prima lettura di
-  una zona nuova è un punto di partenza. Una zona che era in uso, è stata
+  una zona nuova è un punto di partenza (e quella di una zona chiave, quando
+  viene riattivata). Una zona che era in uso, è stata
   disattivata e poi riattivata mentre rilevava conta come scattata in quel
   momento — per una zona 24h, di manomissione, di panico o tecnica, è un
   allarme.
@@ -166,9 +175,12 @@ esiste, quando una condizione di scatto numerica legge qualcosa che non è un
 numero, quando è rimasta muta oltre il suo *Limite di silenzio*, o quando la
 sua entità della batteria non si riesce a leggere. Un guasto non è mai «tutto
 tranquillo»: blocca l'inserimento dell'area della zona, viene annunciato come
-*Guasto di zona*, e *Test e diagnostica* mostra *Blocca: guasto*. Dopo due
-giorni di lettura impossibile diventa anche una segnalazione di riparazione di
-Home Assistant.
+*Guasto di zona*, e *Test e diagnostica* mostra *Blocca: guasto*. Quando
+l'entità stessa della zona è `unavailable` o `unknown` da due giorni (valore
+predefinito), diventa anche una segnalazione di riparazione di Home Assistant;
+un guasto per limite di silenzio, una lettura che non è un numero, un'entità
+della batteria illeggibile o una zona già illeggibile all'avvio di Foyer non ne
+aprono una.
 
 - **Consenti l'inserimento anche in guasto**, sulla zona, lascia inserire la
   sua area comunque. Lascialo spento a meno che tu non sappia perché: quella
@@ -214,7 +226,7 @@ proprie.
 | *Il tuo utente Foyer non ha il permesso per farlo.* | Alla persona manca il permesso (inserire, inserimento forzato, cambiare scenario…) | Spuntalo nella pagina *Utenti* |
 | *Quel codice appartiene a un utente disattivato o fuori dal suo periodo di validità.* | Un codice ospite scaduto, o una persona disattivata | La pagina *Utenti* |
 | *Non puoi agire su quell'area.* / *…usare quello scenario.* | Le aree o gli scenari della persona, o il *Chi può usarlo* dello scenario, la lasciano fuori | La pagina *Utenti* o *Scenari* |
-| *È in corso un walk test. Terminalo, poi inserisci…* | L'inserimento viene rifiutato mentre è in corso un walk test: quando finisce disinserisce le aree che aveva inserito, e disferebbe il tuo | *Chiudi il walk test*, che per impostazione predefinita chiede un codice, poi inserisci |
+| *È in corso un walk test. Terminalo, poi inserisci…* | L'inserimento viene rifiutato mentre è in corso un walk test: quando finisce disinserisce le aree che aveva inserito, e disferebbe il tuo | *Chiudi il walk test*, che per impostazione predefinita chiede un codice, poi inserisci. Quando finisce disinserisce le aree che il test aveva inserito, tranne un'area in allarme o rimasta con la memoria d'allarme per una zona 24h o di manomissione durante il test, che solo il disinserimento di una persona chiude, e lascia ogni altra area come l'ha trovata |
 | *C'è un allarme in corso. Disinserisci prima di cambiare scenario.* | Si cambia scenario mentre un'area che toccherebbe è nel ritardo d'ingresso o in allarme | Disinserisci prima: cambiare scenario non zittisce mai un allarme |
 | *Più scenari sono associati a questa modalità di inserimento…* | Due scenari condividono una modalità, quindi *Tutta la casa* non sa quale si intende | Inserisci lo scenario stesso, dal pannello, dalla card o da `select.foyer_scenario`. La pagina *Scenari* dice *Condivisa con un altro scenario* |
 | *Lo stato attuale dell'area non lo consente…* | Già inserita, in inserimento o in allarme — oppure quello scenario è già in corso e non resta niente da inserire | Niente da fare |
@@ -226,16 +238,18 @@ canale vengono rifiutati per 300 secondi; ogni blocco successivo raddoppia,
 fino a un'ora, e il raddoppio riparte da capo dopo un giorno senza blocchi.
 Tutti e tre i numeri sono nella pagina *Utenti*. Un codice corretto interrompe
 la serie di errori ma non un blocco già in corso. Ciò che viene bloccato è
-circoscritto: il pannello, la card e i servizi contano **per account di Home
-Assistant**, quindi un account che tira a indovinare blocca sé stesso e
-nessun altro; un tastierino conta per dispositivo; l'endpoint dei dispositivi
+circoscritto: il pannello, la card e i pannelli d'allarme di Home Assistant
+condividono un solo contatore **per account di Home Assistant**, quindi un
+account che tira a indovinare blocca sé stesso e nessun altro; le chiamate ai
+servizi `foyer.*` hanno un contatore tutto loro per account, e le chiamate
+senza un utente dietro, come le automazioni, ne condividono uno; un tastierino conta per dispositivo; l'endpoint dei dispositivi
 conta un token mancante o sbagliato per indirizzo di provenienza, e un
 dispositivo con il suo token giusto non viene mai rifiutato per il suo
 indirizzo. Un **amministratore di Home Assistant non viene mai bloccato fuori
 dal pannello, dalla card o dai pannelli d'allarme di Home Assistant** — i
 tentativi vengono contati e registrati, e l'account resta aperto — così
-nessuno può chiudersi fuori da casa propria. Una chiamata di servizio viene
-contata come quella di chiunque altro, amministratore o no. La card dice fino a
+nessuno può chiudersi fuori da casa propria. Una chiamata di servizio
+`foyer.*` viene contata come quella di chiunque altro, amministratore o no. La card dice fino a
 quando; il pannello dice *I codici da questo account sono bloccati fino alle …*.
 
 **Le card di Home Assistant rifiutano un inserimento senza codice.** Home
@@ -271,9 +285,10 @@ stato usato sulla strada sbagliata. Vedi [tastierini](keypads.md) (in inglese).
 - *Inserimento rifiutato* sotto *Inserimento*, con il motivo e le zone, quando
   la richiesta è stata rifiutata nel momento in cui è stata fatta;
 - *Inserimento fallito*, quando un inserimento accettato ha trovato una zona
-  ancora aperta o in guasto alla fine del ritardo d'uscita, e ogni volta che
-  l'inserimento di una regola automatica è stato rifiutato, con il nome della
-  regola;
+  ancora aperta o in guasto alla fine del ritardo d'uscita; ogni volta che
+  l'inserimento di una regola automatica è stato rifiutato per un motivo
+  diverso dalla casa già inserita in quel modo, con il nome della regola; e
+  quando un tag o una zona chiave non è riuscito a inserire;
 - *Codice rifiutato* sotto *Sicurezza*, quando il rifiuto riguardava chi stava
   chiedendo — un codice sbagliato, un blocco, un permesso o un'area — con il
   motivo nel dettaglio della riga;
@@ -349,7 +364,7 @@ scaduto, recupera l'accesso da **Impostazioni → Dispositivi e servizi → Foye
 Home Defender → Configura**: riattiva l'utente Foyer di quell'account, toglie il
 suo periodo di validità e imposta un codice nuovo, oppure crea un utente con
 tutti i permessi. Non è mai silenzioso: una riga nel registro, una notifica di
-Home Assistant e un messaggio a ogni contatto, ognuno con il nome dell'account.
+Home Assistant e un messaggio a ogni contatto attivo, ognuno con il nome dell'account.
 Le [domande frequenti](faq.it.md) e il [modello di sicurezza](security-model.it.md)
 dicono perché esiste e cosa non cambia.
 
@@ -395,9 +410,11 @@ stato digitato.
   Companion scarica un link in diretta attraverso il proxy delle telecamere di
   Home Assistant; Telegram ha bisogno di un file, scritto nella *Cartella
   telecamere* (`media/foyer` per impostazione predefinita, mai `www`), che deve
-  stare in `allowlist_external_dirs` altrimenti non viene scritto niente. Solo i
-  canali push e di chat ricevono immagini, solo a un allarme, e mai quando parte
-  un ritardo d'ingresso. Una telecamera che non risponde costa la sua immagine,
+  stare in `allowlist_external_dirs` altrimenti non viene scritto niente. Con
+  *Le telecamere delle zone che hanno dato l'allarme*, solo i canali push e di
+  chat ricevono immagini, solo a un allarme, e mai quando parte un ritardo
+  d'ingresso; *Sempre la stessa telecamera* allega la sua unica immagine alla
+  notifica stessa, in qualunque momento l'azione venga eseguita. Una telecamera che non risponde costa la sua immagine,
   mai il testo.
 - **Ore di silenzio.** Dentro le *Ore di silenzio* di un contatto passa solo
   ciò che raggiunge la *Gravità minima per passare*. La traccia del simulatore

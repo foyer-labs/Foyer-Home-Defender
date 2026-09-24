@@ -50,8 +50,10 @@ past its supervision window — which blocks for a different reason and needs a
 different fix. The column says which, so the answer is "close the patio door"
 or "the garage sensor has fallen off the network", not "something is wrong".
 
-This column is the same function the engine uses when it refuses an arm
-request. It cannot say *ready* where arming would refuse.
+This column is the same function the engine uses when it refuses an arming
+for a fault or an open zone, so it cannot say *ready* where a zone would
+block; a code, a permission or a running walk test can still refuse the
+request.
 
 ### Batteries
 
@@ -297,8 +299,9 @@ Six things worth knowing before you start one:
 ### Action test — press the button before the night you need it
 
 A test button beside every action, and it really executes: the siren really
-sounds, for three seconds whatever its configured duration, and the
-notification really sends. It asks first, it needs the `test_actions`
+sounds — for three seconds on a siren that accepts a duration; one driven by a
+switch, or one that takes no duration, stays on until you switch it off — and
+the notification really sends. It asks first, it needs the `test_actions`
 permission and a code, and every run leaves a row in the log marked as a test.
 
 It is worth the noise for one reason. The worst way to discover that a

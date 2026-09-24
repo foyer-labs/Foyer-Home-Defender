@@ -73,9 +73,10 @@ un amministratore che passa dalle sue stesse interfacce:
   account che non ne ha uno riceve una nuova persona con tutti i permessi. Una
   volta scritto, viene annunciato con una riga sotto *Sicurezza*, una notifica
   di Home Assistant e un messaggio a ogni contatto attivo, ognuno con il nome
-  dell'account; un recupero che non è stato possibile scrivere lascia la sua
-  riga, segnata come fallita. A chiunque altro si dà un modo di entrare dalla
-  pagina *Utenti*.
+  dell'account; un recupero la cui scrittura è fallita lascia la sua riga,
+  segnata come fallita, e uno respinto prima che venga scritto qualcosa — un
+  codice non valido o già in uso — riceve la risposta nel modulo stesso. A
+  chiunque altro si dà un modo di entrare dalla pagina *Utenti*.
 
 ---
 
@@ -85,7 +86,7 @@ un amministratore che passa dalle sue stesse interfacce:
 
 Ogni codice, e ogni codice di coercizione, è conservato come hash bcrypt ed è
 in sola scrittura: nessun comando, servizio o pagina restituisce un codice o
-un hash, e né un backup né il download della diagnostica ne contengono uno.
+un hash, e né un backup di Foyer né il download della diagnostica ne contengono uno.
 Il pannello dice se qualcuno ha un codice, mai quale sia. Il fattore di lavoro
 è tenuto a qualche decina di millisecondi per confronto, perché un codice
 errato digitato su un tastierino durante un ritardo d'ingresso viene
@@ -122,7 +123,9 @@ codice utilizzabile** — attiva, con un codice, e dentro il suo periodo di
 validità. Prima di allora non c'è niente da verificare, quindi applicare la
 politica renderebbe l'allarme inutilizzabile anziché più sicuro; il pannello
 lo dice chiaramente finché dura, nella Panoramica e con *I codici non sono
-attivi* nella pagina *Utenti*, e la card non mostra il tastierino. Dalla prima
+attivi* nella pagina *Utenti*, e la card non offre nessun tastierino da aprire
+(una card impostata sulla disposizione *Tastierino* ne mostra comunque uno,
+anche se nulla chiederà un codice). Dalla prima
 persona così in poi, la politica vale per intero. È anche il motivo per cui,
 mentre un'area è inserita, una modifica che lascerebbe nessuno con un codice
 utilizzabile viene respinta (più sotto).
@@ -136,8 +139,9 @@ pannello viene chiuso. Un codice che è stato respinto, o che ha incontrato un
 blocco, viene dimenticato all'istante.
 
 **La card** non tiene nessun codice oltre il comando per cui è stato digitato.
-Le cifre digitate partono solo con il comando che il tastierino indica sopra
-di esse; vengono dimenticate dopo 30 secondi senza toccare un tasto, dopo
+Le cifre digitate partono con il prossimo comando premuto, e quando un comando
+è in attesa di un codice, solo con quello, che il tastierino indica sopra di
+esse; vengono dimenticate dopo 30 secondi senza toccare un tasto, dopo
 l'invio del comando, e quando la card esce dallo schermo. Come la card chiede
 il codice è in [card.it.md](card.it.md).
 
@@ -159,7 +163,7 @@ il codice è in [card.it.md](card.it.md).
 | *Valido dal* / *Valido fino al* | Un codice per ospiti: fuori da questo intervallo il codice viene respinto, come appartenente a *un utente disattivato o fuori dal suo periodo di validità*. |
 | *Permessi* | Che cosa questa persona può chiedere in assoluto — la tabella successiva. |
 | *Aree* | *Tutto*, o aree scelte. Ogni operazione che agisce su un'area viene respinta quando ne tocca una fuori dall'elenco: inserire un'area o uno scenario, escludere una zona, disinserire — compreso il disinserimento di ogni area da *Tutta la casa*. Modificare la configurazione, leggere il registro e provare un'azione non sono mai ristretti dalle aree. Il *Walk test* è l'unica operazione su un'area che non restringono. |
-| *Scenari* | *Tutto*, o scenari scelti che questa persona può inserire. L'elenco *Chi può usarlo* di uno scenario lo restringe ulteriormente. |
+| *Scenari* | *Tutto*, o scenari scelti. Fuori dall'elenco la persona non può né inserire lo scenario, né passare a esso, né disinserire le aree che ha inserito. L'elenco *Chi può usarlo* di uno scenario restringe ulteriormente le stesse tre cose. |
 | *Non chiedere il codice dove questa persona è identificata* | L'esenzione per persona, spenta di serie — vedi [quali canali identificano](#dove-si-può-fare-a-meno-del-codice). Richiede un account collegato. |
 | *Attivo* | Il codice di una persona disattivata viene respinto, e la sua storia resta. |
 
@@ -175,11 +179,11 @@ nasconda.
 | *Inserimento forzato* | Inserire nonostante una zona che lo blocca — un comando distinto, e registrato. |
 | *Escludere una zona* | Escludere una zona a mano, e includerla di nuovo. |
 | *Cambiare scenario* | Passare a un altro scenario a impianto inserito. |
-| *Modificare la configurazione* | Ogni pagina di configurazione, il ripristino di un backup e lo svuotamento del registro. Serve anche per leggere la configurazione, ma senza codice. |
+| *Modificare la configurazione* | Ogni pagina di configurazione tranne persone, tag e politica dei codici, il ripristino di un backup e lo svuotamento del registro. Serve anche per leggere la configurazione, ma senza codice; scaricare un backup ne chiede uno quando la politica lo dice. |
 | *Leggere il registro* | La pagina *Registro* e le sue esportazioni, *Test e diagnostica* (la tabella in tempo reale e il simulatore) e *Stato del sistema*. |
 | *Provare le azioni* | La prova delle azioni, che fa suonare davvero la sirena e manda davvero il messaggio. |
 | *Walk test* | Avviare e terminare un walk test. Arriva più lontano di quanto dica il nome: [più sotto](#chi-può-avviare-un-walk-test-può-tenere-zitta-la-casa). |
-| *Gestire utenti e codici* | Le persone, e tutto quello che decide che cosa una persona può fare o quale chiave apre la casa a nome di chi: una persona, un tag, la persona a nome della quale agisce un interruttore a chiave, e il *Chi può usarlo* di uno scenario. Qualunque modifica che ne tocchi uno — salvata, cancellata, ripristinata da un backup o importata — lo richiede oltre a *Modificare la configurazione*, altrimenti *Modificare la configurazione* sarebbe un modo per dare a sé stessi, o a qualcun altro, quello che questo permesso nega. Lo richiede anche cancellare dal registro la storia di una persona. |
+| *Gestire utenti e codici* | Le persone, e tutto quello che decide che cosa una persona può fare o quale chiave apre la casa a nome di chi. Salvare o cancellare una persona, salvare un tag, e le impostazioni della politica dei codici e del blocco richiedono questo permesso. Una modifica fatta con *Modificare la configurazione* che tocca anche delle persone — la persona a nome della quale agisce un interruttore a chiave, il *Chi può usarlo* di uno scenario, la cancellazione di un tag, il ripristino di un backup o un'importazione — li richiede entrambi, altrimenti *Modificare la configurazione* sarebbe un modo per dare a sé stessi, o a qualcun altro, quello che questo permesso nega. Lo richiede anche cancellare dal registro la storia di una persona. |
 
 Una persona aggiunta dalla pagina *Utenti* parte con *Inserire*,
 *Disinserire*, *Escludere una zona*, *Cambiare scenario* e *Leggere il
@@ -277,8 +281,10 @@ codice o un tag producono una riga senza segno.
 I codici errati vengono contati **per origine**, così che una fonte che
 tira a indovinare blocchi sé stessa e non la famiglia:
 
-- **per account di Home Assistant**, sul pannello, sulla card, sulle entità
-  del pannello d'allarme e sui servizi;
+- **per account di Home Assistant**: un contatore condiviso da pannello, card
+  ed entità del pannello d'allarme, e un altro per le chiamate ai servizi
+  `foyer.*`; le chiamate senza un utente dietro, come le automazioni,
+  condividono un unico contatore;
 - **per dispositivo**, per un tastierino o un dispositivo dichiarato sotto
   *Dispositivi di inserimento*;
 - **per indirizzo di origine**, all'endpoint dei dispositivi, per un token
@@ -305,9 +311,11 @@ e le sue righe nel registro — e basta il permesso *Walk test*, non serve
 *Disinserire*.
 
 È voluto, e non è mai silenzioso su sé stesso: chiede un codice per
-impostazione predefinita, mette un banner su ogni schermo, manda una notifica
-all'inizio e alla fine, ed entrambe le sue righe nel registro nominano la
-persona. Restano attivi durante il test: le zone 24h, manomissione, tecniche e
+impostazione predefinita, mette un banner su ogni schermo, il profilo
+predefinito manda una notifica di Home Assistant all'inizio e alla fine (togli
+la spunta a quei due momenti e inizia e finisce senza annunci), ed entrambe le
+sue righe nel registro, sotto *Sistema*, nominano la persona quando un codice
+o un account collegato hanno detto chi era. Restano attivi durante il test: le zone 24h, manomissione, tecniche e
 panico, un allarme già in corso e un codice di coercizione. La pagina *Utenti*
 avverte quando *Walk test* è spuntato. Dai *Walk test* alle persone a cui
 daresti *Disinserire*.
@@ -388,9 +396,12 @@ Foyer dice se ognuna esiste, e mai quale sia:
   per sempre, e così zittire l'unica cosa che segnala la morte di Foyer stesso.
   [Il dettaglio](system-health.md#the-url-is-a-credential) (in inglese).
 
-Nessuna è in un backup, e nessuna è nel download della diagnostica di Home
-Assistant, che lascia fuori anche nomi, hash dei codici e id reali delle
-entità ([che cosa contiene](system-health.md#the-diagnostics-download)).
+Nessuna è in un backup di Foyer, e nessuna è nel download della diagnostica di
+Home Assistant, che lascia fuori anche nomi, hash dei codici e id reali delle
+entità ([che cosa contiene](system-health.md#the-diagnostics-download)). Un
+backup di Home Assistant è un'altra cosa: copia la cartella di configurazione,
+`.storage/foyer.config` compreso, quindi contiene tutto quello che l'elenco
+sopra dice che un amministratore può leggere.
 
 **Il webhook di presa d'atto, se lo accendi, è un URL non autenticato.**
 Esiste perché un provider vocale possa rimandare il tasto premuto durante una
@@ -408,16 +419,19 @@ viene dimenticato; per rivederlo se ne genera uno nuovo.
 ## Dispositivi
 
 - **Dichiarati prima di poter comandare.** Un `device_id` che questa
-  installazione non ha viene respinto qualunque codice porti, registrato sotto
-  *Sicurezza* e sollevato come notifica di Home Assistant. Il blocco conta per
+  installazione non ha viene respinto qualunque codice porti. Sui servizi di
+  inserimento e via MQTT il rifiuto viene anche registrato sotto *Sicurezza*,
+  al massimo una volta al minuto per nome, e sollevato come notifica di Home
+  Assistant. Il blocco conta per
   dispositivo, quindi chi potesse inventarsi il nome di un dispositivo non
   verrebbe mai bloccato.
 - **Il token autentica il dispositivo; non cifra niente.** Su HTTP in chiaro
   il token e ogni codice digitato sul dispositivo si possono leggere sulla
-  rete. Un dispositivo così viene comunque servito, e porta un avviso
-  permanente *Non cifrato* sotto *Dispositivi di inserimento*. Un token da solo
-  non inserisce e non disinserisce mai: ogni azione attraverso l'endpoint
-  richiede un codice digitato sul dispositivo, inserimento compreso, e un
+  rete. Un dispositivo così viene comunque servito, e porta un avviso *Non
+  cifrato* sotto *Dispositivi di inserimento* finché non arriva da lui una
+  richiesta cifrata. Un token da solo non inserisce e non disinserisce mai:
+  ogni comando attraverso l'endpoint — inserire, disinserire, escludere una
+  zona, prendere atto — richiede un codice digitato sul dispositivo, e un
   dispositivo non va mai oltre i permessi spuntati per lui, qualunque codice
   venga digitato.
 - **Un token giusto non viene mai respinto per il suo indirizzo.** Dietro lo
@@ -469,7 +483,7 @@ account non legato a una persona esente, e dai il PIN di Google, se è un
 codice Foyer, a una persona che abbia solo quello che lasceresti fare a
 chiunque vicino all'altoparlante — *Inserire*, per esempio. Tramite Home
 Assistant Cloud agiscono come l'account del Cloud stesso, che la pagina
-*Utenti* non propone di collegare, quindi lì l'esenzione non li raggiunge mai.
+*Utenti* non propone di collegare.
 
 ---
 
@@ -515,7 +529,8 @@ perché un messaggio lo legge chi sta dall'altra parte, e «inserito, nessuno in
 casa» dice a un estraneo esattamente quando venire:
 
 - il ping del **watchdog esterno** è una richiesta vuota di serie; il
-  contenuto facoltativo è spento e porta al massimo tre numeri
+  contenuto facoltativo è spento, e porta solo due conteggi e un sì o no sullo
+  stato di salute
   ([system-health.md](system-health.md#the-heartbeat-carries-nothing), in
   inglese);
 - il **messaggio di stato MQTT** mantenuto parte dal livello `minimal`, senza
@@ -523,7 +538,9 @@ casa» dice a un estraneo esattamente quando venire:
   quello che si fa ([keypads.md](keypads.md#the-mqtt-contract), in inglese);
 - un **dispositivo API** non legge niente finché i suoi permessi non sono
   spuntati; poi, di serie, lo stato dell'allarme con il solo token, e tutto il
-  resto solo per poco dopo che qualcuno ha digitato un codice sul dispositivo
+  resto solo dopo che qualcuno ha digitato un codice sul dispositivo, finché
+  non resta senza letture per un breve periodo (due minuti di serie) o
+  qualcuno inserisce o disinserisce attraverso di esso
   ([keypads.md](keypads.md#api-devices-displays-relays-and-modules-of-your-own)).
 
 ---

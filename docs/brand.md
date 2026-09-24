@@ -100,7 +100,8 @@ They use a stroke of 3.6 rather than the 3.2 of the shielded mark.
   make the full-colour symbol work: shrinking the colour version produces grey
   mush. `foyer-hd-icon.svg` is its own drawing — the shield outline, one arch
   and a solid doorway, in `currentColor` with no fill colours, gradient or
-  opacity. The fainter arch is left out because it would vanish at that size.
+  opacity. It keeps the larger, outer arch, drawn solid, and leaves out the
+  smaller inner one, because at that size two arches merge into one.
 - **The wordmark and the subtitle carry no font dependency.** *FOYER* is
   built from bars and strokes, and *HOME DEFENDER* is stored as outlines
   (Poppins Medium, converted), spaced so that it spans the width of the

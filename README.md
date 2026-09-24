@@ -121,6 +121,9 @@ Beta. Foyer is written by one author, and every release is an ordinary GitHub
 release that HACS offers by version. The stored configuration carries a schema
 version and is migrated forward on update, and the
 [changelog](CHANGELOG.md) says what changed in behaviour, release by release.
+What comes next, and what each step has to prove, is in
+[the roadmap](docs/SPEC.md#16-roadmap); watch the repository to be told when a
+release lands.
 
 ## Contributing, security, licence
 

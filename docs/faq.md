@@ -41,7 +41,7 @@ You could, and the first version works. What takes the next six months is
 everything else, and Foyer is built around exactly those parts:
 
 - **A restart halfway through an entry delay.** Foyer saves area states, running
-  delays and escalation progress on every change and restores them when Home
+  delays, a siren's cutoff and escalation progress on every change and restores them when Home
   Assistant starts again. The log records the gap, so it never implies the house
   was watched while Home Assistant was down.
 - **A sensor that went `unavailable` three weeks ago** and has been read as
@@ -109,15 +109,17 @@ a code, the exempt person's included.
 - **While somebody is exempt**, Home Assistant asks for nothing. The exempt
   person arms with no code; anybody else Foyer wants a code from is refused by
   Foyer, with a row in the log and a message saying where to type one: Foyer's
-  card, the Foyer panel, or Home Assistant's *Alarm panel* card, which offers
-  arming only while the panel is disarmed.
+  card, the Foyer panel, or Home Assistant's *Alarm panel* card, which shows
+  a code field wherever a code may be asked but offers arming only while the
+  panel is disarmed.
 - **Changing mode while the house is armed** is a change of scenario, which asks
   for a code by default even where arming does not. The dialog asks for a code
   only while arming is said to need one, so where only the change asks, type the
   code in Foyer's card or the panel.
 
 Voice assistants read the same answer. Alexa is offered a panel only while
-arming it needs no code. Google Assistant asks for its PIN before arming only
+arming it needs no code; it sends none and does not wait for Foyer's answer,
+so a refusal shows only in the panel's state and in the log. Google Assistant asks for its PIN before arming only
 while a code is needed, but sends the PIN stored in its own configuration
 whether it asked or not: if that PIN is somebody's Foyer code, the request is
 made in their name; if not, it is a wrong code and counts towards the lockout.

@@ -23,22 +23,24 @@ triggered?*. Foyer never assumes that `on` means alarm. A normally-closed
 magnetic contact reads `off` when the door is open, a normally-open one reads
 `on`, and a lock reads `unlocked`; a zone whose trigger names the wrong state
 never fires, and nothing about it looks wrong until the night it matters. Open
-*Test & diagnostics*, stand in front of the sensor, open the door or walk
-past, and read the *Trigger evaluation* column
+*Test & diagnostics*, open the door or walk past, press *Refresh* while the
+sensor is still triggered — the table is a snapshot and does not update by
+itself — and read the *Trigger evaluation* column
 ([how to read it](simulator.md#diagnostics-am-i-looking-at-the-right-sensor)).
 If it says *Would not* while the door is open, the trigger is wrong: correct
 the states on the *Zones* page and tick *I have checked this against the real
-sensor* again. Changing which entity a zone watches asks for that
-confirmation again too, because a trigger read against one entity's states
-means nothing on another's.
+sensor* again. The zone editor does not change the entity of an existing
+zone: to watch another entity, create the zone again, and confirm its trigger
+then.
 
 If the trigger is right, work down this list.
 
 - **The entity was renamed.** A zone points at an entity id. When Home
   Assistant no longer has it, *Test & diagnostics* lists the entity above the
   table, its row reads *No such entity*, and the zone is in fault — *Fault:
-  not reachable* — which blocks arming its area. It fires again only once the
-  zone is pointed at the new id. If the zone has *Allow arming while in fault*
+  not reachable* — which blocks arming its area. Foyer does not follow a
+  rename: give the entity its old id back in Home Assistant, or delete the
+  zone and create it again on the new id. If the zone has *Allow arming while in fault*
   ticked, the area arms anyway, and that zone watches nothing.
 - **The zone is switched off.** *A disabled zone is ignored completely*: the
   table shows it as *Disabled*. Zones brought in by the importer on the
@@ -50,8 +52,9 @@ If the trigger is right, work down this list.
 - **Its area is not watching it.** An intrusion zone alarms only while its own
   area is armed. An area not included in the scenario that is running, an
   area still counting down its exit delay, and a disarmed area are not
-  monitoring their zones; there, a zone opening can only chime. Only 24h,
-  tamper, panic and technical zones answer whatever the area is doing.
+  monitoring their zones; there, a zone opening can only chime. Only zones
+  with *Always on (24h)* ticked — 24h, tamper and panic zones by default — and
+  technical zones answer whatever the area is doing.
 - **It was already open.** A zone that is triggered when its area arms does
   not fire until it closes and opens again: with *If open when arming* set to
   *Ignore*, "it fires the next time it opens". The same is true of the first
@@ -65,9 +68,11 @@ If the trigger is right, work down this list.
   at arming or by a forced arming are watched again as soon as they close.
 - **It needs more than one activation.** *Activations needed* above 1 means
   the zone does nothing until it has triggered that many times within its
-  window, and a PIR held `on` counts once. So does a verification group with
-  *Members produce nothing below the threshold*: one member alone is silent
-  until another joins it within the window.
+  window, and a PIR held `on` counts once. Only activations that would alarm
+  at once are counted: a delayed zone's first opening still starts its entry
+  delay. A verification group with *Members produce nothing below the
+  threshold* holds a member back too, until enough members to reach the
+  threshold detect within the window.
 - **It is an event or a tag.** An `event` entity needs its *Event type* — the
   button that counts — and fires only on a new event of that type; a `tag`
   fires on every scan and takes no type. The table shows *On scan only* for
@@ -101,9 +106,11 @@ order it joined, under one incident id. Then:
   members detect within a window; by default each member still alarms on its
   own and the group adds its confirmation, so the graduated answer comes from
   giving the members a quieter response profile than the group's. With
-  *Members produce nothing below the threshold*, a lone member does nothing at
-  all — including a real intruder seen by the one working sensor, which is why
-  it is off by default. *Cross-zone verification* on a zone is the same engine
+  *Members produce nothing below the threshold*, a lone member does nothing
+  while enough other members are readable and watched — including a real
+  intruder seen by only one of several working sensors, which is why it is
+  off by default. When too few members are left able to count, a lone member
+  alarms on its own. *Cross-zone verification* on a zone is the same engine
   as a group of two: it records the confirmation and silences neither zone.
   Only activations that would alarm at once count, so coming home through the
   entry delay never satisfies a group.
@@ -121,7 +128,8 @@ order it joined, under one incident id. Then:
   front door starts its entry delay, and an instant sensor in the hall alarms.
   The *Armed* row records that the exit delay was skipped.
 - **A zone was switched back on while it was triggered.** Only a new zone's
-  first reading is a baseline. A zone that was in use, switched off and
+  first reading is a baseline (and a key zone's, when it is switched back
+  on). A zone that was in use, switched off and
   switched on again while detecting counts as triggering at that moment — for
   a 24h, tamper, panic or technical zone, that is an alarm.
 - **A battery was changed in a tamper-protected sensor.** Opening its case
@@ -147,7 +155,10 @@ when a numeric trigger reads something that is not a number, when it has been
 silent past its *Silence limit*, or when its battery entity cannot be read.
 A fault is never "all quiet": it blocks arming the zone's area, it is
 announced as *Zone fault*, and *Test & diagnostics* shows *Blocks: fault*.
-After two days unreadable it also becomes a Home Assistant repair issue.
+When the zone's own entity has been unavailable or unknown for two days (by
+default), it also becomes a Home Assistant repair issue; a silence-limit fault,
+a reading that is not a number, an unreadable battery entity or a zone already
+unreadable when Foyer started does not raise one.
 
 - **Allow arming while in fault**, on the zone, lets its area arm regardless.
   Leave it off unless you know why: that zone then watches nothing while the
@@ -188,7 +199,7 @@ show the same reason in their own words.
 | *Your Foyer user does not have permission for this.* | The person lacks the permission (arming, forced arming, changing scenario…) | Tick it on the *Users* page |
 | *That code belongs to a user who is disabled or outside their validity period.* | A guest code past its date, or a person switched off | The *Users* page |
 | *You are not allowed to act on that area.* / *…use that scenario.* | The person's areas or scenarios, or the scenario's *Who may use it*, leave them out | The *Users* or *Scenarios* page |
-| *A walk test is running. End it first, then arm…* | Arming is refused while a walk test runs: its end disarms the areas it armed, and would undo yours | *End walk test*, which asks for a code by default, then arm |
+| *A walk test is running. End it first, then arm…* | Arming is refused while a walk test runs: its end disarms the areas it armed, and would undo yours | *End walk test*, which asks for a code by default, then arm. Its end disarms the areas the test armed, except one in alarm or left holding alarm memory by a 24h or tamper zone during the test, which only a person's disarm ends, and leaves every other area as it found it |
 | *An alarm is in progress. Disarm before changing scenario.* | Switching scenario while an area it would touch is in its entry delay or in alarm | Disarm first: changing scenario never silences an alarm |
 | *More than one scenario is linked to this arming mode…* | Two scenarios share one mode, so *Whole house* cannot tell which is meant | Arm the scenario itself, from the panel, the card or `select.foyer_scenario`. The *Scenarios* page says *Shared with another scenario* |
 | *The area's current state does not allow this…* | Already armed, arming or in alarm — or that scenario is already running with nothing left to arm | Nothing to do |
@@ -200,14 +211,16 @@ channel are refused for 300 seconds; each further lockout doubles, up to an
 hour, and the doubling starts again after a day without one. All three
 numbers are on the *Users* page. A correct code ends the run of failures but
 not a lockout already running. What is locked is narrow: the panel, the card
-and the services count **per Home Assistant account**, so one account guessing
-locks itself out and nobody else; a keypad counts per device; the
+and Home Assistant's own alarm panels share one counter **per Home Assistant
+account**, so one account guessing locks itself out and nobody else; `foyer.*`
+service calls keep a counter of their own per account, and calls with no user
+behind them, such as automations, share one; a keypad counts per device; the
 device endpoint counts a missing or wrong token per source address, and a
 device with its right token is never refused for its address. A Home
 Assistant **administrator is never locked out of the panel, the card or Home
 Assistant's own alarm panels** — the attempts are counted and logged, and the
 account stays open — so nobody can shut themselves out of their own house. A
-service call is counted like anybody's, administrator or not. The card says
+`foyer.*` service call is counted like anybody's, administrator or not. The card says
 until when; the panel says *Codes from this account are blocked until …*.
 
 **Home Assistant's own cards refuse a codeless arming.** Home Assistant asks
@@ -240,8 +253,9 @@ wrong path. See [keypads](keypads.md).
 - *Arming refused* under *Arming*, with the reason and the zones, when the
   request was refused as it was made;
 - *Arming failed*, when an accepted arming met a zone still open or in fault
-  as its exit delay ended, and whenever an automatic rule's arming was
-  refused, with the rule's name;
+  as its exit delay ended; whenever an automatic rule's arming was refused for
+  any reason other than the house already being armed that way, with the
+  rule's name; and when a tag or a key zone failed to arm;
 - *Code rejected* under *Security*, when the refusal was about who was asking —
   a wrong code, a lockout, a permission or an area — with the reason in the
   row's detail;
@@ -311,7 +325,7 @@ recovers access from **Settings → Devices & services → Foyer Home Defender �
 Configure**: it enables that account's Foyer user, removes its validity
 window and sets a new code, or creates a user with every permission. It is
 never quiet: a row in the log, a Home Assistant notification and a message to
-every contact, each naming the account. The [FAQ](faq.md) and the
+every enabled contact, each naming the account. The [FAQ](faq.md) and the
 [security model](security-model.md) say why it exists and what it does not
 change.
 
@@ -350,8 +364,10 @@ the card keeps none beyond the command it was typed for.
   Companion app fetches a live link through Home Assistant's camera proxy;
   Telegram needs a file, written to the *Camera folder* (`media/foyer` by
   default, never `www`), which must be in `allowlist_external_dirs` or nothing
-  is written. Only push and chat channels receive pictures, only at an alarm,
-  and never when an entry delay starts. A camera that does not answer costs
+  is written. With *The cameras of the zones behind the alarm*, only push
+  and chat channels receive pictures, only at an alarm, and never when an
+  entry delay starts; *Always the same camera* attaches its one picture to the
+  notification itself, at whatever moment the action runs. A camera that does not answer costs
   its own picture, never the text.
 - **Quiet hours.** Inside a contact's *Quiet hours*, only what reaches
   *Minimum severity to get through* gets through. The simulator's trace says

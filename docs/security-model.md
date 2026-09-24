@@ -67,9 +67,10 @@ uses its own surfaces:
   its validity window removed and its code replaced; an account with none gets
   a new person with every permission. Once written, it is announced in a row
   under *Security*, a Home Assistant notification and a message to every
-  enabled contact, each naming the account; one that could not be written
-  leaves its row, marked failed. Anybody else is given a way in from the
-  *Users* page.
+  enabled contact, each naming the account; one whose write failed leaves its
+  row, marked failed, and one refused before anything is written — a code
+  that is invalid or already in use — is answered in the form. Anybody else is given a way in from
+  the *Users* page.
 
 ---
 
@@ -79,7 +80,7 @@ uses its own surfaces:
 
 Every code, and every duress code, is stored as a bcrypt hash and is
 write-only: no command, service or page returns a code or a hash, and neither
-a backup nor the diagnostics download carries one. The panel says whether
+a Foyer backup nor the diagnostics download carries one. The panel says whether
 somebody has a code, never what it is. The work factor is kept to tens of
 milliseconds a comparison, because a wrong code typed at a keypad during an
 entry delay is compared against every stored hash; only somebody who can read
@@ -111,8 +112,9 @@ Changing somebody's code leaves every row the old one signed where it was.
 enabled, with a code, and inside their validity window. Nothing can be
 verified before then, so enforcing the policy would make the alarm unusable
 rather than safer; the panel says so plainly while it lasts, on the Overview
-and as *Codes are not in force* on the *Users* page, and the card shows no
-keypad. From the first such person on, the policy applies
+and as *Codes are not in force* on the *Users* page, and the card offers no
+keypad to unfold (a card set to the *Keypad* layout still shows one, though
+nothing will ask for a code). From the first such person on, the policy applies
 in full. It is also why, while any area is armed, an edit that would leave
 nobody with a usable code is refused (below).
 
@@ -124,7 +126,8 @@ arming or disarming whatever the answer, and when the panel is closed. A code
 that was refused, or ran into a lockout, is forgotten on the spot.
 
 **The card** keeps no code beyond the command it was typed for. Typed digits
-go only with the command the keypad names above them; they are forgotten
+go with the next command pressed, and once a command is waiting for a code,
+only with that one, which the keypad names above them; they are forgotten
 after 30 seconds without a key, after the command is sent, and when the card
 leaves the screen. How the card asks is in [card.md](card.md).
 
@@ -146,7 +149,7 @@ leaves the screen. How the card asks is in [card.md](card.md).
 | *Valid from* / *Valid until* | A guest code: outside this window the code is refused, as *a user who is disabled or outside their validity period*. |
 | *Permissions* | What this person may ask for at all — the next table. |
 | *Areas* | *Everything*, or chosen areas. Every operation that acts on an area is refused when it touches one outside the list: arming an area or a scenario, excluding a zone, disarming — the *Whole house* disarm of every area included. Editing the configuration, reading the log and testing an action are never narrowed by areas. The *Walk test* is the one operation on an area it does not narrow. |
-| *Scenarios* | *Everything*, or chosen scenarios this person may arm. A scenario's own *Who may use it* list narrows it further. |
+| *Scenarios* | *Everything*, or chosen scenarios. Outside the list the person can neither arm the scenario, switch to it, nor disarm the areas it armed. A scenario's own *Who may use it* list narrows the same three further. |
 | *Skip the code where this person is identified* | The per-person exemption, off by default — see [which channels identify](#where-a-code-can-be-skipped). It needs a linked account. |
 | *Enabled* | A disabled person's code is refused, and their history is kept. |
 
@@ -161,11 +164,11 @@ Checked in the backend on every command, whatever the page shows or hides.
 | *Force arming* | Arming past a zone that blocks it — a distinct, logged command. |
 | *Exclude a zone* | Excluding a zone by hand, and including it again. |
 | *Change scenario* | Switching to another scenario while armed. |
-| *Edit the configuration* | Every configuration page, restoring a backup and emptying the log. Reading the configuration needs it too, but no code. |
+| *Edit the configuration* | Every configuration page except people, tags and the code policy, restoring a backup and emptying the log. Reading the configuration needs it too, but no code; downloading a backup asks for one when the policy says so. |
 | *Read the log* | The *Log* page and its exports, *Test & diagnostics* (the live table and the simulator) and *System health*. |
 | *Test actions* | The action test, which really sounds the siren and really sends the message. |
 | *Walk test* | Starting and ending a walk test. It reaches further than its name: [below](#whoever-may-start-a-walk-test-may-keep-the-house-quiet). |
-| *Manage users and codes* | People, and everything that decides what a person may do or which key opens the house as whom: a person, a tag, the person a key switch acts as, and a scenario's *Who may use it*. Any change touching one of them — saved, deleted, restored from a backup or imported — needs it as well as *Edit the configuration*, or *Edit the configuration* would be a way to hand oneself, or somebody else, what this permission withholds. Erasing a person's history from the log needs it too. |
+| *Manage users and codes* | People, and everything that decides what a person may do or which key opens the house as whom. Saving or deleting a person, saving a tag, and the code policy and lockout settings need this permission. A change made under *Edit the configuration* that also touches people — the person a key switch acts as, a scenario's *Who may use it*, deleting a tag, restoring a backup or importing — needs both, or *Edit the configuration* would be a way to hand oneself, or somebody else, what this permission withholds. Erasing a person's history from the log needs it too. |
 
 A person added on the *Users* page starts with *Arm*, *Disarm*, *Exclude a
 zone*, *Change scenario* and *Read the log*. Only the first person, created by
@@ -256,8 +259,9 @@ produces an unmarked row.
 Wrong codes are counted **per origin**, so that one source guessing locks
 itself out and not the household:
 
-- **per Home Assistant account**, on the panel, the card, the alarm panel
-  entities and the services;
+- **per Home Assistant account**: one counter shared by the panel, the card
+  and the alarm panel entities, and another for `foyer.*` service calls; calls
+  with no user behind them, such as automations, share a single counter;
 - **per device**, for a keypad or device declared under *Arming devices*;
 - **per source address**, at the device endpoint, for a missing or wrong
   token.
@@ -281,9 +285,11 @@ it ends, each time with its notification and its log rows — and it needs *Walk
 test*, not *Disarm*.
 
 It is kept that way on purpose, and it is never quiet about itself: it asks
-for a code by default, it puts a banner on every screen, it sends a
-notification when it starts and when it ends, and both of its rows in the log
-name the person. What stays live through it: 24h, tamper, technical and panic
+for a code by default, it puts a banner on every screen, the default profile
+sends a Home Assistant notification when it starts and when it ends (untick
+those two moments and it starts and ends unannounced), and both of its rows in
+the log, under *System*, name the person when a code or a linked account said
+who that was. What stays live through it: 24h, tamper, technical and panic
 zones, an alarm already under way, and a duress code. The *Users* page warns
 when *Walk test* is ticked. Give it to the people you would give *Disarm* to.
 
@@ -355,9 +361,11 @@ Foyer therefore says whether each exists, and never what it is:
   silences the one thing that reports Foyer's own death.
   [The detail](system-health.md#the-url-is-a-credential).
 
-None of them is in a backup, and none is in Home Assistant's diagnostics
+None of them is in a Foyer backup, and none is in Home Assistant's diagnostics
 download, which also leaves out names, code hashes and real entity ids
-([what it contains](system-health.md#the-diagnostics-download)).
+([what it contains](system-health.md#the-diagnostics-download)). A Home Assistant backup is another matter: it copies the configuration
+directory, `.storage/foyer.config` included, so it holds everything the list
+above says an administrator can read.
 
 **The acknowledgement webhook, if you switch it on, is an unauthenticated
 URL.** It exists so a voice provider can feed back the key somebody pressed
@@ -375,16 +383,18 @@ again, you generate a new one.
 ## Devices
 
 - **Declared before they may command.** A `device_id` this installation does
-  not carry is refused whatever code it brings, recorded under *Security* and
-  raised as a Home Assistant notification. The lockout counts per device, so a
+  not carry is refused whatever code it brings. On the arming services and
+  over MQTT the refusal is also recorded under *Security*, at most once a
+  minute per name, and raised as a Home Assistant notification. The lockout counts per device, so a
   caller free to invent a device name would be a caller who is never locked
   out.
 - **The token authenticates the device; it does not encrypt anything.** Over
   plain HTTP the token and every code typed on the device can be read on the
-  network. Such a device is still served, and carries a permanent
-  *Unencrypted* warning under *Arming devices*. A token alone never arms or
-  disarms: every action through the endpoint needs a code typed on the device,
-  arming included, and a device never goes beyond the permissions ticked for
+  network. Such a device is still served, and carries an *Unencrypted*
+  warning under *Arming devices* until a request from it arrives encrypted. A
+  token alone never arms or disarms: every command through the endpoint —
+  arming, disarming, excluding a zone, acknowledging — needs a code typed on
+  the device, and a device never goes beyond the permissions ticked for
   it, whatever code is typed.
 - **A right token is never refused for its address.** Behind the same router,
   reverse proxy or IPv6 /64 as somebody guessing, a device with its right token
@@ -430,8 +440,7 @@ counts towards the lockout. Link voice assistants through an account that is
 not linked to an exempt person, and give Google's PIN, if it is a Foyer code,
 to a person who holds only what you would let anybody near the speaker do —
 *Arm*, say. Through Home Assistant Cloud they act as the Cloud's own account,
-which the *Users* page does not offer to link, so the exemption never reaches
-them there.
+which the *Users* page does not offer to link.
 
 ---
 
@@ -474,14 +483,16 @@ works, because a message is read by whoever holds the other end, and "armed,
 nobody home" tells a third party exactly when to come:
 
 - the **external watchdog's** ping is an empty request by default; the
-  optional payload is off and carries three numbers at most
+  optional payload is off, and carries only two counts and a yes or no for
+  health
   ([system-health.md](system-health.md#the-heartbeat-carries-nothing));
 - the retained **MQTT state message** starts at its `minimal` level, with no
   scenario, no area names and no zone names, and is raised knowingly
   ([keypads.md](keypads.md#the-mqtt-contract));
 - an **API device** reads nothing until its permissions are ticked; then, by
   default, the state of the alarm with its token alone, and everything else
-  only for a short while after somebody types a code on it
+  only after somebody types a code on it, until it has gone unread for a
+  short while (two minutes by default) or somebody arms or disarms through it
   ([keypads.md](keypads.md#api-devices-displays-relays-and-modules-of-your-own)).
 
 ---

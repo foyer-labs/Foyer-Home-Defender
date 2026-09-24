@@ -136,18 +136,21 @@ Each of these is a line in the report, not a guess:
   when you press arm.
 
 A sensor named in the file that does not exist in Home Assistant right now
-still becomes a zone, and shows as a fault until the entity is back. A sensor
+still becomes a zone, and the report names it. Like every imported zone it
+arrives switched off; once it is confirmed and switched on, it shows as a
+fault until the entity is back. A sensor
 that was switched off in Alarmo comes across too, and the report says so:
 confirming its trigger does not oblige you to switch it on.
 
 ## Every zone arrives switched off
 
-Alarmo reads `on`, `open` and `unlocked` as alarm for every sensor, and
-`unavailable` as quiet unless told otherwise. That is one list for every kind of
-sensor, and a normally-closed contact reads the other way round. Foyer does not
-carry that belief across: each zone arrives with **Foyer's own proposal** for
-its trigger, read from the kind of sensor — the same proposal the zone wizard
-makes — **not confirmed, and switched off**.
+Alarmo's file does not say, sensor by sensor, which state means an alarm: it
+reads `on`, `open` and `unlocked` as alarm for every sensor. In Foyer every
+zone declares its own trigger, and a normally-closed contact reads the other
+way round from a normally-open one, so the importer has nothing it could carry
+across as a confirmed trigger. Each zone arrives with **Foyer's own proposal**
+for its trigger, read from the kind of sensor — the same proposal the zone
+wizard makes — **not confirmed, and switched off**.
 
 The *Zones* page marks such a zone *Trigger to confirm* and explains why when
 you open it. It cannot be switched on until somebody has tested the sensor,

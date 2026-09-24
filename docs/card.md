@@ -47,8 +47,8 @@ The editor has two choices, and writes the same YAML you would write by hand,
 so switching between the two loses nothing:
 
 - *Panel to show* — every Foyer panel, *Whole house* first.
-- *Layout* — *Full*, *Compact*, *Badge* or *Keypad*, each with a one-line
-  description under it.
+- *Layout* — *Full*, *Compact*, *Badge* or *Keypad*, with a one-line
+  description of the chosen layout under it.
 
 The card speaks the language of your Home Assistant profile, English or
 Italian, and draws itself with the theme's own colours, so it reads the same in
@@ -79,9 +79,10 @@ that is what pressing it does.
 ## How it asks for a code
 
 *Full* and *Compact* open the keypad when a code is asked for; *Keypad* always
-shows it. The card never decides that a code is needed: it sends the command
-without one, and when the backend answers *a code is required*, the keypad
-opens on that command.
+shows it. The card never decides that a code is needed. Digits already typed
+on an open keypad go with the next command pressed; with none typed, it sends
+the command without a code, and when the backend answers *a code is
+required*, the keypad opens on that command.
 
 Above the digits it says what they are for — *Code to arm Away*, *Code to
 disarm Ground floor*, *Code to exclude Kitchen window*, *Code to end the walk
@@ -174,7 +175,7 @@ the card offers it:
 |---|---|
 | Wrong code | *That code is not right.*, inside the keypad next to the digits, which stay open for another try |
 | Too many wrong codes | *Too many wrong codes: try again after 14:32.* in the keypad. The count is per Home Assistant account, so one account cannot lock out the household; the keypad still takes digits, and the lockout ends by itself |
-| Zones open or not responding | *Not armed — still open: Kitchen window.* (or *not responding*), with *Arm without these zones* and a line saying they are not watched until they close and that the arming is recorded as forced. The same zones are listed under *Not ready to arm* in `full`, each with *Exclude* |
+| Zones open or not responding | *Not armed — still open: Kitchen window.* (or *not responding*), with *Arm without these zones* and a line saying they are not watched until they close and that the arming is recorded as forced. The same zones are listed under *Not ready to arm* in `full`, with *Exclude* beside each one that may be excluded |
 | Other refusals | The reason in words: no permission, a scenario you may not use, a walk test running, and so on |
 | The command never arrived | *The command did not reach Foyer. Nothing changed: try again.* |
 

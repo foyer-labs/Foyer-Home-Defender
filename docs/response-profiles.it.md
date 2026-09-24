@@ -42,8 +42,10 @@ profilo, *Default*, che contiene una sola notifica di Home Assistant, e tutto
 lo eredita finché non scegli diversamente.
 
 **L'anello della zona si legge per una cosa sola: l'allarme di quella zona**
-— lo scatto, il ritardo d'ingresso che apre, il gruppo di verifica che
-soddisfa. Un inserimento, un disinserimento, un guasto, un'esclusione, *Fine
+— lo scatto, il ritardo d'ingresso che apre, e la conferma di una coppia a
+verifica incrociata o di un conteggio di *Attivazioni necessarie* che
+completa. Un gruppo di verifica risponde con il suo profilo, poi con la
+catena della sua area. Un inserimento, un disinserimento, un guasto, un'esclusione, *Fine
 dell'allarme*, *Incidente aperto* — tutto il resto che succede in un'area
 risponde con la catena dell'area, area → scenario → predefinito. È una
 regola sola da tenere a mente quando ti chiedi perché qualcosa ha suonato, e
@@ -220,7 +222,8 @@ sta succedendo. Quindi l'unità è l'incidente:
   parità vince la zona che si è aggiunta per prima. Una zona più rumorosa che
   si aggiunge cambia l'elenco delle persone e tiene l'orologio
   dell'incidente: i passi già dovuti partono subito invece di ricominciare
-  da capo. È l'unico uso di *Gravità*.
+  da capo. Se non c'era ancora nessuna escalation in corso, l'orologio parte
+  quando quella zona si aggiunge. È l'unico uso di *Gravità*.
 - **Una sola presa d'atto chiude l'intero incidente**, e ne ferma subito
   l'escalation. Disinserire un'area toccata dall'incidente è una presa
   d'atto; disinserire un'area che non ha toccato no — chi la mattina
@@ -306,13 +309,17 @@ zona. Su *Incidente aperto* e *Zona aggiunta all'incidente*, l'incidente è
 silenzioso solo finché lo sono tutte le sue zone: **una zona non silenziosa
 che contribuisce allo stesso incidente suona comunque.** Un pulsante
 antipanico segnato come silenzioso manda il suo messaggio in silenzio; la
-finestra della cucina che scatta un minuto dopo fa suonare la sirena.
+finestra della cucina che scatta un minuto dopo fa suonare la sirena —
+attraverso il profilo dell'area, quindi spunta la sirena per *Zona aggiunta
+all'incidente* oltre che per *Allarme*: una seconda zona in un'area già in
+allarme genera solo quel momento.
 
 ### Il pulsante Prova
 
 Accanto a ogni azione salvata, *Prova* la esegue per davvero: la sirena
-suona per davvero — per tre secondi, qualunque sia la durata configurata —
-la notifica arriva per davvero, la luce si accende per davvero. Prima chiede
+suona per davvero — per tre secondi su una sirena che accetta una durata;
+una comandata da un interruttore, o che non accetta una durata, resta accesa
+finché non la spegni tu — la notifica arriva per davvero, la luce si accende per davvero. Prima chiede
 conferma, richiede il permesso *Provare le azioni* e un codice, e lascia nel
 registro una riga segnata come prova. Condizioni e ore di silenzio non
 vengono considerate, perché sono regole sugli allarmi, non sul fatto che il

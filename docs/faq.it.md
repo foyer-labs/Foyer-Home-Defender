@@ -43,7 +43,8 @@ Puoi, e la prima versione funziona. Quello che costa i sei mesi successivi è
 tutto il resto, e Foyer è costruito proprio attorno a quelle parti:
 
 - **Un riavvio a metà di un ritardo d'ingresso.** Foyer salva gli stati delle
-  aree, i ritardi in corso e l'avanzamento delle escalation a ogni modifica, e
+  aree, i ritardi in corso, lo spegnimento programmato di una sirena e
+  l'avanzamento delle escalation a ogni modifica, e
   li ripristina quando Home Assistant riparte. Il registro annota il buco, così
   non lascia mai intendere che la casa fosse sorvegliata mentre Home Assistant
   era fermo.
@@ -120,7 +121,8 @@ senza codice, anche quello della persona esentata.
   esentata inserisce senza codice; chiunque altro a cui Foyer chieda un codice
   viene rifiutato da Foyer, con una riga nel registro e un messaggio che dice
   dove digitarlo: la card di Foyer, il pannello di Foyer, o la card *Pannello
-  degli Allarmi* di Home Assistant, che offre l'inserimento solo finché il
+  degli Allarmi* di Home Assistant, che mostra un campo per il codice ovunque
+  un codice possa essere chiesto, ma offre l'inserimento solo finché il
   pannello è disinserito.
 - **Cambiare modalità con la casa inserita** è un cambio di scenario, che per
   impostazione predefinita chiede un codice anche dove inserire non lo chiede.
@@ -129,7 +131,9 @@ senza codice, anche quello della persona esentata.
   card di Foyer o nel pannello.
 
 Gli assistenti vocali leggono la stessa risposta. Ad Alexa un pannello viene
-offerto solo finché inserirlo non chiede un codice. Google Assistant chiede il
+offerto solo finché inserirlo non chiede un codice; non ne manda nessuno e non
+aspetta la risposta di Foyer, quindi un rifiuto si vede solo nello stato del
+pannello e nel registro. Google Assistant chiede il
 suo PIN prima di inserire solo finché serve un codice, ma manda il PIN salvato
 nella propria configurazione che l'abbia chiesto o no: se quel PIN è il codice
 Foyer di qualcuno, la richiesta viene fatta a suo nome; se non lo è, è un

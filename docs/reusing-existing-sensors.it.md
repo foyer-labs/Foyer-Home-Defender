@@ -205,7 +205,12 @@ cambiato o no. Il limite si può impostare da 60 secondi a 7 giorni.
   Una porta che resta chiusa per una settimana non manda niente per una
   settimana, e un limite la manderebbe in guasto.
 - **Un sensore che dà segni di vita a intervalli regolari:** imposta il
-  limite più lungo di quell'intervallo, sensore per sensore.
+  limite più lungo di quell'intervallo, sensore per sensore. Con il sensore
+  binario MQTT, un segno di vita che ripete lo stesso stato arriva a Home
+  Assistant solo con `force_update: true`; senza, l'entità non viene scritta
+  e il limite manderebbe in guasto un sensore sano — usa invece
+  l'`expire_after` del sensore stesso, più lungo dell'intervallo dei segni di
+  vita.
 - **Un'integrazione della centrale:** se riscrive uno stato invariato a ogni
   interrogazione dipende dall'integrazione. Imposta un limite generoso e
   guarda per un giorno la colonna *Salute* in *Test e diagnostica*. Se la

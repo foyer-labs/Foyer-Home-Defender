@@ -146,10 +146,12 @@ configurazione invece di ricominciare da capo, in cinque passi brevi:
    una zona* elenca le entità non ancora usate. Scegline una e la procedura ti
    dice com'è adesso e in quali stati Foyer la considererà in allarme,
    entrambe le cose lette dal vivo, così puoi aprire la porta e guardare
-   cambiare la frase. Per un sensore di porta, finestra o movimento scegli
-   *Istantanea* (suona subito) o *Ritardata* (lascia il ritardo d'ingresso per
-   disinserire: la porta da cui entri); per tutto il resto il tipo viene
-   mostrato e si può cambiare più tardi nella pagina *Zone*. Spunta *L'ho
+   cambiare la frase. Dove Foyer propone una normale zona antintrusione — un
+   contatto, un sensore di movimento, una copertura, una serratura o un
+   interruttore — scegli *Istantanea* (suona subito) o *Ritardata* (lascia il
+   ritardo d'ingresso per disinserire: la porta da cui entri); dove propone
+   altro — manomissione, 24h, tecnica — il tipo viene mostrato e si può
+   cambiare più tardi nella pagina *Zone*. Spunta *L'ho
    provato: aprendo o facendo scattare il sensore, lo stato qui sopra diventa
    quello indicato*, poi *Aggiungi la zona*. Un sensore che riporta un numero,
    o un'entità per cui Foyer non ha uno stato da proporre, viene mandato alla
@@ -195,7 +197,8 @@ casa; renderebbe solo impossibile disinserire, ed è così che un allarme insegn
 al suo proprietario a toglierlo.
 
 Dal momento in cui qualcuno ha un codice, la politica si applica per intero, e a
-tutti. Con le impostazioni predefinite, per inserire non serve niente, mentre
+tutti. Con le impostazioni predefinite, per inserire una casa disinserita non
+serve niente, mentre passare da uno scenario in funzione a un altro,
 disinserire, escludere una zona, forzare un inserimento, cambiare la
 configurazione, un walk test e una prova delle azioni chiedono un codice;
 prendere atto di un allarme no. Un amministratore di Home Assistant se lo sente
@@ -248,8 +251,10 @@ che vedono HomeKit e gli assistenti vocali.
 Uno **scenario** è un insieme di aree, con un nome, da inserire insieme —
 *Notte, solo piano terra*, *Solo garage*, *Cane in casa* — quanti ne servono
 alla casa, non quattro modalità fisse. Scegliere uno scenario mentre un altro è
-inserito lo sostituisce: le aree che il nuovo non elenca vengono disinserite.
-`select.foyer_scenario` nomina sempre lo scenario in funzione, e conta, perché
+inserito lo sostituisce: le aree che il vecchio aveva inserito e il nuovo non
+elenca vengono disinserite, e un'area inserita da sola resta com'è. Il cambio
+viene rifiutato mentre un'area che tocca è nel ritardo d'ingresso o in
+allarme. `select.foyer_scenario` nomina sempre lo scenario in funzione, e conta, perché
 più scenari possono presentare a Home Assistant la stessa modalità. Inserire
 una singola area fuori da qualsiasi scenario si può, ed è l'eccezione.
 
@@ -269,7 +274,9 @@ manda un comando, e quello che vedi è la risposta del backend.
 
 **Tutta la casa.** Lo stato della casa, e la modalità che vede Home Assistant,
 poi un pulsante per ogni scenario — *Inserisci «Notte»* — ciascuno con un
-lucchetto quando per inserirlo serve un codice. Accanto a ogni pulsante:
+lucchetto quando per inserirlo da casa disinserita serve un codice; per
+passarci da un altro scenario in funzione serve il codice di *Cambiare
+scenario* anche dove non compare nessun lucchetto. Accanto a ogni pulsante:
 *Pronto per l'inserimento*, *Non pronto:* seguito dalle zone che lo impediscono,
 oppure *in funzione* per lo scenario inserito. La riga sulla prontezza è un
 consiglio, non uno sbarramento: premere un pulsante che dice *Non pronto* manda
@@ -301,7 +308,9 @@ sua area viene disinserita; con una durata, viene inclusa di nuovo allo scadere
 del tempo, e lo dice. *Includi di nuovo* chiude un'esclusione in anticipo. Un
 rilevatore di fumo in allarme non compare qui: ha il suo banner.
 
-**I banner in alto.** Sopra tutto il resto possono comparire quattro cose:
+**I banner in alto.** In cima alla Panoramica possono comparire quattro cose
+(sopra di loro, su ogni pagina, il pannello mostra anche un walk test in corso
+e un blocco dei codici):
 
 - **Allarme tecnico** — fumo, gas, acqua: un canale a sé. Inserire non lo
   tocca e disinserire non lo chiude; si chiude quando qualcuno preme *Prendi

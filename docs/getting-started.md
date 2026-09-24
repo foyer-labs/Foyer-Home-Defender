@@ -139,11 +139,12 @@ the config flow made rather than starting again, in five short steps:
 2. **Zones.** The zones mapped so far, against a target of three. *Add a
    zone* lists the entities not already used. Pick one and the wizard says
    what it is now and in which states Foyer will treat it as in alarm, both
-   read live, so you can open the door and watch the sentence change. For a
-   door, window or motion sensor you choose *Instant* (sounds at once) or
+   read live, so you can open the door and watch the sentence change. Where
+   Foyer proposes an ordinary intrusion zone — a contact, a motion sensor, a
+   cover, a lock or a switch — you choose *Instant* (sounds at once) or
    *Delayed* (leaves the entry delay to disarm — the door you come in by);
-   for anything else the type is shown and can be changed later on the
-   *Zones* page. Tick *I tried it: opening or triggering it changes the state
+   where it proposes something else — tamper, 24h, technical — the type is
+   shown and can be changed later on the *Zones* page. Tick *I tried it: opening or triggering it changes the state
    above to the one listed*, then *Add the zone*. A sensor that reports a
    number, or an entity for which Foyer has no state to propose, is sent to
    the *Zones* page instead, because its trigger is something you have to
@@ -185,9 +186,10 @@ nobody has would not protect the house; it would only make it impossible to
 disarm, which is how an alarm teaches its owner to remove it.
 
 From the moment somebody holds a code, the policy applies in full, and to
-everybody. With the defaults, arming asks for nothing, while disarming,
-excluding a zone, forcing an arming, changing the configuration, a walk test
-and an action test ask for a code; acknowledging an alarm does not. A Home
+everybody. With the defaults, arming a disarmed house asks for nothing, while
+switching from one running scenario to another, disarming, excluding a zone,
+forcing an arming, changing the configuration, a walk test and an action test
+ask for a code; acknowledging an alarm does not. A Home
 Assistant administrator is asked like anybody else, because being an
 administrator identifies nobody: the unlocked wall tablet is almost always
 signed in as one. When the panel asks, it says what the code is for — *Code
@@ -233,7 +235,9 @@ it disarms every area. It is the entity HomeKit and the voice assistants see.
 A **scenario** is a named set of areas to arm together — *Night, ground floor
 only*, *Garage only*, *Dog at home* — as many as the house needs, not four
 fixed modes. Choosing a scenario while another is armed takes its place:
-areas the new one does not list are disarmed. `select.foyer_scenario` always
+areas the old one armed and the new one does not list are disarmed, and an
+area armed on its own is left as it is. The switch is refused while an area it
+touches is in its entry delay or in alarm. `select.foyer_scenario` always
 names the scenario that is running, which matters because several scenarios
 may report the same mode to Home Assistant. Arming a single area outside any
 scenario is possible, and is the exception.
@@ -251,7 +255,8 @@ you see is the backend's answer.
 
 **Whole house.** The house's state, and the mode Home Assistant is shown,
 then one button per scenario — *Arm “Night”* — each with a lock when arming it
-asks for a code. Beside each button: *Ready to arm*, *Not ready* followed by
+from a disarmed house asks for a code; switching to it from another running
+scenario asks for the *Change scenario* code even where no lock is shown. Beside each button: *Ready to arm*, *Not ready* followed by
 the zones that stand in the way, or *running* for the scenario that is armed.
 The readiness line is advice, not a gate: pressing a button that says *Not
 ready* still sends the command, and the refusal, if there is one, comes from
@@ -280,7 +285,9 @@ area is disarmed; with a duration, it is included again when the time is up,
 and says so. *Include again* ends an exclusion early. A smoke detector in
 alarm is not listed here: it has its own banner.
 
-**Banners at the top.** Four things can appear above everything else:
+**Banners at the top.** Four things can appear at the top of the Overview
+(above them, on every page, the panel also shows a running walk test and a
+code lockout):
 
 - **Technical alarm** — smoke, gas, water: its own channel. Arming does not
   affect it and disarming does not clear it; it clears once somebody presses

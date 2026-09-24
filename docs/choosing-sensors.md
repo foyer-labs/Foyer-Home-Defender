@@ -59,8 +59,10 @@ zone, an entity that reports nothing for longer than the limit is a fault:
 it blocks arming unless the zone allows it, raises `zone_fault`, and shows as
 *Fault: silent too long* on *Test & diagnostics*. A report counts even when
 the state did not change, because Foyer reads Home Assistant's
-`last_reported` rather than the time of the last change. The limit is off by
-default and may be set from 60 seconds to 7 days, per zone.
+`last_reported` rather than the time of the last change — provided the
+integration writes the unchanged state: an MQTT binary sensor does so only
+with `force_update: true`. The limit is off by default and may be set from
+60 seconds to 7 days, per zone.
 
 When choosing, prefer a sensor whose documentation states a check-in
 interval, and set the limit comfortably longer than it. For a sensor that
@@ -150,9 +152,10 @@ group adds its confirmation and its own response profile. That is what makes
 the answer graduated: give the members a quiet profile and the group a loud
 one, and a single PIR sends a notification while two within a minute sound
 the siren. The false alarm from one sensor stops costing a siren, and the
-real intruder, who crosses more than one, still gets it. For one sensor
-confirming another, *Cross-zone verification* on the zone does the same with
-one field.
+real intruder, who crosses more than one, still gets it. *Cross-zone
+verification* on a zone records that one sensor confirmed another with a
+single field, but a pair has no response profile of its own: for the
+quiet-then-loud answer, make a group of two.
 
 Two rules shape how to place the second sensor:
 

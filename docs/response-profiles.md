@@ -41,7 +41,9 @@ Assistant notification, and everything inherits it until you choose
 otherwise.
 
 **The zone link is read for one thing only: that zone's own alarm** —
-the trigger, the entry delay it opens, the verification group it satisfies.
+the trigger, the entry delay it opens, and the confirmation of a cross-zone
+pair or an *Activations needed* count it completes. A verification group
+answers with its own profile, then its area's chain.
 An arming, a disarm, a fault, an exclusion, *Alarm over*, *Incident opened* —
 everything else that happens in an area answers with the area's chain,
 area → scenario → default. It is one rule to hold in mind when asking why
@@ -211,7 +213,8 @@ happening. So the incident is the unit:
   steps of the highest-severity one among those that have steps at all, and
   ties go to the zone that joined first. A louder zone joining changes the
   list of people, and keeps the incident's clock: steps already due go out at
-  once rather than starting again. This is the only use of *Severity*.
+  once rather than starting again. If nothing was escalating yet, the clock
+  starts when that zone joins. This is the only use of *Severity*.
 - **One acknowledgement closes the whole incident**, and stops its
   escalation at once. Disarming an area the incident touched is an
   acknowledgement; disarming an area it did not touch is not — whoever
@@ -291,12 +294,16 @@ Silence belongs to the zone. On the zone's own alarm, the zone decides. On
 *Incident opened* and *Zone joined the incident*, the incident is silent only
 while every zone in it is: **a non-silent zone contributing to the same
 incident still sounds.** A panic button marked silent sends its message
-quietly; the kitchen window going a minute later sounds the siren.
+quietly; the kitchen window going a minute later sounds the siren — through
+the area's profile, so tick the siren for *Zone joined the incident* as well
+as *Alarm*: a second zone in an area already in alarm raises only that
+moment.
 
 ### The test button
 
 Beside every saved action, *Test* really runs it: the siren really sounds —
-for three seconds, whatever its configured duration — the notification
+for three seconds on a siren that accepts a duration; one driven by a switch,
+or one that takes no duration, stays on until you switch it off — the notification
 really arrives, the light really comes on. It asks first, needs the *Test
 actions* permission and a code, and leaves a row in the log marked as a test.
 Conditions and quiet hours are not asked, because they are rules about

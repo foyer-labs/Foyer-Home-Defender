@@ -51,8 +51,8 @@ L'editor ha due scelte, e scrive lo stesso YAML che scriveresti a mano, quindi
 passare dall'uno all'altro non fa perdere niente:
 
 - *Pannello da mostrare* — ogni pannello di Foyer, *Tutta la casa* per primo.
-- *Disposizione* — *Completa*, *Compatta*, *Badge* o *Tastierino*, ciascuna con
-  una descrizione di una riga sotto.
+- *Disposizione* — *Completa*, *Compatta*, *Badge* o *Tastierino*, con sotto
+  una descrizione di una riga della disposizione scelta.
 
 La card parla la lingua del tuo profilo di Home Assistant, inglese o italiano,
 e si disegna con i colori del tema, quindi si legge allo stesso modo in un tema
@@ -85,8 +85,10 @@ memoria d'allarme*, perché è quello che fa premerlo.
 ## Come chiede un codice
 
 *Completa* e *Compatta* aprono il tastierino quando serve un codice;
-*Tastierino* lo mostra sempre. La card non decide mai che serve un codice: manda
-il comando senza, e quando il backend risponde *serve un codice*, il tastierino
+*Tastierino* lo mostra sempre. La card non decide mai che serve un codice. Le
+cifre già digitate su un tastierino aperto partono con il prossimo comando
+premuto; se non ne è stata digitata nessuna, manda il comando senza codice, e
+quando il backend risponde *serve un codice*, il tastierino
 si apre su quel comando.
 
 Sopra le cifre dice a cosa servono — *Codice per inserire Fuori casa*, *Codice
@@ -187,7 +189,7 @@ superarlo la card la offre:
 |---|---|
 | Codice sbagliato | *Il codice non è corretto.*, dentro il tastierino accanto alle cifre, che restano aperte per un altro tentativo |
 | Troppi codici sbagliati | *Troppi codici errati: riprova dopo le 14:32.* nel tastierino. Il conteggio è per account di Home Assistant, così un account non può bloccare tutta la casa; il tastierino continua ad accettare cifre, e il blocco finisce da solo |
-| Zone aperte o che non rispondono | *Inserimento non riuscito — ancora aperte: Finestra della cucina.* (o *non rispondono*), con *Inserisci senza queste zone* e una riga che dice che non sono sorvegliate finché non si chiudono e che l'inserimento viene registrato come forzato. Le stesse zone sono elencate sotto *Non pronto per l'inserimento* in `full`, ciascuna con *Escludi* |
+| Zone aperte o che non rispondono | *Inserimento non riuscito — ancora aperte: Finestra della cucina.* (o *non rispondono*), con *Inserisci senza queste zone* e una riga che dice che non sono sorvegliate finché non si chiudono e che l'inserimento viene registrato come forzato. Le stesse zone sono elencate sotto *Non pronto per l'inserimento* in `full`, con *Escludi* accanto a ciascuna che si può escludere |
 | Altri rifiuti | Il motivo a parole: nessun permesso, uno scenario che non puoi usare, un walk test in corso, e così via |
 | Il comando non è mai arrivato | *Il comando non è arrivato a Foyer. Non è cambiato nulla: riprova.* |
 

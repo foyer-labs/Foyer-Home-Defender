@@ -34,6 +34,8 @@ things are worth knowing before the detail:
 
 ## Mains power and the UPS
 
+<p align="center"><img src="screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting every fifteen minutes with an empty payload, and every notification channel with its last successful send or the fact that it has never been used" width="900"></p>
+
 A UPS over NUT, or a smart plug that reports its own supply, already gives you
 a `binary_sensor`. Name it on page 14 and say which of its states means the
 mains has failed.

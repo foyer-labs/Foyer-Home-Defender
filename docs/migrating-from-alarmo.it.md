@@ -150,19 +150,22 @@ Ognuna di queste cose è una riga del report, non un tentativo di indovinare:
   inserisci.
 
 Un sensore nominato nel file che in questo momento non esiste in Home
-Assistant diventa comunque una zona, e risulta in guasto finché l'entità non
-torna. Anche un sensore che era disattivato in Alarmo viene importato, e il
-report lo dice: confermarne il trigger non ti obbliga ad attivarlo.
+Assistant diventa comunque una zona, e il report la nomina. Come ogni zona
+importata arriva disattivata; una volta confermata e attivata, risulta in
+guasto finché l'entità non torna. Anche un sensore che era disattivato in
+Alarmo viene importato, e il report lo dice: confermarne il trigger non ti
+obbliga ad attivarlo.
 
 ## Ogni zona arriva disattivata
 
-Alarmo legge `on`, `open` e `unlocked` come allarme per qualunque sensore, e
-`unavailable` come quiete se non gli si dice altro. È un'unica lista per ogni
-tipo di sensore, e un contatto normalmente chiuso (NC) si legge al contrario.
-Foyer non si porta dietro questo presupposto: ogni zona arriva con **la
-proposta di Foyer** per il suo trigger, ricavata dal tipo di sensore (la
-stessa che fa la procedura guidata delle zone), **non confermata, e
-disattivata**.
+Il file di Alarmo non dice, sensore per sensore, quale stato significa
+allarme: legge `on`, `open` e `unlocked` come allarme per qualunque sensore. In
+Foyer ogni zona dichiara il suo trigger, e un contatto normalmente chiuso
+(NC) si legge al contrario di uno normalmente aperto (NA), quindi
+l'importatore non ha niente che possa portarsi dietro come trigger confermato.
+Ogni zona arriva con **la proposta di Foyer** per il suo trigger, ricavata dal
+tipo di sensore (la stessa che fa la procedura guidata delle zone), **non
+confermata, e disattivata**.
 
 La pagina *Zone* segna una zona così come *Trigger da confermare*, e quando la
 apri spiega perché. Non si può attivare finché qualcuno non ha provato il

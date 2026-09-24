@@ -68,8 +68,8 @@ cui un'area inserita potrebbe rispondere, e i contatti che nominano;
 |---|---|---|---|
 | *Durata delle sirene* | 180 s | 1–900 s | bloccata |
 | *Attendi la chiusura al massimo* | 300 s | 60–1800 s | bloccata |
-| *Ritardo d'ingresso predefinito* | 30 s | 0–300 s | bloccata |
-| *Ritardo d'uscita predefinito* | 30 s | 0–300 s | bloccata |
+| *Ritardo d'ingresso predefinito* | 30 s | 0–300 s nel pannello | bloccata |
+| *Ritardo d'uscita predefinito* | 30 s | 0–300 s nel pannello | bloccata |
 | *Batteria scarica sotto* | 20 % | 1–100 % | libera |
 | *Timeout del walk test* | 900 s | 60–3600 s | bloccata |
 
@@ -90,9 +90,12 @@ la zona l'avesse bloccato. Una zona può avere un valore suo; questo è quello
 che usa quando non ce l'ha. Vedi [zone](zones.it.md).
 
 **Ritardo d'ingresso predefinito** e **Ritardo d'uscita predefinito** sono i
-ritardi con cui parte un'area creata senza ritardi propri. Le aree esistenti
-tengono i loro, e i ritardi di ogni area si modificano nella pagina *Aree*;
-una zona può sovrascrivere il ritardo d'ingresso e uno scenario quello
+ritardi che il backend dà a un'area salvata senza ritardi propri. La pagina
+*Aree* non ne manda mai una così: fa partire ogni nuova area da 30 s per
+entrambi, qualunque cosa dicano queste impostazioni, quindi i ritardi di una
+nuova area impostali lì. Il pannello offre 0–300 s per entrambi; i ritardi di
+ogni area vengono tenuti entro 0–300 s al salvataggio. Le aree esistenti
+tengono i loro; una zona può sovrascrivere il ritardo d'ingresso e uno scenario quello
 d'uscita. Vedi [zone](zones.it.md).
 
 **Batteria scarica sotto** decide quando un'entità batteria numerica è
@@ -154,8 +157,8 @@ con il suo pulsante *Salva*.
   fascia globale.
 - **Modalità** — *Suono singolo*, oppure *Pronuncia il nome della zona*
   tramite l'entità di *Sintesi vocale* scelta accanto. Con il suono singolo,
-  *Contenuto da riprodurre* è ciò che riproduce un media player; una sirena
-  suona per un secondo se supporta una durata impostata, altrimenti viene
+  *Contenuto da riprodurre* è ciò che riproduce un media player. In entrambe le
+  modalità, una sirena suona per un secondo se supporta una durata impostata, altrimenti viene
   saltata.
 - **Volume** — in percentuale, 0–100. Vuoto lascia il volume del lettore
   com'è.

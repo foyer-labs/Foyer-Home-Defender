@@ -185,7 +185,11 @@ changed. The limit may be set from 60 seconds to 7 days.
   that stays closed for a week sends nothing for a week, and a limit would
   fault it.
 - **A sensor that checks in on a schedule:** set the limit longer than that
-  schedule, sensor by sensor.
+  schedule, sensor by sensor. Through the MQTT binary sensor, a check-in that
+  repeats the same state reaches Home Assistant only with
+  `force_update: true`; without it, the entity is not written and the limit
+  would fault a healthy sensor — use the sensor's own `expire_after`
+  instead, longer than the check-in interval.
 - **A panel integration:** whether it writes an unchanged state on every
   poll is up to the integration. Set a generous limit and watch the *Health*
   column on *Test & diagnostics* for a day. If the zone shows *Fault: silent

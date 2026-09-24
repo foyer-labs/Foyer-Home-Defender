@@ -64,7 +64,8 @@ in guasto: blocca l'inserimento a meno che la zona non lo consenta, genera
 `zone_fault`, e compare come *Guasto: muta da troppo tempo* in *Test e
 diagnostica*. Una segnalazione conta anche quando lo stato non è cambiato,
 perché Foyer legge il `last_reported` di Home Assistant invece del momento
-dell'ultimo cambio. Il limite è spento di default e si può impostare da 60
+dell'ultimo cambio — a patto che l'integrazione scriva lo stato invariato: un
+sensore binario MQTT lo fa solo con `force_update: true`. Il limite è spento di default e si può impostare da 60
 secondi a 7 giorni, zona per zona.
 
 Quando scegli, preferisci un sensore la cui documentazione dichiari un
@@ -163,9 +164,10 @@ suo profilo di risposta. È questo che rende la risposta graduale: dai ai
 membri un profilo silenzioso e al gruppo uno rumoroso, e un PIR da solo manda
 una notifica mentre due entro un minuto fanno suonare la sirena. Il falso
 allarme di un sensore smette di costare una sirena, e l'intruso vero, che ne
-attraversa più di uno, la sirena la sente comunque. Per un sensore che ne
-conferma un altro, *Verifica incrociata* sulla zona fa la stessa cosa con un
-solo campo.
+attraversa più di uno, la sirena la sente comunque. *Verifica incrociata*
+su una zona registra con un solo campo che un sensore ne ha confermato un
+altro, ma una coppia non ha un profilo di risposta suo: per la risposta prima
+silenziosa e poi rumorosa, crea un gruppo di due.
 
 Due regole decidono dove mettere il secondo sensore:
 

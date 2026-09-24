@@ -30,6 +30,8 @@ are worth reading before writing a rule:
 
 ## The rule model
 
+<p align="center"><img src="screenshots/panel-rules-en.png" alt="The Automation rules page: a rule that arms when everybody has been away for ten minutes, with its guards and its two-minute grace period, an expected-visitor window for the boiler engineer, and the automatic disarming card naming the attack it protects against and the perimeter area a rule may never disarm" width="900"></p>
+
 | Element | Options |
 |---|---|
 | **Trigger** | `absence` — every selected person `not_home` for N minutes · `presence` — a selected person arrives · `time` — at HH:MM on chosen weekdays · `entity` — an entity holds a state for N minutes |

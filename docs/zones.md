@@ -127,11 +127,14 @@ Choosing another scenario while one runs is a switch, not a second arming:
   memory, because nothing armed them again;
 - areas of the new one not yet armed go through their exit delay and start
   clean;
-- areas armed on their own, outside any scenario, are left exactly as they are.
+- areas armed on their own that the new scenario does not list are left
+  exactly as they are; one it does list stays armed and now belongs to it.
 
 A switch is refused while any area it would touch is in its entry delay or
 triggered: changing scenario must never silence an alarm without a disarm. It
-asks for the *Change scenario* code by default, even where arming asks none.
+asks for the *Change scenario* code by default, even where the global policy
+asks none to arm; an area or scenario set to *No code* to arm asks none for
+the switch either.
 The scenario stays active while any area it armed is still armed.
 
 ---
@@ -177,7 +180,8 @@ So *When is this zone triggered?* says what the entity reads right now and
 makes a **proposal**: a type from the entity's device class (*door* suggests
 *Delayed*, *window* and *motion* *Instant*, *smoke* and *moisture*
 *Technical*), and trigger states from its domain — `on` for a binary sensor,
-`open` and `opening` for a cover, `unlocked` and `open` for a lock. A proposal is a
+`open` and `opening` for a cover, `unlocked`, `open` and `opening` for a
+lock. A proposal is a
 starting point, never a decision: **open the door or walk past, watch the
 state change, and tick *I have checked this against the real sensor*.** Save
 stays disabled until you do, the backend refuses the save without it whatever
@@ -261,13 +265,14 @@ default and never implicit.
 A zone can be excluded **by hand** — *Exclude* on the Overview's *Not ready*
 list and on the card, or `foyer.bypass_zone` — and let back in with *Include
 again* or `foyer.unbypass_zone`. It needs *Exclude a zone* and a code by
-default. Two rules, both matching real panels:
+default. Two rules:
 
 - **without a duration**, the exclusion ends when the area is disarmed;
 - **with a duration** — *1 h*, *8 h* or a number of minutes on the Overview, up
   to 30 days through the service — it outlives the disarm and ends when its
-  time is up, **announcing the zone's return**, because a zone excluded and
-  forgotten is exactly the window somebody comes through.
+  time is up; the zone's return is logged, and announced by any profile that
+  ticks *Zone included again*, because a zone excluded and forgotten is
+  exactly the window somebody comes through.
 
 Closing the zone never ends a manual exclusion: closing the window is what it
 was excluded for. An automatic exclusion, by contrast, rejoins as it closes.
@@ -372,7 +377,8 @@ wired as an entity.
 | *Scenario* | Which scenario it arms |
 | *When released* | *Nothing*, or *Disarm everything* — for a switch that stays on while the house is armed |
 
-A key has no area to choose, so it disarms every area, as *Whole house* does;
+A key's command is not tied to its area, so it disarms every area, as *Whole
+house* does;
 *Arm or disarm* disarms everything if any area is armed, and otherwise arms its
 scenario. The key is the credential: no code travels with it. A refused arming
 is recorded as *Arming failed*, never silent, or the person walks away
@@ -486,8 +492,9 @@ being held for ever.
   area watches it, and acts in its own area.
 - **A zone belongs to one group or cross-zone pair at most**, or its detection
   would count twice; the editor offers only free zones.
-- A group with fewer enabled members than its threshold cannot be satisfied;
-  the page says so, and its members act on their own.
+- A group needs at least as many enabled members as its threshold: a save
+  that would leave fewer, switching a member off included, is refused and
+  says why.
 
 ### Cross-zone verification
 
@@ -523,11 +530,12 @@ to intrusion zones only.
 | `binary_sensor.foyer_ready_to_arm` | Whether arming every area would succeed now; `…_ready_to_arm_<area>` per area. Attributes name the faulted and open zones that block |
 | `sensor.foyer_open_zones` | How many intrusion zones are open, names as an attribute |
 | `binary_sensor.foyer_fault` | Any zone in fault, names as an attribute |
-| `sensor.foyer_countdown_<area>` | Seconds left of an exit or entry delay |
+| `sensor.foyer_countdown_<area>` | Seconds left of an exit or entry delay, or of an *Arm after closing* wait |
 | `switch.foyer_chime` | The chime on or off |
 
-`ready_to_arm` reads the same function the engine uses when it refuses an arm
-request, so it cannot say *ready* where arming would refuse.
+`ready_to_arm` reads the same function the engine uses to refuse an arming for
+a fault or an open zone, so it cannot say *ready* where a zone would block; a
+code, a permission or a walk test can still refuse the request.
 
 ---
 

@@ -141,13 +141,15 @@ inserimento:
   nuovo;
 - le aree del nuovo non ancora inserite passano dal loro ritardo d'uscita e
   partono pulite;
-- le aree inserite per conto loro, fuori da ogni scenario, restano esattamente
-  come sono.
+- le aree inserite per conto loro che il nuovo scenario non elenca restano
+  esattamente come sono; una che elenca resta inserita e ora appartiene a lui.
 
 Un cambio viene rifiutato finché un'area che toccherebbe è nel ritardo
 d'ingresso o in allarme: cambiare scenario non deve mai zittire un allarme
 senza un disinserimento. Di default chiede il codice di *Cambiare scenario*,
-anche dove l'inserimento non ne chiede. Lo scenario resta attivo finché è
+anche dove la politica generale non ne chiede per inserire; un'area o uno
+scenario impostato su *Senza codice* per inserire non ne chiede nemmeno per il
+cambio. Lo scenario resta attivo finché è
 ancora inserita un'area che ha inserito lui.
 
 ---
@@ -195,8 +197,8 @@ Per questo *Quando scatta questa zona?* dice cosa legge l'entità in questo
 momento e fa una **proposta**: un tipo a partire dalla classe del dispositivo
 (*door* suggerisce *Ritardata*, *window* e *motion* *Istantanea*, *smoke* e
 *moisture* *Tecnica*), e gli stati di scatto a partire dal dominio — `on` per
-un binary sensor, `open` e `opening` per una cover, `unlocked` e `open` per
-una serratura. Una proposta è un punto di partenza, mai una decisione:
+un binary sensor, `open` e `opening` per una cover, `unlocked`, `open` e
+`opening` per una serratura. Una proposta è un punto di partenza, mai una decisione:
 **apri la porta o passa davanti al sensore, guarda cambiare lo stato, e
 spunta *Ho verificato questi stati sul sensore reale*.** Finché non lo fai il
 salvataggio resta disabilitato, il backend rifiuta il salvataggio senza la
@@ -285,13 +287,14 @@ mai implicito.
 Una zona si può escludere **a mano** — *Escludi* nella lista *Non pronte*
 della Panoramica e sulla card, o `foyer.bypass_zone` — e far rientrare con
 *Includi di nuovo* o `foyer.unbypass_zone`. Richiede *Escludere una zona* e di
-default un codice. Due regole, entrambe come nelle centrali vere:
+default un codice. Due regole:
 
 - **senza durata**, l'esclusione finisce quando l'area viene disinserita;
 - **con una durata** — *1 h*, *8 h* o un numero di minuti nella Panoramica,
   fino a 30 giorni dal servizio — sopravvive al disinserimento e finisce allo
-  scadere del tempo, **segnalando il ritorno della zona**, perché una zona
-  esclusa e dimenticata è proprio la finestra da cui entra qualcuno.
+  scadere del tempo; il ritorno della zona viene registrato, e annunciato da
+  ogni profilo che spunta *Zona inclusa di nuovo*, perché una zona esclusa e
+  dimenticata è proprio la finestra da cui entra qualcuno.
 
 Chiudere la zona non fa mai finire un'esclusione manuale: chiudere la
 finestra è proprio il motivo per cui era stata esclusa. Un'esclusione
@@ -404,7 +407,8 @@ un telecomando o un pulsante collegato come entità.
 | *Scenario* | Quale scenario inserisce |
 | *Quando si rilascia* | *Niente*, o *Disinserisci tutto* — per un interruttore che resta su on finché la casa è inserita |
 
-Una chiave non ha un'area da scegliere, quindi disinserisce tutte le aree,
+Il comando di una chiave non è legato alla sua area, quindi disinserisce tutte
+le aree,
 come fa *Tutta la casa*; *Inserisci o disinserisci* disinserisce tutto se
 qualche area è inserita, e altrimenti inserisce il suo scenario. La chiave è
 la credenziale: con lei non viaggia nessun codice. Un inserimento rifiutato
@@ -529,8 +533,9 @@ soddisfatto, un membro agisce da solo invece di restare trattenuto per sempre.
 - **Una zona appartiene al massimo a un gruppo o a una coppia di verifica
   incrociata**, altrimenti il suo rilevamento conterebbe due volte; l'editor
   offre solo le zone libere.
-- Un gruppo con meno membri attivi della sua soglia non può essere
-  soddisfatto; la pagina lo dice, e i suoi membri agiscono da soli.
+- Un gruppo ha bisogno di almeno tanti membri attivi quanto la sua soglia: un
+  salvataggio che ne lascerebbe meno, compreso disattivare un membro, viene
+  rifiutato e dice perché.
 
 ### Verifica incrociata
 
@@ -567,12 +572,13 @@ conteggio e campanello riguardano solo le zone d'intrusione.
 | `binary_sensor.foyer_ready_to_arm` | Se inserire tutte le aree adesso riuscirebbe; `…_ready_to_arm_<area>` per ogni area. Gli attributi nominano le zone in guasto e aperte che bloccano |
 | `sensor.foyer_open_zones` | Quante zone d'intrusione sono aperte, con i nomi come attributo |
 | `binary_sensor.foyer_fault` | Qualche zona in guasto, con i nomi come attributo |
-| `sensor.foyer_countdown_<area>` | I secondi che restano di un ritardo d'uscita o d'ingresso |
+| `sensor.foyer_countdown_<area>` | I secondi che restano di un ritardo d'uscita o d'ingresso, o di un'attesa di *Inserisci dopo la chiusura* |
 | `switch.foyer_chime` | Il campanello acceso o spento |
 
-`ready_to_arm` legge la stessa funzione che usa il motore quando rifiuta una
-richiesta di inserimento, quindi non può dire *pronto* dove l'inserimento
-verrebbe rifiutato.
+`ready_to_arm` legge la stessa funzione che usa il motore per rifiutare un
+inserimento per un guasto o una zona aperta, quindi non può dire *pronto* dove
+una zona lo bloccherebbe; un codice, un permesso o un walk test possono
+comunque rifiutare la richiesta.
 
 ---
 

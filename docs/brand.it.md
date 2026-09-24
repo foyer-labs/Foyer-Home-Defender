@@ -106,8 +106,9 @@ Usano un tratto di 3.6 invece del 3.2 del marchio con lo scudo.
   opacità che fanno funzionare il simbolo a colori: rimpicciolendo la versione
   a colori si ottiene una poltiglia grigia. `foyer-hd-icon.svg` è un disegno a
   sé: il contorno dello scudo, un arco e una porta piena, in `currentColor`
-  senza colori di riempimento, sfumature o opacità. L'arco più tenue è escluso
-  perché a quella dimensione sparirebbe.
+  senza colori di riempimento, sfumature o opacità. Tiene l'arco più grande,
+  quello esterno, disegnato pieno, e lascia fuori quello interno più piccolo,
+  perché a quella dimensione due archi si fondono in uno.
 - **La scritta e il sottotitolo non dipendono da nessun font.** *FOYER* è
   costruita con barre e tratti, e *HOME DEFENDER* è salvato come contorni
   (Poppins Medium, convertito), spaziato in modo da coprire la larghezza della
