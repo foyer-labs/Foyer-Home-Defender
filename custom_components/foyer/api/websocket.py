@@ -30,7 +30,7 @@ from ..const import (
     SIGNAL_UPDATE,
 )
 from ..core import authz
-from ..core.journal import config_row, system_row
+from ..core.journal import LogRow, config_row, row_for, system_row
 from ..core.models import (
     ARMED_HA_STATES,
     IDENTIFYING_CHANNELS,
@@ -239,6 +239,7 @@ async def _gate(
     permission: Permission,
     need_code: bool = True,
     purpose: Purpose | None = None,
+    raised: list[LogRow] | None = None,
 ) -> Actor | None:
     """Check, answer the caller on refusal, and record the refusal.
 
@@ -249,6 +250,10 @@ async def _gate(
     ``purpose`` names the command where ``operation`` — the policy entry —
     does not: a duress code used to empty the log raises a `duress` that
     says so, and not "edit the configuration" (decision 134).
+
+    ``raised``, when given, receives the `duress` row this request raised,
+    if it raised one: the one command that empties the log has to write it
+    again afterwards, or the clear it asked for erases it.
     """
     actor = await _actor(hass, system, connection, msg)
     # The lockout of §8.4, spent through the engine so that a wrong code here
@@ -266,6 +271,12 @@ async def _gate(
             CodeAttempt(operation=operation, actor=actor, purpose=purpose)
         )
         reason = attempt.reason
+        if raised is not None:
+            raised.extend(
+                row_for(o, attempt.at)
+                for o in attempt.occurrences
+                if o.moment is Moment.DURESS
+            )
     reason = reason or _may_configure(
         system, actor, operation, permission, need_code=need_code
     )
@@ -1875,6 +1886,11 @@ async def ws_log_clear(
     """
     if (system := _system(hass, connection, msg["id"])) is None:
         return
+    # A duress code used to empty the log raised its `duress` at the gate,
+    # and that row was queued before the clear it came with. Written again
+    # after the clear, beside "log cleared", or the request would erase the
+    # one record that the person asking was not free to refuse (§8.1).
+    raised: list[LogRow] = []
     if (
         await _gate(
             hass,
@@ -1884,6 +1900,7 @@ async def ws_log_clear(
             operation=Operation.EDIT_CONFIG,
             permission=Permission.EDIT_CONFIG,
             purpose=Purpose.CLEAR_LOG,
+            raised=raised,
         )
     ) is None:
         return
@@ -1891,7 +1908,9 @@ async def ws_log_clear(
         connection.send_error(msg["id"], "no_log", "the event log is not available")
         return
     await system.log.async_flush()
-    removed = await system.log.async_clear()
+    removed = await system.log.async_clear(
+        keep=raised, settings=system.config.settings.log
+    )
     system.async_record(
         (
             config_row(

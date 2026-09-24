@@ -136,6 +136,31 @@ async def test_the_bus_hears_it_as_every_row(hass, house):
     assert [e["detail"]["operation"] for e in duress] == ["clear_log"]
 
 
+async def test_a_log_emptied_under_it_keeps_its_duress_row(hass, house):
+    """The gate queued the `duress` before the clear it came with, and the
+    clear erased it with everything else. It is written again after the
+    clear, beside "log cleared", and the answer is the ordinary code's."""
+    await _ws(house.client, {"type": "foyer/config/export", "code": CODE})
+    plain = await _ws(house.client, {"type": "foyer/log/clear", "code": CODE})
+    await hass.async_block_till_done()
+    await _ws(house.client, {"type": "foyer/config/export", "code": CODE})
+    await hass.async_block_till_done()
+    before = len(await _rows(hass))
+
+    coerced = await _ws(house.client, {"type": "foyer/log/clear", "code": DURESS})
+    await hass.async_block_till_done()
+
+    assert coerced["success"] and plain["success"]
+    assert coerced["removed"] == before
+    rows = await _rows(hass)  # newest first
+    (row,) = [r for r in rows if r["event_type"] == "duress"]
+    assert row["detail"]["operation"] == "clear_log"
+    kinds = [r["event_type"] for r in rows if r["category"] != "action"]
+    assert kinds.index("config_log_cleared") < kinds.index("duress")
+    cleared = next(r for r in rows if r["event_type"] == "config_log_cleared")
+    assert cleared["detail"]["changes"]["removed"] == before
+
+
 async def test_every_command_the_code_is_sent_with_raises_it_again(hass, house):
     """The panel keeps a code for two minutes (§15.1), and every command
     sent with it in that time is one more thing the person was made to do."""

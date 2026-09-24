@@ -921,18 +921,33 @@ class LogStore:
         assert self._connection is not None
         self._connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
-    async def async_clear(self) -> int:
-        """Empty the log. An edit_config operation, and itself logged (§10.3)."""
-        return await self.hass.async_add_executor_job(self._clear)
+    async def async_clear(
+        self,
+        keep: Sequence[LogRow] = (),
+        settings: LogSettings | None = None,
+    ) -> int:
+        """Empty the log. An edit_config operation, and itself logged (§10.3).
 
-    def _clear(self) -> int:
+        ``keep`` is written again once the log is empty: the `duress` a
+        duress code raised while asking for this very clear (§8.1). Already
+        announced on the bus when it was first written, so not again; not
+        counted as removed, so the answer is the one the ordinary code gets.
+        """
+        rows = [
+            r for r in keep if settings is None or settings.is_enabled(str(r.category))
+        ]
+        return await self.hass.async_add_executor_job(self._clear, rows)
+
+    def _clear(self, keep: Sequence[LogRow]) -> int:
         with self._lock:
             if self._connection is None:
                 return 0
             removed = self._connection.execute("DELETE FROM events").rowcount
+            if keep:
+                self._connection.executemany(_INSERT, [_row_values(r) for r in keep])
             self._connection.commit()
             self._connection.execute("VACUUM")
-        return removed
+        return max(0, removed - len(keep))
 
     async def async_count(self) -> int:
         result = await self.async_query(limit=1)
