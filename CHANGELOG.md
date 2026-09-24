@@ -5,6 +5,53 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.23] — the documentation
+
+The README becomes a short front page, and what it used to carry moves into
+`docs/`, where each panel page's *Learn more* now leads. Nothing in what the
+alarm does changes; the stored configuration keeps its schema.
+
+### Added
+- **Documents for every panel page**, each in English and Italian:
+  [security model](docs/security-model.md), [getting started](docs/getting-started.md),
+  [zones, areas and scenarios](docs/zones.md),
+  [response profiles](docs/response-profiles.md), [settings](docs/settings.md),
+  [the card](docs/card.md), [troubleshooting](docs/troubleshooting.md),
+  [questions people ask](docs/faq.md),
+  [migrating from Alarmo](docs/migrating-from-alarmo.md),
+  [visual identity](docs/brand.md), [choosing sensors](docs/choosing-sensors.md),
+  [reusing existing sensors](docs/reusing-existing-sensors.md), and an
+  [index](docs/README.md). The two hardware documents are assembled from
+  manufacturer and integration documentation, not tested on hardware, and
+  say so at the top.
+
+### Changed
+- **Every panel page has a *Learn more* link**, and it opens the Italian
+  document when the panel speaks Italian and one exists. Before, only six
+  pages had one.
+- **The READMEs are a front page**: what Foyer is, what it looks like, how to
+  start, the security model in one paragraph, and the documentation index.
+  They no longer compare Foyer with any other product.
+
+### Fixed — in the documents
+- `docs/keypads.md` said that `skip_exit_delay` turns every delayed zone into
+  an instant one. It does not: it arms with no exit delay, so every zone is
+  watched at once, and a delayed zone still starts its entry delay.
+- `docs/keypads.md` said that every row a right token causes from a locked
+  address carries the address, and every row of a device in the clear says it
+  was not encrypted. The rows that record the request do; the rows of the
+  actions it sets off do not.
+- `docs/privacy.md` said the seven-day preset leaves the `action` category
+  alone. It shortens it too, because `action` records who acknowledged.
+- `docs/keypads.md` called the *Unencrypted* warning permanent; it goes the
+  moment a request from that device arrives encrypted.
+- `docs/simulator.md` said the action test sounds a siren for three seconds
+  whatever its configured duration. That holds for a siren that accepts a
+  duration; one driven by a switch, or one that takes none, stays on until it
+  is switched off. It also said the diagnostics' *Arming* column cannot say
+  ready where arming would refuse: it reads faults and open zones, and a code,
+  a permission or a running walk test can still refuse.
+
 ## [0.1.0-beta.22] — what the third review left open
 
 The questions beta.21 left for the household, answered: SPEC decisions
