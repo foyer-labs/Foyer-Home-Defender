@@ -2251,9 +2251,10 @@ class _Run:
             )
         )
         if self.inhibiting:
-            # A walk test arms every area itself (§11.3), so "the house is
-            # armed" here is not the household's arming — and §11.3 says all
-            # actions are inhibited and means it. The moment is still
+            # A walk test holds back the answer of every area while it runs
+            # — the areas it armed, and any area already armed when it began
+            # (§11.3, decision 137) — and §11.3 says all actions are
+            # inhibited and means it. The moment is still
             # raised, for the log and for the live page; the incident is
             # not, because response.inhibits exempts anything belonging to
             # an open incident, on the stated assumption that during a walk

@@ -283,9 +283,10 @@ house nobody disarmed. Page 14 says so above the radios, and a save that
 tries is refused with the setting named. The mains, the watchdog and the
 channel checks never open an incident, and stay editable whatever is armed.
 
-**A walk test never sounds for this.** A walk test arms every area itself, so
-"the house is armed" there is not the household's arming: the moment is still
-raised and still logged, and no incident opens.
+**A walk test never sounds for this.** A walk test holds back the answer of
+every area while it runs — the areas it armed, and any area already armed
+when it began (§11.3) — so the moment is still raised and still logged, and
+no incident opens.
 
 ### The rule that defeats the feature if it is missed
 
