@@ -100,8 +100,10 @@ brings their restrictions, never their exemptions: their permissions still
 apply, and a code is still required wherever the policy asks for one.
 
 **`skip_exit_delay`** arms with no time to leave. It needs no permission of its
-own — whoever may arm may arm at once — but it turns every delayed zone into
-an instant one, so the log records that it happened.
+own — whoever may arm may arm at once — but every zone is watched from that
+instant: the front door opened on the way out starts the entry delay, and a
+motion sensor in the hall alarms at once. So the *Armed* row records that it
+happened, and "why did it sound while I was still in the hall?" has an answer.
 
 ---
 
@@ -209,14 +211,15 @@ already.
 - **A right token is never refused for its address.** Behind the same router,
   reverse proxy or IPv6 /64 as somebody guessing, a device with its right
   token keeps working while that address is locked out: a token is 32 random
-  bytes, and nobody guesses one. Every row its requests cause in the log
-  carries the address and says it was locked, so a device sharing its address
-  with a guesser shows up there. Its requests neither add to the address's
-  count nor clear it.
+  bytes, and nobody guesses one. The rows that record its requests — the
+  arming, the disarm, the refusal — carry the address and say it was locked,
+  so a device sharing its address with a guesser shows up there; the rows of
+  the actions those requests set off, under `action`, do not. Its requests
+  neither add to the address's count nor clear it.
 - **Plain HTTP is accepted, and said.** A device whose last request arrived
   unencrypted carries a permanent *Unencrypted* warning under *Arming devices*,
-  and every row of the log it causes records that the request was not
-  encrypted. Many home-made devices cannot do TLS at all; refusing them would
+  and the rows that record its requests say that the request was not
+  encrypted (the rows of the actions they set off, under `action`, do not). Many home-made devices cannot do TLS at all; refusing them would
   take the feature away from the people who asked for it.
 - **Tags are not allowed on it.** A tag carries no code, so on the endpoint the
   token by itself would be the key to the house. Tags stay `tag.*` and

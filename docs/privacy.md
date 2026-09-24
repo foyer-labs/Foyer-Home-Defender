@@ -83,11 +83,12 @@ Retention is already per category, on **page 11 — Settings**, thirty days
 everywhere by default, purged daily.
 
 Beside those fields is a **shorten to seven days** button. It sets `arming`,
-`alarm`, `security` and `config` to seven days and **leaves the other four
-alone** — `action`, `system` and the two `zone_*` categories carry what a siren
-did, faults, restarts and door states, which name nobody and are what you read
-when you want to know why a sensor did not react three weeks ago. There is
-nothing to be gained by shortening those and something real to lose.
+`alarm`, `action`, `security` and `config` to seven days — `action` among them
+because it records who acknowledged an alarm — and **leaves the other three
+alone**: `system` and the two `zone_*` categories carry faults, restarts and
+door states, which name nobody and are what you read when you want to know why
+a sensor did not react three weeks ago. There is nothing to be gained by
+shortening those and something real to lose.
 
 Seven days is what an installation with domestic staff usually wants: long
 enough to answer "what happened last weekend", short enough that nobody's
