@@ -362,6 +362,12 @@ class FoyerPageUsers extends LitElement {
               </label>`,
             )}
           </div>
+          ${draft.permissions.includes("walk_test")
+            ? // Said here because this is where it is granted (§8.3,
+              // decision 137): the one permission the areas below do not
+              // narrow, and it can keep an armed house quiet without `disarm`.
+              html`<div class="notice" role="alert">${t(s, "users.walk_test_note")}</div>`
+            : nothing}
 
           <div class="hr"></div>
           <div class="scopes">

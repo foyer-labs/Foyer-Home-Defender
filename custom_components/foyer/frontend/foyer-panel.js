@@ -4755,6 +4755,7 @@ var Ht = class extends j {
                 <span>${N(e, `permission.${n}`)}</span>
               </label>`)}
           </div>
+          ${t.permissions.includes("walk_test") ? w`<div class="notice" role="alert">${N(e, "users.walk_test_note")}</div>` : E}
 
           <div class="hr"></div>
           <div class="scopes">

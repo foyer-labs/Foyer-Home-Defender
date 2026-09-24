@@ -247,7 +247,10 @@ già intelligente.
   persone — una persona, un tag, la persona per cui agisce una chiave, l'elenco
   delle persone di uno scenario — richiede *Gestire utenti e codici* oltre a
   *Modificare la configurazione*, da qualunque pagina e nel ripristino di un
-  backup.
+  backup. L'unico permesso che l'ambito non restringe è *Walk test*: copre
+  tutta la casa, e finché il test è attivo nessuna area risponde a una
+  rilevazione ordinaria, quindi può tenere zitta una casa inserita senza
+  *Disinserire* ([più sotto](#a-cosa-servono-i-codici-e-a-cosa-no)).
 - **Una casa inserita mantiene la risposta con cui è stata inserita.** Finché
   un'area è inserita non si possono cambiare la durata delle sirene, i
   ritardi, i profili con cui potrebbe rispondere e i contatti che avvisano, la
@@ -409,6 +412,13 @@ Una rilevazione durante il walk test viene registrata e non muove nient'altro:
 niente allarme, niente incidente, nessuna memoria d'allarme, e nessuno dice a
 HomeKit o ad Alexa che qualcuno è entrato. Uscendo vengono disinserite
 esattamente le aree che il walk test aveva inserito.
+
+Copre tutta la casa, chiunque lo avvii: viene inserita ogni area disinserita
+che può esserlo, anche fuori dalle aree di chi lo avvia, e un'area che
+qualcun altro aveva inserito smette anch'essa di rispondere fino alla fine
+del test. Per questo *Walk test* è un permesso da dare come si dà
+*Disinserire* — [a cosa servono i codici](#a-cosa-servono-i-codici-e-a-cosa-no)
+spiega perché, e la pagina *Utenti* lo dice quando lo spunti.
 
 **La prova delle azioni** è un pulsante accanto a ogni azione, e la esegue
 davvero: la sirena suona, la notifica parte. È il punto: l'errore che evita è scoprire durante l'emergenza che il
@@ -785,6 +795,25 @@ tua automazione può risponderle: una che mostra gli eventi di sicurezza da
 qualche parte in casa deve lasciare fuori `duress`.
 [Come rispondere](docs/notification-channels.md#answering-a-duress-code) (in
 inglese).
+
+**Chi può avviare un walk test può tenere zitta la casa.** Un walk test si
+cammina in tutta la casa, quindi inserisce ogni area disinserita che può —
+anche quelle che a chi lo avvia non sono permesse — e finché non finisce
+nessuna area risponde a una rilevazione ordinaria, nemmeno una inserita da
+qualcun altro. Dura quindici minuti dall'ultima rilevazione per impostazione
+predefinita, mai più di tre ore dall'inizio, e basta il permesso *Walk test*,
+non serve *Disinserire*. È voluto, e non è mai silenzioso su se stesso:
+chiede un codice per impostazione predefinita, mette un banner su ogni
+schermo, manda una notifica all'inizio e alla fine, ed entrambe le sue righe
+nel registro nominano la persona. Restano attivi durante il test: le zone
+24h, manomissione, tecniche e panico, un allarme già in corso e un codice di
+coercizione. Dai *Walk test* alle persone a cui daresti *Disinserire*. E
+togliere *Codice richiesto* accanto ad *Avvio del walk test* lo consegna a
+qualunque cosa possa raggiungere un servizio di Foyer o
+`switch.foyer_walk_test` senza essere identificata — un'automazione, uno
+script, un account di Home Assistant non collegato a nessuno — perché i
+permessi si controllano sulla persona che chiede, e una richiesta che non
+identifica nessuno non ne ha da controllare.
 
 **E non è un sistema antincendio.** Il canale tecnico è davvero utile — è
 attivo che la casa sia inserita o no, e disinserire non ha nessuna autorità su

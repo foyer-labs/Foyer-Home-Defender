@@ -63,6 +63,16 @@ in it:
   `docs/automation-rules.md` says so plainly, and what restrains it is the
   kill switch, the guards and the rule that a perimeter area is never disarmed
   automatically.
+- **A person holding `walk_test`.** A walk test arms every area it can and
+  holds back the answer to ordinary detections in all of them — areas that
+  person may not arm or disarm, and one somebody else armed, included — for
+  up to three hours at a time. That is its design, not a bypass: it asks for
+  a code by default, a banner says so on every screen, a notification marks
+  its start and its end, and both log rows carry the person's name. Grant it
+  as you would grant `disarm`; `docs/SPEC.md` §8.3 says why. The same goes
+  for a caller nobody identified starting one after the policy was set to ask
+  no code for it. A walk test started *without* the permission or the code
+  the policy asks for is a vulnerability, and belongs above.
 - **Presence as an identity.** A phone is not a credential. This is why
   automatic disarming is off by default and why a perimeter area is never
   opened by a rule; the attack is described rather than defended against.

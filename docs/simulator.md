@@ -263,7 +263,7 @@ the wrong wall look identical there, so walk the ones you expected to trip
 again before you conclude anything. A zone in fault is marked as such in the
 same row, because it could not have reacted.
 
-Five things worth knowing before you start one:
+Six things worth knowing before you start one:
 
 - **24h, tamper, technical and panic zones stay fully live**, alarm included.
   A walk test never silences a smoke detector. They are also left out of the
@@ -285,6 +285,13 @@ Five things worth knowing before you start one:
   not for a watch, so it is not the arming that clears the memory, and the
   area keeps it after the test. Its zones are still recorded when they
   detect you. Disarm the area first if you want it walked armed.
+- **It covers the whole house, whoever starts it.** Every disarmed area that
+  can arm is armed, including areas outside your own, and an area somebody
+  else armed stays armed but stops answering too until the test ends. The
+  `walk_test` permission can therefore keep an armed house quiet without
+  `disarm` — fifteen minutes after the last detection by default, never more
+  than three hours in all — so it is given as `disarm` is, and it asks for a
+  code by default. The Users page says so beside the permission.
 
 ### Action test — press the button before the night you need it
 

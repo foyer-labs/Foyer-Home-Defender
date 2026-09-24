@@ -25,11 +25,12 @@ from custom_components.foyer.core.models import (
     CodeResult,
     Moment,
     Reason,
+    User,
     ZoneType,
 )
 from custom_components.foyer.core.response import SKIP_WALK_TEST, skip_reason
 
-from .helpers import DOOR, HALL, TAMPER, WINDOW, World, make_house, user, zone
+from .helpers import BATH, DOOR, HALL, TAMPER, WINDOW, World, make_house, user, zone
 
 SMOKE = "binary_sensor.kitchen_smoke"
 
@@ -478,6 +479,105 @@ def test_a_person_without_the_permission_is_refused():
     decision = world.walk_test(user_id="luca", channel="ha_ui", code=CodeResult.VALID)
     assert not decision.accepted
     assert decision.reason is Reason.NOT_PERMITTED
+
+
+# --- reach (§8.3, decision 137) ----------------------------------------------------
+#
+# `walk_test` reaches further than its name, on purpose: a walk is walked
+# through the whole house, so the test arms and quiets every area whoever
+# starts it. These pin that reach, so that narrowing it one day is a decision
+# somebody takes rather than a side effect nobody noticed — and so that what
+# the README and the Users page warn about stays true.
+
+
+def walker() -> User:
+    """The narrowest person the permission can be given to: `walk_test` and
+    nothing else, with a scope of one area. No `disarm`."""
+    return user(permissions=frozenset({"walk_test"}), allowed_area_ids=("garage",))
+
+
+def test_a_person_limited_to_one_area_still_walks_the_whole_house():
+    """§8.1: `allowed_area_ids` narrows every operation that acts on an area,
+    and a walk test acts on the whole house. The garage is all this person
+    may touch, and every disarmed area arms all the same."""
+    world = World(replace(make_house(), users=(walker(),)))
+    as_walker = {"user_id": "luca", "channel": "keypad", "code": CodeResult.VALID}
+
+    # Nothing else this person may do reaches past the garage, or disarms.
+    refused = world.arm_area("ground", **as_walker)
+    assert refused.reason is Reason.NOT_PERMITTED
+    assert world.states() == {
+        "ground": "disarmed",
+        "upstairs": "disarmed",
+        "garage": "disarmed",
+    }
+
+    decision = world.walk_test(**as_walker)
+
+    assert decision.accepted
+    assert world.states() == {
+        "ground": "armed",
+        "upstairs": "armed",
+        "garage": "armed",
+    }
+    assert set(world.state.walk_test.armed_areas) == {"ground", "upstairs", "garage"}
+
+    # And ending it gives every one of them back, outside the scope included.
+    assert world.walk_test(False, **as_walker).accepted
+    assert set(world.states().values()) == {"disarmed"}
+
+
+def test_an_area_somebody_else_armed_does_not_answer_during_the_walk_test():
+    """The reach that matters: upstairs was armed by somebody else, and a
+    person who may not disarm it keeps it quiet for as long as the test
+    runs. The detection is recorded; nothing answers it."""
+    anna = user("anna", "Anna")
+    config = answering(make_house(), Moment.TRIGGERED, Moment.INCIDENT_OPENED)
+    world = World(replace(config, users=(walker(), anna)))
+    world.arm_area("upstairs", user_id="anna", channel="keypad", code=CodeResult.VALID)
+    world.advance(30)
+    assert world.area("upstairs").state is AreaState.ARMED
+
+    as_walker = {"user_id": "luca", "channel": "keypad", "code": CodeResult.VALID}
+    assert world.walk_test(**as_walker).accepted
+    assert "upstairs" not in world.state.walk_test.armed_areas
+    world.advance(10)
+    decision = world.set(BATH, "on")
+
+    assert world.area("upstairs").state is AreaState.ARMED
+    assert world.area("upstairs").memory is False
+    assert world.state.incident is None
+    assert Moment.TRIGGERED not in moments(decision)
+    assert decision.actions == ()
+    assert "bath" in world.state.walk_test.detections
+
+    # Until it ends, and no longer: upstairs is still Anna's, still armed,
+    # and answers the next time the same window opens.
+    world.advance(10)
+    world.set(BATH, "off")
+    assert world.walk_test(False, **as_walker).accepted
+    assert world.area("upstairs").state is AreaState.ARMED
+    world.advance(10)
+    decision = world.set(BATH, "on")
+    assert world.area("upstairs").state is AreaState.TRIGGERED
+    assert Moment.TRIGGERED in [i.moment for i in decision.actions]
+
+
+def test_with_no_code_asked_an_unidentified_caller_may_start_one():
+    """§8.2: a request nobody identified is checked against nobody's
+    permissions, so lowering "enter walk test" to no code lets any caller
+    that reaches a service or the switch start one. The README says so where
+    it describes the policy; this keeps it true."""
+    config = replace(make_house(), users=(user(),))
+    refused = World(config).walk_test(channel="automation")
+    assert refused.reason is Reason.CODE_REQUIRED
+
+    world = World(replace(config, code_policy=CodePolicy(walk_test=False)))
+    decision = world.walk_test(channel="automation")
+
+    assert decision.accepted
+    assert world.state.walk_test.user_id is None
+    assert set(world.states().values()) == {"armed"}
 
 
 # --- what ending it must never do --------------------------------------------------
