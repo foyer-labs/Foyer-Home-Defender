@@ -640,7 +640,9 @@ class FoyerCard extends LitElement {
           ${countdown ? this._countdown(s, countdown) : nothing}
           ${this._renderInlinePad(s)}
           <div class="buttons">
-            ${master
+            ${master && this._alarmRunning
+              ? nothing
+              : master
               ? html`<select
                   ?disabled=${this._busy}
                   aria-label=${t(s, "card.scenario")}
@@ -991,6 +993,11 @@ class FoyerCard extends LitElement {
                 >
                   ${t(s, "common.acknowledge")}
                 </button>`}
+          </div>`
+        : nothing}
+      ${status.security && !status.security.enforced
+        ? html`<div class="alert inert" role="note">
+            ${t(s, "overview.no_codes_warning")}
           </div>`
         : nothing}
     `;
@@ -1559,6 +1566,9 @@ class FoyerCard extends LitElement {
       .force-hint {
         color: var(--secondary-text-color);
         font-size: 12.5px;
+      }
+      .alert.inert {
+        border-left-color: var(--warning-color, #f57c00);
       }
       .alert {
         display: flex;

@@ -1141,7 +1141,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
           ${l ? this._countdown(e, l) : L}
           ${this._renderInlinePad(e)}
           <div class="buttons">
-            ${r ? F`<select
+            ${r && this._alarmRunning ? L : r ? F`<select
                   ?disabled=${this._busy}
                   aria-label=${Z(e, "card.scenario")}
                   @change=${(e) => {
@@ -1403,6 +1403,9 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
                 >
                   ${Z(e, "common.acknowledge")}
                 </button>`}
+          </div>` : L}
+      ${t.security && !t.security.enforced ? F`<div class="alert inert" role="note">
+            ${Z(e, "overview.no_codes_warning")}
           </div>` : L}
     `;
 	}
@@ -1850,6 +1853,9 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
       .force-hint {
         color: var(--secondary-text-color);
         font-size: 12.5px;
+      }
+      .alert.inert {
+        border-left-color: var(--warning-color, #f57c00);
       }
       .alert {
         display: flex;
