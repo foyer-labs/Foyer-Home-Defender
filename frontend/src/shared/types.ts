@@ -433,6 +433,8 @@ export interface KeyConfig {
   on_activate: "arm" | "disarm" | "toggle";
   scenario_id: string | null;
   on_deactivate: "none" | "disarm";
+  /** Who the log credits (§4.7). Changing it needs manage_users (§8.3). */
+  user_id?: string | null;
 }
 
 export interface ZoneConfig {

@@ -617,7 +617,9 @@
     "camera_remove": "Remove",
     "camera_add": "Add a camera…",
     "cameras_hint": "A notification set to show the zones' cameras sends these, in this order, one picture each after the text, and at most four cameras across the whole alarm.",
-    "cameras_none_hint": "No cameras: a notification set to show the zones' cameras sends its text alone when this zone alarms. Choose the camera that shows it, and the one in the room next door."
+    "cameras_none_hint": "No cameras: a notification set to show the zones' cameras sends its text alone when this zone alarms. Choose the camera that shows it, and the one in the room next door.",
+    "key_person": "Acts as",
+    "key_person_none": "Nobody named: the log credits the key"
   },
   "scenarios": {
     "title": "Scenarios",

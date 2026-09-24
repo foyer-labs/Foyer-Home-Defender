@@ -1125,6 +1125,23 @@ class FoyerPageZones extends LitElement {
                 </select>
               </label>`}
           <label class="field">
+            <span class="lbl">${t(s, "zones.key_person")}</span>
+            <select
+              @change=${(e: Event) =>
+                update({ user_id: (e.target as HTMLSelectElement).value || null })}
+            >
+              <option value="" .selected=${live(!key.user_id)}>
+                ${t(s, "zones.key_person_none")}
+              </option>
+              ${(this.ctx?.config?.users ?? []).map(
+                (u) =>
+                  html`<option .value=${u.id ?? ""} .selected=${live(u.id === key.user_id)}>
+                    ${u.name}
+                  </option>`,
+              )}
+            </select>
+          </label>
+          <label class="field">
             <span class="lbl">${t(s, "field.on_deactivate")}</span>
             <select
               @change=${(e: Event) =>

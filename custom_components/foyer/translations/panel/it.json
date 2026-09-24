@@ -617,7 +617,9 @@
     "camera_remove": "Togli",
     "camera_add": "Aggiungi una telecamera…",
     "cameras_hint": "Una notifica impostata per mostrare le telecamere delle zone invia queste, in quest'ordine, una foto ciascuna dopo il testo, e al massimo quattro telecamere per tutto l'allarme.",
-    "cameras_none_hint": "Nessuna telecamera: quando scatta questa zona, una notifica impostata per mostrare le telecamere delle zone invia solo il testo. Scegli la telecamera che la inquadra, e quella della stanza accanto."
+    "cameras_none_hint": "Nessuna telecamera: quando scatta questa zona, una notifica impostata per mostrare le telecamere delle zone invia solo il testo. Scegli la telecamera che la inquadra, e quella della stanza accanto.",
+    "key_person": "Agisce come",
+    "key_person_none": "Nessuno: il registro attribuisce l'azione alla chiave"
   },
   "scenarios": {
     "title": "Scenari",

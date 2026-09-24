@@ -2927,6 +2927,19 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                 </select>
               </label>`}
           <label class="field">
+            <span class="lbl">${N(e, "zones.key_person")}</span>
+            <select
+              @change=${(e) => r({ user_id: e.target.value || null })}
+            >
+              <option value="" .selected=${W(!n.user_id)}>
+                ${N(e, "zones.key_person_none")}
+              </option>
+              ${(this.ctx?.config?.users ?? []).map((e) => w`<option .value=${e.id ?? ""} .selected=${W(e.id === n.user_id)}>
+                    ${e.name}
+                  </option>`)}
+            </select>
+          </label>
+          <label class="field">
             <span class="lbl">${N(e, "field.on_deactivate")}</span>
             <select
               @change=${(e) => r({ on_deactivate: e.target.value })}

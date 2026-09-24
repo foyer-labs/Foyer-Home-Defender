@@ -42,3 +42,63 @@ async def test_a_tested_siren_on_a_switch_is_switched_off_again(
 
     await _advance(hass, freezer, 3)
     assert [c.data["entity_id"] for c in off] == ["switch.siren_relay"]
+
+
+async def test_a_key_zone_keeps_its_person_through_a_panel_save(
+    hass, loaded, hass_ws_client
+):
+    """§4.7: a key zone acts as a person. The panel now shows and sets it, and
+    a zone saved from the panel keeps the person it had."""
+    from .test_phase2 import CODE, _make_user
+
+    client = await hass_ws_client(hass)
+    luca = await _make_user(
+        hass,
+        client,
+        new_code=CODE,
+        permissions=["arm", "disarm", "edit_config", "manage_users"],
+    )
+    config = (await _ws(client, {"type": "foyer/config"}))["config"]
+    scenario_id = config["scenarios"][0]["id"]
+    area_id = config["areas"][0]["id"]
+    hass.states.async_set("input_boolean.key_switch", "off")
+    item = {
+        "name": "Key switch",
+        "entity_id": "input_boolean.key_switch",
+        "area_id": area_id,
+        "type": "key",
+        "channel": "key",
+        "arm_policy": "ignore",
+        "trigger": {"kind": "state", "states": ["on"]},
+        "key": {
+            "on_activate": "toggle",
+            "scenario_id": scenario_id,
+            "on_deactivate": "none",
+            "user_id": luca,
+        },
+    }
+    saved = await _ws(
+        client,
+        {
+            "type": "foyer/config/save",
+            "kind": "zone",
+            "item": item,
+            "trigger_confirmed": True,
+            "code": CODE,
+        },
+    )
+    assert saved["success"], saved
+    await hass.async_block_till_done()
+
+    # The panel reads the zone and saves it back, as its editor does.
+    config = (await _ws(client, {"type": "foyer/config"}))["config"]
+    zone = next(z for z in config["zones"] if z["name"] == "Key switch")
+    assert zone["key"]["user_id"] == luca
+    again = await _ws(
+        client,
+        {"type": "foyer/config/save", "kind": "zone", "item": zone, "code": CODE},
+    )
+    assert again["success"], again
+    await hass.async_block_till_done()
+    zone = next(z for z in hass.data[DOMAIN].config.zones if z.name == "Key switch")
+    assert zone.key.user_id == luca
