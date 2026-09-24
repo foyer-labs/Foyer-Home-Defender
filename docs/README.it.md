@@ -51,6 +51,7 @@ proprio, con le ragioni dietro ogni decisione, è in [SPEC.md](SPEC.md)
 |---|---|
 | [Identità visiva](brand.it.md) | Il marchio, la palette, i file |
 | [Contratto API](api/openapi.yaml) · [Contratto MQTT](api/asyncapi.yaml) (in inglese) | L'endpoint per i dispositivi e i messaggi MQTT, versione v1 |
+| [Supporto](../SUPPORT.md) (in inglese) | Cosa aspettarsi da una issue: al meglio delle possibilità, senza garanzia di risposta né di correzione |
 | [Contribuire](../CONTRIBUTING.md) · [Politica di sicurezza](../SECURITY.md) · [Changelog](../CHANGELOG.md) (in inglese) | Come contribuire, come segnalare una vulnerabilità, cosa è cambiato in ogni versione |
 
 I documenti scritti prima della versione 0.1.0-beta.23 (canali di notifica,

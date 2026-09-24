@@ -82,7 +82,15 @@ durante l'alpha.
 
 *Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Foyer Home
 Defender.* Foyer si può aggiungere una volta sola per ogni Home Assistant. Il
-flusso di configurazione ha due schermate.
+flusso di configurazione ha tre schermate.
+
+**Prima di iniziare** mostra cos'è Foyer e cosa non è — il testo del
+[modello di sicurezza](security-model.it.md#il-confine) — con una spunta, *Ho
+letto e accetto*. Niente viene configurato finché non è spuntata; la data
+dell'accettazione resta con l'integrazione e viene scritta nel registro di
+Foyer. Un'installazione configurata prima che questo venisse chiesto riceve
+lo stesso testo come segnalazione in *Impostazioni → Riparazioni*, e continua
+a funzionare finché qualcuno non la spunta.
 
 **Configura Foyer Home Defender** chiede tre cose:
 

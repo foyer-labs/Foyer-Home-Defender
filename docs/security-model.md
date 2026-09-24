@@ -26,9 +26,14 @@ Assistant, no code in Foyer means anything, and the event log is
 audit-*useful* rather than tamper-*proof* for exactly the same reason.
 
 That is the honest boundary, and it is worth knowing before you rely on it.
-Foyer is an integration that does what an alarm does; it is not a certified
-alarm system, it does not meet EN 50131 or any equivalent grade, and it does
-not replace a monitored professional installation.
+What Foyer is, in the words setting it up asks you to accept:
+
+> Foyer is offered as software that automates actions on rules, not as an
+> alarm system. It is not certified (EN 50131, CEI 79-3), not monitored, not a
+> fire alarm, and comes with no warranty and no promise of support
+> (Apache-2.0, sections 7 and 8). Do not rely on it alone to protect people or
+> property: keep certified smoke alarms, and a professional installation where
+> a policy or a risk calls for one.
 
 ## What a Home Assistant administrator can do regardless
 

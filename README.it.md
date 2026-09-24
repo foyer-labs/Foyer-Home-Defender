@@ -79,6 +79,17 @@ partire niente.
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-it.png" alt="La card nelle disposizioni completa e compatta durante il ritardo d'ingresso: ogni area con il suo stato, il conto alla rovescia, e il tastierino che si apre da solo perché per disinserire serve un codice" width="420">
 </p>
 
+## Prima di installare
+
+> Foyer è offerto come software che automatizza azioni su regole, non come
+> impianto d'allarme. Non è certificato (EN 50131, CEI 79-3), non è
+> sorvegliato, non è un sistema antincendio, ed è fornito senza garanzie né
+> impegno di supporto (Apache-2.0, sezioni 7 e 8). Non affidarti solo a lui per
+> proteggere persone o beni: tieni rilevatori di fumo certificati, e un
+> impianto professionale dove una polizza o un rischio lo richiedono.
+
+Per configurare Foyer ti viene chiesto di spuntare che l'hai letto.
+
 ## Per iniziare
 
 Ti servono Home Assistant 2026.6 o successivo, un sensore di porta, finestra
@@ -89,7 +100,8 @@ account cloud, e nessun broker a meno che un tuo dispositivo parli MQTT.
    categoria *Integrazione*, installa *Foyer Home Defender* e riavvia Home
    Assistant.
 2. *Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Foyer Home
-   Defender*, e conferma gli stati in cui la prima zona conta come scattata.
+   Defender*: accetta il testo qui sopra, poi conferma gli stati in cui la
+   prima zona conta come scattata.
 3. Apri **Foyer** nella barra laterale: una procedura guidata di cinque passi
    completa la configurazione.
 
@@ -128,8 +140,9 @@ in inglese; tutti gli altri sono in entrambe le lingue.
 
 ## Stato
 
-Beta. Foyer è scritto da un solo autore, e ogni versione è una release GitHub
-ordinaria che HACS propone per numero di versione. La configurazione salvata
+Beta. Foyer è il progetto personale e non commerciale di una persona,
+pubblicato come Foyer Labs; non c'è una società dietro. Ogni versione è una
+release GitHub ordinaria che HACS propone per numero di versione. La configurazione salvata
 porta la versione del suo schema e viene migrata in avanti a ogni
 aggiornamento, e il [changelog](CHANGELOG.md) dice, versione per versione,
 cosa è cambiato nel comportamento. Cosa viene dopo, e cosa ogni passo deve
@@ -138,7 +151,9 @@ segui il repository per sapere quando esce una versione.
 
 ## Contribuire, sicurezza, licenza
 
-Issue e pull request sono benvenute, in italiano o in inglese;
+Issue e pull request sono benvenute, in italiano o in inglese, e ricevono
+risposta al meglio delle possibilità, senza garanzia di una risposta né di una
+correzione ([SUPPORT.md](SUPPORT.md));
 [CONTRIBUTING.md](CONTRIBUTING.md) spiega come si prepara l'ambiente di
 sviluppo e l'unica regola che non si piega mai, e aggiungere una lingua non
 tocca il codice. Un problema di sicurezza va in un
@@ -148,5 +163,7 @@ non in una issue — vedi [SECURITY.md](SECURITY.md).
 <p align="center">
   <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
 </p>
+
+Una donazione è un ringraziamento e non compra né supporto né priorità.
 
 Apache-2.0. Vedi [LICENSE](LICENSE) e [NOTICE](NOTICE).

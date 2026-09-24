@@ -26,9 +26,14 @@ Foyer vuol dire niente, e per lo stesso identico motivo il registro eventi è
 *utile* come traccia, non *inalterabile*.
 
 Questo è il confine onesto, e vale la pena conoscerlo prima di appoggiarcisi.
-Foyer è un'integrazione che fa quello che fa un allarme; non è un impianto
-certificato, non soddisfa CEI 79-3 / EN 50131 o equivalenti, e non sostituisce
-un impianto professionale con servizio di vigilanza.
+Cos'è Foyer, con le parole che la configurazione ti chiede di accettare:
+
+> Foyer è offerto come software che automatizza azioni su regole, non come
+> impianto d'allarme. Non è certificato (EN 50131, CEI 79-3), non è
+> sorvegliato, non è un sistema antincendio, ed è fornito senza garanzie né
+> impegno di supporto (Apache-2.0, sezioni 7 e 8). Non affidarti solo a lui per
+> proteggere persone o beni: tieni rilevatori di fumo certificati, e un
+> impianto professionale dove una polizza o un rischio lo richiedono.
 
 ## Cosa può fare comunque un amministratore di Home Assistant
 

@@ -76,7 +76,14 @@ the alpha.
 ## Adding the integration
 
 *Settings → Devices & services → Add integration → Foyer Home Defender.*
-Foyer can be added once per Home Assistant. The config flow has two screens.
+Foyer can be added once per Home Assistant. The config flow has three screens.
+
+**Before you start** shows what Foyer is and is not — the text in
+[the security model](security-model.md#the-boundary) — with a tick, *I have
+read this and accept it*. Nothing is set up until it is ticked; the date you
+accepted is kept with the integration and written in Foyer's log. An
+installation set up before this was asked for gets the same text as a card
+in *Settings → Repairs*, and keeps working until somebody ticks it.
 
 **Set up Foyer Home Defender** asks for three things:
 

@@ -76,6 +76,17 @@ a way to check all of it without setting anything off.
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts during an entry delay: every area with its state, the countdown, and the keypad that opens by itself because disarming asks for a code" width="420">
 </p>
 
+## Before you install
+
+> Foyer is offered as software that automates actions on rules, not as an
+> alarm system. It is not certified (EN 50131, CEI 79-3), not monitored, not a
+> fire alarm, and comes with no warranty and no promise of support
+> (Apache-2.0, sections 7 and 8). Do not rely on it alone to protect people or
+> property: keep certified smoke alarms, and a professional installation where
+> a policy or a risk calls for one.
+
+Setting Foyer up asks you to tick that you have read it.
+
 ## Get started
 
 You need Home Assistant 2026.6 or later, one door, window or motion sensor
@@ -84,8 +95,9 @@ no broker unless a device of yours speaks MQTT.
 
 1. In HACS, add this repository as a *Custom repository*, category
    *Integration*, install *Foyer Home Defender* and restart Home Assistant.
-2. *Settings → Devices & services → Add integration → Foyer Home Defender*,
-   and confirm the states in which your first zone counts as triggered.
+2. *Settings → Devices & services → Add integration → Foyer Home Defender*:
+   accept the text above, then confirm the states in which your first zone
+   counts as triggered.
 3. Open **Foyer** in the sidebar: a five-step wizard finishes the setup.
 
 [Getting started](docs/getting-started.md) covers the manual install, the
@@ -117,8 +129,9 @@ alarm system. [The security model](docs/security-model.md) says the rest.
 
 ## Status
 
-Beta. Foyer is written by one author, and every release is an ordinary GitHub
-release that HACS offers by version. The stored configuration carries a schema
+Beta. Foyer is the personal, non-commercial project of one person, published
+as Foyer Labs; there is no company behind it. Every release is an ordinary
+GitHub release that HACS offers by version. The stored configuration carries a schema
 version and is migrated forward on update, and the
 [changelog](CHANGELOG.md) says what changed in behaviour, release by release.
 What comes next, and what each step has to prove, is in
@@ -127,7 +140,9 @@ release lands.
 
 ## Contributing, security, licence
 
-Issues and pull requests are welcome, in English or Italian;
+Issues and pull requests are welcome, in English or Italian, and are
+answered on a best-effort basis, with no promise of a reply or a fix
+([SUPPORT.md](SUPPORT.md));
 [CONTRIBUTING.md](CONTRIBUTING.md) explains the development setup and the one
 rule never bent, and adding a language touches no code. A security problem
 belongs in a [private advisory](https://github.com/foyer-labs/Foyer-Home-Defender/security/advisories/new),
@@ -136,5 +151,7 @@ not an issue — see [SECURITY.md](SECURITY.md).
 <p align="center">
   <a href="https://www.buymeacoffee.com/foyerlabs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me a Coffee" height="60"></a>
 </p>
+
+A donation is a thank-you and buys neither support nor priority.
 
 Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

@@ -50,6 +50,7 @@ behind every decision, is in [SPEC.md](SPEC.md).
 |---|---|
 | [Visual identity](brand.md) | The mark, the palette, the asset set |
 | [API contract](api/openapi.yaml) · [MQTT contract](api/asyncapi.yaml) | The device endpoint and the MQTT messages, version v1 |
+| [Support](../SUPPORT.md) | What to expect from an issue: best effort, with no promise of an answer or a fix |
 | [Contributing](../CONTRIBUTING.md) · [Security policy](../SECURITY.md) · [Changelog](../CHANGELOG.md) | How to contribute, how to report a vulnerability, what changed in each release |
 
 Documents written before version 0.1.0-beta.23 — notification channels,

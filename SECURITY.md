@@ -80,22 +80,16 @@ in it:
 
 ## What this is not
 
-Worth saying here as well as in the READMEs, because this page is the one
-people find from the repository's front door.
+> Foyer is offered as software that automates actions on rules, not as an
+> alarm system. It is not certified (EN 50131, CEI 79-3), not monitored, not a
+> fire alarm, and comes with no warranty and no promise of support
+> (Apache-2.0, sections 7 and 8). Do not rely on it alone to protect people or
+> property: keep certified smoke alarms, and a professional installation where
+> a policy or a risk calls for one.
 
-Foyer is not certified and does not aim to be: EN 50131, CEI 79-3 and their
-equivalents are out of scope, and an insurance policy or a tender that names a
-grade is not satisfied by it. Nobody is monitoring anything — it notifies the
-people the household listed, over transports it does not own. Detection is only
-as good as sensors somebody bought, on a radio somebody else designed, behind
-a router that goes off with the power. And it is not a fire alarm system: a
-smoke detector wired into Home Assistant does not replace certified,
-interconnected smoke alarms.
-
-None of that makes it useless; it makes it a tool with a shape. The simulator,
-the walk test and the action test exist so that the honest claim can be "it
-does what you configured", which is a different promise from "it will protect
-you".
+The simulator, the walk test and the action test exist so that the honest
+claim can be "it does what you configured", which is a different promise from
+"it will protect you".
 
 ## Supported versions
 
@@ -107,8 +101,9 @@ watches your front door.
 
 ## What happens after a report
 
-There is no service-level agreement to make and none is offered. What there is
-in practice: an acknowledgement that the report arrived, a fix or a clear
-"this is out of scope and here is why", and — if it is a real vulnerability —
-a release, a changelog entry that says what it was, and credit in the advisory
-unless you would rather not be named.
+There is no service-level agreement and none is offered: Foyer is the personal,
+non-commercial project of one person, looked after on a best-effort basis. A
+report is read when there is time, and there is no promise of an answer, a fix
+or a date. What usually happens with a real vulnerability is a release, a
+changelog entry that says what it was, and credit in the advisory unless you
+would rather not be named — usually, not certainly.
