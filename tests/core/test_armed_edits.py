@@ -70,7 +70,15 @@ from .helpers import NOW, World, make_house, rule, user, zone
 def armed(config: FoyerConfig | None = None) -> World:
     """The ground floor armed by Night; upstairs and the garage disarmed."""
     world = World(config)
-    world.arm("night")
+    night = world.config.scenario("night")
+    # A scenario limited to some people is armed by one of them, with a code:
+    # a request that establishes nobody cannot use it.
+    who = (
+        {"user_id": "luca", "code": CodeResult.VALID}
+        if night is not None and night.allowed_user_ids is not None
+        else {}
+    )
+    world.arm("night", **who)
     assert world.area("ground").state is not AreaState.DISARMED
     return world
 

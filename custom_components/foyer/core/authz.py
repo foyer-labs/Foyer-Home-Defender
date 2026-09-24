@@ -164,6 +164,14 @@ def _scenario_setting(scenario: Scenario | None, operation: Operation) -> bool |
     return None
 
 
+# What a scenario's "Who may use it" list restricts: using the scenario, which
+# is arming it, forcing it or switching to it. Disarming is left to the person's
+# own permissions and areas.
+_LISTED_OPERATIONS = frozenset(
+    {Operation.ARM, Operation.FORCE_ARM, Operation.CHANGE_SCENARIO}
+)
+
+
 def check_user(
     config: FoyerConfig,
     actor: Actor,
@@ -181,6 +189,23 @@ def check_user(
     not here.
     """
     user = config.user(actor.user_id)
+    listed = scenario.allowed_user_ids if scenario is not None else None
+    if (
+        listed is not None
+        and operation in _LISTED_OPERATIONS
+        and (user is None or actor.claimed)
+        # An automatic rule is the household's own configuration acting, and
+        # names no person by design (§9.4); a key zone names its own.
+        and actor.channel != "auto_rule"
+        and enforced(config, now)
+    ):
+        # A scenario limited to some people cannot be armed by a request that
+        # establishes nobody — a codeless arming, or a name a message typed
+        # (decisions 88, 102): being on the list is a permission, and a claim
+        # buys none. The way through is a code, which says who is asking
+        # (fix phase). While no code exists, nobody can be established, and
+        # the policy's being switched off decides as it does everywhere else.
+        return Reason.CODE_REQUIRED
     if user is None:
         return None
     if not user.enabled or not user.in_window(now):
@@ -196,7 +221,6 @@ def check_user(
         allowed_here = user.allowed_scenario_ids
         if allowed_here is not None and scenario.id not in allowed_here:
             return Reason.SCENARIO_NOT_ALLOWED
-        listed = scenario.allowed_user_ids
         if listed is not None and user.id not in listed:
             return Reason.SCENARIO_NOT_ALLOWED
     return None
