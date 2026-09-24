@@ -72,6 +72,7 @@ from ..core.models import (
     Operation,
     Outcome,
     Reason,
+    RunningAction,
     RuntimeState,
     Scenario,
     Startup,
@@ -84,10 +85,12 @@ from ..core.models import (
 )
 from ..core.privacy import cutoff as privacy_cutoff, ref_for
 from ..core.response import (
+    TEST_SIREN_SECONDS,
     PlanContext,
     contact_test_intent,
     notify_test_intent,
     recipients_for,
+    revert_intent,
     test_intent,
 )
 from ..core.simulate import (
@@ -1567,6 +1570,50 @@ class FoyerSystem:
         return simulation_dict(simulation, self.config)
 
     @callback
+    def _async_end_test_siren(self, intent: ActionIntent) -> None:
+        """Switch a tested siren off when its three seconds are up (§11.4).
+
+        A siren that takes a duration stops by itself; one driven by a switch,
+        or one that takes no duration, would not, and the test would leave it
+        sounding until somebody went to switch it off. So the off goes to
+        every target, whichever kind it is — for one that has stopped already
+        it is a no-op. Not a running action: a test answers no alarm, and a
+        restart in these three seconds is not worth a persisted timer.
+        """
+        entity_ids = intent.params.get("entity_ids") or ()
+        if isinstance(entity_ids, str):
+            entity_ids = (entity_ids,)
+        if not entity_ids:
+            return
+        off = revert_intent(
+            RunningAction(
+                action_id=intent.action_id,
+                kind=ActionKind.SIREN.value,
+                entity_ids=tuple(entity_ids),
+                area_id=None,
+                until=None,
+                restore="off",
+            ),
+            intent.moment,
+        )
+
+        async def stop(_now: datetime) -> None:
+            await self._executor.async_run(
+                Decision(
+                    at=dt_util.utcnow(),
+                    accepted=True,
+                    state=self.state,
+                    actions=(off,),
+                )
+            )
+
+        async_track_point_in_utc_time(
+            self.hass,
+            stop,
+            dt_util.utcnow() + timedelta(seconds=TEST_SIREN_SECONDS),
+        )
+
+    @callback
     def access_recovered(
         self,
         strings: Mapping[str, Any],
@@ -1734,6 +1781,8 @@ class FoyerSystem:
             )
         )
         result = results[0]
+        if intent.kind == ActionKind.SIREN.value:
+            self._async_end_test_siren(intent)
         named = self.config.user(actor.user_id) if actor else None
         self.async_record(
             (
