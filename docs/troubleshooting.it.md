@@ -174,7 +174,9 @@ Poi:
 Una zona è in guasto quando la sua entità è `unavailable` o `unknown` o non
 esiste, quando una condizione di scatto numerica legge qualcosa che non è un
 numero, quando è rimasta muta oltre il suo *Limite di silenzio*, o quando la
-sua entità della batteria non si riesce a leggere. Un guasto non è mai «tutto
+sua entità della batteria non si riesce a leggere. Un'entità `event` o `tag`
+che legge `unknown` semplicemente non è mai scattata, e non è un guasto;
+`unavailable` invece lo è ancora. Un guasto non è mai «tutto
 tranquillo»: blocca l'inserimento dell'area della zona, viene annunciato come
 *Guasto di zona*, e *Test e diagnostica* mostra *Blocca: guasto*. Quando
 l'entità stessa della zona è `unavailable` o `unknown` da due giorni (valore
@@ -221,7 +223,7 @@ proprie.
 | *Inserimento non riuscito: zona ancora aperta: …* | Una zona *Inserisci dopo la chiusura* è rimasta aperta oltre *Attendi la chiusura al massimo* (300 s per impostazione predefinita) dopo il ritardo d'uscita | Chiudila prima, o alza il limite |
 | *Inserimento non riuscito — non rispondono: …* | Una zona in guasto | Vedi [Guasti](#guasti-una-zona-che-non-si-riesce-a-leggere) |
 | *Impossibile forzare l'inserimento: queste zone non possono essere escluse: …* | Un inserimento forzato ha trovato una zona che non è *Può essere esclusa* | Chiudila o riparala |
-| *Serve un codice.* | Lo chiede la politica dei codici, un'area o uno scenario | Digitalo: il pannello e la card lo chiedono da soli. Dalle card di Home Assistant, vedi più sotto |
+| *Serve un codice.* | Lo chiede la politica dei codici, un'area o uno scenario; oppure lo scenario ha una lista *Chi può usarlo* e la richiesta non ha accertato nessuno — un inserimento senza codice, o uno `user_id` soltanto dichiarato — cosa che viene rifiutata finché qualcuno ha un codice, anche dove l'inserimento non chiede un codice | Digitalo: il pannello e la card lo chiedono da soli. Dalle card di Home Assistant, vedi più sotto |
 | *Il codice non è corretto.* | Il codice non corrisponde a nessuno | Ridigitalo; ogni codice sbagliato conta per il blocco |
 | *Troppi codici errati…* | Blocco in corso, vedi più sotto | Aspetta, o usa un altro canale |
 | *Il tuo utente Foyer non ha il permesso per farlo.* | Alla persona manca il permesso (inserire, inserimento forzato, cambiare scenario…) | Spuntalo nella pagina *Utenti* |
@@ -236,7 +238,7 @@ proprie.
 
 **Blocco.** Dopo cinque codici sbagliati entro 300 secondi, i codici da quel
 canale vengono rifiutati per 300 secondi; ogni blocco successivo raddoppia,
-fino a un'ora, e il raddoppio riparte da capo dopo un giorno senza blocchi.
+fino a un'ora — o fino alla durata configurata, se è più lunga — e il raddoppio riparte da capo dopo un giorno senza blocchi.
 Tutti e tre i numeri sono nella pagina *Utenti*. Un codice corretto interrompe
 la serie di errori ma non un blocco già in corso. Ciò che viene bloccato è
 circoscritto: il pannello, la card e i pannelli d'allarme di Home Assistant
@@ -247,22 +249,23 @@ senza un utente dietro, come le automazioni, ne condividono uno; un tastierino c
 conta un token mancante o sbagliato per indirizzo di provenienza, e un
 dispositivo con il suo token giusto non viene mai rifiutato per il suo
 indirizzo. Un **amministratore di Home Assistant non viene mai bloccato fuori
-dal pannello, dalla card o dai pannelli d'allarme di Home Assistant** — i
-tentativi vengono contati e registrati, e l'account resta aperto — così
-nessuno può chiudersi fuori da casa propria. Una chiamata di servizio
-`foyer.*` viene contata come quella di chiunque altro, amministratore o no. La card dice fino a
+dal pannello, dalla card, dai pannelli d'allarme di Home Assistant o dai
+servizi `foyer.*` chiamati dal suo account** — i tentativi vengono contati e
+registrati, e l'account resta aperto — così nessuno può chiudersi fuori da
+casa propria. La card dice fino a
 quando; il pannello dice *I codici da questo account sono bloccati fino alle …*.
 
 **Le card di Home Assistant rifiutano un inserimento senza codice.** Home
 Assistant fa a Foyer una sola domanda, valida per tutti — per inserire serve un
 codice? — e agisce in base alla risposta prima che Foyer veda chi sta
 chiedendo. Foyer risponde sì finché la politica chiede un codice per inserire
-e nessuno ha attivato *Non chiedere il codice dove questa persona è
-identificata*; *Tutta la casa* risponde sì appena una modalità che può ancora
+e nessuno potrebbe usare *Non chiedere il codice dove questa persona è
+identificata* — vale solo per una persona attiva, collegata a un account di
+Home Assistant e dentro il suo periodo di validità; *Tutta la casa* risponde sì appena una modalità che può ancora
 inserire ne chiede uno. Allora la finestra di Home Assistant e i pulsanti delle
 card chiedono il codice, e una modalità che non ne chiede viene rifiutata da
 Home Assistant finché non si digita un codice — anche da un'automazione, che
-per questo inserisce con `foyer.arm`. Quando qualcuno è esentato, quei pulsanti
+per questo inserisce con `foyer.arm`. Quando qualcuno può usare l'esenzione, quei pulsanti
 smettono di chiederlo, e una persona a cui Foyer vuole chiedere un codice viene
 rifiutata con *Per inserire serve un codice*, e le viene detto dove digitarlo:
 la card di Foyer, il pannello di Foyer, o la card *Pannello degli Allarmi* di
@@ -292,7 +295,10 @@ stato usato sulla strada sbagliata. Vedi [tastierini](keypads.md) (in inglese).
   quando un tag o una zona chiave non è riuscito a inserire;
 - *Codice rifiutato* sotto *Sicurezza*, quando il rifiuto riguardava chi stava
   chiedendo — un codice sbagliato, un blocco, un permesso o un'area — con il
-  motivo nel dettaglio della riga;
+  motivo nel dettaglio della riga. Il suo esito dice *Codice errato* solo quando
+  un codice è stato digitato ed era sbagliato; un codice che serviva e non è
+  stato dato, un permesso, un periodo di validità, un'area o uno scenario
+  dicono *Rifiutato*;
 - *Azione automatica trattenuta* sotto *Sistema*, quando una regola automatica
   è stata fermata da uno dei suoi controlli di sicurezza, da una sospensione o
   dall'interruttore generale. Vedi
@@ -358,8 +364,8 @@ Assistant non identifica nessuno: il tablet a muro lasciato sbloccato è quasi
 sempre collegato con un account amministratore. Quindi il pannello chiede il
 codice a un amministratore dovunque lo chieda la politica, compreso il
 salvataggio della configurazione. Ciò che un amministratore conserva è che i
-codici sbagliati non lo bloccano mai fuori dal pannello, dalla card o dai
-pannelli d'allarme di Home Assistant. Un amministratore che non ha un codice, in
+codici sbagliati non lo bloccano mai fuori dal pannello, dalla card, dai
+pannelli d'allarme di Home Assistant o dai servizi `foyer.*`. Un amministratore che non ha un codice, in
 una casa dove altri ce l'hanno, o il cui utente Foyer è stato disattivato o è
 scaduto, recupera l'accesso da **Impostazioni → Dispositivi e servizi → Foyer
 Home Defender → Configura**: riattiva l'utente Foyer di quell'account, toglie il

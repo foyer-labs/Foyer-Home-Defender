@@ -66,7 +66,9 @@ Esistono altre due catene, ciascuna per un motivo:
 
 Dove vedi la risposta: l'editor delle *Aree* mostra il profilo con cui
 un'area risponderebbe e da dove arriva («Profilo in uso: Full — ereditato
-dallo scenario»); l'elenco in questa pagina dice, sotto *Usato da*, quali
+dallo scenario») — per un'area inserita, dallo scenario con cui è stata
+inserita; per una disinserita, dal primo scenario che la inserisce con un
+profilo proprio; l'elenco in questa pagina dice, sotto *Usato da*, quali
 aree, zone, scenari e gruppi indicano ciascun profilo, e se è il predefinito
 o quello tecnico; e la traccia del simulatore indica il profilo e la sua
 provenienza a ogni passo, letti dalla stessa funzione che usa il motore.
@@ -195,7 +197,10 @@ registrate, e nessuna parte. Quattro cose non vengono mai trattenute: le zone
 24h, manomissione, tecniche e panico, che restano completamente attive; un
 incidente che era già aperto; i momenti *Walk test avviato* e *Walk test
 concluso* del walk test stesso, perché il test deve annunciarsi; e *Codice di
-coercizione usato*.
+coercizione usato*. Se nessuna azione di nessun profilo risponde a *Walk test
+avviato* o *Walk test concluso* con una notifica, Foyer mostra da sé una
+notifica di Home Assistant, così togliere la spunta non rende silenzioso un
+walk test.
 
 ---
 
@@ -317,9 +322,8 @@ allarme genera solo quel momento.
 ### Il pulsante Prova
 
 Accanto a ogni azione salvata, *Prova* la esegue per davvero: la sirena
-suona per davvero — per tre secondi su una sirena che accetta una durata;
-una comandata da un interruttore, o che non accetta una durata, resta accesa
-finché non la spegni tu — la notifica arriva per davvero, la luce si accende per davvero. Prima chiede
+suona per davvero — per tre secondi, dopo i quali Foyer la spegne, che accetti
+una durata o sia comandata da un interruttore — la notifica arriva per davvero, la luce si accende per davvero. Prima chiede
 conferma, richiede il permesso *Provare le azioni* e un codice, e lascia nel
 registro una riga segnata come prova. Condizioni e ore di silenzio non
 vengono considerate, perché sono regole sugli allarmi, non sul fatto che il

@@ -42,7 +42,7 @@ Alarmo* e, quando c'è qualcosa da applicare, *Applica*.
 
 | Passo | Cosa richiede |
 |---|---|
-| *Leggi da Alarmo* (l'anteprima) | *Modificare la configurazione*. Non scrive niente, quindi non chiede nessun codice. |
+| *Leggi da Alarmo* (l'anteprima) | *Modificare la configurazione*. Non scrive niente, quindi non chiede nessun codice. Se l'importazione porterebbe delle persone, anche *Gestire utenti e codici*, perché l'anteprima le nomina. |
 | *Applica* | *Modificare la configurazione*, e il tuo codice quando Foyer ne chiede uno per cambiare la configurazione. Se l'importazione creerebbe delle persone, anche *Gestire utenti e codici*, perché portare dentro delle persone cambia chi può comandare la casa, in qualunque modo lo si faccia. |
 
 Un amministratore di Home Assistant non viene mai respinto per mancanza di un

@@ -119,8 +119,11 @@ Quando hai finito, Foyer crea:
 
 - **un'area**, con 30 secondi di ritardo d'uscita e 30 secondi di ritardo
   d'ingresso, che da inserita si presenta come *Inserito fuori casa*;
-- **una zona** sull'entità che hai scelto, con il suo nome, di tipo
-  *istantanea*, con gli stati di scatto che hai confermato;
+- **una zona** sull'entità che hai scelto, con il suo nome, con gli stati di
+  scatto che hai confermato, e del tipo che la pagina *Zone* proporrebbe per
+  quel sensore: *Ritardata* per una porta, una porta del garage, una tapparella
+  o una serratura, *Tecnica* per un rivelatore di fumo o di gas, *Istantanea*
+  per una finestra, un sensore di movimento o un interruttore;
 - **uno scenario** che inserisce quell'area, e fa presentare *Tutta la casa*
   come *Inserito fuori casa*;
 - **un profilo di risposta**, *Default*, la cui unica azione è una notifica di
@@ -174,7 +177,10 @@ configurazione invece di ricominciare da capo, in cinque passi brevi:
    permessi, perché sei tu che stai configurando l'impianto; tutti gli altri si
    aggiungono nella pagina *Utenti*, ognuno con un codice suo. Il pulsante dice
    *Crea e continua* appena hai scritto qualcosa, e *Salta* finché entrambi i
-   campi sono vuoti.
+   campi sono vuoti. Un nome senza codice viene rifiutato con un messaggio:
+   questo passo è per una persona con un codice. Se nella pagina *Utenti* c'è
+   già qualcuno che però non ha un codice, il passo lo dice invece di
+   presentarlo come chi ha il codice.
 5. **Notifica di prova.** Scegli un servizio di notifica in *Manda a* e premi
    *Manda la prova*. Passa da Foyer come farebbe un vero messaggio d'allarme,
    viene verificata come ogni altra prova delle azioni, e resta nel registro
@@ -188,7 +194,7 @@ cinque passi non hanno coperto, ognuno con un pulsante verso la pagina che lo
 copre: meno di tre zone mappate, nessuno con un codice, o nessun contatto da
 raggiungere quando nessuno prende atto di un allarme.
 
-*Fine* e *Non ora* chiudono entrambi la procedura per tutta l'installazione, non
+*Fine* e *Non mostrare più* chiudono entrambi la procedura per tutta l'installazione, non
 solo per questa visita: l'indicazione è salvata nella configurazione, e il
 pannello non ha nessun pulsante che la riporti indietro. Tutto quello che fa si
 trova nelle pagine normali, quindi fermarsi prima non fa perdere niente, se non
@@ -238,7 +244,8 @@ un codice protegge e da cosa no.
 4. **Manda la notifica di prova** che la procedura guidata ti offre. Se non
    arriva, tutto il resto di Foyer non conta.
 5. **Lascialo scattare una volta, apposta, mentre sei lì.** Inserisci, rientra
-   e — passando da una zona ritardata — lascia scadere il ritardo d'ingresso;
+   e — passando da una zona ritardata, che è ciò che il flusso di
+   configurazione fa di una porta — lascia scadere il ritardo d'ingresso;
    una zona istantanea suona subito. Poi apri il *Registro* e leggi cosa dice
    degli ultimi due minuti, e a chi li attribuisce.
 
@@ -282,9 +289,9 @@ manda un comando, e quello che vedi è la risposta del backend.
 
 **Tutta la casa.** Lo stato della casa, e la modalità che vede Home Assistant,
 poi un pulsante per ogni scenario — *Inserisci «Notte»* — ciascuno con un
-lucchetto quando per inserirlo da casa disinserita serve un codice; per
-passarci da un altro scenario in funzione serve il codice di *Cambiare
-scenario* anche dove non compare nessun lucchetto. Accanto a ogni pulsante:
+lucchetto quando premerlo chiederebbe un codice: per inserirlo da casa
+disinserita, oppure, mentre è in funzione un altro scenario, per passarci, che
+chiede il codice di *Cambiare scenario*. Accanto a ogni pulsante:
 *Pronto per l'inserimento*, *Non pronto:* seguito dalle zone che lo impediscono,
 oppure *in funzione* per lo scenario inserito. La riga sulla prontezza è un
 consiglio, non uno sbarramento: premere un pulsante che dice *Non pronto* manda

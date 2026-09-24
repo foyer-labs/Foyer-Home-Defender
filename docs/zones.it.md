@@ -72,8 +72,8 @@ inserirsi ne chiede uno lì viene rifiutato, e lo dice.
 |---|---|
 | *Nome* | Dà il nome anche alle sue entità: `alarm_control_panel.foyer_<name>`, `binary_sensor.foyer_ready_to_arm_<name>`, `sensor.foyer_countdown_<name>` |
 | *Stato riportato a Home Assistant* | Lo stato che mostra il pannello dell'area quando è inserita — *Inserito fuori casa* per un'area nuova — e l'unica azione di inserimento che offre. È quello che vedono Home Assistant, HomeKit e gli assistenti vocali; non cambia niente del comportamento |
-| *Ritardo d'ingresso predefinito* | Il tempo per disinserire dopo che si apre una zona ritardata, per le zone che non ne hanno uno loro. 30 s per un'area nuova, 0–300 s |
-| *Ritardo d'uscita predefinito* | Il tempo per uscire dopo l'inserimento, a meno che lo scenario non ne abbia uno suo. 30 s per un'area nuova, 0–300 s; a 0 l'area si inserisce subito |
+| *Ritardo d'ingresso predefinito* | Il tempo per disinserire dopo che si apre una zona ritardata, per le zone che non ne hanno uno loro. Un'area nuova parte dal *Ritardo d'ingresso predefinito* delle *Impostazioni* (30 s se non lo cambi), 0–300 s |
+| *Ritardo d'uscita predefinito* | Il tempo per uscire dopo l'inserimento, a meno che lo scenario non ne abbia uno suo. Un'area nuova parte dal *Ritardo d'uscita predefinito* delle *Impostazioni* (30 s se non lo cambi), 0–300 s; a 0 l'area si inserisce subito |
 | *Profilo di risposta* | Chi risponde a tutto quello che succede nell'area. Vuoto: quello dello scenario, poi il predefinito globale. L'editor mostra il profilo effettivo e da dove arriva |
 | *Codice per inserire*, *Codice per disinserire* | *Come la politica globale*, *Codice richiesto* o *Senza codice* |
 | *Area perimetrale* | L'anello di difesa esterno |
@@ -125,9 +125,12 @@ qualunque canale. Cambiare la lista richiede *Gestire utenti e codici* oltre a
 Lasciando *Chiunque abbia il permesso* si parte con tutte le persone
 spuntate, e l'ultima non si può togliere: una lista vuota salvata per sbaglio
 chiuderebbe fuori tutta la famiglia. La lista si controlla sulla persona che
-una richiesta identifica; dove l'inserimento non chiede un codice, una
-richiesta che non identifica nessuno non ne è vincolata — se la lista deve
-valere, dai allo scenario *Codice per inserire*.
+una richiesta accerta, con un codice, un tag o un account collegato. Finché
+qualcuno ha un codice, una richiesta che non accerta nessuno — un
+inserimento senza codice, o uno `user_id` che un messaggio si limita a
+dichiarare — viene rifiutata con *Serve un codice* quando inserisce lo
+scenario, lo forza o ci passa, anche dove l'inserimento non chiede un codice:
+la strada è un codice. Una regola automatica lo inserisce comunque.
 
 ### Cambiare scenario a impianto inserito
 
@@ -315,8 +318,11 @@ Una zona che Foyer non riesce a leggere è un **guasto**, mai «tutto
 tranquillo»: la sua entità è `unavailable`, `unknown` o non esiste (*Guasto:
 non raggiungibile*), una condizione numerica legge qualcosa che non è un
 numero, è rimasta in silenzio oltre il suo *Limite di silenzio*, oppure la sua
-entità batteria non si può leggere. Un guasto **blocca l'inserimento della sua
-area**, genera una volta *Guasto di zona*, accende `binary_sensor.foyer_fault`
+entità batteria non si può leggere. L'unica eccezione è un'entità `event` o
+`tag` che legge `unknown`: è un'entità che non è mai scattata, non una che non
+si può leggere, così un pulsante antipanico nuovo non tiene la sua area non
+inserita finché qualcuno non lo preme; `unavailable` per lei resta un guasto.
+Un guasto **blocca l'inserimento della sua area**, genera una volta *Guasto di zona*, accende `binary_sensor.foyer_fault`
 e compare nella Panoramica, nella pagina *Zone* e in
 [Test e diagnostica](simulator.md#diagnostics-am-i-looking-at-the-right-sensor)
 (in inglese). Un'entità che diventa non disponibile conserva l'ultima lettura,
@@ -405,6 +411,7 @@ un telecomando o un pulsante collegato come entità.
 |---|---|
 | *Quando si attiva* | *Inserisci lo scenario*, *Disinserisci tutto*, *Inserisci o disinserisci* |
 | *Scenario* | Quale scenario inserisce |
+| *Agisce come* | La persona a cui il registro attribuisce quello che fa la chiave, o *Nessuno: il registro attribuisce l'azione alla chiave*. Cambiarla richiede *Gestire utenti e codici*. Una chiave che non nomina nessuno non accerta nessuno, quindi non può inserire uno scenario limitato da *Chi può usarlo*: indica la persona a cui appartiene |
 | *Quando si rilascia* | *Niente*, o *Disinserisci tutto* — per un interruttore che resta su on finché la casa è inserita |
 
 Il comando di una chiave non è legato alla sua area, quindi disinserisce tutte

@@ -126,7 +126,10 @@ cancella quello che c'era e dice *Digita di nuovo il codice per questa azione*.
 Finché nessuno ha un codice, la politica dei codici è inerte e niente ne
 chiederà uno ([modello di sicurezza](security-model.it.md)), quindi la card non
 mostra nessun tastierino in *Completa* e *Compatta* e nessun link *Digita il
-codice*. Nel momento in cui il backend chiede un codice, il tastierino compare.
+codice*. Al loro posto ogni disposizione tranne *Badge* lo dice, come la
+Panoramica: *Nessuno ha ancora un codice, quindi il sistema non ne chiede…*.
+Nel momento in cui il backend chiede un codice, l'avviso sparisce e il
+tastierino compare.
 
 ## Ritardo d'ingresso e allarme
 
@@ -138,7 +141,8 @@ sono proprio quelli che la persona alla porta non ha. Se lo richiudi, resta
 chiuso per quel conto alla rovescia.
 
 Durante un ritardo d'ingresso o un allarme i pulsanti degli scenari di
-*Completa* e *Tastierino* si fanno da parte, perché l'unica cosa rimasta da
+*Completa* e *Tastierino*, e il menu a tendina degli scenari di *Compatta*, si
+fanno da parte, perché l'unica cosa rimasta da
 fare è disinserire, e *Disinserisci* diventa il pulsante principale. La card
 guarda solo dove punta: la card di *Tutta la casa* reagisce a qualunque area,
 la card di un'area solo alla sua, quindi un allarme in garage non toglie i

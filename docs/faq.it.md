@@ -92,8 +92,8 @@ muro lasciato sbloccato è quasi sempre collegato con un account
 amministratore. Quindi a un amministratore il codice viene chiesto come a
 chiunque altro, ogni volta che la politica lo chiede. Ciò che un
 amministratore conserva è che i codici sbagliati non lo bloccano mai fuori dal
-pannello, dalla card o dai pannelli d'allarme di Home Assistant stesso. Il
-quadro completo è nel [modello di sicurezza](security-model.it.md).
+pannello, dalla card, dai pannelli d'allarme di Home Assistant stesso o dai
+servizi `foyer.*`. Il quadro completo è nel [modello di sicurezza](security-model.it.md).
 
 ## Posso inserire dalle card di Home Assistant, o a voce?
 
@@ -105,7 +105,9 @@ ogni richiesta come fa ovunque.
 Che cosa chiede prima Home Assistant dipende da una sola cosa che Foyer gli
 dice: se per inserire serve un codice. Foyer dice di sì solo finché la tua
 politica dei codici ne chiede uno per inserire (per impostazione predefinita
-non lo chiede) e nessuno ha attivato l'esenzione qui sopra. Il motivo è che
+non lo chiede) e nessuno potrebbe usare l'esenzione qui sopra: vale solo per
+una persona che l'ha attivata, è attiva, è collegata a un account di Home
+Assistant ed è dentro il suo periodo di validità. Il motivo è che
 Home Assistant agisce su quella risposta prima che Foyer veda chi sta
 chiedendo: finché è sì, Home Assistant rifiuta ogni inserimento che arriva
 senza codice, anche quello della persona esentata.
@@ -117,7 +119,7 @@ senza codice, anche quello della persona esentata.
   non si digita un codice, anche da un'automazione. Dai il codice a
   quell'automazione, oppure inserisci lo scenario con il servizio `foyer.arm`
   di Foyer.
-- **Finché qualcuno è esentato**, Home Assistant non chiede niente. La persona
+- **Finché qualcuno può usare l'esenzione**, Home Assistant non chiede niente. La persona
   esentata inserisce senza codice; chiunque altro a cui Foyer chieda un codice
   viene rifiutato da Foyer, con una riga nel registro e un messaggio che dice
   dove digitarlo: la card di Foyer, il pannello di Foyer, o la card *Pannello

@@ -68,8 +68,8 @@ cui un'area inserita potrebbe rispondere, e i contatti che nominano;
 |---|---|---|---|
 | *Durata delle sirene* | 180 s | 1–900 s | bloccata |
 | *Attendi la chiusura al massimo* | 300 s | 60–1800 s | bloccata |
-| *Ritardo d'ingresso predefinito* | 30 s | 0–300 s nel pannello | bloccata |
-| *Ritardo d'uscita predefinito* | 30 s | 0–300 s nel pannello | bloccata |
+| *Ritardo d'ingresso predefinito* | 30 s | 0–300 s | bloccata |
+| *Ritardo d'uscita predefinito* | 30 s | 0–300 s | bloccata |
 | *Batteria scarica sotto* | 20 % | 1–100 % | libera |
 | *Timeout del walk test* | 900 s | 60–3600 s | bloccata |
 
@@ -90,11 +90,10 @@ la zona l'avesse bloccato. Una zona può avere un valore suo; questo è quello
 che usa quando non ce l'ha. Vedi [zone](zones.it.md).
 
 **Ritardo d'ingresso predefinito** e **Ritardo d'uscita predefinito** sono i
-ritardi che il backend dà a un'area salvata senza ritardi propri. La pagina
-*Aree* non ne manda mai una così: fa partire ogni nuova area da 30 s per
-entrambi, qualunque cosa dicano queste impostazioni, quindi i ritardi di una
-nuova area impostali lì. Il pannello offre 0–300 s per entrambi; i ritardi di
-ogni area vengono tenuti entro 0–300 s al salvataggio. Le aree esistenti
+ritardi con cui parte una nuova area: la pagina *Aree* riempie da qui i
+ritardi di una nuova area, e il backend li dà a un'area salvata senza ritardi
+propri. Entrambi vengono tenuti entro 0–300 s al salvataggio, come i ritardi
+di ogni area. Le aree esistenti
 tengono i loro; una zona può sovrascrivere il ritardo d'ingresso e uno scenario quello
 d'uscita. Vedi [zone](zones.it.md).
 
@@ -187,13 +186,15 @@ per impostazione predefinita tranne *Attività zone (disinserito)*, che un PIR
 in soggiorno riempie di migliaia di righe al giorno; attivala mentre cerchi un
 problema e poi spegnila di nuovo.
 
-Una categoria disattivata da quel momento non scrive più niente. Le righe che
-ha già scritto restano finché non scadono i loro giorni. Disattivare
-*Sicurezza* ha una conseguenza che vale la pena leggere prima di farlo: i
-codici sbagliati, i blocchi e i codici di coercizione non vengono più
-registrati, e per loro non parte nessun `foyer_event`, quindi un'automazione
-che risponde a un codice di coercizione smette di sentirlo. Il profilo
-predefinito gli risponde comunque.
+Una categoria disattivata da quel momento non scrive più niente, con tre
+eccezioni che vengono sempre scritte, e sempre mandate come `foyer_event`: un
+codice di coercizione, un recupero dell'accesso da *Configura*, e delle
+avvertenze accettate. Le righe che ha già scritto restano finché non scadono i
+loro giorni. Disattivare *Sicurezza* ha comunque una conseguenza che vale la
+pena leggere prima di farlo: i codici sbagliati e i blocchi non vengono più
+registrati, e per loro non parte nessun `foyer_event`. Un codice di
+coercizione viene comunque registrato e raggiunge comunque un'automazione che
+gli risponde, e il profilo predefinito gli risponde comunque.
 
 **Accorcia a 7 giorni** porta *Inserimento*, *Allarme*, *Azione*, *Sicurezza* e
 *Configurazione* a sette giorni e lascia stare le altre tre. È pensato per le

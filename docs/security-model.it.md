@@ -59,14 +59,17 @@ un amministratore che passa dalle sue stesse interfacce:
   volta che la politica lo chiede. Essere amministratore non identifica
   nessuno: il tablet a muro sbloccato di cui parla questa pagina è quasi
   sempre collegato con un account amministratore.
-- **Un amministratore non viene mai bloccato** fuori dal pannello, dalla card o
-  dalle entità del pannello d'allarme. I suoi codici errati vengono contati e
+- **Un amministratore non viene mai bloccato** fuori dal pannello, dalla card,
+  dalle entità del pannello d'allarme o dai servizi `foyer.*` chiamati dal suo
+  account. I suoi codici errati vengono contati e
   registrati, ma il contatore non lo chiude mai fuori, perché un
   amministratore che non riuscisse a rientrare disattiverebbe l'integrazione.
 - **Sui comandi di configurazione e del registro del pannello, un
   amministratore non viene mai respinto per mancanza di un permesso** —
   respingerlo non otterrebbe niente che il paragrafo sopra non gli dia già. Il
-  codice resta.
+  codice resta. I servizi `foyer.*` che esportano il registro, esportano la
+  configurazione o ne importano una non sono il pannello: lì il permesso vale
+  per l'account di un amministratore come per quello di chiunque.
 - **Un amministratore senza più un modo di entrare può recuperare l'accesso,
   e lo fa in modo vistoso** — uno che non ha un codice in una casa dove altri
   ce l'hanno, o il cui utente Foyer è stato disattivato o è uscito dal suo
@@ -76,7 +79,8 @@ un amministratore che passa dalle sue stesse interfacce:
   e un nuovo codice, di nessun altro. L'utente Foyer di quell'account viene
   attivato, il suo periodo di validità tolto e il suo codice sostituito; un
   account che non ne ha uno riceve una nuova persona con tutti i permessi. Una
-  volta scritto, viene annunciato con una riga sotto *Sicurezza*, una notifica
+  volta scritto, viene annunciato con una riga sotto *Sicurezza* — scritta
+  anche con quella categoria disattivata — una notifica
   di Home Assistant e un messaggio a ogni contatto attivo, ognuno con il nome
   dell'account; un recupero la cui scrittura è fallita lascia la sua riga,
   segnata come fallita, e uno respinto prima che venga scritto qualcosa — un
@@ -243,7 +247,7 @@ Sotto la tabella:
 | *Lunghezza del codice* | 6 | 4–12 | Uguale per tutti, perché un tastierino deve sapere quante cifre raccogliere. Quattro cifre sono diecimila combinazioni, e si reggono tutte sul blocco. |
 | *Tentativi falliti* | 5 | 2–20 | Quanti codici errati chiudono il canale... |
 | *Entro (secondi)* | 300 | 10–86 400 | ...all'interno di questo intervallo. |
-| *Blocca per (secondi)* | 300 | 10–86 400 | Per quanto resta chiuso, mai più di un'ora qualunque cosa si imposti qui. Ogni blocco successivo dello stesso canale raddoppia, fino a quell'ora; un canale che passa un giorno senza blocchi riparte dal primo gradino. |
+| *Blocca per (secondi)* | 300 | 10–86 400 | Per quanto resta chiuso. Ogni blocco successivo dello stesso canale raddoppia, fino a un'ora — o fino alla durata impostata qui, se è più lunga, che allora viene rispettata così com'è; un canale che passa un giorno senza blocchi riparte dal primo gradino. |
 
 ### Dove si può fare a meno del codice
 
@@ -275,7 +279,12 @@ adattatore ha bisogno di un modo per dirlo. Quel nome **non concede niente** —
 né sull'inserimento, né sui servizi che leggono il registro o la
 configurazione: un permesso viene da un codice o da un account collegato, mai
 da un id digitato da qualcuno. Dichiararsi qualcuno porta con sé le sue
-restrizioni, mai le sue esenzioni. E siccome di serie inserire non chiede un
+restrizioni, mai le sue esenzioni, e mai un posto nella lista *Chi può usarlo*
+di uno scenario: finché qualcuno ha un codice, una richiesta che non accerta
+nessuno, o che si limita a dichiarare un nome, viene rifiutata con *Serve un
+codice* quando inserisce uno scenario così, lo forza o ci passa, anche dove
+l'inserimento non chiede un codice. Una regola automatica lo inserisce
+comunque. E siccome di serie inserire non chiede un
 codice, una riga così potrebbe altrimenti attribuire un'azione a una persona
 solo sulla parola di chi chiama, quindi ogni riga la cui persona è stata
 nominata anziché accertata è segnata *(non verificato)* accanto al nome. Un
@@ -298,8 +307,8 @@ tira a indovinare blocchi sé stessa e non la famiglia:
 Un blocco solleva il momento `lockout`, a cui un profilo di risposta può
 rispondere — qualcuno che tira a indovinare su un tastierino è un segnale di
 manomissione — e viene registrato sotto *Sicurezza*. I codici errati di un
-amministratore sul pannello, sulla card e sulle entità del pannello d'allarme
-vengono contati e registrati, e non lo bloccano mai.
+amministratore sul pannello, sulla card, sulle entità del pannello d'allarme e
+sui servizi `foyer.*` vengono contati e registrati, e non lo bloccano mai.
 
 ---
 
@@ -318,7 +327,9 @@ e le sue righe nel registro — e basta il permesso *Walk test*, non serve
 È voluto, e non è mai silenzioso su sé stesso: chiede un codice per
 impostazione predefinita, mette un banner su ogni schermo, il profilo
 predefinito manda una notifica di Home Assistant all'inizio e alla fine (togli
-la spunta a quei due momenti e inizia e finisce senza annunci), ed entrambe le
+la spunta a quei due momenti e, a meno che un'altra azione non mandi un
+messaggio per loro, Foyer mostra da sé una notifica di Home Assistant), ed
+entrambe le
 sue righe nel registro, sotto *Sistema*, nominano la persona quando un codice
 o un account collegato hanno detto chi era. Restano attivi durante il test: le zone 24h, manomissione, tecniche e
 panico, un allarme già in corso e un codice di coercizione. La pagina *Utenti*
@@ -370,8 +381,9 @@ Panoramica, in `sensor.foyer_last_event` o nel registro di un dispositivo API.
 Arriva anche sul bus degli eventi di Home Assistant come `foyer_event`, ed è
 così che una tua automazione può risponderle: una che mostra gli eventi di
 sicurezza da qualche parte in casa deve lasciare fuori `duress`. Il bus porta
-solo quello che il registro scrive, quindi disattivare la categoria
-*Sicurezza* in *Impostazioni* ferma anche quell'evento; la risposta del
+solo quello che il registro scrive, ma una riga `duress` viene scritta, e
+mandata sul bus, anche con la categoria *Sicurezza* disattivata in
+*Impostazioni*; la risposta del
 profilo predefinito non dipende dal registro. Svuotare il registro con un
 codice di coercizione non cancella la riga `duress` di quella stessa
 richiesta.
@@ -424,8 +436,9 @@ viene dimenticato; per rivederlo se ne genera uno nuovo.
 ## Dispositivi
 
 - **Dichiarati prima di poter comandare.** Un `device_id` che questa
-  installazione non ha viene respinto qualunque codice porti. Sui servizi di
-  inserimento e via MQTT il rifiuto viene anche registrato sotto *Sicurezza*,
+  installazione non ha viene respinto qualunque codice porti. Su ogni servizio
+  `foyer.*` — la prova delle azioni, le esportazioni e l'importazione
+  comprese — e via MQTT il rifiuto viene anche registrato sotto *Sicurezza*,
   al massimo una volta al minuto per nome, e sollevato come notifica di Home
   Assistant. Il blocco conta per
   dispositivo, quindi chi potesse inventarsi il nome di un dispositivo non
@@ -444,7 +457,8 @@ viene dimenticato; per rivederlo se ne genera uno nuovo.
   un dispositivo con il suo token giusto continua a funzionare mentre
   quell'indirizzo è bloccato, e le sue richieste né aumentano il conteggio
   dell'indirizzo né lo azzerano. Le righe che registrano che cosa ha chiesto
-  una richiesta così dicono che l'indirizzo era bloccato.
+  una richiesta così dicono che l'indirizzo era bloccato, e lo dicono anche le
+  righe delle azioni che ha fatto partire.
 - **Un tag rubato inserisce e disinserisce senza codice.** Un tag non porta
   nessun codice: il possesso è la credenziale, e il tag è l'identità della sua
   persona, quindi la politica dei codici non lo raggiunge. I permessi, le aree
@@ -464,10 +478,11 @@ entità `alarm_control_panel` di Foyer, e lì Home Assistant decide prima di
 Foyer: a un'entità che dice che l'inserimento richiede un codice, Home
 Assistant stesso respinge un inserimento senza codice, per tutti, prima che
 Foyer possa vedere che la persona che chiede è esente. Quindi un pannello dice
-che l'inserimento richiede un codice solo finché nessuna persona attiva ha
-l'esenzione accesa e un inserimento che offre ne chiede uno — per *Tutta la
-casa*, appena una modalità che può ancora inserire lo chiede. Finché qualcuno
-è esente, Home Assistant lascia passare ogni inserimento, e risponde Foyer: una
+che l'inserimento richiede un codice solo finché nessuno potrebbe usare
+l'esenzione — vale solo per una persona attiva, collegata a un account di
+Home Assistant e dentro il suo periodo di validità — e un inserimento che
+offre ne chiede uno — per *Tutta la casa*, appena una modalità che può ancora
+inserire lo chiede. Finché qualcuno può usare l'esenzione, Home Assistant lascia passare ogni inserimento, e risponde Foyer: una
 persona esente inserisce senza codice, e chiunque altro a cui serve un codice
 viene respinto, con una riga nel registro e un messaggio che dice dove si può
 digitare un codice. Un'automazione che chiama le stesse azioni non identifica
@@ -487,8 +502,10 @@ errato, e conta per il blocco. Collega gli assistenti vocali tramite un
 account non legato a una persona esente, e dai il PIN di Google, se è un
 codice Foyer, a una persona che abbia solo quello che lasceresti fare a
 chiunque vicino all'altoparlante — *Inserire*, per esempio. Tramite Home
-Assistant Cloud agiscono come l'account del Cloud stesso, che la pagina
-*Utenti* non propone di collegare.
+Assistant Cloud agiscono come l'account del Cloud stesso, che non si può
+collegare a una persona: la pagina *Utenti* non lo propone, e Foyer lo
+rifiuta al salvataggio, come rifiuta ogni account che Home Assistant gestisce
+da sé.
 
 ---
 
