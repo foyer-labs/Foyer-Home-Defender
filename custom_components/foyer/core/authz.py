@@ -356,7 +356,10 @@ def register_failure(
         strikes = 0
     if len(recent) < failures:
         return Lockout(recent, lock.until, strikes, lock.locked_at), False
-    seconds = min(duration * (2**strikes), MAX_LOCKOUT_BACKOFF)
+    # The doubling stops at an hour, or at the length the household set if
+    # that is longer: a setting the page accepts must never be cut short
+    # without a word (fix phase).
+    seconds = min(duration * (2**strikes), max(duration, MAX_LOCKOUT_BACKOFF))
     return Lockout((), now + timedelta(seconds=seconds), strikes + 1, now), True
 
 
