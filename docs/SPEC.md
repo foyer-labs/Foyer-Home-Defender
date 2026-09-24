@@ -104,6 +104,14 @@ disarms itself because of a core update is worthless.
 The restart gap must be logged explicitly (`system_unavailable` from T1 to T2) so
 the log does not silently imply the house was covered.
 
+A decision's log rows are written, and its actions started, before its state
+reaches the disk: a slow disk must never stand between a trigger and its
+siren. So a process killed in the milliseconds between the two can leave a
+row describing a state that was never saved. The next start restores the
+state that was, and its restart-gap row says when the house stopped being
+watched: the log never claims coverage the state did not have (decision
+146).
+
 ### INV-4 — Unknown is a fault, not calm
 
 A zone entity in `unavailable` or `unknown`, or whose last heartbeat exceeded its
@@ -234,7 +242,7 @@ foyer-home-defender/
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Backend | Python 3.12+, Home Assistant 2025.1+ | Matches HA's own floor |
+| Backend | Python 3.14+, Home Assistant 2026.6+ | The first release whose webhook list is for administrators only: before it, any signed-in account could read the address that stops an alarm (§7.2, decision 147) |
 | Config storage | HA `Store` helper (`.storage/foyer.config`) | Backed up with HA, versioned, migration-friendly |
 | Log storage | dedicated SQLite, stdlib `sqlite3` in an executor thread | Independent retention; unaffected by recorder purge. No new dependency: this is what Home Assistant's own recorder does, and an alarm that fails to load because a wheel could not be fetched at first setup is a failure mode worth not having (decision 72) |
 | Password hashing | `bcrypt` | Already a Home Assistant dependency |
@@ -541,8 +549,12 @@ leaves it, the cutoff resuming an interrupted arming is not a new one, an
 area that stays armed through a scenario switch was not armed again, and a
 walk test is not a watch (§11.3). An arming accepted and then failed when its
 exit delay ends (`arm_failed`) has cleared it already, and it does not come
-back. Clearing the memory is not taking note of the alarm: the incident and its escalation go on until somebody acknowledges
-it or disarms (§5.6).
+back. Nor does an arming accepted in the decision that ends a walk test: that
+decision's response is still held back, so its `alarm_cleared` would reach
+nobody, and a memory nobody has seen must not vanish on the way (decision
+144); the next disarm or arming clears it. Clearing the memory is not taking
+note of the alarm: the incident and its escalation go on until somebody
+acknowledges it or disarms (§5.6).
 
 ### 5.3 Timers
 
@@ -1042,8 +1054,11 @@ sends no `changed: log` notice — the wall tablet the code was typed on shows
 all of them. Like
 every row it is also fired on Home Assistant's bus as `foyer_event`, which is
 how a Home Assistant automation answers duress; an automation that shows
-security rows somewhere in the house must leave it out. Offering one's own
-duress code as a new code is not a use of it: it raises no `duress`, and is
+security rows somewhere in the house must leave it out. Emptying the log with a
+duress code does not erase that request's own `duress` row: it is written
+again after the clear, beside the row that records the clear, and the answer
+counts the rows removed exactly as the ordinary code's would (decision 145).
+Offering one's own duress code as a new code is not a use of it: it raises no `duress`, and is
 refused and counted as a failed attempt, as any code already in use is
 (§8.4).
 
@@ -2064,17 +2079,23 @@ is always on `select.foyer_scenario`.
 **What the panels tell Home Assistant about codes** (decision 136).
 `code_arm_required` is one answer for everybody, and Home Assistant acts on it
 before Foyer sees the request: while it is true, a codeless arming is refused
-by Home Assistant itself. So it is true only while the policy asks a code to
-arm and no enabled user has the exemption of §8.2 switched on — then nobody
-arming from Home Assistant could arm without one, and Home Assistant's
-more-info dialog and tile buttons, which ask for a code only when it is true,
-keep asking. Once somebody is exempt it is false, Home Assistant passes every
-arming on, and the backend answers it, `code_required` included, with the
-log's row for a refusal (INV-2). A panel refusing a codeless arming for that
-reason says where a code can be typed: Home Assistant's alarm panel card,
-Foyer's card or the panel. `code_format` follows the policy, and the master's
-reads every area and scenario as well as the global default, so the alarm
-panel card keeps its field wherever a code may be asked.
+by Home Assistant itself. So it is false while any enabled user has the
+exemption of §8.2 switched on: Home Assistant then passes every arming on, and
+the backend answers it, `code_required` included, with the log's row for a
+refusal (INV-2). Otherwise it is true when an arming the panel offers asks a
+code to arm — for the master, as soon as one mode it can still arm asks
+(decision 143) — so Home Assistant's more-info dialog and tile buttons, which
+ask for a code only when it is true, keep asking. The price is known: a mode
+of the master that needs no code is then refused by Home Assistant until a
+code is passed, from an automation too, which arms it through Foyer's own
+service instead. A panel refusing a codeless arming for lack of a code says
+where one can be typed: Foyer's card, the panel, and Home Assistant's alarm
+panel card while the panel is disarmed — that card offers arming only then.
+`code_format` follows the policy, and the master's reads every area and
+scenario as well as the global default, so the alarm panel card keeps its
+field wherever a code may be asked. The voice assistants read the same
+attribute: while it is false Alexa is offered the panel and Google Assistant
+stops asking for its PIN before arming, still sending the PIN it keeps.
 
 ---
 
@@ -2145,7 +2166,10 @@ the scenario that is running:
   zones', and the one an escalation is running;
 - every contact such a profile names, which can be neither changed, switched
   off nor deleted (§7.1);
-- the code policy, the code length and the lockout;
+- the code policy, the code length and the lockout, and what any area or
+  scenario asks a code for — a disarmed area and a scenario that is not
+  running included, because the strictest-wins rule of §8.2 reads them for a
+  command that touches the armed area (decision 142);
 - whether a rule may disarm (§9.4);
 - the radios and thresholds that decide whether interference opens an
   incident (§12.5).
@@ -2171,7 +2195,7 @@ because §8.2 then switches the whole policy off — the policy changed by
 another route. A key switch's person and a running scenario's list of people
 wait for the disarm with the zone and the scenario they belong to; the person
 themselves can be disabled at once. A disarmed area can still be programmed
-while others stay armed.
+while others stay armed, except what it asks a code for.
 
 **Config backup/restore** (JSON export/import) is not optional: nobody who has
 configured forty zones will do it twice. The exported document carries its
@@ -2466,6 +2490,10 @@ rendition.
   that keeps the two configuration surfaces on one engine.
 - Chime fires only while the zone is unmonitored by the active scenario, and never
   during a walk test.
+- Walk test reach: a person limited to one area, without `disarm`, starts a
+  walk test and every disarmed area that can arm arms; a detection in an area
+  somebody else had armed is recorded and nothing answers it, so narrowing
+  `walk_test` stays a decision rather than an accident (§8.3).
 - A test asserting the watchdog payload is empty unless explicitly enabled.
 - RF interference tests: N zones on one radio going unavailable inside the window
   raises the event; the same pattern with the coordinator ALSO unavailable reports
@@ -2724,3 +2752,9 @@ document should make one of them on purpose.
 | 139 | People, codes, tags, keypads, API devices, the webhook and the rules stay editable while armed; only an edit leaving nobody with a usable code is refused | Revoking a guest's code or a lost phone's rule from abroad, and the administrator's recovery, are needed most while the house is armed; with no usable code the policy switches itself off (decision 78), which is a policy change by another route |
 | 140 | An accepted arming clears the alarm memory of the areas it takes out of `disarmed`, raising `alarm_cleared` — an automatic rule's arming included — and acknowledges nothing | Real panels clear the memory at the next arming, and a memory carried into a new watch describes an earlier night; the incident is another matter — arming needs no code by default, and only an acknowledgement or a disarm is somebody who has seen the alarm |
 | 141 | A refused arming, the cutoff resuming one, an area staying armed through a switch and a walk test leave the memory; a walk test does not arm an area that holds it | None of them is somebody arming that area again, and a memory nobody has seen must not vanish on the way — a walk test least of all, whose own `alarm_cleared` would be held back with every other action |
+| 142 | While any area is armed, what any area or scenario asks a code for cannot change, in either direction — a disarmed area and a scenario that is not running included | They take part in the strictest-wins rule of §8.2 for every command that touches the armed area: lowered on the garage or on an idle scenario, they opened the armed floor without a code |
+| 143 | The master tells Home Assistant arming needs a code as soon as one mode it can still arm asks for one, nobody being exempt | The household chose Home Assistant's dialog asking over a codeless mode arming bare from it; that mode arms from an automation through Foyer's own service |
+| 144 | An arming accepted in the decision that ends a walk test keeps the alarm memory | That decision's response is still held back, so its `alarm_cleared` would reach nobody; the next disarm or arming clears it |
+| 145 | Emptying the log with a duress code keeps that request's `duress` row | The one request a coerced person cannot refuse must not erase its own record; the count of rows removed is the ordinary code's, so nothing on the screen differs |
+| 146 | A decision's rows are written before its state is saved, and a process killed between the two is left to the restart-gap row | A slow disk must never delay a siren; the next start restores the state that was, and the gap row says when the house stopped being watched |
+| 147 | The minimum Home Assistant is 2026.6 | Earlier releases list every webhook to any signed-in account, and one of them stops an alarm in progress |
