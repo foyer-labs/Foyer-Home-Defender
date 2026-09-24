@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=versione" alt="Ultima versione"></a>
   <img src="https://img.shields.io/badge/stato-beta-yellow" alt="Beta">
-  <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5" alt="Home Assistant 2025.1 o successivo">
+  <img src="https://img.shields.io/badge/Home%20Assistant-2026.6%2B-41BDF5" alt="Home Assistant 2026.6 o successivo">
   <img src="https://img.shields.io/badge/HACS-repository%20personalizzato-41BDF5" alt="Repository personalizzato HACS">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml"><img src="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
@@ -45,7 +45,7 @@ pochi mesi di vita: [Alarmo](https://github.com/nielsfaber/alarmo) ha anni di
 installazioni alle spalle, e per un impianto che deve semplicemente funzionare
 oggi è la scelta prudente.
 
-**Cosa ti serve:** Home Assistant 2025.1, un sensore che già funziona e un
+**Cosa ti serve:** Home Assistant 2026.6, un sensore che già funziona e un
 servizio `notify.*`. Nessun account cloud, nessun broker se non lo chiedi tu,
 e nessuna connessione verso l'esterno che parta da Foyer.
 
@@ -841,8 +841,10 @@ furto.
 
 ## Cosa ti serve
 
-- Home Assistant 2025.1 o successivo. Sviluppato e testato su 2025.1 e sulla
-  versione corrente.
+- Home Assistant 2026.6 o successivo. Sviluppato e testato su 2026.6 e sulla
+  versione corrente. Le versioni precedenti permettono a qualsiasi account
+  collegato di elencare i webhook di Home Assistant, e con loro l'indirizzo
+  che ferma un allarme.
 - Almeno un sensore di porta, finestra o movimento già funzionante in Home
   Assistant.
 - Un servizio `notify.*` che funzioni. Foyer orchestra le notifiche; non le
@@ -991,11 +993,13 @@ dipende da una sola cosa che Foyer gli dice: che per inserire serve un codice.
 Lo dice solo finché la tua politica chiede un codice per inserire e nessuno ha
 attivato l'esenzione qui sopra, perché Home Assistant rifiuterebbe chiunque non
 ne digiti uno, anche la persona esentata. Il pannello *Tutta la casa* lo dice
-solo quando ogni modalità che può ancora inserire chiede un codice: dove una
-modalità non ne chiede, Home Assistant rifiuterebbe anche quella. Finché lo
-dice, la finestra a comparsa di Home Assistant e i pulsanti di inserimento di
+appena una modalità che può ancora inserire chiede un codice, così la finestra
+lo chiede; una modalità che non ne chiede viene allora rifiutata da Home
+Assistant finché non si digita un codice, anche da un'automazione — dai il
+codice a quell'automazione, oppure inserisci lo scenario con il servizio di
+Foyer. Finché lo dice, la finestra a comparsa di Home Assistant e i pulsanti di inserimento di
 una card *Mosaico* chiedono il codice da sé. Quando non lo dice — qualcuno è
-esentato, o le modalità non sono d'accordo — non lo chiedono: una persona
+esentato — non lo chiedono: una persona
 esentata inserisce senza codice, e chiunque altro a cui Foyer chieda un codice
 viene rifiutato da Foyer, con una riga nel registro e un messaggio che dice
 dove digitarlo — la card di Foyer, il pannello, o la card *Pannello degli

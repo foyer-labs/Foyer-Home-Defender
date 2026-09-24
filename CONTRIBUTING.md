@@ -59,7 +59,8 @@ ruff check . && ruff format --check .
 ```
 
 The integration tests run inside Home Assistant's own test harness, which needs
-Linux (WSL works):
+Linux (WSL works) and the Python Home Assistant itself requires — 3.14 for the
+2026.6 floor:
 
 ```bash
 pip install pytest-homeassistant-custom-component

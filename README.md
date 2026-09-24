@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=version" alt="Latest version"></a>
   <img src="https://img.shields.io/badge/status-beta-yellow" alt="Beta">
-  <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5" alt="Home Assistant 2025.1 or later">
+  <img src="https://img.shields.io/badge/Home%20Assistant-2026.6%2B-41BDF5" alt="Home Assistant 2026.6 or later">
   <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5" alt="HACS custom repository">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Apache-2.0"></a>
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml"><img src="https://github.com/foyer-labs/Foyer-Home-Defender/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
@@ -41,7 +41,7 @@ houses rather than a few — [Alarmo](https://github.com/nielsfaber/alarmo) has
 years of use behind it, and for an installation that simply has to work today
 it is the prudent choice.
 
-**What it needs:** Home Assistant 2025.1, one sensor that already works, and a
+**What it needs:** Home Assistant 2026.6, one sensor that already works, and a
 `notify.*` service. No cloud account, no broker unless you ask for one, and no
 outbound connection of Foyer's own.
 
@@ -785,8 +785,9 @@ about a burglary.
 
 ## What you need
 
-- Home Assistant 2025.1 or later. Developed and tested against 2025.1 and the
-  current release.
+- Home Assistant 2026.6 or later. Developed and tested against 2026.6 and the
+  current release. Earlier releases let any signed-in account list Home
+  Assistant's webhooks, and with them the address that stops an alarm.
 - At least one door, window or motion sensor already working in Home
   Assistant.
 - A `notify.*` service that works. Foyer orchestrates notifications; it does
@@ -921,11 +922,13 @@ Yes, and Foyer answers, as it does everywhere else. What Home Assistant asks
 for first depends on one thing Foyer tells it: that arming needs a code. That
 is said only while your policy asks for a code to arm and nobody has the
 exemption above switched on, because Home Assistant would refuse everybody who
-typed none, the exempt person included. The *Whole house* panel says it only
-when every mode it can still arm asks for a code: where one mode needs none,
-Home Assistant would refuse that mode too. While it is said, Home Assistant's
+typed none, the exempt person included. The *Whole house* panel says it as
+soon as one mode it can still arm asks for a code, so the dialog asks; a mode
+that needs none is then refused by Home Assistant until a code is typed, even
+from an automation — give that automation the code, or arm the scenario
+through Foyer's own service. While it is said, Home Assistant's
 pop-up dialog and a tile's arm buttons ask for the code themselves. When it is
-not — somebody is exempt, or the modes disagree — they do not ask: an exempt
+not — somebody is exempt — they do not ask: an exempt
 person arms with no code, and anybody else Foyer wants a code from is refused
 by Foyer, with a row in the log and a message saying where a code can be
 typed — Foyer's card, the panel, or Home Assistant's *Alarm panel* card, which
