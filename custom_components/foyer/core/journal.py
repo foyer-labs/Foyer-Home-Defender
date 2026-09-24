@@ -533,6 +533,7 @@ def action_row(
     area_id: str | None = None,
     zone_id: str | None = None,
     incident_id: str | None = None,
+    notes: Mapping[str, str] | None = None,
 ) -> LogRow:
     """What one action did (§10.2, category ``action``).
 
@@ -540,7 +541,7 @@ def action_row(
     during the emergency, so it is a warning even when everything else went
     well: the siren that did not sound is not an "info".
     """
-    detail: dict[str, Any] = {"kind": kind, "action_id": action_id}
+    detail: dict[str, Any] = {"kind": kind, "action_id": action_id, **(notes or {})}
     if profile_id:
         detail["profile_id"] = profile_id
     if error:

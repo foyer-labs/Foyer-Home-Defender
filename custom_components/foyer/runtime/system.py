@@ -274,10 +274,18 @@ def _action_rows(decision: Decision, results: list[ActionResult]) -> tuple[LogRo
     its zone and, when there is one, its incident.
     """
     context = {}
+    notes: dict[Moment, dict[str, str]] = {}
     for occurrence in decision.occurrences:
         context.setdefault(
             occurrence.moment,
             (occurrence.area_id, occurrence.zone_id, occurrence.incident_id),
+        )
+        # How the request arrived — in the clear, from an address locked for
+        # wrong tokens — belongs on every row it causes (§9.2.1, decision
+        # 135), the rows of the actions it set off included.
+        notes.setdefault(
+            occurrence.moment,
+            {k: v for k, v in occurrence.detail.items() if k in _REQUEST_NOTES},
         )
     rows = []
     # By position, as the executor answers: one profile action ticked for
@@ -299,9 +307,15 @@ def _action_rows(decision: Decision, results: list[ActionResult]) -> tuple[LogRo
                 area_id=area_id,
                 zone_id=zone_id,
                 incident_id=incident_id,
+                notes=notes.get(moment),
             )
         )
     return tuple(rows)
+
+
+# What a row says about how its request arrived (engine ``occur``,
+# journal.address_note).
+_REQUEST_NOTES = frozenset({"address", "address_locked", "encrypted"})
 
 
 def entity_state(state: State | None) -> EntityState:

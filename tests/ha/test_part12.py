@@ -319,6 +319,14 @@ async def test_a_right_token_from_a_locked_address_is_served_and_said(
     kinds = {r["event_type"] for r in rows}
     assert {"armed", "code_rejected", "disarmed"} <= kinds
     assert all(_noted(r) for r in rows)
+    # The rows of the actions those requests set off say it too (fix phase):
+    # the default profile answers a disarm with a Home Assistant notification.
+    acted = [
+        r
+        for r in await _rows(hass)
+        if r["category"] == "action" and r["detail"].get("moment") == "disarmed"
+    ]
+    assert acted and all(_noted(r) for r in acted)
     assert hass.data[DOMAIN].state.lockouts[key] == counter
 
 
