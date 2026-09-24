@@ -89,7 +89,7 @@ lockout, not the hash.
 
 Every service and every panel command that changes the state of the alarm or
 its configuration checks the code in the backend, and refuses a request that
-is missing it or has it wrong. A card is a keypad that transmits a code; it
+has it wrong, or is missing it where the policy asks for one. A card is a keypad that transmits a code; it
 never decides. A PIN check in a browser would be decoration, because anybody
 with access to Home Assistant can call the service directly.
 
@@ -219,7 +219,7 @@ Below the table:
 | *Code length* | 6 | 4–12 | The same for everybody, because a keypad has to know how many digits to collect. Four digits is ten thousand combinations, and leans entirely on the lockout. |
 | *Failed attempts* | 5 | 2–20 | How many wrong codes shut the channel... |
 | *Within (seconds)* | 300 | 10–86 400 | ...inside this window. |
-| *Lock for (seconds)* | 300 | 10–86 400 | How long it stays shut. Each further lockout of the same channel doubles, up to one hour; a channel that has gone a day without one starts again from the first step. |
+| *Lock for (seconds)* | 300 | 10–86 400 | How long it stays shut, never more than one hour whatever is set here. Each further lockout of the same channel doubles, up to that hour; a channel that has gone a day without one starts again from the first step. |
 
 ### Where a code can be skipped
 

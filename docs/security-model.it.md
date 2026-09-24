@@ -96,7 +96,7 @@ non l'hash.
 
 Ogni servizio e ogni comando del pannello che cambia lo stato dell'allarme o
 la sua configurazione verifica il codice nel backend, e respinge una
-richiesta in cui manca o è sbagliato. Una card è un tastierino che trasmette
+richiesta in cui è sbagliato, o in cui manca dove la politica lo chiede. Una card è un tastierino che trasmette
 un codice; non decide mai. Un controllo del PIN nel browser sarebbe una
 decorazione, perché chiunque abbia accesso a Home Assistant può chiamare
 direttamente il servizio.
@@ -238,7 +238,7 @@ Sotto la tabella:
 | *Lunghezza del codice* | 6 | 4–12 | Uguale per tutti, perché un tastierino deve sapere quante cifre raccogliere. Quattro cifre sono diecimila combinazioni, e si reggono tutte sul blocco. |
 | *Tentativi falliti* | 5 | 2–20 | Quanti codici errati chiudono il canale... |
 | *Entro (secondi)* | 300 | 10–86 400 | ...all'interno di questo intervallo. |
-| *Blocca per (secondi)* | 300 | 10–86 400 | Per quanto resta chiuso. Ogni blocco successivo dello stesso canale raddoppia, fino a un'ora; un canale che passa un giorno senza blocchi riparte dal primo gradino. |
+| *Blocca per (secondi)* | 300 | 10–86 400 | Per quanto resta chiuso, mai più di un'ora qualunque cosa si imposti qui. Ogni blocco successivo dello stesso canale raddoppia, fino a quell'ora; un canale che passa un giorno senza blocchi riparte dal primo gradino. |
 
 ### Dove si può fare a meno del codice
 
