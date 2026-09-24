@@ -46,6 +46,24 @@ The same holds for the pure halves of `store/` (schema, migrations, editing)
 and for `security/`: they are listed in the purity test and exercised by the
 pure suite.
 
+## Where things are
+
+```
+custom_components/foyer/   the integration (HACS installs this directory as is)
+  core/                    pure decision engine: no Home Assistant imports, ever
+  runtime/ entity/ api/    Home Assistant-facing layers
+  security/                bcrypt codes, and who a request comes from
+  store/                   .storage persistence, schema migrations, the log
+  translations/            en.json, it.json (Home Assistant) and panel/ (UI, help)
+  frontend/                built panel and card bundles, committed
+frontend/                  TypeScript + Lit sources, built with Vite
+blueprints/                keypad and tag adapters (imported by hand, not by HACS)
+scripts/                   build helpers, such as the icon generator
+docs/                      the specification, the user documents, the API contracts, screenshots
+tests/core, tests/repo     run without Home Assistant installed
+tests/ha                   run inside Home Assistant's test harness
+```
+
 ## Development setup
 
 You need Python 3.12 or later and, for the panel and the card, Node 24.
