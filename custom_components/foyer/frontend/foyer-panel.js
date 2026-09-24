@@ -1790,20 +1790,20 @@ var ot = class extends j {
 customElements.get("foyer-delete-button") || customElements.define("foyer-delete-button", ot);
 //#endregion
 //#region src/panel/profile-picker.ts
-function st(e, t) {
-	let n = e.areas.find((e) => e.id === t), r = e.scenarios.find((e) => n?.id && e.areas.includes(n.id) && e.response_profile_id), i = (t) => e.profiles?.find((e) => e.id === t), a = i(n?.response_profile_id);
-	if (a) return {
-		name: a.name,
-		source: "area"
-	};
-	let o = i(r?.response_profile_id);
+function st(e, t, n = null) {
+	let r = e.areas.find((e) => e.id === t), i = n ? e.scenarios.find((e) => e.id === n) : e.scenarios.find((e) => r?.id && e.areas.includes(r.id) && e.response_profile_id), a = (t) => e.profiles?.find((e) => e.id === t), o = a(r?.response_profile_id);
 	if (o) return {
 		name: o.name,
+		source: "area"
+	};
+	let s = a(i?.response_profile_id);
+	if (s) return {
+		name: s.name,
 		source: "scenario"
 	};
-	let s = i(e.settings?.default_profile_id);
-	return s ? {
-		name: s.name,
+	let c = a(e.settings?.default_profile_id);
+	return c ? {
+		name: c.name,
 		source: "default"
 	} : {
 		name: "",
@@ -1825,11 +1825,11 @@ function G(e, t, n, r) {
 }
 function ct(e, t) {
 	if (!e.config) return E;
-	let { name: n, source: r } = st(e.config, t), i = e.strings;
-	return r === "none" ? w`<p class="hint">${N(i, "profiles.inherited_none")}</p>` : w`<p class="hint">
-    ${N(i, "profiles.effective_from", {
-		profile: n,
-		from: N(i, `profiles.inherited_from_${r}`)
+	let n = e.status?.areas.find((e) => e.id === t)?.scenario_id ?? null, { name: r, source: i } = st(e.config, t, n), a = e.strings;
+	return i === "none" ? w`<p class="hint">${N(a, "profiles.inherited_none")}</p>` : w`<p class="hint">
+    ${N(a, "profiles.effective_from", {
+		profile: r,
+		from: N(a, `profiles.inherited_from_${i}`)
 	})}
   </p>`;
 }
