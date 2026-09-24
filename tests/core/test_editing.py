@@ -549,3 +549,46 @@ def test_a_watchdog_block_that_is_not_a_map_is_refused_not_a_traceback(config):
     result = update_health(config, RuntimeState(), health)
     assert result.config is None
     assert result.problems[0].code == "invalid"
+
+
+def test_a_radio_added_on_page_14_is_given_its_id_by_the_backend(config):
+    """Page 14 adds a radio with no id, as page 6 adds a contact's channel:
+    the id is minted where every other one is. A radio sent without one
+    used to be refused as invalid, so none could be added from the page."""
+    from custom_components.foyer.store.editing import update_health
+
+    health = _panel_health(config)
+    health["radios"] = [
+        {
+            "name": "Zigbee",
+            "entry_id": "zha1",
+            "coordinator_entity_id": "binary_sensor.zha_coordinator",
+            "n_zones": None,
+            "window": None,
+            "enabled": True,
+        }
+    ]
+    added = update_health(config, RuntimeState(), health, new_id=lambda: "minted")
+    assert added.problems == ()
+    assert [(r.id, r.entry_id) for r in added.config.health.radios] == [
+        ("minted", "zha1")
+    ]
+    # Sent back as the page reads it, it keeps the id it was given: the
+    # radio's runtime state is keyed on it.
+    again = update_health(
+        added.config,
+        RuntimeState(),
+        _panel_health(added.config),
+        new_id=lambda: "another",
+    )
+    assert [r.id for r in again.config.health.radios] == ["minted"]
+
+
+def test_a_radio_list_that_is_not_a_list_of_maps_is_refused_not_a_traceback(config):
+    from custom_components.foyer.store.editing import update_health
+
+    for radios in ("zha1", ["zha1"]):
+        health = {**_panel_health(config), "radios": radios}
+        result = update_health(config, RuntimeState(), health)
+        assert result.config is None
+        assert result.problems[0].code == "invalid"

@@ -966,6 +966,7 @@ def update_health(
     state: RuntimeState,
     health: dict[str, Any],
     *,
+    new_id: Callable[[], str] = lambda: uuid.uuid4().hex,
     now: datetime | None = None,
 ) -> EditResult:
     """The system-health block (§12): the mains, the watchdog, the radios.
@@ -1003,8 +1004,21 @@ def update_health(
         return _fail(Problem("watchdog_url_invalid", "health", None, "url"))
     else:
         watchdog["url"] = url.strip()
+    radios = health.get("radios") or []
+    if not isinstance(radios, (list, tuple)) or not all(
+        isinstance(r, dict) for r in radios
+    ):
+        return _fail(Problem("invalid", "health"))
+    # A radio the panel has just added comes with no id, as a contact's new
+    # channel does: the id is minted here, where every id Foyer uses is, and
+    # a radio sent without one was otherwise refused as invalid — no radio
+    # could be added from page 14 at all (third review).
+    radios = [{**r, "id": r.get("id") or new_id()} for r in radios]
     try:
-        new = replace(config, health=health_from_dict({**health, "watchdog": watchdog}))
+        new = replace(
+            config,
+            health=health_from_dict({**health, "watchdog": watchdog, "radios": radios}),
+        )
     except (ConfigError, KeyError, TypeError, ValueError):
         return _fail(Problem("invalid", "health"))
     return _check(config, new, state, None, now)
