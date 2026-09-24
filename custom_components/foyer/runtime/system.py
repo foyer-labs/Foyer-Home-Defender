@@ -1676,9 +1676,10 @@ class FoyerSystem:
         executor — a test that went through a path of its own would prove
         that path works.
 
-        Nothing about the alarm changes: no Decision is made, no state is
-        stored, and the row it leaves is filed as a test rather than as the
-        alarm it imitates.
+        Nothing about the alarm changes: the test itself is no Decision, and
+        the row it leaves is filed as a test rather than as the alarm it
+        imitates. What it does change is what Foyer knows of the channels it
+        went over, which is reported like any real send (§12.2).
         """
         if contact_id:
             # The other half of §11.4: the button beside a contact's channel.
@@ -1749,6 +1750,12 @@ class FoyerSystem:
                 ),
             )
         )
+        # And what the send did to each channel it went over, as any real
+        # send does (§12.2): the test button is what turns a channel's
+        # "never used" into an answer (docs/system-health.md). A real send,
+        # not a warning's own, so it is reported now and carries whatever
+        # was held since the last report.
+        await self._async_report_sends(result.sends, {})
         return {
             "success": result.ok,
             "reason": None if result.ok else "action_failed",

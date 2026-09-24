@@ -311,6 +311,44 @@ async def test_a_contact_channel_can_be_tested(hass, hass_ws_client, loaded):
     assert push and push[0]["message"] == "Foyer test"
 
 
+async def test_a_channel_test_counts_as_a_send(hass, hass_ws_client, loaded):
+    """docs/system-health.md: the test button really sends, and it is what
+    turns "never used" into an answer (§12.2). The executor reported how
+    the send went and the engine never heard it."""
+    from homeassistant.exceptions import HomeAssistantError
+
+    from custom_components.foyer.core.models import channel_key
+
+    await _notify_recorder(hass)
+
+    async def broken(call) -> None:
+        raise HomeAssistantError("token expired")
+
+    hass.services.async_register("notify", "sms_gateway", broken)
+    client = await hass_ws_client(hass)
+    book = await _address_book(hass, client)
+    health = _system(hass).state.health
+    push = channel_key(book["contact_id"], "push")
+    sms = channel_key(book["contact_id"], "sms")
+    assert health.channel(push).last_ok is None
+
+    for channel_id in ("push", "sms"):
+        await _ws(
+            client,
+            {
+                "type": "foyer/test_action",
+                "contact_id": book["contact_id"],
+                "channel_id": channel_id,
+            },
+        )
+    await hass.async_block_till_done()
+
+    health = _system(hass).state.health
+    assert health.channel(push).last_ok is not None
+    assert health.channel(sms).last_ok is None
+    assert health.channel(sms).failures >= 1
+
+
 async def test_testing_a_channel_is_recorded_as_a_test(hass, hass_ws_client, loaded):
     await _notify_recorder(hass)
     client = await hass_ws_client(hass)
