@@ -137,3 +137,32 @@ async def test_a_walk_test_announces_itself_even_when_no_profile_does(
     )
     await hass.async_block_till_done()
     assert "over" in notes["foyer_walk_test"]["title"]
+
+
+async def test_an_administrator_calling_the_services_is_never_locked_out(
+    hass, loaded, hass_ws_client, hass_admin_user
+):
+    """§8.4: the admin path is never locked out. A foyer.* service called by an
+    administrator's account was counted like any other, and locked."""
+    from homeassistant.core import Context
+
+    from .test_phase2 import CODE, _make_user
+
+    client = await hass_ws_client(hass)
+    await _make_user(hass, client, new_code=CODE)
+    scenario_id = hass.data[DOMAIN].config.scenarios[0].id
+    armed = await _ws(client, {"type": "foyer/arm", "scenario_id": scenario_id})
+    assert armed["success"], armed
+    reasons = []
+    for _ in range(7):
+        result = await hass.services.async_call(
+            DOMAIN,
+            "disarm",
+            {"code": "999999"},
+            blocking=True,
+            return_response=True,
+            context=Context(user_id=hass_admin_user.id),
+        )
+        reasons.append(result["reason"])
+    assert "locked_out" not in reasons
+    assert set(reasons) == {"bad_code"}

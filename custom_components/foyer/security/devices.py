@@ -188,6 +188,13 @@ async def async_requester(
     # typing their own code on the hall keypad is that person, whatever the
     # message says about who is holding it.
     resolved = credential.user.id if credential.user else (user_id or None)
+    # The Home Assistant admin path is never locked out (§8.4), and a service
+    # called by an administrator's account is that path as much as the panel
+    # is. It identifies nobody and still meets the code (decision 101).
+    is_admin = False
+    if device is None and account:
+        who = await hass.auth.async_get_user(account)
+        is_admin = bool(who and who.is_admin)
     return Requester(
         actor=Actor(
             user_id=resolved,
@@ -200,6 +207,7 @@ async def async_requester(
             # Only for a request with no device: a keypad's failures count
             # against the keypad, whoever's automation relayed them.
             account=None if device is not None else account,
+            is_admin=is_admin,
             # Nothing established this person: the message said so. The log
             # records the difference rather than flattening it.
             claimed=credential.user is None and bool(resolved),
