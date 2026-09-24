@@ -267,7 +267,8 @@
     "last_usable_code": "An area is armed, and this would leave nobody with a usable code, now or sooner than before when a validity period ends, which switches the code policy off. Give somebody else a code first, or disarm.",
     "watchdog_url_invalid": "The watchdog URL has to start with http:// or https://.",
     "armed_code_policy": "While an area is armed, what an area or a scenario asks a code for cannot change: it takes part in every command that touches the armed area. Disarm every area first.",
-    "code_required_here": "This step is for a person with a code: type one, twice, or skip the step."
+    "code_required_here": "This step is for a person with a code: type one, twice, or skip the step.",
+    "unknown_ha_user": "That Home Assistant account cannot be linked: it does not exist, or it is one Home Assistant runs itself, such as Home Assistant Cloud's."
   },
   "field": {
     "name": "Name",

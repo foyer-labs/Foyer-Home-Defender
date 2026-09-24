@@ -188,3 +188,31 @@ async def test_an_undeclared_device_is_heard_of_on_every_service(hass, loaded):
         r["event_type"] == "device_rejected" and r["device_id"] == "made_up_keypad"
         for r in rows
     )
+
+
+async def test_a_person_cannot_be_linked_to_an_account_home_assistant_runs(
+    hass, loaded, hass_ws_client
+):
+    """Only the Users page kept Home Assistant Cloud's account out of the list;
+    a command sent around it could link a person, exemption and all."""
+    cloud = await hass.auth.async_create_system_user("Home Assistant Cloud")
+    client = await hass_ws_client(hass)
+    result = await _ws(
+        client,
+        {
+            "type": "foyer/user/save",
+            "user": {
+                "name": "Voice",
+                "permissions": ["arm"],
+                "allowed_area_ids": None,
+                "allowed_scenario_ids": None,
+                "valid_from": None,
+                "valid_until": None,
+                "code_exempt_when_identified": True,
+                "enabled": True,
+                "ha_user_id": cloud.id,
+            },
+        },
+    )
+    assert result["success"] is False
+    assert [p["code"] for p in result["problems"]] == ["unknown_ha_user"]

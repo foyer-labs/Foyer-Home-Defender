@@ -1448,6 +1448,17 @@ async def ws_user_save(
     length = system.config.settings.security.code_length
     problems: list[Problem] = []
     new_codes: dict[str, str] = {}
+    # A person is linked to somebody's account, never to one Home Assistant
+    # runs itself — Home Assistant Cloud's, the supervisor's. Their requests
+    # come from no person, and an exemption linked to them would reach every
+    # voice assistant behind the Cloud (fix phase). The Users page never
+    # offered them; the backend now refuses them too.
+    if ha_user_id := item.get("ha_user_id"):
+        linked = await hass.auth.async_get_user(ha_user_id)
+        if linked is None or linked.system_generated:
+            problems.append(
+                Problem("unknown_ha_user", "user", item.get("id"), "ha_user_id")
+            )
     for field, stored in (
         ("new_code", "code_hash"),
         ("new_duress_code", "duress_code_hash"),
