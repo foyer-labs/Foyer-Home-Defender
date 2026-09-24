@@ -174,7 +174,9 @@ async def async_unlock(
     # A display that shows the house after a code is a place where somebody
     # read it: which device, whose code, until when — and, like every row a
     # right token causes from a locked-out address, that address (decision
-    # 135). Written here rather than by the engine, so noted here too.
+    # 135); and, like every row a plain-HTTP request causes, that it was not
+    # encrypted (§9.2.1). Written here rather than by the engine, so noted
+    # here too.
     system.async_record(
         (
             security_row(
@@ -188,6 +190,7 @@ async def async_unlock(
                 detail={
                     "device": device.name,
                     "seconds": str(device.unlock_seconds),
+                    **({"encrypted": "false"} if actor.encrypted is False else {}),
                     **address_note(actor.locked_address),
                 },
             ),

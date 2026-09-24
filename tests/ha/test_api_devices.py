@@ -106,6 +106,26 @@ async def test_a_display_shows_the_zones_only_after_a_code(
     assert (await response.json())["reason"] == "unlock_required"
 
 
+async def test_an_unlock_in_the_clear_says_so_on_its_row(
+    hass,
+    endpoint,  # noqa: F811
+):
+    """§9.2.1-9.2.2: every row a plain-HTTP device causes records that the
+    request was not encrypted — the unlock's own row too, written outside
+    the engine that notes it on the others."""
+    http, token, device_id, _client = endpoint
+    _with(hass, device_id, scopes=frozenset({"status", "zones"}))
+    right = await (await _post(http, token, {"action": "unlock", "code": CODE})).json()
+    assert right["success"]
+
+    (row,) = [
+        r
+        for r in await _rows(hass, category="security")
+        if r["event_type"] == "device_unlocked"
+    ]
+    assert row["detail"]["encrypted"] == "false"
+
+
 async def test_a_free_scope_needs_no_code(
     hass,
     endpoint,  # noqa: F811
