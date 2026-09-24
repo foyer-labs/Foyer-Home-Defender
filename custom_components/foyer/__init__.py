@@ -57,6 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # area, zone, user and code hash in it. A document this version cannot
     # read must stop the setup, exactly as the alarm state does below.
     config = await store.async_load()
+    first_run = config is None
     if config is None:
         # First run: the config flow's answers seed the stored configuration.
         # From here on .storage/foyer.config is the source of truth.
@@ -99,6 +100,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     system = FoyerSystem(hass, config, state_store, stored, log)
     system.entry_id = entry.entry_id
+
+    # SPEC §20.4: the disclaimer accepted in the config flow goes in the log
+    # with the installation's first rows; one older than the current text, or
+    # an installation set up before it was asked for, gets a repair card.
+    from homeassistant.util import dt as dt_util
+
+    from . import repairs
+
+    if first_run and repairs.disclaimer_accepted(entry.data):
+        system.async_record((repairs.disclaimer_row(dt_util.utcnow()),))
+    repairs.sync_disclaimer(hass, entry.data)
     entry.runtime_data = system
     hass.data[DOMAIN] = system
 

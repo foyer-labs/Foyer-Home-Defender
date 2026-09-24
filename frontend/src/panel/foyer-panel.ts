@@ -67,7 +67,7 @@ const CONFIG_PAGES: PageId[] = [
 
 // One line per setting in each page's help (translations: help.<page>.items).
 const HELP_ITEMS: Record<PageId, string[]> = {
-  overview: ["area", "master", "scenario", "not_ready", "memory", "technical", "incident"],
+  overview: ["area", "master", "scenario", "not_ready", "memory", "technical", "incident", "disclaimer"],
   areas: ["own_state", "entry", "exit", "reports_as"],
   zones: [
     "trigger",

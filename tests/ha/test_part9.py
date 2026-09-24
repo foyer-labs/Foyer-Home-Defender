@@ -448,6 +448,7 @@ def test_every_repair_issue_has_its_strings(language: str):
         repairs.RF_INTERFERENCE,
         repairs.COORDINATOR_DOWN,
         repairs.MAINS_LOST,
+        repairs.DISCLAIMER,
     ):
         assert key in issues, key
         assert "title" in issues[key]

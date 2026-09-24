@@ -2,6 +2,16 @@
   "config": {
     "step": {
       "user": {
+        "title": "Before you start",
+        "description": "Foyer is offered as software that automates actions on rules, not as an alarm system. It is not certified (EN 50131, CEI 79-3), not monitored, not a fire alarm, and comes with no warranty and no promise of support (Apache-2.0, sections 7 and 8). Do not rely on it alone to protect people or property: keep certified smoke alarms, and a professional installation where a policy or a risk calls for one.",
+        "data": {
+          "accept_disclaimer": "I have read this and accept it"
+        },
+        "data_description": {
+          "accept_disclaimer": "Foyer is set up only once this is ticked. The date you accepted is kept with the integration and in Foyer's log."
+        }
+      },
+      "setup": {
         "title": "Set up Foyer Home Defender",
         "description": "Start with one area, one zone and one scenario. Add everything else from the Foyer panel in the sidebar.",
         "data": {
@@ -31,7 +41,8 @@
     "error": {
       "no_trigger_states": "Choose at least one state.",
       "fault_state_as_trigger": "Unavailable and unknown are faults, not triggers. They always block arming.",
-      "trigger_not_confirmed": "Confirm that you have checked the trigger states."
+      "trigger_not_confirmed": "Confirm that you have checked the trigger states.",
+      "disclaimer_not_accepted": "Tick the box to accept, or close this window to stop here."
     },
     "abort": {
       "single_instance_allowed": "Foyer Home Defender is already set up."
@@ -678,6 +689,23 @@
             "title": "Mark as seen",
             "description": "{entity_id} reports that mains power has failed. Everything that needs the internet stops when the router does.\n\nConfirming closes this notice. It comes back if the problem returns."
           }
+        }
+      }
+    },
+    "disclaimer": {
+      "title": "Foyer: read and accept what Foyer is and is not",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "What Foyer is and is not",
+            "description": "Foyer is offered as software that automates actions on rules, not as an alarm system. It is not certified (EN 50131, CEI 79-3), not monitored, not a fire alarm, and comes with no warranty and no promise of support (Apache-2.0, sections 7 and 8). Do not rely on it alone to protect people or property: keep certified smoke alarms, and a professional installation where a policy or a risk calls for one.\n\nThe alarm keeps working until you do.",
+            "data": {
+              "accept_disclaimer": "I have read this and accept it"
+            }
+          }
+        },
+        "error": {
+          "disclaimer_not_accepted": "Tick the box to accept, or close this window to stop here."
         }
       }
     }

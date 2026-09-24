@@ -12,6 +12,13 @@ CONF_AREA_NAME: Final = "area_name"
 CONF_SCENARIO_NAME: Final = "scenario_name"
 CONF_ZONE_ENTITY: Final = "zone_entity"
 CONF_TRIGGER_STATES: Final = "trigger_states"
+# The disclaimer of SPEC §20.4, accepted in the config flow (decision 151) or,
+# for an installation older than it, from a repair issue. The entry keeps
+# which version of the text was accepted and when: Home Assistant does not
+# tell an integration which account opened the flow, so "when" is all there
+# is to keep. A new version of the text asks again.
+CONF_DISCLAIMER: Final = "disclaimer"
+DISCLAIMER_VERSION: Final = 1
 
 # Frontend
 PANEL_URL_PATH: Final = "foyer"

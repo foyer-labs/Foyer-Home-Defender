@@ -723,6 +723,10 @@
         "incident": {
           "term": "Incident",
           "text": "Every zone of one alarm, acknowledged once."
+        },
+        "disclaimer": {
+          "term": "What Foyer is",
+          "text": "Foyer is offered as software that automates actions on rules, not as an alarm system. It is not certified (EN 50131, CEI 79-3), not monitored, not a fire alarm, and comes with no warranty and no promise of support (Apache-2.0, sections 7 and 8). Do not rely on it alone to protect people or property: keep certified smoke alarms, and a professional installation where a policy or a risk calls for one."
         }
       }
     },
@@ -1827,7 +1831,8 @@
     "device_unlocked": "Device unlocked with a code",
     "auto_outcome": "Automatic rule outcome told",
     "config_new_webhook": "Acknowledgement webhook address generated",
-    "config_forget_webhook": "Acknowledgement webhook switched off"
+    "config_forget_webhook": "Acknowledgement webhook switched off",
+    "config_disclaimer_accepted": "Disclaimer accepted"
   },
   "log": {
     "filters": "Filters",

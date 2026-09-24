@@ -18,9 +18,11 @@ from pytest_homeassistant_custom_component.common import (
 
 from custom_components.foyer.const import (
     CONF_AREA_NAME,
+    CONF_DISCLAIMER,
     CONF_SCENARIO_NAME,
     CONF_TRIGGER_STATES,
     CONF_ZONE_ENTITY,
+    DISCLAIMER_VERSION,
     DOMAIN,
 )
 
@@ -82,6 +84,10 @@ def entry() -> MockConfigEntry:
             CONF_SCENARIO_NAME: "Fuori casa",
             CONF_ZONE_ENTITY: ZONE,
             CONF_TRIGGER_STATES: ["on"],
+            CONF_DISCLAIMER: {
+                "version": DISCLAIMER_VERSION,
+                "accepted_at": "2026-01-01T00:00:00+00:00",
+            },
         },
     )
 

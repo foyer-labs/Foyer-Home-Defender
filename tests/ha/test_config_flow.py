@@ -7,7 +7,7 @@ from unittest.mock import patch
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.foyer.const import DOMAIN
+from custom_components.foyer.const import DISCLAIMER_VERSION, DOMAIN
 
 from .conftest import ZONE
 
@@ -18,13 +18,23 @@ STEP_USER = {
 }
 
 
-async def _to_trigger_step(hass):
+async def _to_setup_step(hass):
     hass.states.async_set(ZONE, "off")
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"accept_disclaimer": True}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "setup"
+    return result
+
+
+async def _to_trigger_step(hass):
+    result = await _to_setup_step(hass)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], STEP_USER
     )
@@ -47,12 +57,30 @@ async def test_full_flow_creates_the_entry(hass):
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "Casa"
-    assert result["data"] == {
+    data = dict(result["data"])
+    accepted = data.pop("disclaimer")
+    assert data == {
         "area_name": "Casa",
         "scenario_name": "Fuori casa",
         "zone_entity": ZONE,
         "trigger_states": ["on"],
     }
+    # SPEC §20.4: which text was accepted, and when.
+    assert accepted["version"] == DISCLAIMER_VERSION
+    assert accepted["accepted_at"]
+
+
+async def test_nothing_is_set_up_until_the_disclaimer_is_accepted(hass):
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"accept_disclaimer": False}
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
+    assert result["errors"] == {"accept_disclaimer": "disclaimer_not_accepted"}
 
 
 async def test_trigger_must_be_confirmed(hass):

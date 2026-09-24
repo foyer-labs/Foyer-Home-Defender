@@ -1,4 +1,5 @@
-"""Config flow: name the area and scenario, pick the zone, confirm its trigger.
+"""Config flow: accept the disclaimer, name the area and scenario, pick the
+zone, confirm its trigger.
 
 And the Configure step, which is one thing only: an administrator recovering
 access (SPEC §8.2, decisions 109, 110). Everything else is the panel's.
@@ -27,18 +28,22 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
     TextSelectorType,
 )
+from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
 from .const import (
     CONF_AREA_NAME,
+    CONF_DISCLAIMER,
     CONF_SCENARIO_NAME,
     CONF_TRIGGER_STATES,
     CONF_ZONE_ENTITY,
+    DISCLAIMER_VERSION,
     DOMAIN,
 )
 from .core.proposals import SUPPORTED_DOMAINS, invalid_trigger_states, propose_trigger
 
 CONF_CONFIRM = "confirm_trigger"
+CONF_ACCEPT = "accept_disclaimer"
 CONF_ACCOUNT = "account"
 CONF_CODE = "code"
 
@@ -57,8 +62,35 @@ class FoyerConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """SPEC §20.4: what Foyer is and is not, before anything is set up.
+
+        Read where the decision is made, and accepted with a tick rather than
+        dismissed with a button: nothing is installed until it is (decision
+        151). The entry keeps the version accepted and when.
+        """
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if user_input.get(CONF_ACCEPT):
+                self._data[CONF_DISCLAIMER] = {
+                    "version": DISCLAIMER_VERSION,
+                    "accepted_at": dt_util.utcnow().isoformat(),
+                }
+                return await self.async_step_setup()
+            errors[CONF_ACCEPT] = "disclaimer_not_accepted"
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {vol.Required(CONF_ACCEPT, default=False): BooleanSelector()}
+            ),
+            errors=errors,
+        )
+
+    async def async_step_setup(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         if user_input is not None:
             self._data = {
+                **self._data,
                 CONF_AREA_NAME: user_input[CONF_AREA_NAME].strip(),
                 CONF_SCENARIO_NAME: user_input[CONF_SCENARIO_NAME].strip(),
                 CONF_ZONE_ENTITY: user_input[CONF_ZONE_ENTITY],
@@ -66,7 +98,7 @@ class FoyerConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_trigger()
 
         return self.async_show_form(
-            step_id="user",
+            step_id="setup",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_AREA_NAME): TextSelector(),

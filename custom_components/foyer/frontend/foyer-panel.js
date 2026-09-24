@@ -10941,7 +10941,8 @@ var An = [
 		"not_ready",
 		"memory",
 		"technical",
-		"incident"
+		"incident",
+		"disclaimer"
 	],
 	areas: [
 		"own_state",

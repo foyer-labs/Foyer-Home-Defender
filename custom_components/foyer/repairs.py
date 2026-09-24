@@ -25,6 +25,7 @@ the next occurrence raises the card again.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import hashlib
 from typing import TYPE_CHECKING, Any
 
@@ -34,7 +35,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import issue_registry as ir
 import voluptuous as vol
 
-from .const import DOMAIN
+from .const import CONF_DISCLAIMER, DISCLAIMER_VERSION, DOMAIN
 from .core.models import ChannelFault
 
 if TYPE_CHECKING:
@@ -52,6 +53,9 @@ WATCHDOG_UNREACHABLE = "watchdog_unreachable"
 RF_INTERFERENCE = "rf_interference"
 COORDINATOR_DOWN = "coordinator_down"
 MAINS_LOST = "mains_lost"
+# Not a health problem: the disclaimer of SPEC §20.4, for an installation set
+# up before it was asked for, or before its current version (decision 152).
+DISCLAIMER = "disclaimer"
 
 # How long the two conditions that can right themselves have to last before
 # they are worth a card in Settings. A power cut of five minutes and a
@@ -87,10 +91,108 @@ class SeenRepairFlow(RepairsFlow):
         return self.async_show_form(step_id="confirm", data_schema=vol.Schema({}))
 
 
+class DisclaimerRepairFlow(RepairsFlow):
+    """Accept the disclaimer from Settings ▸ Repairs (SPEC §20.4).
+
+    The same text and the same tick as the config flow, for an installation
+    that never went through it. Nothing waits on it: the alarm keeps working
+    until somebody accepts, because an alarm switched off by an update to its
+    documentation would be a worse outcome than the one the text warns about.
+    """
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None):
+        return await self.async_step_confirm()
+
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if user_input.get("accept_disclaimer"):
+                await async_accept_disclaimer(self.hass)
+                return self.async_create_entry(data={})
+            errors["accept_disclaimer"] = "disclaimer_not_accepted"
+        return self.async_show_form(
+            step_id="confirm",
+            data_schema=vol.Schema(
+                {vol.Required("accept_disclaimer", default=False): bool}
+            ),
+            errors=errors,
+        )
+
+
 async def async_create_fix_flow(
     hass: HomeAssistant, issue_id: str, data: dict[str, Any] | None
 ) -> RepairsFlow:
+    if issue_id == DISCLAIMER:
+        return DisclaimerRepairFlow(hass)
     return SeenRepairFlow(hass, issue_id)
+
+
+def disclaimer_accepted(data: Mapping[str, Any]) -> bool:
+    """Whether a config entry's data holds an acceptance of the current text."""
+    accepted = data.get(CONF_DISCLAIMER)
+    return isinstance(accepted, Mapping) and (
+        accepted.get("version", 0) >= DISCLAIMER_VERSION
+    )
+
+
+def sync_disclaimer(hass: HomeAssistant, entry_data: Mapping[str, Any]) -> None:
+    """Raise the disclaimer card while the current text is unaccepted."""
+    if disclaimer_accepted(entry_data):
+        ir.async_delete_issue(hass, DOMAIN, DISCLAIMER)
+        return
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        DISCLAIMER,
+        is_fixable=True,
+        is_persistent=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key=DISCLAIMER,
+    )
+
+
+async def async_accept_disclaimer(hass: HomeAssistant) -> None:
+    """Record the acceptance on the entry and in the log, and drop the card.
+
+    The entry's data is updated in place: Foyer registers no update
+    listener, so this reloads nothing and leaves the alarm as it is.
+    """
+    from homeassistant.util import dt as dt_util
+
+    now = dt_util.utcnow()
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_DISCLAIMER: {
+                    "version": DISCLAIMER_VERSION,
+                    "accepted_at": now.isoformat(),
+                },
+            },
+        )
+    system: FoyerSystem | None = hass.data.get(DOMAIN)
+    if system is not None:
+        system.async_record((disclaimer_row(now),))
+    ir.async_delete_issue(hass, DOMAIN, DISCLAIMER)
+
+
+def disclaimer_row(at):
+    """The log's row for an accepted disclaimer (category ``config``)."""
+    from .core.journal import config_row
+
+    return config_row(
+        at,
+        operation="disclaimer_accepted",
+        kind="disclaimer",
+        channel="ha_config",
+        changes={"version": DISCLAIMER_VERSION},
+    )
 
 
 def reconcile(
@@ -209,7 +311,7 @@ def async_forget_all(hass: HomeAssistant) -> None:
     """
     registry = ir.async_get(hass)
     for domain, issue_id in list(registry.issues):
-        if domain == DOMAIN and _is_health_issue(issue_id):
+        if domain == DOMAIN and (_is_health_issue(issue_id) or issue_id == DISCLAIMER):
             ir.async_delete_issue(hass, DOMAIN, issue_id)
 
 

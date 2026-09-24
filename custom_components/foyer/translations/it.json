@@ -2,6 +2,16 @@
   "config": {
     "step": {
       "user": {
+        "title": "Prima di iniziare",
+        "description": "Foyer è offerto come software che automatizza azioni su regole, non come impianto d'allarme. Non è certificato (EN 50131, CEI 79-3), non è sorvegliato, non è un sistema antincendio, ed è fornito senza garanzie né impegno di supporto (Apache-2.0, sezioni 7 e 8). Non affidarti solo a lui per proteggere persone o beni: tieni rilevatori di fumo certificati, e un impianto professionale dove una polizza o un rischio lo richiedono.",
+        "data": {
+          "accept_disclaimer": "Ho letto e accetto"
+        },
+        "data_description": {
+          "accept_disclaimer": "Foyer viene configurato solo dopo questa spunta. La data dell'accettazione resta con l'integrazione e nel registro di Foyer."
+        }
+      },
+      "setup": {
         "title": "Configura Foyer Home Defender",
         "description": "Si parte da un'area, una zona e uno scenario. Tutto il resto si aggiunge dal pannello Foyer nella barra laterale.",
         "data": {
@@ -31,7 +41,8 @@
     "error": {
       "no_trigger_states": "Scegli almeno uno stato.",
       "fault_state_as_trigger": "Non disponibile e sconosciuto sono guasti, non stati di allarme. Bloccano sempre l'inserimento.",
-      "trigger_not_confirmed": "Conferma di aver verificato gli stati di allarme."
+      "trigger_not_confirmed": "Conferma di aver verificato gli stati di allarme.",
+      "disclaimer_not_accepted": "Spunta la casella per accettare, oppure chiudi questa finestra per fermarti qui."
     },
     "abort": {
       "single_instance_allowed": "Foyer Home Defender è già configurato."
@@ -678,6 +689,23 @@
             "title": "Segna come visto",
             "description": "{entity_id} segnala che la rete elettrica è venuta a mancare. Tutto ciò che passa da internet si ferma quando si ferma il router.\n\nConfermando, la segnalazione si chiude. Ricompare se il problema si ripresenta."
           }
+        }
+      }
+    },
+    "disclaimer": {
+      "title": "Foyer: leggi e accetta cosa è Foyer e cosa non è",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Cosa è Foyer e cosa non è",
+            "description": "Foyer è offerto come software che automatizza azioni su regole, non come impianto d'allarme. Non è certificato (EN 50131, CEI 79-3), non è sorvegliato, non è un sistema antincendio, ed è fornito senza garanzie né impegno di supporto (Apache-2.0, sezioni 7 e 8). Non affidarti solo a lui per proteggere persone o beni: tieni rilevatori di fumo certificati, e un impianto professionale dove una polizza o un rischio lo richiedono.\n\nNel frattempo l'allarme continua a funzionare.",
+            "data": {
+              "accept_disclaimer": "Ho letto e accetto"
+            }
+          }
+        },
+        "error": {
+          "disclaimer_not_accepted": "Spunta la casella per accettare, oppure chiudi questa finestra per fermarti qui."
         }
       }
     }
