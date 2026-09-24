@@ -70,8 +70,9 @@ in it:
   a code by default, a banner says so on every screen, a notification marks
   its start and its end, and both log rows carry the person's name. Grant it
   as you would grant `disarm`; `docs/SPEC.md` §8.3 says why. The same goes
-  for a caller nobody identified starting one after the policy was set to ask
-  no code for it. A walk test started *without* the permission or the code
+  for a caller nobody identified (which includes any service call made
+  without a code, whatever account made it) starting one after the policy
+  was set to ask no code for it. A walk test started *without* the permission or the code
   the policy asks for is a vulnerability, and belongs above.
 - **Presence as an identity.** A phone is not a credential. This is why
   automatic disarming is off by default and why a perimeter area is never

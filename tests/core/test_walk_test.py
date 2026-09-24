@@ -628,3 +628,19 @@ def test_ending_it_by_hand_does_not_silence_a_sounding_alarm_either():
     assert not world.state.incident.acknowledged
     ended = next(o for o in decision.occurrences if o.moment is Moment.WALK_TEST_ENDED)
     assert ended.detail["left_in_alarm"] == "ground"
+
+
+def test_a_new_person_does_not_start_with_the_walk_test():
+    """§8.3, decision 137: the whole-house reach is given deliberately.
+
+    A person added on the Users page starts with DEFAULT_PERMISSIONS (the
+    store's defaults and the panel's empty draft both copy it). Adding
+    ``walk_test`` there would pass everything else and hand every new
+    person a way to keep an armed house quiet without ``disarm``.
+    """
+    from custom_components.foyer.core.authz import DEFAULT_PERMISSIONS
+    from custom_components.foyer.core.models import Permission
+
+    assert Permission.WALK_TEST not in DEFAULT_PERMISSIONS
+    assert Permission.EDIT_CONFIG not in DEFAULT_PERMISSIONS
+    assert Permission.MANAGE_USERS not in DEFAULT_PERMISSIONS

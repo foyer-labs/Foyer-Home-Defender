@@ -224,10 +224,13 @@ good result for the money, on a house that is already smart.
   under *Who may use it*. Anything that changes people — a person, a tag, the
   person a key switch acts as, a scenario's list of people — needs *Manage
   users and codes* as well as *Edit the configuration*, from any page and in a
-  restored backup. The one permission the scope does not narrow is *Walk
-  test*: it covers the whole house, and while the test runs no area answers
-  an ordinary detection, so it can keep an armed house quiet without
-  *Disarm* ([below](#what-the-codes-are-for-and-what-they-are-not)).
+  restored backup. The scope narrows what acts on an area — arming,
+  disarming, excluding a zone; editing the configuration, reading the log and
+  testing an action are never narrowed by areas. The one operation on an area
+  it does not narrow is the *Walk test*: it covers the whole house, and while
+  the test runs no area answers an ordinary detection, so it can keep an
+  armed house quiet without *Disarm*
+  ([below](#what-the-codes-are-for-and-what-they-are-not)).
 - **An armed house keeps the answer it was armed with.** While any area is
   armed, the siren time, the delays, the profiles it could answer with and
   the contacts they call, the code policy and the lockout, whether a rule may
@@ -372,8 +375,10 @@ real intrusion produces nothing:
 
 A detection during a walk test is recorded and moves nothing else: no alarm,
 no incident, no alarm memory, and nothing tells HomeKit or Alexa that somebody
-has broken in. Leaving disarms exactly the areas the walk test armed. An area
-still holding alarm memory is not one of them: the test arms for a walk, not
+has broken in. Leaving disarms the areas the walk test armed — except one in
+alarm, or one a 24h or tamper zone left holding alarm memory during the test,
+which only a person's disarm ends — and leaves every other area as it found
+it. An area already holding alarm memory when the test starts is not armed: the test arms for a walk, not
 for a watch, so it leaves that area disarmed with its memory, and its zones
 are still recorded when they see you.
 
@@ -754,16 +759,20 @@ walked through the whole house, so it arms every disarmed area it can — the
 areas the person starting it is not allowed included, though not one still
 holding alarm memory — and until it ends no area answers an ordinary
 detection, not even one somebody else armed. That lasts fifteen minutes after the last
-detection by default, never more than three hours from the start, and it
-needs *Walk test*, not *Disarm*. It is kept that way on purpose, and it is
+detection by default, never more than three hours from the start of one
+test — though nothing stops it being started again as soon as it ends, each
+time with its notification and its log rows — and it needs *Walk test*, not
+*Disarm*. It is kept that way on purpose, and it is
 never quiet about itself: it asks for a code by default, it puts a banner on
 every screen, it sends a notification when it starts and when it ends, and
 both of its rows in the log name the person. What stays live through it: 24h, tamper, technical and panic zones,
 an alarm already under way, and a duress code. Give *Walk test* to the people
 you would give *Disarm* to. And unticking *Code required* beside *Start a walk
-test* hands it to anything that can reach a Foyer service or
-`switch.foyer_walk_test` without being identified — an automation, a script,
-a Home Assistant account linked to nobody — because permissions are checked
+test* hands it to anything that can start one without being identified —
+any Home Assistant account calling `foyer.walk_test`, linked to a person or
+not, since a service call identifies a person only by a code; and an
+automation, a script or an account linked to nobody through
+`switch.foyer_walk_test` or the panel — because permissions are checked
 against the person asking, and a request that identifies nobody has none to
 check.
 

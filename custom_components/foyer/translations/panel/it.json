@@ -977,7 +977,7 @@
         },
         "scope": {
           "term": "Ambito e validità",
-          "text": "Un codice può essere limitato ad alcune aree o scenari e può smettere di funzionare a una certa data — che è ciò che rende un codice ospite un codice ospite. Il walk test fa eccezione: copre tutta la casa qualunque area sia scelta."
+          "text": "Un codice può essere limitato ad alcune aree — inserire, disinserire ed escludere una zona lì — o scenari e può smettere di funzionare a una certa data — che è ciò che rende un codice ospite un codice ospite. Modificare la configurazione, leggere il registro e provare un'azione non sono mai ristretti per aree. Il walk test fa eccezione tra ciò che agisce su un'area: copre tutta la casa qualunque area sia scelta."
         }
       }
     },
@@ -2253,7 +2253,7 @@
     "code_hint_new": "{n} cifre, diverso da quello di chiunque altro.",
     "confirm_delete": "Eliminare {name}? Non si può annullare. Il suo codice smette subito di funzionare; la sua storia resta nel registro.",
     "policy_armed": "Un'area è inserita: politica dei codici, lunghezza del codice e blocco restano come sono finché tutte le aree non sono disinserite. Le persone e i loro codici si possono ancora cambiare.",
-    "walk_test_note": "Il walk test copre tutta la casa, qualunque area sia scelta qui sotto. Inserisce ogni area disinserita che può, e finché non finisce nessuna area risponde a una rilevazione ordinaria — nemmeno una inserita da qualcun altro — per un massimo di tre ore. Chi ce l'ha può tenere zitta una casa inserita senza Disinserire, quindi dallo come daresti Disinserire."
+    "walk_test_note": "Il walk test copre tutta la casa, qualunque area sia scelta qui sotto. Inserisce ogni area disinserita che può, e finché non finisce nessuna area risponde a una rilevazione ordinaria — nemmeno una inserita da qualcun altro — per un massimo di tre ore alla volta, e si può riavviare appena finisce. Chi ce l'ha può tenere zitta una casa inserita senza Disinserire, quindi dallo come daresti Disinserire."
   },
   "device_kind": {
     "keypad": "Tastierino",
@@ -2506,7 +2506,7 @@
     "active": "Cammina per la casa. La tabella qui sotto si riempie mano a mano che le zone ti rilevano, e quelle che non lo fanno mai sono il risultato che conta.",
     "start_title": "Avvia un walk test",
     "start_sub": "Davvero inserito, davvero in ascolto, nessuna risposta",
-    "explainer": "Viene inserita ogni area disinserita che può esserlo — tutta la casa, qualunque siano le aree che ti sono permesse per il resto — tranne una che conserva ancora una memoria d'allarme, le cui zone registrano comunque il tuo passaggio. Un'area tenuta aperta da una zona resta fuori, e viene indicata. Una già inserita resta inserita, e fino alla fine del test non risponde nemmeno lei. Alla fine vengono disinserite le aree che il test aveva inserito, tranne una in allarme.",
+    "explainer": "Viene inserita ogni area disinserita che può esserlo — tutta la casa, qualunque siano le aree che ti sono permesse per il resto — tranne una che conserva ancora una memoria d'allarme, le cui zone registrano comunque il tuo passaggio. Un'area tenuta aperta da una zona resta fuori, e viene indicata. Una già inserita resta inserita, e fino alla fine del test non risponde nemmeno lei. Alla fine vengono disinserite le aree che il test aveva inserito, tranne una in allarme o che conserva la memoria d'allarme: quella la chiude solo un disinserimento fatto da una persona.",
     "duration": "Timeout",
     "duration_default": "Predefinito dell'impianto",
     "duration_hint": "Minuti senza rilevazioni prima che si chiuda da solo. Ogni rilevazione lo rimanda. Può solo essere più breve dell'impostazione dell'impianto, mai più lungo: la chiusura automatica non si disattiva.",

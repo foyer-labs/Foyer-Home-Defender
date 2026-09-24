@@ -290,7 +290,8 @@ Six things worth knowing before you start one:
   else armed stays armed but stops answering too until the test ends. The
   `walk_test` permission can therefore keep an armed house quiet without
   `disarm` — fifteen minutes after the last detection by default, never more
-  than three hours in all — so it is given as `disarm` is, and it asks for a
+  than three hours per test, and nothing stops it being started again as soon
+  as it ends — so it is given as `disarm` is, and it asks for a
   code by default. The Users page says so beside the permission.
 
 ### Action test — press the button before the night you need it

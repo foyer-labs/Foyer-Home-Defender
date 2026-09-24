@@ -977,7 +977,7 @@
         },
         "scope": {
           "term": "Scope and validity",
-          "text": "A code can be limited to some areas or scenarios, and can stop working on a date — which is what makes a guest code a guest code. A walk test is the exception: it covers the whole house whatever areas are chosen."
+          "text": "A code can be limited to some areas — arming, disarming and excluding a zone there — or scenarios, and can stop working on a date — which is what makes a guest code a guest code. Editing the configuration, reading the log and testing an action are never narrowed by areas. A walk test is the exception among what acts on an area: it covers the whole house whatever areas are chosen."
         }
       }
     },
@@ -2253,7 +2253,7 @@
     "code_hint_new": "{n} digits, different from everyone else's.",
     "confirm_delete": "Delete {name}? This cannot be undone. Their code stops working at once; their history stays in the log.",
     "policy_armed": "An area is armed: the code policy, the code length and the lockout keep their values until every area is disarmed. People and their codes can still be changed.",
-    "walk_test_note": "Walk test covers the whole house, whatever areas are chosen below. It arms every disarmed area it can, and until it ends no area answers an ordinary detection — one somebody else armed included — for up to three hours. Whoever holds it can keep an armed house quiet without Disarm, so give it as you would give Disarm."
+    "walk_test_note": "Walk test covers the whole house, whatever areas are chosen below. It arms every disarmed area it can, and until it ends no area answers an ordinary detection — one somebody else armed included — for up to three hours at a time, and it can be started again as soon as it ends. Whoever holds it can keep an armed house quiet without Disarm, so give it as you would give Disarm."
   },
   "device_kind": {
     "keypad": "Keypad",
@@ -2506,7 +2506,7 @@
     "active": "Walk the house. The table below fills in as zones detect you, and the ones that never do are the finding.",
     "start_title": "Start a walk test",
     "start_sub": "Really armed, really reading, nothing answering",
-    "explainer": "Every disarmed area that can arm is armed — the whole house, whatever areas you are allowed otherwise — except one still holding alarm memory, whose zones still record you walking past. An area a zone is holding open stays out, and is named. One that was already armed stays armed, and does not answer either until the test ends. The end disarms the areas the test armed, except one in alarm.",
+    "explainer": "Every disarmed area that can arm is armed — the whole house, whatever areas you are allowed otherwise — except one still holding alarm memory, whose zones still record you walking past. An area a zone is holding open stays out, and is named. One that was already armed stays armed, and does not answer either until the test ends. The end disarms the areas the test armed, except one in alarm or still holding its alarm memory: only a person's disarm ends that.",
     "duration": "Timeout",
     "duration_default": "System default",
     "duration_hint": "Minutes without a detection before it ends itself. Each detection pushes it back. It can only be shorter than the system setting, never longer: the automatic end cannot be switched off.",

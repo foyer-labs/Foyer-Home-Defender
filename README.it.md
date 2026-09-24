@@ -247,10 +247,13 @@ già intelligente.
   persone — una persona, un tag, la persona per cui agisce una chiave, l'elenco
   delle persone di uno scenario — richiede *Gestire utenti e codici* oltre a
   *Modificare la configurazione*, da qualunque pagina e nel ripristino di un
-  backup. L'unico permesso che l'ambito non restringe è *Walk test*: copre
-  tutta la casa, e finché il test è attivo nessuna area risponde a una
-  rilevazione ordinaria, quindi può tenere zitta una casa inserita senza
-  *Disinserire* ([più sotto](#a-cosa-servono-i-codici-e-a-cosa-no)).
+  backup. L'ambito restringe ciò che agisce su un'area — inserire,
+  disinserire, escludere una zona; modificare la configurazione, leggere il
+  registro e provare un'azione non sono mai ristretti per aree. L'unica
+  operazione su un'area che non restringe è il *Walk test*: copre tutta la
+  casa, e finché il test è attivo nessuna area risponde a una rilevazione
+  ordinaria, quindi può tenere zitta una casa inserita senza *Disinserire*
+  ([più sotto](#a-cosa-servono-i-codici-e-a-cosa-no)).
 - **Una casa inserita mantiene la risposta con cui è stata inserita.** Finché
   un'area è inserita non si possono cambiare la durata delle sirene, i
   ritardi, i profili con cui potrebbe rispondere e i contatti che questi
@@ -412,9 +415,12 @@ un'intrusione vera non produce nulla:
 
 Una rilevazione durante il walk test viene registrata e non muove nient'altro:
 niente allarme, niente incidente, nessuna memoria d'allarme, e nessuno dice a
-HomeKit o ad Alexa che qualcuno è entrato. Uscendo vengono disinserite
-esattamente le aree che il walk test aveva inserito. Un'area che conserva
-ancora una memoria d'allarme non è tra queste: il test inserisce per una
+HomeKit o ad Alexa che qualcuno è entrato. Uscendo vengono disinserite le
+aree che il walk test aveva inserito — tranne una in allarme, o una a cui una
+zona 24h o di manomissione ha lasciato la memoria d'allarme durante il test,
+che solo un disinserimento fatto da una persona chiude — e ogni altra area
+resta come era. Un'area che conserva già una memoria d'allarme quando il test
+parte non viene inserita: il test inserisce per una
 prova, non per una sorveglianza, quindi la lascia disinserita con la sua
 memoria, e le sue zone vengono registrate lo stesso quando ti vedono.
 
@@ -809,17 +815,20 @@ cammina in tutta la casa, quindi inserisce ogni area disinserita che può —
 anche quelle che a chi lo avvia non sono permesse, ma non una che conserva
 ancora una memoria d'allarme — e finché non finisce nessuna area risponde a
 una rilevazione ordinaria, nemmeno una inserita da qualcun altro. Dura quindici minuti dall'ultima rilevazione per impostazione
-predefinita, mai più di tre ore dall'inizio, e basta il permesso *Walk test*,
-non serve *Disinserire*. È voluto, e non è mai silenzioso su se stesso:
+predefinita, mai più di tre ore dall'inizio di un test — ma niente impedisce
+di riavviarlo appena finisce, ogni volta con la sua notifica e le sue righe
+nel registro — e basta il permesso *Walk test*, non serve *Disinserire*. È voluto, e non è mai silenzioso su se stesso:
 chiede un codice per impostazione predefinita, mette un banner su ogni
 schermo, manda una notifica all'inizio e alla fine, ed entrambe le sue righe
 nel registro nominano la persona. Restano attivi durante il test: le zone
 24h, manomissione, tecniche e panico, un allarme già in corso e un codice di
 coercizione. Dai *Walk test* alle persone a cui daresti *Disinserire*. E
 togliere *Codice richiesto* accanto ad *Avvio del walk test* lo consegna a
-qualunque cosa possa raggiungere un servizio di Foyer o
-`switch.foyer_walk_test` senza essere identificata — un'automazione, uno
-script, un account di Home Assistant non collegato a nessuno — perché i
+qualunque cosa possa avviarlo senza essere identificata — qualunque account
+di Home Assistant che chiami `foyer.walk_test`, collegato a una persona o no,
+perché una chiamata di servizio identifica una persona solo con un codice; e
+un'automazione, uno script o un account non collegato a nessuno attraverso
+`switch.foyer_walk_test` o il pannello — perché i
 permessi si controllano sulla persona che chiede, e una richiesta che non
 identifica nessuno non ne ha da controllare.
 
