@@ -136,6 +136,36 @@ async def test_the_bus_hears_it_as_every_row(hass, house):
     assert [e["detail"]["operation"] for e in duress] == ["clear_log"]
 
 
+async def test_switching_the_security_log_off_does_not_silence_it(hass, house):
+    """Fix phase: the `security` category's switch dropped the duress row, and
+    with it the only `foyer_event` a household automation could answer."""
+    settings = (await _config(house.client))["settings"]
+    log = dict(settings["log"])
+    log["enabled"] = {**log["enabled"], "security": False}
+    answer = await _ws(
+        house.client,
+        {
+            "type": "foyer/config/settings",
+            "settings": {**settings, "log": log},
+            "code": CODE,
+        },
+    )
+    assert answer["success"], answer
+    await hass.async_block_till_done()
+    heard: list[dict] = []
+
+    @callback
+    def listen(event) -> None:
+        heard.append(event.data)
+
+    hass.bus.async_listen("foyer_event", listen)
+    await _ws(house.client, {"type": "foyer/config/export", "code": DURESS})
+    await hass.async_block_till_done()
+    assert [e["event_type"] for e in heard if e["event_type"] == "duress"] == [
+        "duress"
+    ]
+
+
 async def test_a_log_emptied_under_it_keeps_its_duress_row(hass, house):
     """The gate queued the `duress` before the clear it came with, and the
     clear erased it with everything else. It is written again after the

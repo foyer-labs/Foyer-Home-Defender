@@ -360,7 +360,7 @@ class LogStore:
         disabled ``zone_disarmed`` costs nothing at all.
         """
         for row in rows:
-            if not settings.is_enabled(str(row.category)):
+            if not _kept(row, settings):
                 continue
             data = row_to_dict(row)
             # Every write also reaches the bus, so external collectors and
@@ -933,9 +933,7 @@ class LogStore:
         announced on the bus when it was first written, so not again; not
         counted as removed, so the answer is the one the ordinary code gets.
         """
-        rows = [
-            r for r in keep if settings is None or settings.is_enabled(str(r.category))
-        ]
+        rows = [r for r in keep if settings is None or _kept(r, settings)]
         return await self.hass.async_add_executor_job(self._clear, rows)
 
     def _clear(self, keep: Sequence[LogRow]) -> int:
@@ -1008,3 +1006,16 @@ def _cell(value: Any) -> Any:
 
 def export_json(rows: Sequence[Mapping[str, Any]]) -> str:
     return json.dumps(list(rows), indent=2, default=str)
+
+
+# Rows written whatever their category's switch says. A `duress` row is how a
+# Home Assistant automation hears a request for help (`foyer_event`, §8.1):
+# switching the `security` category off to quiet the wrong codes also
+# silenced that, which is not a trade anybody chooses knowingly. The recovery
+# of access and the accepted disclaimer are the records of the two things
+# that must never happen quietly (§8.2, §20.4). Fix phase.
+ALWAYS_WRITTEN = frozenset({"duress", "access_recovered", "config_disclaimer_accepted"})
+
+
+def _kept(row: LogRow, settings: LogSettings) -> bool:
+    return row.event_type in ALWAYS_WRITTEN or settings.is_enabled(str(row.category))
