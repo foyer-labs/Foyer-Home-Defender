@@ -493,7 +493,7 @@
     "master": "Tutta la casa",
     "scenario": "Scenario",
     "no_scenarios": "Ancora nessuno scenario.",
-    "scenario_hint": "Scegliere uno scenario ne inserisce le aree. Scelto mentre ne è inserito un altro, lo sostituisce: le aree non incluse nel nuovo si disinseriscono.",
+    "scenario_hint": "Scegliere uno scenario ne inserisce le aree. Scelto mentre ne è inserito un altro, lo sostituisce: le aree che il vecchio aveva inserito e il nuovo non include si disinseriscono.",
     "disarm_all": "Disinserisci tutto",
     "force_arm": "Inserisci senza queste zone",
     "force_arm_hint": "Restano scoperte finché non si chiudono; registrato come inserimento forzato.",
@@ -605,7 +605,7 @@
     "bypass_for": "Escludi per",
     "bypass_hours": "{hours} h",
     "bypass_until": "inclusa di nuovo alle {time}",
-    "bypass_indefinite": "finché non la includi di nuovo",
+    "bypass_indefinite": "finché l'area non viene disinserita",
     "bypass_hint": "Una zona esclusa non allarma. Senza durata viene inclusa di nuovo al disinserimento dell'area; con una durata viene inclusa di nuovo da sola, e lo segnala.",
     "silent_hint": "La risposta viene eseguita senza i tipi di azione scelti nelle Impostazioni, come le sirene.",
     "profile_hint": "Letto solo quando questa zona allarma. Vuoto: il profilo dell'area.",
@@ -848,7 +848,7 @@
     },
     "settings": {
       "title": "Cosa fanno queste impostazioni",
-      "intro": "Impostazioni che valgono per tutto l'impianto: il campanello, e dove finisce ogni catena di risposta.",
+      "intro": "Impostazioni che valgono per tutto l'impianto: i valori da cui partono le aree nuove, dove finisce ogni catena di risposta, il campanello, cosa tiene il registro, i backup, l'importatore e la lingua dei messaggi in uscita.",
       "items": {
         "targets": {
           "term": "Suona su",
@@ -906,7 +906,7 @@
         },
         "moments": {
           "term": "Quando parte",
-          "text": "Un'azione può rispondere a più momenti. Alcuni momenti arriveranno in un prossimo aggiornamento e sono segnalati."
+          "text": "Un'azione può rispondere a più momenti: spunta tutti quelli a cui deve rispondere."
         },
         "conditions": {
           "term": "Condizioni",
@@ -982,7 +982,7 @@
         },
         "lockout": {
           "term": "Blocco",
-          "text": "Codici sbagliati ripetuti chiudono quel tastierino per un po', sempre più a lungo. È anche un evento a cui un profilo di risposta può rispondere: qualcuno che tenta a caso su un tastierino è un segnale di manomissione."
+          "text": "Codici sbagliati ripetuti chiudono per un po' il canale da cui arrivano, sempre più a lungo: quell'account di Home Assistant, quel tastierino o dispositivo, quell'indirizzo. È anche un evento a cui un profilo di risposta può rispondere: qualcuno che tenta codici a caso è un segnale di manomissione."
         },
         "scope": {
           "term": "Ambito e validità",
@@ -1578,12 +1578,12 @@
     "backup_intro": "Nessuno che abbia configurato quaranta zone lo rifarà una seconda volta.",
     "backup_export": "Esporta JSON",
     "backup_import": "Ripristina da un file…",
-    "backup_hint": "Il file porta con sé la versione di schema con cui è stato scritto. Un backup di una versione più vecchia viene aggiornato al ripristino; uno di una versione più recente viene rifiutato anziché letto a metà.",
+    "backup_hint": "Il file porta con sé la versione di schema con cui è stato scritto. Un backup di una versione più vecchia viene aggiornato al ripristino; uno di una versione maggiore più recente viene rifiutato anziché letto a metà.",
     "backup_version": "Configurazione salvata: schema {version}",
     "backup_restored": "Configurazione ripristinata.",
     "language_title": "Lingua dei messaggi",
     "language_system": "Come Home Assistant",
-    "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le notifiche, e il nome della zona pronunciato dal campanello.",
+    "language_hint": "Questo pannello segue sempre la lingua di chi lo guarda. Questa impostazione riguarda ciò che Foyer manda fuori: le parole delle sue notifiche e dei loro pulsanti.",
     "low_battery_hint": "Per cento. Sotto questo valore una batteria numerica è considerata scarica. Un sensore binario di batteria è invece letto dal suo «on».",
     "walk_test_hint": "Secondi per cui un walk test resta attivo senza rilevazioni prima di chiudersi da solo. Ogni rilevazione lo rimanda, e un tetto assoluto lo chiude comunque. La chiusura automatica è obbligatoria, quindi nessun valore qui la disattiva.",
     "short_preset": "Accorcia a {days} giorni",
@@ -1717,9 +1717,9 @@
     "message_hint": "Variabili: {variables}",
     "delay_hint": "In secondi. Trattiene le azioni che seguono in questa lista e sopravvive a un riavvio.",
     "revert_hint": "In secondi. Vuoto: lascialo com'è.",
-    "camera_hint": "La notifica allega l'immagine dal vivo; il file finisce nella cartella telecamere.",
+    "camera_hint": "Scatta un'istantanea o registra, e scrive il file nella cartella telecamere. Per mandare immagini con un messaggio, imposta Immagini su una notifica.",
     "call_service_hint": "Tutto ciò che Foyer non modella nativamente. I dati sono JSON.",
-    "escalation_later": "Un passo di escalation è una notifica con un tempo sopra: dagli un ritardo dall'inizio dell'allarme e aspetterà invece di partire subito. Chi raggiunge si configura nella pagina Contatti.",
+    "escalation_later": "Un passo di escalation è una notifica con un tempo sopra: dagli un ritardo dall'inizio dell'allarme e aspetterà invece di partire subito. Chi raggiunge si sceglie sulla notifica stessa; le persone e i loro canali stanno nella pagina Contatti.",
     "future_moment": "Arriva in un prossimo aggiornamento.",
     "attach_hint": "L'immagine dal vivo accompagna la notifica, attraverso il proxy autenticato di Home Assistant. Nessun file viene scritto.",
     "attach_hint_telegram": "Telegram scarica l'immagine da fuori casa, quindi uno scatto viene salvato nella cartella telecamere e spedito con il messaggio. Quella cartella deve essere in allowlist_external_dirs.",
@@ -1963,7 +1963,7 @@
       "codes": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo conserva i codici come hash nel proprio formato, e Foyer non accetta sulla fiducia una credenziale da un altro sistema. Chiunque sia stato importato — {people} in tutto — ha bisogno di un codice nuovo nella pagina Utenti prima di poter disinserire con un codice.",
       "codes_nobody": "Non è arrivato nessun codice, e non ne arriverà mai: Alarmo conserva i codici come hash nel proprio formato, e Foyer non accetta sulla fiducia una credenziale da un altro sistema. Non è stata importata nessuna persona nuova, quindi chi può disinserire è chi è già nella pagina Utenti.",
       "zones_to_confirm": "Zone importate: {zones}, tutte disattivate. Ogni trigger è la proposta di Foyer ricavata dal tipo di sensore, non qualcosa che qualcuno abbia verificato: finché non lo confermi nella pagina Zone e non attivi la zona, non sorveglia niente.",
-      "unavailable_is_fault": "In Foyer un sensore che diventa non disponibile è un guasto, mai un silenzio: blocca l'inserimento e viene segnalato. Alarmo lo leggeva come chiuso, se non gli si diceva altro.",
+      "unavailable_is_fault": "In Foyer un sensore che diventa non disponibile è un guasto: blocca l'inserimento e viene segnalato, e non viene mai letto come chiuso.",
       "sensor_duplicate": "{entity} compare due volte nel file; è stato importato una volta sola.",
       "sensor_exists": "{entity} è già la zona Foyer «{zone}», che è rimasta esattamente com'era.",
       "sensor_domain": "{entity} non è un tipo di entità che Alarmo potesse vedere aperta o chiusa, quindi non c'era una zona da ricavarne.",
@@ -1971,7 +1971,7 @@
       "sensor_made_always_on": "{entity} era un sensore {type} che in Alarmo non era sempre attivo. In Foyer sorveglia sempre, come quel tipo di sensore deve fare.",
       "sensor_no_mode": "{entity} non era attivo in nessuna modalità abilitata nella sua area, quindi Alarmo non lo sorvegliava mai; non è stato importato.",
       "entry_delay_varies": "{entity} aveva un ritardo di ingresso diverso a seconda della modalità. Foyer ne dà uno per zona, e ha preso il più lungo: {seconds} s.",
-      "sensor_missing": "{entity} in questo momento non esiste in Home Assistant. La zona «{zone}» è stata creata comunque, e risulterà in guasto finché l'entità non torna.",
+      "sensor_missing": "{entity} in questo momento non esiste in Home Assistant. La zona «{zone}» è stata creata comunque, disattivata come ogni zona importata; una volta confermata e attivata risulterà in guasto finché l'entità non torna.",
       "trigger_unavailable": "In Alarmo «{zone}» faceva scattare l'allarme quando diventava non disponibile. In Foyer è un guasto: blocca l'inserimento e viene segnalato, ma non fa suonare.",
       "delay_on": "«{zone}» doveva restare attiva {seconds} s prima che Alarmo intervenisse. Foyer non ha un'attesa del genere e interviene alla prima volta; contare gli scatti della zona è la cosa più vicina.",
       "sensor_was_disabled": "«{zone}» era disattivata anche in Alarmo. Confermarne il trigger non ti obbliga ad attivarla.",
@@ -2010,14 +2010,14 @@
       "profile_created": "Il profilo di risposta «{profile}» parte come copia del tuo profilo predefinito, più le sirene e gli interruttori di Alarmo, e risponde per le aree importate.",
       "group_not_imported": "Il gruppo «{group}» ({n} su {members} entro {seconds} s) non è stato creato: un gruppo ha bisogno dei suoi membri attivi, e ogni zona importata parte disattivata. Crealo nella pagina Gruppi di verifica quando saranno confermate.",
       "setting_not_imported": "L'impostazione di Alarmo «{setting}» non è stata importata; le impostazioni di Foyer sono rimaste come erano.",
-      "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. È stato scritto da un Alarmo più recente di quello su cui è stato verificato, e quello che fa quel campo non è stato importato.",
+      "unknown_field": "Il file ha un campo che questo importatore non conosce: {field}. Quello che fa quel campo non è stato importato.",
       "scenario_overrides": "«{scenario}» ha un proprio ritardo di uscita o durata della sirena, e ora vale anche per le aree importate, qualunque cosa avesse Alarmo. Controllalo nella pagina Scenari."
     }
   },
   "wizard": {
     "title": "Completa la configurazione di Foyer",
     "intro": "L'integrazione ha creato un'area, una zona e uno scenario — ancora nulla è inserito. Cinque passi brevi trasformano tutto questo in una configurazione che copre tutta la casa. Puoi fermarti quando vuoi e proseguire dalle pagine qui sopra.",
-    "dismiss": "Non ora",
+    "dismiss": "Non mostrare più",
     "next": "Continua",
     "back": "Indietro",
     "done": "Fine",
@@ -2250,7 +2250,7 @@
     "enabled": "Attivo",
     "enabled_hint": "Il codice di un utente disattivato viene rifiutato, e la sua storia resta nel registro.",
     "policy": "Politica dei codici",
-    "policy_hint": "Quali operazioni chiedono un codice. Aree e scenari possono chiedere di più, mai di meno.",
+    "policy_hint": "Quali operazioni chiedono un codice. Un'area o uno scenario possono cambiarlo con Codice richiesto o Senza codice; dove non concordano, vince quello che chiede il codice.",
     "operation": "Operazione",
     "needs_code": "Codice richiesto",
     "later_phase": "prossimo aggiornamento",

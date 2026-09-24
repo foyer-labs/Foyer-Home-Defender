@@ -493,7 +493,7 @@
     "master": "Whole house",
     "scenario": "Scenario",
     "no_scenarios": "No scenarios yet.",
-    "scenario_hint": "Choosing a scenario arms its areas. Chosen while another is armed, it takes its place: areas not in the new one are disarmed.",
+    "scenario_hint": "Choosing a scenario arms its areas. Chosen while another is armed, it takes its place: areas the old one armed and the new one leaves out are disarmed.",
     "disarm_all": "Disarm everything",
     "force_arm": "Arm without these zones",
     "force_arm_hint": "They are not watched until they close; recorded as a forced arming.",
@@ -605,7 +605,7 @@
     "bypass_for": "Exclude for",
     "bypass_hours": "{hours} h",
     "bypass_until": "included again at {time}",
-    "bypass_indefinite": "until you include it again",
+    "bypass_indefinite": "until the area is disarmed",
     "bypass_hint": "An excluded zone does not alarm. Without a duration it is included again when the area is disarmed; with one it is included again on its own, and says so.",
     "silent_hint": "The response runs without the action kinds chosen in Settings, such as sirens.",
     "profile_hint": "Read only when this zone alarms. Empty: the area's profile.",
@@ -848,7 +848,7 @@
     },
     "settings": {
       "title": "What these settings do",
-      "intro": "Settings that apply to the whole system: the chime, and where every response chain ends.",
+      "intro": "Settings that apply to the whole installation: the defaults new areas start with, where every response chain ends, the chime, what the log keeps, backups, the importer and the language of outgoing messages.",
       "items": {
         "targets": {
           "term": "Play on",
@@ -906,7 +906,7 @@
         },
         "moments": {
           "term": "When it runs",
-          "text": "One action can answer several moments. Some moments arrive in a later version and are marked."
+          "text": "One action can answer several moments; tick every one it should answer."
         },
         "conditions": {
           "term": "Conditions",
@@ -982,7 +982,7 @@
         },
         "lockout": {
           "term": "Lockout",
-          "text": "Repeated wrong codes shut that keypad for a while, longer each time. It is also an event a response profile can answer: somebody guessing at a keypad is a tamper signal."
+          "text": "Repeated wrong codes shut the channel they came from for a while, longer each time: that Home Assistant account, that keypad or device, that address. It is also an event a response profile can answer: somebody guessing codes is a tamper signal."
         },
         "scope": {
           "term": "Scope and validity",
@@ -1578,12 +1578,12 @@
     "backup_intro": "Nobody who has configured forty zones will do it twice.",
     "backup_export": "Export JSON",
     "backup_import": "Restore from a file…",
-    "backup_hint": "The file carries the schema version it was written with. A backup from an older version is brought up to date on restore; one from a newer version is refused rather than half-read.",
+    "backup_hint": "The file carries the schema version it was written with. A backup from an older version is brought up to date on restore; one from a newer major version is refused rather than half-read.",
     "backup_version": "Stored configuration: schema {version}",
     "backup_restored": "Configuration restored.",
     "language_title": "Language of messages",
     "language_system": "As Home Assistant",
-    "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: notifications, and the zone name the chime speaks.",
+    "language_hint": "This panel always follows the language of whoever is looking at it. This setting is for what Foyer sends out: the words of its notifications and their buttons.",
     "low_battery_hint": "Per cent. Below this a numeric battery counts as low. A battery binary sensor is read by its own “on” instead.",
     "walk_test_hint": "Seconds a walk test runs without a detection before it ends itself. Each detection pushes it back, and an absolute cap ends it whatever happens. The automatic end is mandatory, so no value here switches it off.",
     "short_preset": "Shorten to {days} days",
@@ -1717,9 +1717,9 @@
     "message_hint": "Variables: {variables}",
     "delay_hint": "In seconds. It holds the actions after it in this list, and survives a restart.",
     "revert_hint": "In seconds. Empty: leave it as it is.",
-    "camera_hint": "The notification attaches the live picture; the file is written to the camera folder.",
+    "camera_hint": "Takes a snapshot or a recording and writes it to the camera folder. To send pictures with a message, set Pictures on a notification.",
     "call_service_hint": "Anything Foyer does not model natively. Data is JSON.",
-    "escalation_later": "An escalation step is a notification with a time on it: give one a delay from the alarm start, and it waits instead of firing at once. Who it reaches is set on the Contacts page.",
+    "escalation_later": "An escalation step is a notification with a time on it: give one a delay from the alarm start, and it waits instead of firing at once. Who it reaches is chosen on the notification itself; the people and their channels live on the Contacts page.",
     "future_moment": "Arrives in a later version.",
     "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written.",
     "attach_hint_telegram": "Telegram fetches the picture from outside the house, so a still is written to the camera folder and sent with the message. That folder must be in allowlist_external_dirs.",
@@ -1963,7 +1963,7 @@
       "codes": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Everybody brought in — {people} in all — needs a new code on the Users page before they can disarm with one.",
       "codes_nobody": "No code came across, and none ever will: Alarmo keeps its codes as hashes in its own format, and Foyer does not take a credential from another system on trust. Nobody new was brought in, so the people who can disarm are the ones already on the Users page.",
       "zones_to_confirm": "Zones brought in: {zones}, every one switched off. Each trigger is Foyer's proposal from the kind of sensor, not something anybody has checked: until you confirm it on the Zones page and switch the zone on, it watches nothing.",
-      "unavailable_is_fault": "A sensor that goes unavailable is a fault in Foyer, never a quiet one: it blocks arming and is reported. Alarmo read it as closed unless told otherwise.",
+      "unavailable_is_fault": "A sensor that goes unavailable is a fault in Foyer: it blocks arming and is reported, and is never read as closed.",
       "sensor_duplicate": "{entity} is listed twice in the file; it was brought in once.",
       "sensor_exists": "{entity} is already Foyer's zone “{zone}”, which was left exactly as it is.",
       "sensor_domain": "{entity} is not a kind of entity Alarmo could see open or closed, so there was no zone to make of it.",
@@ -1971,7 +1971,7 @@
       "sensor_made_always_on": "{entity} was a {type} sensor that was not always on in Alarmo. In Foyer it watches all the time, as that kind of sensor must.",
       "sensor_no_mode": "{entity} was not active in any mode its area had switched on, so Alarmo never watched it; it was not brought in.",
       "entry_delay_varies": "{entity} had a different entry delay in different modes. Foyer gives a zone one, and it took the longest: {seconds} s.",
-      "sensor_missing": "{entity} does not exist in Home Assistant right now. The zone “{zone}” was made anyway, and will show as a fault until the entity is back.",
+      "sensor_missing": "{entity} does not exist in Home Assistant right now. The zone «{zone}» was made anyway, switched off like every imported zone; once confirmed and switched on it shows as a fault until the entity is back.",
       "trigger_unavailable": "“{zone}” sounded the alarm in Alarmo when it became unavailable. In Foyer that is a fault: it blocks arming and is reported, but it does not sound.",
       "delay_on": "“{zone}” had to stay triggered {seconds} s before Alarmo acted on it. Foyer has no such wait and acts the first time; counting triggers on the zone is the nearest thing.",
       "sensor_was_disabled": "“{zone}” was switched off in Alarmo too. Confirming its trigger does not oblige you to switch it on.",
@@ -2010,14 +2010,14 @@
       "profile_created": "The response profile “{profile}” starts as a copy of your default one, plus the sirens and switches from Alarmo, and answers for the areas brought in.",
       "group_not_imported": "The group “{group}” ({n} of {members} within {seconds} s) was not made: a group needs its members switched on, and every zone brought in starts switched off. Make it on the Verification groups page once they are confirmed.",
       "setting_not_imported": "Alarmo's setting “{setting}” was not brought across; Foyer's own settings were left as they are.",
-      "unknown_field": "The file has a field this importer does not know: {field}. It was written by a newer Alarmo than the one this was checked against, and whatever that field does was not brought across.",
+      "unknown_field": "The file has a field this importer does not know: {field}. Whatever that field does was not brought across.",
       "scenario_overrides": "“{scenario}” has its own exit delay or siren time, and it now applies to the imported areas too, whatever Alarmo had. Check it on the Scenarios page."
     }
   },
   "wizard": {
     "title": "Finish setting up Foyer",
     "intro": "The integration created one area, one zone and one scenario — nothing is armed yet. Five short steps turn that into a setup that covers the whole house. You can stop at any point and carry on from the pages above.",
-    "dismiss": "Not now",
+    "dismiss": "Don't show again",
     "next": "Continue",
     "back": "Back",
     "done": "Finish",
@@ -2250,7 +2250,7 @@
     "enabled": "Enabled",
     "enabled_hint": "A disabled user's code is refused, and their history is kept.",
     "policy": "Code policy",
-    "policy_hint": "Which operations ask for a code. Areas and scenarios can ask for more, never for less.",
+    "policy_hint": "Which operations ask for a code. An area or a scenario can override this with Code required or No code; where they disagree, the one that asks wins.",
     "operation": "Operation",
     "needs_code": "Code required",
     "later_phase": "later version",
