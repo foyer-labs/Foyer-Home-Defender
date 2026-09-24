@@ -5,6 +5,30 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [0.1.0-beta.24] — what Foyer is, and what to expect
+
+The disclaimer SPEC §20.4 left open is agreed, and asked for before setup.
+The support policy is written down where people ask. The stored
+configuration keeps its schema.
+
+### Changed — read these before you update
+- **Adding the integration starts with *Before you start*:** what Foyer is
+  and is not, with a tick, *I have read this and accept it*. Nothing is set
+  up until it is ticked. The integration keeps which version of the text was
+  accepted and when, and Foyer's log records it as *Disclaimer accepted*.
+- **An installation set up before this gets a card in Settings → Repairs**
+  with the same text and tick. **The alarm keeps working until somebody ticks
+  it**; nothing is refused meanwhile.
+
+### Added
+- The same text in the Overview's help, both READMEs, the security model and
+  `SECURITY.md` (decisions 150–152).
+- `SUPPORT.md`: best effort, with no promise of an answer, a fix or a date;
+  only the latest release; a donation buys neither support nor priority. The
+  issue form asks you to confirm you have read it and troubleshooting.
+- Issues labelled `needs info` close by themselves after fourteen days
+  without an answer from their author; nothing else closes by itself.
+
 ## [0.1.0-beta.23] — the documentation
 
 The README becomes a short front page, and what it used to carry moves into
