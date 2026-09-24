@@ -794,15 +794,31 @@ class FoyerPageLog extends LitElement {
    * a no in the reader's language, not an English literal (found in review). */
   private _plainDetail(s: Strings, row: LogRow): [string, string][] {
     const skip = new Set(["changes", "zone_ids", "blocking_zones"]);
+    // A duress row's operation and target are identifiers the backend
+    // writes for templates; in the reader's language they are words, and an
+    // Italian page printed "Operazione: disarm" (review).
+    const words = (key: string, value: unknown): string | null => {
+      if (row.event_type !== "duress" || typeof value !== "string") return null;
+      const lookup =
+        key === "operation"
+          ? `operation.${value}`
+          : key === "target"
+            ? `log.duress_target.${value}`
+            : "";
+      if (!lookup) return null;
+      const said = t(s, lookup);
+      return said === lookup ? null : said;
+    };
     return Object.entries(row.detail ?? {})
       .filter(([key, value]) => !skip.has(key) && value !== null && value !== "")
       .map(([key, value]) => [
         key,
-        value === "true" || value === "false"
-          ? this._value(s, value === "true")
-          : typeof value === "object"
-            ? JSON.stringify(value)
-            : this._value(s, value),
+        words(key, value) ??
+          (value === "true" || value === "false"
+            ? this._value(s, value === "true")
+            : typeof value === "object"
+              ? JSON.stringify(value)
+              : this._value(s, value)),
       ]);
   }
 

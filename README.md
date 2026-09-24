@@ -744,7 +744,9 @@ on the log page and in an export, never on the Overview, in
 `sensor.foyer_last_event` or in an API device's log. It is also on Home
 Assistant's event bus as `foyer_event`, which is how an automation of yours can
 answer it: one that shows security events somewhere in the house should leave
-`duress` out.
+`duress` out. The bus carries only what the log writes, so switching the
+`security` category off stops that event too; the default profile's answer
+does not depend on the log.
 [Answering it](docs/notification-channels.md#answering-a-duress-code).
 
 **Whoever may start a walk test may keep the house quiet.** A walk test is

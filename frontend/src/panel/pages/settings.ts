@@ -300,7 +300,10 @@ class FoyerPageSettings extends LitElement {
                       <span class="hint">${t(s, "settings.log_days")}</span>
                     </label>`
                   : html`<span class="hint">${t(s, "settings.log_off")}</span>`}
-              </div>`;
+              </div>
+              ${!on && category === "security"
+                ? html`<p class="hint">${t(s, "settings.log_security_off")}</p>`
+                : nothing}`;
             })}
           </div>
           <p class="hint">${t(s, "settings.log_rows_hint")}</p>

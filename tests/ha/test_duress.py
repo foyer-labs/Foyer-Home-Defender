@@ -23,7 +23,7 @@ from custom_components.foyer.api.backup import backup_document
 from custom_components.foyer.const import DOMAIN
 
 from .conftest import MASTER, PANEL_ENTITY
-from .test_part2 import _advance, _state, _ws
+from .test_part2 import _IDS, _advance, _state, _ws
 from .test_phase2 import CODE, DURESS, _make_user
 from .test_services import KEYPAD, SCENARIO, _call, _rows, _save
 
@@ -487,3 +487,260 @@ async def test_a_keypad_on_the_broker_raises_it(hass, house, mqtt_mock, freezer)
     rows = await _duress_rows(hass)  # newest first
     assert [r["detail"]["operation"] for r in rows] == ["unknown_action", "disarm"]
     assert all(r["channel"] == "keypad" for r in rows)
+
+
+# --- the review of this item -------------------------------------------------------
+
+
+async def _raw(client, message: dict) -> dict:
+    """The whole answer, an error included: a refusal is part of what must
+    be the same for both codes."""
+    await client.send_json({"id": next(_IDS), **message})
+    answer = await client.receive_json()
+    answer.pop("id")
+    return answer
+
+
+@pytest.mark.parametrize(
+    ("message", "operation"),
+    [
+        ({"type": "foyer/arm"}, "arm"),
+        ({"type": "foyer/arm", "force": True}, "force_arm"),
+        (
+            {
+                "type": "foyer/auto/suspend",
+                "kind": "until",
+                "start": "not a time",
+                "until": "nor this",
+            },
+            "suspend_auto_arming",
+        ),
+    ],
+)
+async def test_a_panel_command_refused_before_the_engine_raises_it(
+    hass, house, message, operation
+):
+    """Decision 131: refused after the code was read, and before the engine
+    heard anything. The duress, the same error, and no counter moved."""
+    before = dict(hass.data[DOMAIN].state.lockouts)
+    plain = await _raw(house.client, {**message, "code": CODE})
+    assert plain["success"] is False
+    assert await _duress_rows(hass) == []
+
+    coerced = await _raw(house.client, {**message, "code": DURESS})
+
+    assert coerced == plain
+    (row,) = await _duress_rows(hass)
+    assert row["detail"] == {"operation": operation}
+    assert dict(hass.data[DOMAIN].state.lockouts) == before
+
+
+@pytest.mark.parametrize(
+    ("changes", "body", "named"),
+    [
+        (
+            {"arm_scenario_ids": ()},
+            {"action": "arm", "scenario": SCENARIO},
+            {"operation": "arm", "scenario": "SCENARIO"},
+        ),
+        (
+            {"disarm_area_ids": ()},
+            {"action": "disarm", "areas": ["AREA"]},
+            {"operation": "disarm", "areas": "AREA"},
+        ),
+        ({}, {"action": "dance"}, {"operation": "unknown_action"}),
+    ],
+)
+async def test_a_device_restriction_refused_before_the_engine_raises_it(
+    hass, house, changes, body, named
+):
+    """The device's own lists, and an action the contract does not have:
+    refused by the endpoint, named as the engine would name them."""
+    system = hass.data[DOMAIN]
+    ids = {"AREA": system.config.areas[0].id, "SCENARIO": system.config.scenarios[0].id}
+    if "areas" in body:
+        body = {**body, "areas": [ids["AREA"]]}
+    named = {k: ids.get(v, v) for k, v in named.items()}
+    _with(hass, house.device_id, **changes)
+    before = dict(system.state.lockouts)
+    plain = await _post(house, {**body, "code": CODE})
+    assert plain["success"] is False
+    assert await _duress_rows(hass) == []
+
+    coerced = await _post(house, {**body, "code": DURESS})
+
+    assert coerced == plain
+    (row,) = await _duress_rows(hass)
+    # What the request named, and nothing else it might have named; the
+    # transport's own facts (`encrypted`) ride along as on every device row.
+    targets = {"operation", "scenario", "mode", "area", "areas", "zone"}
+    assert {k: v for k, v in row["detail"].items() if k in targets} == named
+    assert dict(hass.data[DOMAIN].state.lockouts) == before
+
+
+@pytest.mark.parametrize(
+    ("message", "operation"),
+    [
+        ({"type": "foyer/privacy/erase", "user_id": "nobody"}, "erase_person"),
+        ({"type": "foyer/alarmo/apply", "fingerprint": "none"}, "import_alarmo"),
+        ({"type": "foyer/config/import"}, "import_config"),
+    ],
+)
+async def test_each_panel_command_carries_its_own_name(hass, house, message, operation):
+    """Decision 134: a command that is not `edit_config` in words is not
+    named `edit_config` either, whatever it went on to answer."""
+    if message["type"] == "foyer/config/import":
+        message = {**message, "document": backup_document(hass.data[DOMAIN].config)}
+    await _raw(house.client, {**message, "code": DURESS})
+    await hass.async_block_till_done()
+
+    assert [r["detail"]["operation"] for r in await _duress_rows(hass)] == [operation]
+
+
+@pytest.mark.parametrize(
+    ("service", "data"),
+    [("export_log", {"format": "json"}), ("export_config", {})],
+)
+async def test_each_service_carries_its_own_name(hass, house, service, data):
+    result = await _call(hass, service, code=DURESS, **data)
+
+    assert result["success"], result
+    assert [r["detail"]["operation"] for r in await _duress_rows(hass)] == [service]
+
+
+async def test_one_action_answering_it_and_the_disarm_is_filed_under_each(
+    hass, house, freezer
+):
+    """One notify ticked for `disarmed` and `duress`: two intents with one
+    id. Paired by id, both rows took one moment, and the duress's answer
+    was on the hall display, or the disarm's was hidden (review)."""
+    hass.services.async_register("notify", "tell", lambda call: None)
+    profile = (await _config(house.client))["profiles"][0]
+    profile["actions"].append(
+        {
+            "kind": "notify",
+            "moments": ["disarmed", "duress"],
+            "name": "",
+            "params": {"service": "notify.tell", "message": "{{ user }}"},
+            "conditions": [],
+            "condition_mode": "all",
+            "enabled": True,
+            "escalation_offset": None,
+        }
+    )
+    await _save(hass, house.client, "profile", profile, code=CODE)
+    system = hass.data[DOMAIN]
+    (tell,) = [
+        a.id
+        for a in system.config.profiles[0].actions
+        if {m.value for m in a.moments} == {"disarmed", "duress"}
+    ]
+    armed = await _ws(
+        house.client,
+        {
+            "type": "foyer/arm",
+            "scenario_id": system.config.scenarios[0].id,
+            "code": CODE,
+        },
+    )
+    assert armed["success"]
+    await _advance(hass, freezer, 61)
+
+    await _ws(house.client, {"type": "foyer/disarm", "code": DURESS})
+    await hass.async_block_till_done()
+
+    told = [
+        r
+        for r in await _rows(hass, category="action")
+        if r["detail"].get("action_id") == tell
+    ]
+    assert sorted(r["detail"]["moment"] for r in told) == ["disarmed", "duress"]
+    (duress,) = [r for r in told if r["detail"]["moment"] == "duress"]
+    assert duress["area_id"] is None
+    (disarmed,) = [r for r in told if r["detail"]["moment"] == "disarmed"]
+    assert disarmed["area_id"] is not None
+
+    _with(
+        hass,
+        house.device_id,
+        scopes=frozenset({"status", "log"}),
+        free_scopes=frozenset({"status", "log"}),
+        clear_text_confirmed=True,
+    )
+    response = await house.http.get(
+        "/api/foyer/device/log",
+        headers={"Authorization": f"Bearer {house.token}"},
+        params={"limit": "50"},
+    )
+    shown = [
+        r for r in (await response.json())["rows"] if r["event_type"] == "action_notify"
+    ]
+    # The disarm's answer, once: what the ordinary code would have shown.
+    (only,) = shown
+    assert only["area"] is not None
+
+
+async def test_a_broken_duress_channel_is_not_announced_at_the_request(hass, house):
+    """Two duress sends that fail over a contact's channel: counted at once,
+    "channel broken" went up on every screen seconds after the code was
+    typed, naming the contact. It is counted at the sweep (review)."""
+    from homeassistant.components.persistent_notification import (
+        DOMAIN as NOTIFICATIONS,
+    )
+
+    async def broken(call) -> None:
+        raise HomeAssistantError("token expired")
+
+    hass.services.async_register("notify", "broken", broken)
+    await _save(
+        hass,
+        house.client,
+        "contact",
+        {
+            "name": "Anna",
+            "channels": [{"id": "push", "kind": "push", "service": "notify.broken"}],
+        },
+        code=CODE,
+    )
+    contact_id = hass.data[DOMAIN].config.contacts[0].id
+    profile = (await _config(house.client))["profiles"][0]
+    profile["actions"].append(
+        {
+            "kind": "notify",
+            "moments": ["duress"],
+            "name": "",
+            "params": {
+                "message": "{{ user }}",
+                "contacts": [{"contact_id": contact_id}],
+            },
+            "conditions": [],
+            "condition_mode": "all",
+            "enabled": True,
+            "escalation_offset": None,
+        }
+    )
+    await _save(hass, house.client, "profile", profile, code=CODE)
+    system = hass.data[DOMAIN]
+    last = system.last_row
+
+    def down() -> list:
+        return [
+            n
+            for n in hass.data.get(NOTIFICATIONS, {}).values()
+            if n["notification_id"].endswith("_notification_channel_down")
+        ]
+
+    for _ in range(2):
+        await _ws(house.client, {"type": "foyer/config/export", "code": DURESS})
+        await hass.async_block_till_done()
+
+    assert system.last_row is last
+    assert down() == []
+    assert len(system._duress_sends) == 2
+
+    await system._async_channel_sweep()
+    await hass.async_block_till_done()
+
+    # Still evidence about a real send: the sweep counts it.
+    assert system._duress_sends == []
+    assert down()

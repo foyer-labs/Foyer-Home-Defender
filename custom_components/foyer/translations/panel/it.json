@@ -1590,7 +1590,8 @@
     "pseudonymise_confirm": "Dal prossimo avvio — e salvare una qualsiasi impostazione è un avvio — ogni riga più vecchia di {days} giorni perde il nome che porta, e il nome dentro il suo dettaglio. Non si torna indietro disattivando di nuovo questa opzione. Il registro non risponderà più a chi ha disinserito quelle notti.",
     "pseudonymise_yes": "Attiva",
     "defaults_armed": "Un'area è inserita: durata delle sirene, attesa della chiusura, ritardi predefiniti e timeout del walk test restano come sono finché tutte le aree non sono disinserite. La soglia della batteria si può ancora cambiare.",
-    "response_armed": "Un'area è inserita: profilo predefinito e tecnico, ciò che una zona silenziosa tace e cartella telecamere restano come sono finché tutte le aree non sono disinserite."
+    "response_armed": "Un'area è inserita: profilo predefinito e tecnico, ciò che una zona silenziosa tace e cartella telecamere restano come sono finché tutte le aree non sono disinserite.",
+    "log_security_off": "I codici sbagliati, i blocchi e i codici di coercizione non vengono più registrati, e per loro non parte nessun foyer_event: un'automazione che risponde a un codice di coercizione smette di sentirlo. Il profilo predefinito gli risponde comunque."
   },
   "action_kind": {
     "notify": "Notifica",
@@ -1738,7 +1739,7 @@
     "duress_hint": "Scatta a ogni uso di un codice di coercizione, qualunque cosa si stesse facendo. Risponde solo il profilo predefinito, e in silenzio. Mandalo a qualcuno fuori casa.",
     "duress_not_default": "Questo non è il profilo predefinito, quindi questa azione non risponde mai a un codice di coercizione.",
     "duress_persistent": "Una notifica di Home Assistant compare su ogni schermo di Home Assistant, tablet a muro compreso — dove chi ha digitato il codice di coercizione può trovarsi accanto a chi l'ha costretto. Manda invece una notifica a un contatto.",
-    "duress_silent": "{kind} è nell'elenco silenzioso, quindi non viene mai eseguito per un codice di coercizione: un suono in casa lo direbbe a chi è nella stanza."
+    "duress_silent": "Le azioni «{kind}» sono nell'elenco silenzioso, quindi non vengono mai eseguite per un codice di coercizione: un suono in casa lo direbbe a chi è nella stanza."
   },
   "camera_mode": {
     "snapshot": "Scatto",
@@ -1884,7 +1885,11 @@
     "person_keep_pseudonym": "Tieni un identificatore stabile invece di dimenticare",
     "person_keep_pseudonym_hint": "Se è disattivato, le righe perdono la persona del tutto. Se è attivato, tengono un identificatore opaco che non dice nulla di lei ma continua a legare le sue righe fra loro. Chi chiede di essere dimenticato di solito chiede la prima.",
     "person_erased": "Righe che non nominano più nessuno: {rows}.",
-    "tokens_rejected": "{count} token sbagliati rifiutati da {addresses} indirizzi con un blocco in comune"
+    "tokens_rejected": "{count} token sbagliati rifiutati da {addresses} indirizzi con un blocco in comune",
+    "duress_target": {
+      "incident": "L'allarme intrusione",
+      "technical": "L'allarme tecnico"
+    }
   },
   "language": {
     "self": "Italiano"
@@ -2138,8 +2143,7 @@
     "areas": "Aree",
     "area": "Area",
     "mode": "Modalità",
-    "target": "Destinazione",
-    "enabled": "Attivato"
+    "target": "Oggetto"
   },
   "code": {
     "title": "Codice",
@@ -2188,10 +2192,8 @@
     "test_action": "Prova reale di un'azione",
     "cancel_auto_action": "Annullamento di un'azione automatica",
     "unbypass_zone": "Reinclusione di una zona",
-    "auto_arming": "Attivazione o disattivazione delle regole automatiche",
     "suspend_auto_arming": "Sospensione delle regole automatiche",
     "lift_suspension": "Revoca di una sospensione delle regole automatiche",
-    "chime": "Attivazione o disattivazione del campanello",
     "unknown_action": "Un'azione che il dispositivo non prevede",
     "unlock": "Sblocco di un dispositivo per leggerlo",
     "export_log": "Esportazione del registro",
@@ -2200,7 +2202,12 @@
     "export_config": "Esportazione della configurazione",
     "import_config": "Ripristino della configurazione",
     "import_alarmo": "Importazione da Alarmo",
-    "simulate": "Uso del simulatore"
+    "simulate": "Uso del simulatore",
+    "end_walk_test": "Fine del walk test",
+    "auto_arming_on": "Attivazione delle regole automatiche",
+    "auto_arming_off": "Disattivazione delle regole automatiche",
+    "chime_on": "Attivazione del campanello",
+    "chime_off": "Disattivazione del campanello"
   },
   "users": {
     "title": "Utenti",

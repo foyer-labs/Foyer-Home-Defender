@@ -47,6 +47,7 @@ from custom_components.foyer.core.models import (
     Purpose,
     Reason,
     ResponseProfile,
+    SetChime,
     Suspension,
     SuspensionKind,
 )
@@ -54,6 +55,7 @@ from custom_components.foyer.core.response import PlanContext, variables
 from custom_components.foyer.core.simulate import SimulationRequest, as_dict, run
 from custom_components.foyer.core.templates import TEMPLATE_VARIABLES, render
 from custom_components.foyer.core.validation import validate
+from custom_components.foyer.store.schema import state_from_dict, state_to_dict
 from custom_components.foyer.store.seed import SEED_MOMENTS
 
 from .helpers import NOW, WINDOW, World, closed_entities, make_house, user
@@ -191,13 +193,15 @@ CASES: dict[str, tuple[Callable, Callable, str, dict[str, str]]] = {
         nothing,
         lambda w, who: w.walk_test(True, **who),
         "walk_test",
-        {"enabled": "true"},
+        {},
     ),
+    # Named for the way it went: "start a walk test" said of somebody made
+    # to end one is the wrong half (decision 134, review).
     "walk_test_end": (
         walking,
         lambda w, who: w.walk_test(False, **who),
-        "walk_test",
-        {"enabled": "false"},
+        "end_walk_test",
+        {},
     ),
     "cancel": (
         nothing,
@@ -205,11 +209,29 @@ CASES: dict[str, tuple[Callable, Callable, str, dict[str, str]]] = {
         "cancel_auto_action",
         {},
     ),
-    "auto_arming": (
+    "auto_arming_off": (
         nothing,
         lambda w, who: w.auto_arming(False, **who),
-        "auto_arming",
-        {"enabled": "false"},
+        "auto_arming_off",
+        {},
+    ),
+    "auto_arming_on": (
+        lambda w: w.auto_arming(False, **ORDINARY),
+        lambda w, who: w.auto_arming(True, **who),
+        "auto_arming_on",
+        {},
+    ),
+    "chime_off": (
+        nothing,
+        lambda w, who: w.send(SetChime(False, Actor(**who))),
+        "chime_off",
+        {},
+    ),
+    "chime_on": (
+        lambda w: w.send(SetChime(False, Actor(**ORDINARY))),
+        lambda w, who: w.send(SetChime(True, Actor(**who))),
+        "chime_on",
+        {},
     ),
     "suspend": (
         nothing,
@@ -726,3 +748,71 @@ def test_the_duress_row_and_the_actions_that_answered_it_are_not_for_a_glance():
     for moment, expected in ((Moment.DURESS, False), (Moment.DISARMED, True)):
         row = action_row(at, action_id="a", kind="notify", moment=moment, ok=False)
         assert glanceable(row) is expected
+
+
+def test_the_revert_of_what_answered_it_is_its_own_row_too():
+    """A relay pulsed to a dialer is the classic duress output. Its release,
+    30 s later, was filed under the siren cutoff: a row a glance finds, on
+    the hall display, half a minute after the coerced disarm (review)."""
+    relay = ProfileAction(
+        "relay",
+        ActionKind.SWITCH,
+        frozenset({Moment.DURESS}),
+        params={"entity_ids": ["switch.dialer"], "state": "on", "revert_after": 30},
+    )
+    world = house(answering_duress(make_house(), relay))
+    armed(world)
+    world.disarm(**DURESS)
+    (running,) = [r for r in world.state.running if r.action_id == "relay"]
+    assert running.duress
+    # And after a restart, which the relay may well be switched on across.
+    restored = state_from_dict(state_to_dict(world.state), world.config)
+    assert [r.duress for r in restored.running] == [True]
+    older = state_to_dict(world.state)
+    for item in older["running"]:
+        del item["duress"]
+    assert not state_from_dict(older, world.config).running[0].duress
+
+    later = world.advance(40)
+
+    (revert,) = [i for i in later.actions if i.action_id == "relay"]
+    assert revert.moment is Moment.DURESS
+    row = action_row(
+        later.at, action_id="relay", kind=revert.kind, moment=revert.moment, ok=False
+    )
+    assert not glanceable(row)
+
+
+def test_the_revert_of_an_ordinary_answer_stays_the_cutoff():
+    relay = ProfileAction(
+        "relay",
+        ActionKind.SWITCH,
+        frozenset({Moment.DISARMED}),
+        params={"entity_ids": ["switch.lamp"], "state": "on", "revert_after": 30},
+    )
+    world = house(answering_duress(make_house(), relay))
+    armed(world)
+    world.disarm(**ORDINARY)
+    assert not any(r.duress for r in world.state.running)
+
+    (revert,) = [i for i in world.advance(40).actions if i.action_id == "relay"]
+    assert revert.moment is Moment.SIREN_CUTOFF
+
+
+def test_one_action_answering_it_and_another_moment_is_two_intents_in_order():
+    """What the runtime pairs its action rows by: the position, because the
+    id is shared (runtime/system._action_rows)."""
+    tell = ProfileAction(
+        "tell", ActionKind.NOTIFY, frozenset({Moment.DISARMED, Moment.DURESS})
+    )
+    config = make_house()
+    default = config.profiles[0]
+    world = house(replace(config, profiles=(replace(default, actions=(tell,)),)))
+    armed(world)
+
+    decision = world.disarm(**DURESS)
+
+    assert [(i.action_id, i.moment) for i in decision.actions] == [
+        ("tell", Moment.DURESS),
+        ("tell", Moment.DISARMED),
+    ]

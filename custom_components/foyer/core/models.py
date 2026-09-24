@@ -273,11 +273,16 @@ class Purpose(StrEnum):
 
     # Letting a zone back in: its own service in §14.1, and not an exclusion.
     UNBYPASS_ZONE = "unbypass_zone"
-    # §9.4's switch and suspensions, which share Cancel's policy entry.
-    AUTO_ARMING = "auto_arming"
+    # Ending a walk test, which §8.2 calls `walk_test` like starting one.
+    END_WALK_TEST = "end_walk_test"
+    # §9.4's switch and suspensions, which share Cancel's policy entry. A
+    # switch is named for the way it went: "on or off" is half an answer.
+    AUTO_ARMING_ON = "auto_arming_on"
+    AUTO_ARMING_OFF = "auto_arming_off"
     SUSPEND_AUTO_ARMING = "suspend_auto_arming"
     LIFT_SUSPENSION = "lift_suspension"
-    CHIME = "chime"
+    CHIME_ON = "chime_on"
+    CHIME_OFF = "chime_off"
     # An action a device or a keypad sent that the contract does not have.
     UNKNOWN_ACTION = "unknown_action"
     # A code typed on an API device to read it (§9.2.2).
@@ -2144,6 +2149,9 @@ class RunningAction:
     # smoke sounder, which §5.5 says in as many words it may never do
     # (found in review).
     technical: bool = False
+    # Whether it answered `duress` (§8.1). Its revert is then one of the
+    # duress's own rows, which nothing a glance finds may show (decision 133).
+    duress: bool = False
 
 
 @dataclass(frozen=True, slots=True)

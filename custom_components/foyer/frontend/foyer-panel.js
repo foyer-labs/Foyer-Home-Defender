@@ -8838,8 +8838,14 @@ var X = 50, vn = class extends j {
 			"changes",
 			"zone_ids",
 			"blocking_zones"
-		]);
-		return Object.entries(t.detail ?? {}).filter(([e, t]) => !n.has(e) && t !== null && t !== "").map(([t, n]) => [t, n === "true" || n === "false" ? this._value(e, n === "true") : typeof n == "object" ? JSON.stringify(n) : this._value(e, n)]);
+		]), r = (n, r) => {
+			if (t.event_type !== "duress" || typeof r != "string") return null;
+			let i = n === "operation" ? `operation.${r}` : n === "target" ? `log.duress_target.${r}` : "";
+			if (!i) return null;
+			let a = N(e, i);
+			return a === i ? null : a;
+		};
+		return Object.entries(t.detail ?? {}).filter(([e, t]) => !n.has(e) && t !== null && t !== "").map(([t, n]) => [t, r(t, n) ?? (n === "true" || n === "false" ? this._value(e, n === "true") : typeof n == "object" ? JSON.stringify(n) : this._value(e, n))]);
 	}
 	static {
 		this.styles = [
@@ -9095,7 +9101,8 @@ var Sn = 30, Cn = {
                       />
                       <span class="hint">${N(e, "settings.log_days")}</span>
                     </label>` : w`<span class="hint">${N(e, "settings.log_off")}</span>`}
-              </div>`;
+              </div>
+              ${!r && t === "security" ? w`<p class="hint">${N(e, "settings.log_security_off")}</p>` : E}`;
 		})}
           </div>
           <p class="hint">${N(e, "settings.log_rows_hint")}</p>

@@ -276,11 +276,13 @@ def _action_rows(decision: Decision, results: list[ActionResult]) -> tuple[LogRo
             occurrence.moment,
             (occurrence.area_id, occurrence.zone_id, occurrence.incident_id),
         )
-    by_id = {intent.action_id: intent for intent in decision.actions}
     rows = []
-    for result in results:
-        intent = by_id.get(result.action_id)
-        moment = intent.moment if intent is not None else None
+    # By position, as the executor answers: one profile action ticked for
+    # two moments is two intents with one id, and paired by id both results
+    # took the last one's moment — a `duress` answer filed as the disarm's,
+    # where a glance finds it, or the disarm's filed as the duress's.
+    for intent, result in zip(decision.actions, results, strict=True):
+        moment = intent.moment
         area_id, zone_id, incident_id = context.get(moment, (None, None, None))
         rows.append(
             action_row(
@@ -290,7 +292,7 @@ def _action_rows(decision: Decision, results: list[ActionResult]) -> tuple[LogRo
                 moment=moment,
                 ok=result.ok,
                 error=result.error,
-                profile_id=intent.profile_id if intent is not None else None,
+                profile_id=intent.profile_id,
                 area_id=area_id,
                 zone_id=zone_id,
                 incident_id=incident_id,
@@ -352,6 +354,11 @@ class FoyerSystem:
         # wherever it ran (§12.2, _async_execute). They travel with the next
         # report of a real send, or with the next channel sweep.
         self._held_sends: list[dict[str, bool]] = []
+        # What the answers to `duress` sent, kept for the channel sweep alone
+        # (_async_execute): a channel judged broken on them is announced on
+        # every screen, and seconds after the coerced request it would say
+        # so on the tablet it was made at (decision 133).
+        self._duress_sends: list[dict[str, bool]] = []
         # True while one call holds the turn to decide: its synchronous half
         # is running, or it has just handed the turn to the first call in
         # the queue. A call that arrives meanwhile waits in the queue, in
@@ -684,7 +691,11 @@ class FoyerSystem:
         # its own sends are held in turn: what a warning's send sets off
         # never feeds itself, and moves no faster than the house's own real
         # sends and this sweep.
-        reports = _send_reports(self._held_sends)
+        # What answered `duress` goes first, and only here: it is older than
+        # anything held since the last report or sweep, if not always older
+        # than every real send reported in between.
+        reports = _send_reports([*self._duress_sends, *self._held_sends])
+        self._duress_sends = []
         self._held_sends = []
         if present or reports:
             await self.async_handle(
@@ -898,17 +909,29 @@ class FoyerSystem:
         turn, through the whole address book. Held, not dropped, because
         each is evidence about a real send. No default, so no caller can
         forget to say.
+
+        What answered `duress` waits for the channel sweep instead, not for
+        the next report: counted at once, two failed duress sends — a code
+        the panel keeps for two minutes, an arming and a disarm — raised
+        "channel broken" on every screen seconds after the request, naming
+        the contact the alert was for (decision 133).
         """
         results = await self._executor.async_run(decision)
         self.async_record(_action_rows(decision, results))
         sends: dict[str, bool] = {}
         held: dict[str, bool] = {}
+        duress: dict[str, bool] = {}
         # By position: the executor answers in the Decision's order, one
         # result per intent, and one profile action answering two moments in
         # one decision is two intents with one id.
         for intent, result in zip(decision.actions, results, strict=False):
+            if intent.moment is Moment.DURESS:
+                duress.update(result.sends)
+                continue
             answers = not report or intent.moment in _CHANNEL_MOMENTS
             (held if answers else sends).update(result.sends)
+        if duress:
+            self._duress_sends.append(duress)
         await self._async_report_sends(sends, held)
 
     async def _async_report_sends(

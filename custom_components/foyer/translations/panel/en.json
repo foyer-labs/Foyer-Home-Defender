@@ -1590,7 +1590,8 @@
     "pseudonymise_confirm": "From the next start — and saving any setting is a start — every row older than {days} days loses the name on it, and the name inside its detail. It cannot be undone by switching this off again. The log will no longer answer who disarmed on those nights.",
     "pseudonymise_yes": "Switch it on",
     "defaults_armed": "An area is armed: the siren time, how long arming waits for a zone to close, the default delays and the walk test timeout keep their values until every area is disarmed. The battery threshold can still be changed.",
-    "response_armed": "An area is armed: the default and technical profiles, what a silent zone keeps quiet and the camera folder keep their values until every area is disarmed."
+    "response_armed": "An area is armed: the default and technical profiles, what a silent zone keeps quiet and the camera folder keep their values until every area is disarmed.",
+    "log_security_off": "Wrong codes, lockouts and duress codes are no longer recorded, and no foyer_event is sent for them: an automation answering a duress code stops hearing it. The default profile still answers it."
   },
   "action_kind": {
     "notify": "Notification",
@@ -1884,7 +1885,11 @@
     "person_keep_pseudonym": "Keep a stable identifier instead of forgetting",
     "person_keep_pseudonym_hint": "Off, the rows lose the person entirely. On, they keep an opaque identifier that says nothing about them but still links their rows to each other. Somebody asking to be forgotten is usually asking for the first.",
     "person_erased": "Rows that no longer name anybody: {rows}.",
-    "tokens_rejected": "{count} wrong tokens refused from {addresses} addresses sharing one lockout"
+    "tokens_rejected": "{count} wrong tokens refused from {addresses} addresses sharing one lockout",
+    "duress_target": {
+      "incident": "The intrusion alarm",
+      "technical": "The technical alarm"
+    }
   },
   "language": {
     "self": "English"
@@ -2138,8 +2143,7 @@
     "areas": "Areas",
     "area": "Area",
     "mode": "Mode",
-    "target": "Target",
-    "enabled": "Switched on"
+    "target": "Target"
   },
   "code": {
     "title": "Code",
@@ -2188,10 +2192,8 @@
     "test_action": "Run a real action test",
     "cancel_auto_action": "Cancel an automatic action",
     "unbypass_zone": "Include a zone again",
-    "auto_arming": "Switch automatic rules on or off",
     "suspend_auto_arming": "Suspend automatic rules",
     "lift_suspension": "Lift a suspension of automatic rules",
-    "chime": "Switch the chime on or off",
     "unknown_action": "An action the device does not have",
     "unlock": "Unlock a device to read it",
     "export_log": "Export the log",
@@ -2200,7 +2202,12 @@
     "export_config": "Export the configuration",
     "import_config": "Restore the configuration",
     "import_alarmo": "Import from Alarmo",
-    "simulate": "Run the simulator"
+    "simulate": "Run the simulator",
+    "end_walk_test": "End a walk test",
+    "auto_arming_on": "Switch automatic rules on",
+    "auto_arming_off": "Switch automatic rules off",
+    "chime_on": "Switch the chime on",
+    "chime_off": "Switch the chime off"
   },
   "users": {
     "title": "Users",

@@ -558,10 +558,6 @@ def _reject(reason: Reason, blocking: tuple[str, ...] = ()) -> _Outcome:
     return _Outcome(accepted=False, reason=reason, blocking=blocking)
 
 
-def _flag(value: bool) -> str:
-    return "true" if value else "false"
-
-
 class _Run:
     """Working state for one decide() call. Mutable locals, pure overall."""
 
@@ -1293,14 +1289,17 @@ class _Run:
             operation = Operation.ACKNOWLEDGE
             technical = isinstance(event, AcknowledgeTechnical)
             named = {"target": "technical" if technical else "incident"}
+        # Which way a switch went is the operation, not a detail beside it:
+        # the message and the log read only the operation, and "start a walk
+        # test" said of somebody made to end one is the wrong half.
         elif isinstance(event, WalkTestRequest):
-            operation = Operation.WALK_TEST
-            named = {"enabled": _flag(event.enable)}
+            operation = Operation.WALK_TEST if event.enable else Purpose.END_WALK_TEST
         elif isinstance(event, CancelAutoAction):
             operation = Operation.CANCEL_AUTO_ACTION
         elif isinstance(event, SetAutoArming):
-            operation = Purpose.AUTO_ARMING
-            named = {"enabled": _flag(event.enabled)}
+            operation = (
+                Purpose.AUTO_ARMING_ON if event.enabled else Purpose.AUTO_ARMING_OFF
+            )
         elif isinstance(event, SetSuspension):
             operation = (
                 Purpose.LIFT_SUSPENSION
@@ -1308,8 +1307,7 @@ class _Run:
                 else Purpose.SUSPEND_AUTO_ARMING
             )
         elif isinstance(event, SetChime):
-            operation = Purpose.CHIME
-            named = {"enabled": _flag(event.enabled)}
+            operation = Purpose.CHIME_ON if event.enabled else Purpose.CHIME_OFF
         elif isinstance(event, CodeAttempt):
             operation = event.purpose or (event.operation or "")
         elif isinstance(event, DuressNotice):
@@ -1748,7 +1746,12 @@ class _Run:
         """Switch off what an action switched on, when its time is up (§6.2)."""
         done = [r for r in self.running if r.until is not None and r.until <= self.now]
         for running in done:
-            self.extra.append(revert_intent(running, Moment.SIREN_CUTOFF))
+            # Filed under what started it when that was `duress`: its tail
+            # is one of its rows, and a revert filed under the cutoff put a
+            # dialer relay's release on the hall display 30 s after the
+            # coerced disarm (decision 133).
+            moment = Moment.DURESS if running.duress else Moment.SIREN_CUTOFF
+            self.extra.append(revert_intent(running, moment))
         self.running = list(without(self.running, done))
         self.forget_started(done)
 

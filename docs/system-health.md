@@ -95,6 +95,13 @@ Held, they are still counted — a second channel failing is still found — but
 the chain never feeds itself: each step waits for something the house sends
 for its own reasons, or for a sweep.
 
+What answers a duress code waits for the sweep alone, not for the next real
+send. A channel it finds broken is announced like any other, on the screens a
+glance reaches, and counted at once that announcement could come seconds after
+the code was typed, on the tablet it was typed at, naming the contact the
+alert was for. At the sweep it is still counted, up to a quarter of an hour
+later.
+
 **Who is told is yours to configure.** `notification_channel_down` and
 `notification_channel_restored` are ordinary moments: attach them to a
 response profile on page 5 and name the contacts. Without that, the fact is

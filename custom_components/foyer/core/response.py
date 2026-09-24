@@ -963,7 +963,13 @@ def run_sequence(
             plan.started.append(action.id)
         if action.kind.value in REVERTIBLE:
             running = _running(
-                action, params, area_id, incident_id, ctx.now, technical=technical
+                action,
+                params,
+                area_id,
+                incident_id,
+                ctx.now,
+                technical=technical,
+                duress=moment is Moment.DURESS,
             )
             if running is not None:
                 plan.running.append(running)
@@ -978,6 +984,7 @@ def _running(
     now: datetime,
     *,
     technical: bool = False,
+    duress: bool = False,
 ) -> RunningAction | None:
     targets = entity_ids(params)
     if not targets:
@@ -993,6 +1000,7 @@ def _running(
             area_id=area_id,
             incident_id=incident_id,
             technical=technical,
+            duress=duress,
         )
     revert_after = params.get("revert_after")
     if not revert_after:
@@ -1006,6 +1014,7 @@ def _running(
         area_id=area_id,
         incident_id=incident_id,
         technical=technical,
+        duress=duress,
     )
 
 

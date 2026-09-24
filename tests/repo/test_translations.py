@@ -270,7 +270,7 @@ def test_every_name_a_duress_row_can_carry_is_translated():
         words = load(TRANSLATIONS / "panel", language)["operation"]
         assert not names - words.keys(), (language, names - words.keys())
     detail = load(TRANSLATIONS / "panel", "en")["detail"]
-    assert {"operation", "areas", "area", "mode", "target", "enabled"} <= detail.keys()
+    assert {"operation", "areas", "area", "mode", "target"} <= detail.keys()
 
 
 def test_every_notification_the_seed_can_send_is_translated():

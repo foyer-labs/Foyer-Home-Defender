@@ -798,7 +798,9 @@ riga sta nella pagina del registro e in un'esportazione, mai nella Panoramica,
 in `sensor.foyer_last_event` o nel registro di un dispositivo API. Arriva anche
 sul bus degli eventi di Home Assistant come `foyer_event`, ed è così che una
 tua automazione può risponderle: una che mostra gli eventi di sicurezza da
-qualche parte in casa deve lasciare fuori `duress`.
+qualche parte in casa deve lasciare fuori `duress`. Il bus porta solo quello
+che il registro scrive, quindi disattivare la categoria `security` ferma anche
+quell'evento; la risposta del profilo predefinito non dipende dal registro.
 [Come rispondere](docs/notification-channels.md#answering-a-duress-code) (in
 inglese).
 

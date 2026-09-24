@@ -1236,6 +1236,9 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
                 # came back from a restart as an intrusion one, and the next
                 # disarm of its area switched it off (found in review).
                 "technical": r.technical,
+                # And whether it answered `duress`: its revert after a
+                # restart is still one of the duress's rows (decision 133).
+                "duress": r.duress,
             }
             for r in state.running
         ],
@@ -1612,6 +1615,7 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
                     area_id=r.get("area_id"),
                     incident_id=r.get("incident_id"),
                     technical=r.get("technical") is True,
+                    duress=r.get("duress") is True,
                 )
                 for r in data.get("running", ())
             ),
