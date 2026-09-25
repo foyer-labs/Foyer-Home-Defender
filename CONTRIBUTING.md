@@ -6,7 +6,7 @@ Python at all — exactly how to add a language.
 
 ## Before you start
 
-Foyer is a beta, and the personal, non-commercial project of one person.
+Foyer is the personal, non-commercial project of one person.
 Issues and pull requests are looked at on a best-effort basis, with no promise
 of an answer, a review or a merge: some of it takes a while, and some of it
 does not happen. A pull request is merged at the maintainer's discretion. For

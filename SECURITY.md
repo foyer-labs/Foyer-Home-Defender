@@ -93,7 +93,7 @@ claim can be "it does what you configured", which is a different promise from
 
 ## Supported versions
 
-This is a beta with one author. **The latest release is the supported one**; a
+Foyer has one author. **The latest release is the supported one**; a
 fix goes into the next release rather than backwards into older tags. The
 [changelog](CHANGELOG.md) says what changed in behaviour, because "fixes" is
 not much of an answer when you are deciding whether to update the thing that

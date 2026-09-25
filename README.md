@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=version" alt="Latest version"></a>
-  <img src="https://img.shields.io/badge/status-release%20candidate-yellow" alt="Release candidate">
+  <img src="https://img.shields.io/badge/status-stable-brightgreen" alt="Stable">
   <img src="https://img.shields.io/badge/Home%20Assistant-2026.6%2B-41BDF5" alt="Home Assistant 2026.6 or later">
   <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5" alt="HACS custom repository">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-blue" alt="Apache-2.0"></a>
@@ -162,8 +162,9 @@ alarm system. [The security model](docs/security-model.md) says the rest.
 
 ## Status
 
-Release candidate for 1.0: it becomes 1.0.0 once people other than its
-author have used it for some weeks without a serious problem. Foyer is the
+1.0.0 is the first stable release. From here on, a change that would break
+the services, the device and MQTT contracts (v1) or the stored configuration
+comes only in a new major version, and the changelog says so first. Foyer is the
 personal, non-commercial project of one person, published
 as Foyer Labs; there is no company behind it. Every release is an ordinary
 GitHub release that HACS offers by version. The stored configuration carries a schema

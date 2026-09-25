@@ -5,6 +5,18 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [1.0.0] — the first stable release
+
+The same alarm as 1.0.0-rc.2: nothing changes in how it behaves. What
+changes is the promise. From 1.0.0 on, the services, the device endpoint and
+MQTT contracts (v1) and the stored configuration stay compatible within 1.x;
+a change that would break any of them comes only in a new major version, and
+this changelog says so first.
+
+### Changed
+- The manifest names the integration's owner (`codeowners`), which HACS
+  requires before an integration joins its default list.
+
 ## [1.0.0-rc.2] — every document in Italian, and an icon
 
 No change in how the alarm behaves. The configuration, the services and the

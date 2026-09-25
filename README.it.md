@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/releases"><img src="https://img.shields.io/github/v/release/foyer-labs/Foyer-Home-Defender?sort=semver&include_prereleases&label=versione" alt="Ultima versione"></a>
-  <img src="https://img.shields.io/badge/stato-release%20candidate-yellow" alt="Release candidate">
+  <img src="https://img.shields.io/badge/stato-stabile-brightgreen" alt="Stabile">
   <img src="https://img.shields.io/badge/Home%20Assistant-2026.6%2B-41BDF5" alt="Home Assistant 2026.6 o successivo">
   <img src="https://img.shields.io/badge/HACS-repository%20personalizzato-41BDF5" alt="Repository personalizzato HACS">
   <a href="https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/LICENSE"><img src="https://img.shields.io/badge/licenza-Apache--2.0-blue" alt="Apache-2.0"></a>
@@ -171,8 +171,10 @@ il resto.
 
 ## Stato
 
-Release candidate della 1.0: diventa 1.0.0 dopo qualche settimana d'uso
-da parte di persone diverse dal suo autore senza problemi gravi. Foyer è il
+La 1.0.0 è la prima versione stabile. Da qui in avanti, una modifica che
+romperebbe i servizi, i contratti dei dispositivi e MQTT (v1) o la
+configurazione salvata arriva solo con una nuova versione principale, e il
+changelog lo dice prima. Foyer è il
 progetto personale e non commerciale di una persona,
 pubblicato come Foyer Labs; non c'è una società dietro. Ogni versione è una
 release GitHub ordinaria che HACS propone per numero di versione. La configurazione salvata
