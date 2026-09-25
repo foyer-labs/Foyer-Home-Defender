@@ -195,6 +195,10 @@ def test_faults_are_held_back_while_settling_and_announced_at_startup():
     world.set(WINDOW, "off")  # an unrelated entity arrives: still quiet
     world.settling = False
     decision = world.send(Startup())
+    # Not at the start itself: the startup grace holds it back (decision
+    # 165), and announces it when the grace ends if it is still there.
+    assert Moment.ZONE_FAULT not in decision.moments
+    decision = world.advance(world.config.health.startup_grace)
     assert Moment.ZONE_FAULT in decision.moments
 
 

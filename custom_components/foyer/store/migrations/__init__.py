@@ -598,6 +598,13 @@ def _v8_4_to_v8_5(data: Document) -> Document:
     return out
 
 
+def _v8_5_to_v8_6(data: Document) -> Document:
+    """A startup grace for zone faults (decision 165), at its default."""
+    out = copy.deepcopy(data)
+    out.setdefault("health", {}).setdefault("startup_grace", 120)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -633,6 +640,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (8, 2): (_v8_2_to_v8_3, (8, 3)),
     (8, 3): (_v8_3_to_v8_4, (8, 4)),
     (8, 4): (_v8_4_to_v8_5, (8, 5)),
+    (8, 5): (_v8_5_to_v8_6, (8, 6)),
 }
 
 

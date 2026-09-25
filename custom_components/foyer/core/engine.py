@@ -253,6 +253,10 @@ def decide(
         )
         run.restarted = True
         run.gap_since = event.down_since
+        # Entities come back a little after Home Assistant says it has
+        # started: hold their faults back from being news for a while.
+        grace = config.health.startup_grace
+        run.fault_grace_until = now + timedelta(seconds=grace) if grace else None
         run.occur(
             Moment.HA_RESTARTED,
             detail={
@@ -456,6 +460,9 @@ def next_wakeup(
         if due is not None and due > now:
             # Strictly after the window, matching supervision_lapsed().
             dues.append(due + timedelta(microseconds=1))
+    if state.fault_grace_until is not None and state.fault_grace_until > now:
+        # The end of the startup grace: what it held back is announced then.
+        dues.append(state.fault_grace_until)
     health = config.health
     quiet = state.health.mains_quiet_since
     if (
@@ -604,6 +611,8 @@ class _Run:
         )
         self.faults = frozenset(state.faults & zone_ids)
         self.low_batteries = frozenset(state.low_batteries & zone_ids)
+        self.fault_grace_until = state.fault_grace_until
+        self.unannounced_faults = set(state.unannounced_faults & zone_ids)
         self.entities: dict[str, EntityState] = dict(snapshot.entities)
         self.timezone = snapshot.timezone
         self.occurrences: list[Occurrence] = []
@@ -1893,21 +1902,42 @@ class _Run:
                 )
 
     def reconcile_faults(self) -> None:
-        """Announce each new fault once (INV-4); forget faults that cleared."""
+        """Announce each new fault once (INV-4); forget faults that cleared.
+
+        Right after a start a fault is held back from being announced until
+        the grace ends (decision 165): it is in ``faults`` at once, so it
+        blocks arming and shows as a fault, but its ``zone_fault`` waits, and
+        a zone that answers again in time never has one. Whatever is still
+        faulted when the grace ends is announced then.
+        """
         current: dict[str, str] = {}
         for zone in self.config.zones:
             if zone.enabled and (cause := self.fault(zone)) is not None:
                 current[zone.id] = cause
-        for zone_id, cause in current.items():
-            if zone_id not in self.faults:
-                zone = self.config.zone(zone_id)
-                assert zone is not None
-                self.occur(
-                    Moment.ZONE_FAULT,
-                    area_id=zone.area_id,
-                    zone_id=zone_id,
-                    detail={"cause": cause},
-                )
+        grace = self.fault_grace_until
+        in_grace = grace is not None and self.now < grace
+        announce = [z for z in current if z not in self.faults]
+        if in_grace:
+            self.unannounced_faults.update(announce)
+            announce = []
+        else:
+            # The grace is over: what it held back and is still faulted is
+            # news now, in the order of the configuration like any other.
+            announce = [
+                z for z in current if z in self.unannounced_faults or z in announce
+            ]
+            self.unannounced_faults.clear()
+            self.fault_grace_until = None
+        self.unannounced_faults &= current.keys()
+        for zone_id in announce:
+            zone = self.config.zone(zone_id)
+            assert zone is not None
+            self.occur(
+                Moment.ZONE_FAULT,
+                area_id=zone.area_id,
+                zone_id=zone_id,
+                detail={"cause": current[zone_id]},
+            )
         self.faults = frozenset(current)
 
     def reconcile_batteries(self) -> None:
@@ -4302,6 +4332,8 @@ class _Run:
             in_clear=frozenset(self.in_clear),
             faults=self.faults,
             low_batteries=self.low_batteries,
+            fault_grace_until=self.fault_grace_until,
+            unannounced_faults=frozenset(self.unannounced_faults),
             technical=self.technical,
             incident=self.incident,
             incident_seq=self.incident_seq,

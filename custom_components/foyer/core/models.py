@@ -635,6 +635,13 @@ MAINS_MODES: tuple[str, ...] = (MAINS_SENSOR, MAINS_OUTSIDE_UPS)
 DEFAULT_MAINS_OUTSIDE_DELAY = 120
 MIN_MAINS_OUTSIDE_DELAY = 30
 MAX_MAINS_OUTSIDE_DELAY = 3600
+# How long after Home Assistant starts a zone that is not answering yet is
+# held back from being announced (decision 165). Zigbee2MQTT and friends
+# bring their entities back a little after Home Assistant says it has
+# started; a fault still there when this runs out is announced as ever.
+DEFAULT_STARTUP_GRACE = 120
+MIN_STARTUP_GRACE = 0
+MAX_STARTUP_GRACE = 900
 
 # System health (§12). Every number here was chosen rather than inherited,
 # and the reasoning is in docs/system-health.md.
@@ -1420,6 +1427,7 @@ class HealthSettings:
     mains_mode: str = MAINS_SENSOR
     mains_outside_entity_ids: tuple[str, ...] = ()
     mains_outside_delay: int = DEFAULT_MAINS_OUTSIDE_DELAY
+    startup_grace: int = DEFAULT_STARTUP_GRACE
     watchdog: WatchdogSettings = field(default_factory=WatchdogSettings)
     radios: tuple[Radio, ...] = ()
     rf_zones: int = DEFAULT_RF_ZONES
@@ -2550,6 +2558,12 @@ class RuntimeState:
     # state, read with a default: an older file restores as "none known yet",
     # and the first reconcile after the restart announces what is low.
     low_batteries: frozenset[str] = frozenset()
+    # After a start, until when a zone that is not answering is a fault but
+    # not yet news (decision 165), and the zones held back that way. A fault
+    # held back still blocks arming and still shows everywhere a fault shows;
+    # only the zone_fault moment waits, and a zone back in time never has one.
+    fault_grace_until: datetime | None = None
+    unannounced_faults: frozenset[str] = frozenset()
     technical: Mapping[str, TechnicalAlarm] = field(default_factory=dict)
     incident: Incident | None = None
     incident_seq: int = 0

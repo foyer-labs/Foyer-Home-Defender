@@ -56,9 +56,11 @@ async def test_an_arming_by_an_automation_is_said_in_words(
     ]
 
 
-async def test_a_fault_says_its_cause_in_words(hass, loaded, hass_ws_client):
+async def test_a_fault_says_its_cause_in_words(hass, loaded, hass_ws_client, freezer):
     client = await hass_ws_client(hass)
     calls = await _notify_on(hass, client, "zone_fault")
+    # Past the startup grace, when a fault is announced at once (decision 165).
+    await _advance(hass, freezer, 121)
 
     hass.states.async_set(ZONE, "unavailable")
     await hass.async_block_till_done()

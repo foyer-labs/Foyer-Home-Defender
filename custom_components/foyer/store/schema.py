@@ -21,6 +21,7 @@ from ..core.models import (
     DEFAULT_RF_CONFIRM,
     DEFAULT_RF_WINDOW,
     DEFAULT_RF_ZONES,
+    DEFAULT_STARTUP_GRACE,
     DEFAULT_UNLOCK_SECONDS,
     DEFAULT_WATCHDOG_FAILURES,
     DEFAULT_WATCHDOG_INTERVAL,
@@ -221,8 +222,10 @@ from ..core.models import (
 # 8.5 is additive: a disarm rule may name every area (decision 163). An 8.4
 # build reading it finds the rule's list empty and refuses to act on it,
 # which disarms less, never more.
+# 8.6 is additive: a startup grace for zone faults (decision 165). An 8.5
+# build ignores it and announces every fault at a start, as it always did.
 STORAGE_VERSION = 8
-STORAGE_MINOR_VERSION = 5
+STORAGE_MINOR_VERSION = 6
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -303,6 +306,7 @@ def health_from_dict(h: dict[str, Any]) -> HealthSettings:
         mains_outside_delay=int(
             h.get("mains_outside_delay", DEFAULT_MAINS_OUTSIDE_DELAY)
         ),
+        startup_grace=int(h.get("startup_grace", DEFAULT_STARTUP_GRACE)),
         watchdog=WatchdogSettings(
             enabled=bool(w.get("enabled", False)),
             url=str(w.get("url", "")),
@@ -328,6 +332,7 @@ def health_to_dict(h: HealthSettings) -> dict[str, Any]:
         "mains_mode": h.mains_mode,
         "mains_outside_entity_ids": list(h.mains_outside_entity_ids),
         "mains_outside_delay": h.mains_outside_delay,
+        "startup_grace": h.startup_grace,
         "watchdog": {
             "enabled": h.watchdog.enabled,
             "url": h.watchdog.url,
@@ -1218,6 +1223,8 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
         # notification each time (found in review). The latch exists exactly
         # so that it is said once, on the way down.
         "low_batteries": sorted(state.low_batteries),
+        "fault_grace_until": _iso(state.fault_grace_until),
+        "unannounced_faults": sorted(state.unannounced_faults),
         "technical": {
             zone_id: {
                 "since": alarm.since.isoformat(),
@@ -1589,6 +1596,10 @@ def state_from_dict(data: dict[str, Any], config: FoyerConfig) -> RuntimeState:
             # here: a zone that has gone is not a battery anybody can replace.
             low_batteries=frozenset(
                 z for z in data.get("low_batteries", ()) if z in zone_ids
+            ),
+            fault_grace_until=_dt(data.get("fault_grace_until")),
+            unannounced_faults=frozenset(
+                z for z in data.get("unannounced_faults", ()) if z in zone_ids
             ),
             technical={
                 zone_id: TechnicalAlarm(

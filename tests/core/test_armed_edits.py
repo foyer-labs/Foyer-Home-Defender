@@ -292,6 +292,7 @@ FREE_CHANGES = {
         mains_outside_entity_ids=("switch.fridge_plug",)
     ),
     "health.mains_outside_delay": _health(mains_outside_delay=300),
+    "health.startup_grace": _health(startup_grace=60),
     "health.watchdog": _health(
         watchdog=replace(HealthSettings().watchdog, payload=True, interval=600)
     ),

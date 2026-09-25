@@ -51,6 +51,7 @@ from ..core.models import (
     MAX_RF_ZONES,
     MAX_RULE_MINUTES,
     MAX_SIREN_DURATION,
+    MAX_STARTUP_GRACE,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_VERIFICATION_WINDOW,
@@ -68,6 +69,7 @@ from ..core.models import (
     MIN_RF_CONFIRM,
     MIN_RF_WINDOW,
     MIN_RF_ZONES,
+    MIN_STARTUP_GRACE,
     MIN_SUPERVISION_TIMEOUT,
     MIN_VERIFICATION_WINDOW,
     MIN_WALK_TEST_TIMEOUT,
@@ -799,6 +801,7 @@ def _meta() -> dict[str, Any]:
             "rf_window": [MIN_RF_WINDOW, MAX_RF_WINDOW],
             "rf_confirm": [MIN_RF_CONFIRM, MAX_RF_CONFIRM],
             "mains_outside_delay": [MIN_MAINS_OUTSIDE_DELAY, MAX_MAINS_OUTSIDE_DELAY],
+            "startup_grace": [MIN_STARTUP_GRACE, MAX_STARTUP_GRACE],
         },
         # What page 5 needs to build an action editor without knowing the
         # engine: the catalogue, where each kind may point, and the moments.

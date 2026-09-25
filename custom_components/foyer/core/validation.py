@@ -40,6 +40,7 @@ from .models import (
     MAX_RF_ZONES,
     MAX_RULE_MINUTES,
     MAX_SIREN_DURATION,
+    MAX_STARTUP_GRACE,
     MAX_SUPERVISION_TIMEOUT,
     MAX_TRIGGER_COUNT,
     MAX_UNLOCK_SECONDS,
@@ -60,6 +61,7 @@ from .models import (
     MIN_RF_CONFIRM,
     MIN_RF_WINDOW,
     MIN_RF_ZONES,
+    MIN_STARTUP_GRACE,
     MIN_SUPERVISION_TIMEOUT,
     MIN_UNLOCK_SECONDS,
     MIN_VERIFICATION_WINDOW,
@@ -212,6 +214,7 @@ FREE_WHILE_ARMED: tuple[str, ...] = (
     "health.mains_mode",
     "health.mains_outside_entity_ids",
     "health.mains_outside_delay",
+    "health.startup_grace",
     "health.watchdog",
     "health.channel_sweep",
     "health.channel_failures",
@@ -1167,6 +1170,8 @@ def _health_problems(config: FoyerConfig) -> list[Problem]:
         health.mains_outside_delay, MIN_MAINS_OUTSIDE_DELAY, MAX_MAINS_OUTSIDE_DELAY
     ):
         add("health_out_of_range", "mains_outside_delay")
+    if not _in_range(health.startup_grace, MIN_STARTUP_GRACE, MAX_STARTUP_GRACE):
+        add("health_out_of_range", "startup_grace")
 
     watchdog = health.watchdog
     if watchdog.enabled and not watchdog_url_valid(watchdog.url):
