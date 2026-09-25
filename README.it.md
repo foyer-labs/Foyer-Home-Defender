@@ -51,9 +51,10 @@ partire niente.
   persona, un codice di coercizione che funziona come quello normale e fa
   scattare un allarme silenzioso, il blocco dopo codici sbagliati ripetuti, e
   un registro che dice chi ha fatto cosa. [Modello di sicurezza](docs/security-model.it.md)
-- **Tastierini, tag e dispositivi tuoi.** Tastierini Ring e Zigbee, tag NFC e
-  telecomandi, tramite servizi, MQTT o l'endpoint HTTP di Foyer, con un rifiuto
-  che dice quale zona è aperta. [Tastierini](docs/keypads.md) (in inglese)
+- **Tastierini, tag e telecomandi.** Tastierini Ring e Zigbee, tag NFC e
+  telecomandi, con un rifiuto che dice quale zona è aperta — e dispositivi che
+  costruisci tu, [più sotto](#costruisci-i-tuoi-dispositivi).
+  [Tastierini](docs/keypads.md) (in inglese)
 - **Fumo, gas e acqua su un canale separato.** Attivo che la casa sia inserita
   o no, e mai annunciato come un'effrazione. [Zone](docs/zones.it.md#il-canale-tecnico)
 - **Una casa che si inserisce da sola quando escono tutti**, dopo un conto
@@ -78,6 +79,39 @@ partire niente.
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-it.png" alt="La card nelle disposizioni completa e compatta durante il ritardo d'ingresso: ogni area con il suo stato, il conto alla rovescia, e il tastierino che si apre da solo perché per disinserire serve un codice" width="420">
 </p>
+
+## Costruisci i tuoi dispositivi
+
+Foyer non parla con tastierini particolari: offre un contratto, e qualunque
+cosa lo rispetti può entrare in casa. Una lampada accanto alla porta che si
+accende quando la casa è inserita, un display nell'ingresso che elenca le
+finestre aperte dopo che hai digitato un codice, un tastierino costruito su un
+ESP32 o un Arduino: l'hardware è tuo, e anche l'idea.
+
+- **Tre strade.** Una chiamata di servizio di Home Assistant (`foyer.arm`,
+  `foyer.disarm`, …), un topic MQTT, o l'endpoint HTTP di Foyer, con un flusso
+  che avvisa il dispositivo nell'istante in cui la casa si inserisce.
+- **Prima dichiarato, poi solo ciò che concedi.** Un dispositivo si dichiara
+  in *Dispositivi di inserimento* prima di poter comandare qualcosa.
+  Sull'endpoint ha un token tutto suo e dei permessi — leggere lo stato, le
+  zone, le batterie, lo stato del sistema, il registro; inserire, disinserire,
+  escludere, prendere atto — ognuno spento finché non lo accendi.
+- **Leggere può essere libero; agire mai.** Ogni inserimento e disinserimento
+  dall'endpoint chiede il codice di una persona, verificato da Foyer, e un
+  dispositivo non va mai oltre i suoi permessi, qualunque cosa quella persona
+  possa fare.
+- **Il contratto è scritto**, alla versione v1: un documento OpenAPI e uno
+  AsyncAPI, confrontati con il codice da un test a ogni modifica, e una pagina
+  *API* nel pannello dove un amministratore lo prova sulla casa vera.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-api-device-it.png" alt="Un dispositivo sull'endpoint e cosa può leggere e fare: lo stato leggibile senza codice, zone, batterie e registro solo dopo un codice, inserire e disinserire concessi, escludere zone e prendere atto no" width="760">
+</p>
+
+[Tastierini e dispositivi API](docs/keypads.md#api-devices-displays-relays-and-modules-of-your-own)
+(in inglese) spiega i permessi, lo sblocco e le richieste con esempi;
+[il contratto HTTP](docs/api/openapi.yaml) e [il contratto MQTT](docs/api/asyncapi.yaml)
+sono il riferimento.
 
 ## Prima di installare
 
@@ -132,6 +166,7 @@ il resto.
 | [Canali di notifica](docs/notification-channels.md) | Ricette, dall'app Companion a un modem GSM (in inglese) |
 | [Modello di sicurezza](docs/security-model.it.md) | Da cosa proteggono i codici, e da cosa no |
 | [Simulatore](docs/simulator.md) | Diagnostica, simulatore, walk test e prova delle azioni (in inglese) |
+| [Tastierini e dispositivi API](docs/keypads.md) | I contratti del servizio, MQTT e HTTP, i permessi, gli adattatori inclusi, l'hardware (in inglese) |
 | [Tutti i documenti](docs/README.it.md) | Tastierini, regole automatiche, stato del sistema, resilienza, privacy, impostazioni, la card, risoluzione dei problemi, domande frequenti… |
 
 I documenti scritti prima di questa versione — tastierini, canali di notifica,

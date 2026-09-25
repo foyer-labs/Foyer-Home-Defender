@@ -49,9 +49,9 @@ a way to check all of it without setting anything off.
   person, a duress code that works as the ordinary one and raises a silent
   alarm, a lockout after repeated wrong codes, and a log that names who did
   what. [Security model](docs/security-model.md)
-- **Keypads, tags and devices of your own.** Ring and Zigbee keypads, NFC tags
-  and remotes, over services, MQTT or Foyer's own HTTP endpoint, with a
-  refusal that says which zone is open. [Keypads](docs/keypads.md)
+- **Keypads, tags and remotes.** Ring and Zigbee keypads, NFC tags and
+  remotes, with a refusal that says which zone is open — and devices you build
+  yourself, [below](#build-your-own-devices). [Keypads](docs/keypads.md)
 - **Smoke, gas and water on a separate channel.** Live whether the house is
   armed or not, and never reported as a break-in. [Zones](docs/zones.md#the-technical-channel)
 - **A house that arms itself when everybody leaves**, after a countdown you
@@ -75,6 +75,38 @@ a way to check all of it without setting anything off.
 <p align="center">
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/card-en.png" alt="The card in its full and compact layouts during an entry delay: every area with its state, the countdown, and the keypad that opens by itself because disarming asks for a code" width="420">
 </p>
+
+## Build your own devices
+
+Foyer does not talk to particular keypads: it offers a contract, and anything
+that keeps to it can join the house. A lamp by the front door that lights while
+the house is armed, a display in the hall that lists the open windows once a
+code is typed, a keypad built on an ESP32 or an Arduino: the hardware is yours,
+and so is the idea.
+
+- **Three ways in.** A Home Assistant service call (`foyer.arm`,
+  `foyer.disarm`, …), an MQTT topic, or Foyer's own HTTP endpoint, with a
+  stream that tells a device the moment the house arms.
+- **Declared first, allowed only what you grant.** A device is declared under
+  *Arming devices* before it may command anything. On the endpoint it holds a
+  token of its own and scopes — read the state, the zones, the batteries,
+  system health, the log; arm, disarm, exclude, acknowledge — each off until
+  you switch it on.
+- **Reading can be free; acting never is.** Every arming and disarming through
+  the endpoint needs a person's code, checked by Foyer, and a device never
+  goes beyond its scopes, whatever that person could do.
+- **The contract is written down**, at version v1: an OpenAPI and an AsyncAPI
+  document, compared with the code by a test on every change, and an *API*
+  page in the panel where an administrator tries it against the real house.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-api-device-en.png" alt="A device on the endpoint and what it may read and do: the state readable without a code, the zones, batteries and log only after a code, arming and disarming allowed, excluding zones and taking note not" width="760">
+</p>
+
+[Keypads and API devices](docs/keypads.md#api-devices-displays-relays-and-modules-of-your-own)
+explains the scopes, the unlock and the requests with examples;
+[the HTTP contract](docs/api/openapi.yaml) and [the MQTT contract](docs/api/asyncapi.yaml)
+are the reference.
 
 ## Before you install
 
@@ -125,6 +157,7 @@ alarm system. [The security model](docs/security-model.md) says the rest.
 | [Notification channels](docs/notification-channels.md) | Recipes, from the Companion app to a GSM modem |
 | [Security model](docs/security-model.md) | What codes protect against, and what they do not |
 | [Simulator](docs/simulator.md) | Diagnostics, the simulator, the walk test and the action test |
+| [Keypads and API devices](docs/keypads.md) | The service, MQTT and HTTP contracts, scopes, the shipped adapters, the hardware |
 | [All documents](docs/README.md) | Keypads, automatic rules, system health, resilience, privacy, settings, the card, troubleshooting, FAQ… |
 
 ## Status

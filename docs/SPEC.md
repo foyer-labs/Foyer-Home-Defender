@@ -2454,7 +2454,7 @@ and the Italian README says so where it links them.
 
 | File | Content |
 |---|---|
-| `README.md`, `README.it.md` | The front door: one-line pitch, a picture, what the household gets (each point linking its document), getting started in a few lines, the **security model in one paragraph** (INV-6), the documentation index, a factual status line, contributing, security reporting, licence |
+| `README.md`, `README.it.md` | The front door: one-line pitch, a picture, what the household gets (each point linking its document), a short section on building devices of your own against the v1 contract (linking `docs/keypads.md` and `docs/api/`), getting started in a few lines, the **security model in one paragraph** (INV-6), the documentation index, a factual status line, contributing, security reporting, licence |
 | `docs/README.md` (+ `.it.md`) | The index of `docs/`: every document, one line each, and which panel page it explains |
 | `docs/security-model.md` (+ `.it.md`) | The full threat model (INV-6): what codes protect against and what they do not, what a Home Assistant administrator can do regardless, the duress code, the walk test's reach, credentials shown once, how the configuration can be checked rather than trusted, why the log is audit-useful but not tamper-proof |
 | `docs/getting-started.md` (+ `.it.md`) | Requirements, install (HACS and manual), the config flow and the first-run wizard: first area, first zones, first scenario, first person with a code, first test notification; the first fifteen minutes |
