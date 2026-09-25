@@ -48,7 +48,7 @@ Every file below is in [`docs/logo/`](logo/).
 | `foyer-hd-app.svg`, `foyer-hd-app-512.png`, `foyer-hd-app-192.png` | The 192 px PNG heads both READMEs, at a width of 120 | Ink rounded tile, the symbol scaled to 0.84 for a safe margin |
 | `foyer-hd-lockup-dark-bg.svg` / `.png`<br>`foyer-hd-lockup-light-bg.svg` / `.png` | This page | Two files, not one recoloured |
 
-Three details of how they are wired in:
+Four details of how they are wired in:
 
 - **The header symbol is inlined into the panel at build time.** The panel
   imports the two SVG files as text, so the page draws them without a second
@@ -64,6 +64,13 @@ Three details of how they are wired in:
   `frontend/src/icons/icon-path.ts`. CI runs the script and fails when the
   committed path no longer matches the SVG, so the two cannot drift. If the
   icon changes, edit the SVG and run the script again.
+- **The integration's icon and logo are rendered from the same drawings.**
+  Home Assistant and HACS look for them in `custom_components/foyer/brand/`,
+  and HACS will not list an integration in its default repositories without
+  at least `icon.png` there. `scripts/build_brand_images.py` renders the
+  symbol (cropped to the shield, 256 and 512 px) and the lockup (256 and
+  512 px high), each for a light and a dark ground, into that folder. If
+  either drawing changes, run it again.
 
 To use the icon on a dashboard, write `icon: foyer:shield` wherever a card
 takes an icon. The icon set is registered by a module Home Assistant loads on

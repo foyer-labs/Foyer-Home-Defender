@@ -22,9 +22,6 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # Not yet listed in home-assistant/brands; that is a prerequisite for
-          # the default HACS repository only, not for custom repositories.
-          ignore: brands
 
   lint:
     name: ruff

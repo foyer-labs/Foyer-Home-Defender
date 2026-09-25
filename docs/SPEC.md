@@ -2410,6 +2410,7 @@ rendition.
 | `foyer-hd-symbol-dark-bg.svg`<br>`foyer-hd-symbol-light-bg.svg` | Panel header | Full colour, transparent ground, 32 px and up |
 | `foyer-hd-app.svg` → `foyer-hd-app-512.png`, `-192.png` | HACS listing, repository social preview, favicon | Dark rounded tile, symbol scaled to 0.84 for a proper safe margin |
 | `foyer-hd-lockup-dark-bg.svg` / `-light-bg.svg` (+ PNG) | README header, documentation | Two files, not one recoloured |
+| `custom_components/foyer/brand/` (`icon`, `logo`, each with `dark_` and `@2x`) | Home Assistant's integration pages, HACS | Rendered from the symbol and the lockup by `scripts/build_brand_images.py`, never drawn by hand; `icon.png` is what HACS requires for its default list |
 
 ### 17.2 Rules that keep it coherent
 

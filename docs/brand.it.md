@@ -49,7 +49,7 @@ Tutti i file qui sotto sono in [`docs/logo/`](logo/).
 | `foyer-hd-app.svg`, `foyer-hd-app-512.png`, `foyer-hd-app-192.png` | Il PNG da 192 px apre tutti e due i README, largo 120 | Riquadro arrotondato in Ink, il simbolo scalato a 0.84 per lasciare un margine di sicurezza |
 | `foyer-hd-lockup-dark-bg.svg` / `.png`<br>`foyer-hd-lockup-light-bg.svg` / `.png` | Questa pagina | Due file, non uno ricolorato |
 
-Tre dettagli su come sono collegati:
+Quattro dettagli su come sono collegati:
 
 - **Il simbolo dell'intestazione viene incorporato nel pannello in fase di
   build.** Il pannello importa i due file SVG come testo, così la pagina li
@@ -67,6 +67,13 @@ Tre dettagli su come sono collegati:
   fallisce quando il tracciato nel repository non corrisponde più all'SVG, così
   i due non possono divergere. Se l'icona cambia, modifica l'SVG ed esegui di
   nuovo lo script.
+- **L'icona e il logo dell'integrazione sono ricavati dagli stessi disegni.**
+  Home Assistant e HACS li cercano in `custom_components/foyer/brand/`, e HACS
+  non inserisce un'integrazione nel suo elenco predefinito senza almeno
+  `icon.png` in quella cartella. `scripts/build_brand_images.py` ricava in
+  quella cartella il simbolo (ritagliato sullo scudo, 256 e 512 px) e il
+  lockup (alto 256 e 512 px), ciascuno per fondo chiaro e per fondo scuro. Se
+  uno dei due disegni cambia, esegui di nuovo lo script.
 
 Per usare l'icona su una dashboard, scrivi `icon: foyer:shield` ovunque una
 card accetti un'icona. Il set di icone viene registrato da un modulo che Home
