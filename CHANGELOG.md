@@ -8,6 +8,22 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.10] — a restart without a storm of faults
+
+The stored configuration moves to schema 8.6. The step is additive: an older
+release ignores the new setting and announces every fault at a start, as it
+always did.
+
+### Changed — read these before you update
+- **Right after a restart, a zone fault waits before it is announced.**
+  Zigbee2MQTT and similar integrations bring their devices back a little
+  after Home Assistant says it has started, and every one of them arrived as
+  a *Zone fault* at every restart. For the new *Grace after a restart* on
+  *System health* — two minutes by default, 0 to fifteen — a zone that is not
+  answering is still a fault: it blocks arming and shows everywhere a fault
+  shows. Only its announcement waits, and a zone back in time is never
+  announced. Set it to 0 to be told at once, as before.
+
 ## [1.0.9] — a channel that is used says so
 
 ### Fixed
