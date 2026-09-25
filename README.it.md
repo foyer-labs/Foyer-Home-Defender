@@ -171,10 +171,11 @@ il resto.
 
 ## Stato
 
-La 1.0.0 è la prima versione stabile. Da qui in avanti, una modifica che
-romperebbe i servizi, i contratti dei dispositivi e MQTT (v1) o la
-configurazione salvata arriva solo con una nuova versione principale, e il
-changelog lo dice prima. Foyer è il
+La 1.0.0 è la prima versione stabile, e resta una prima versione: aspettati
+correzioni frequenti, e che alcune cambino il comportamento, i servizi, i
+contratti dei dispositivi e MQTT o la configurazione salvata senza aspettare
+una 2.0. Per ora non c'è nessuna promessa di compatibilità; quello che una
+versione ti chiede di fare è elencato per primo nel changelog. Foyer è il
 progetto personale e non commerciale di una persona,
 pubblicato come Foyer Labs; non c'è una società dietro. Ogni versione è una
 release GitHub ordinaria che HACS propone per numero di versione. La configurazione salvata

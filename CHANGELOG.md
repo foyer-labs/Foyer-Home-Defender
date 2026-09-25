@@ -1,17 +1,23 @@
 # Changelog
 
-All notable changes are recorded here. The project follows
-[Semantic Versioning](https://semver.org). For a security system the changelog
-is what lets you decide whether to take an update, so entries say what changed
-in behaviour, not just "fixes".
+All notable changes are recorded here. Versions are numbered in the style of
+[Semantic Versioning](https://semver.org), but while 1.x is young a release
+may change behaviour, a service, a contract or the stored configuration
+without a new major version. For a security system the changelog is what lets
+you decide whether to take an update, so entries say what changed in
+behaviour, not just "fixes", and whatever needs something from you comes
+first, under *Changed — read these before you update*.
 
 ## [1.0.0] — the first stable release
 
-The same alarm as 1.0.0-rc.2: nothing changes in how it behaves. What
-changes is the promise. From 1.0.0 on, the services, the device endpoint and
-MQTT contracts (v1) and the stored configuration stay compatible within 1.x;
-a change that would break any of them comes only in a new major version, and
-this changelog says so first.
+The same alarm as 1.0.0-rc.2: nothing changes in how it behaves. It is a
+first release, not a promise that nothing will change: more fixes will follow
+soon, and some may change behaviour, the services, the device endpoint and
+MQTT contracts or the stored configuration without waiting for a 2.0. A change
+that breaks a device written for the v1 contract is still published as a new
+contract version, as the contract documents say.
+Any such change is listed first, under *Changed — read these before you
+update*, in the release that makes it.
 
 ### Changed
 - The manifest names the integration's owner (`codeowners`), which HACS
@@ -50,10 +56,7 @@ device and MQTT contracts are as in 1.0.0-rc.1.
 ## [1.0.0-rc.1] — the fix phase
 
 The defects found while the documentation was written, corrected. This is
-the release candidate for 1.0: once people other than its author have used it
-for some weeks without a serious problem, 1.0.0 follows, and with it a
-promise that the services, the device and MQTT contracts (v1) and the stored
-configuration stay compatible. The stored configuration keeps its schema.
+the release candidate for 1.0. The stored configuration keeps its schema.
 
 ### Changed — read these before you update
 - **A scenario limited by *Who may use it* now needs somebody established.**

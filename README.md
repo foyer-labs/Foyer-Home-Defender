@@ -162,9 +162,11 @@ alarm system. [The security model](docs/security-model.md) says the rest.
 
 ## Status
 
-1.0.0 is the first stable release. From here on, a change that would break
-the services, the device and MQTT contracts (v1) or the stored configuration
-comes only in a new major version, and the changelog says so first. Foyer is the
+1.0.0 is the first stable release, and still a first release: expect frequent
+fixes, and expect some of them to change behaviour, the services, the device
+and MQTT contracts or the stored configuration without waiting for a 2.0.
+Nothing about compatibility is promised yet; what a release asks of you is
+listed first in the changelog. Foyer is the
 personal, non-commercial project of one person, published
 as Foyer Labs; there is no company behind it. Every release is an ordinary
 GitHub release that HACS offers by version. The stored configuration carries a schema

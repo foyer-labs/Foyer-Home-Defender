@@ -2570,9 +2570,14 @@ Set up in Phase 0, when it costs half an hour:
   entry requirement for the default HACS repository; without them the project is
   only ever installable as a custom repository.
 - pytest, ruff and the frontend build on every push.
-- **Semantic versioning** and a maintained changelog. For a security system, the
-  changelog is what lets a user decide whether to take an update — "fixes" is not
-  an answer when the thing being updated guards their house.
+- **Numbered releases** and a maintained changelog. Versions are numbered in
+  the style of semantic versioning, but 1.0.0 carries no compatibility promise
+  (decision 156): a 1.x release may change behaviour, a service, a device
+  contract (as a new contract version, §9.2.2, when it breaks devices written
+  for v1) or the stored configuration, and whatever needs something from the user is
+  listed first in the release that makes it. For a security system, the
+  changelog is what lets a user decide whether to take an update — "fixes" is
+  not an answer when the thing being updated guards their house.
 
 ### 20.2 Importing from Alarmo
 
@@ -2850,3 +2855,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 153 | Support is best effort, with no promise of an answer or a fix, and says so in `SUPPORT.md`, the issue forms and the README | A promise nobody made is still read into silence; saying it once, where a person asks, costs nothing and sets the expectation |
 | 154 | Issues labelled `needs info` close by themselves after 14 days without the author; nothing else closes by itself | The one wait that is the reporter's; a real defect the maintainer has not reached must not vanish on a timer |
 | 155 | Foyer is the personal, non-commercial project of one individual publishing as Foyer Labs; donations are gifts and buy no support or priority | That is what it is, and the exclusions for free software supplied outside a commercial activity depend on it staying so |
+| 156 | 1.0.0 promises no compatibility: a 1.x release may change behaviour, a service, a device contract (a break is a new contract version, §9.2.2) or the stored configuration, and says so first in the changelog | It is a first release with one author; the fixes it will need cannot all wait for a 2.0, and a promise that would be broken by the first serious bug is worse than none. What is promised is that nothing changes silently |
