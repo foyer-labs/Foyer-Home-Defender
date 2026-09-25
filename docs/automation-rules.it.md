@@ -42,7 +42,7 @@ Quattro cose vanno lette prima di scrivere una regola:
 
 | Elemento | Opzioni |
 |---|---|
-| **Attivazione** | `absence` — ogni persona scelta `not_home` da N minuti · `presence` — arriva una persona scelta · `time` — alle HH:MM nei giorni della settimana scelti · `entity` — un'entità mantiene uno stato per N minuti |
+| **Attivazione** | `absence` — ogni persona scelta fuori casa (`not_home`, o in un'altra zona come *Lavoro*) da N minuti · `presence` — arriva una persona scelta · `time` — alle HH:MM nei giorni della settimana scelti · `entity` — un'entità mantiene uno stato per N minuti |
 | **Azione** | inserire uno scenario · disinserire le aree indicate · passare a un altro scenario |
 | **Finestra di attività** | giorni della settimana più una fascia oraria; fuori da lì la regola non esiste |
 | **Condizioni di sicurezza** | solo se è tutto disinserito · solo se tutte le zone sono pronte · solo se nessuna zona interna si è mossa da N minuti |
@@ -338,6 +338,18 @@ metà. È anche il modo più semplice di cominciare. Lascia che una regola
 disinserisca tutte le aree mentre impari come si comporta la casa, poi segna
 come perimetrali le porte e le finestre esterne un'area alla volta; da quel
 momento la regola le lascia inserite senza bisogno di modificarla.
+
+**Fuori casa vuol dire ovunque tranne che a casa.** Una persona in un'altra
+zona di Home Assistant segna il nome di quella zona — *Lavoro*, *Scuola* —
+invece di `not_home`, ed è fuori casa lo stesso. Una persona che Foyer non
+riesce a leggere (`unknown`, `unavailable`) no: una casa vuota non si deduce
+mai da un telefono che ha smesso di rispondere.
+
+**Rientrare in una casa disinserita non fa niente.** Una regola di
+disinserimento le cui aree sono già tutte disinserite non fa partire il
+conto alla rovescia né avvisa nessuno, e il rientro viene consumato: se poi
+inserisci la casa con quella persona ancora dentro, la regola non la
+disinserisce.
 
 Due conseguenze da conoscere:
 

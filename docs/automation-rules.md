@@ -36,7 +36,7 @@ are worth reading before writing a rule:
 
 | Element | Options |
 |---|---|
-| **Trigger** | `absence` — every selected person `not_home` for N minutes · `presence` — a selected person arrives · `time` — at HH:MM on chosen weekdays · `entity` — an entity holds a state for N minutes |
+| **Trigger** | `absence` — every selected person away (`not_home`, or in another zone such as *Work*) for N minutes · `presence` — a selected person arrives · `time` — at HH:MM on chosen weekdays · `entity` — an entity holds a state for N minutes |
 | **Action** | arm a scenario · disarm named areas · switch to another scenario |
 | **Active window** | weekdays plus a time range; outside it the rule does not exist |
 | **Guards** | only if currently disarmed · only if every zone is ready · only if no interior zone has moved for N minutes |
@@ -290,6 +290,16 @@ deleted does not leave the rule half-broken. It is also the easiest way to
 start. Let a rule disarm every area while you learn how the house behaves,
 then mark the outside doors and windows as the perimeter one area at a time;
 from that moment the rule leaves them armed without being edited.
+
+**Away is anywhere but home.** A person in another zone of Home Assistant
+reads that zone's name — *Work*, *School* — rather than `not_home`, and is
+away just the same. A person Foyer cannot read (`unknown`, `unavailable`) is
+not: an empty house is never inferred from a phone that has gone quiet.
+
+**Coming home to a disarmed house does nothing.** A disarm rule whose areas
+are all disarmed already neither counts down nor notifies anybody, and the
+arrival is spent: arming the house afterwards, with that person still home,
+is not undone by the rule.
 
 Two consequences worth knowing:
 

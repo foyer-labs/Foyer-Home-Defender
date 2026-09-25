@@ -32,6 +32,7 @@ from datetime import datetime, time, timedelta, tzinfo
 
 from .clock import in_daily_window, parse_hhmm
 from .models import (
+    FAULT_STATES,
     Area,
     AreaState,
     AutoRule,
@@ -46,11 +47,12 @@ from .models import (
     SuspensionKind,
 )
 
-# What a person entity says when they are not at the house. Home Assistant's
-# own word, and the only one `absence` and `presence` read: a zone's trigger
-# spec exists precisely because entity states vary (INV-5), but the presence
-# domain has exactly one vocabulary and inventing a second would be a setting
-# nobody could fill correctly.
+# What a person entity says at the house. Home Assistant's own word, and the
+# one `absence` and `presence` read: a zone's trigger spec exists precisely
+# because entity states vary (INV-5), but the presence domain has one fixed
+# point. Away is anything else that can be read — `not_home`, or the name of
+# another zone ("Work", "School"): a person at work is not at home, and
+# reading only `not_home` kept an empty house from ever arming (decision 166).
 HOME = "home"
 NOT_HOME = "not_home"
 
@@ -88,12 +90,17 @@ def condition_holds(rule: AutoRule, states: dict[str, str | None]) -> bool:
     if trigger.kind is RuleTriggerKind.ABSENCE:
         if not trigger.entity_ids:
             return False
-        return all(states.get(e) == NOT_HOME for e in trigger.entity_ids)
+        return all(_away(states.get(e)) for e in trigger.entity_ids)
     if trigger.kind is RuleTriggerKind.ENTITY:
         if not trigger.entity_ids or trigger.state is None:
             return False
         return states.get(trigger.entity_ids[0]) == trigger.state
     return False
+
+
+def _away(state: str | None) -> bool:
+    """Readable, and not at home: `not_home` or another zone's name."""
+    return state is not None and state not in FAULT_STATES and state != HOME
 
 
 def occurrence_due(

@@ -1185,3 +1185,72 @@ def test_every_area_needs_no_list_to_be_saved():
     codes = {p.code for p in validate(_every_area())}
     assert "rule_without_areas" not in codes
     assert "rule_only_perimeter" not in codes
+
+
+# --- where "away" is, and a disarm with nothing to disarm (decision 166) ----------
+
+
+def test_somebody_in_another_zone_is_away():
+    """A person at work reads "Work", not `not_home`: they are still out."""
+    world = World(house(rule(notify_contact_ids=())))
+    world.person(LUCA, "Work")
+    world.person(PARTNER, "not_home")
+    decision = world.advance(30 * 60)
+    assert Moment.AUTO_PENDING in decision.moments
+
+
+def test_a_person_who_cannot_be_read_is_not_away():
+    world = World(house(rule(notify_contact_ids=())))
+    world.person(LUCA, "unknown")
+    world.person(PARTNER, "not_home")
+    decision = world.advance(30 * 60)
+    assert Moment.AUTO_PENDING not in decision.moments
+    assert not world.state.pending_rules
+
+
+def _welcome_home(grace: int = 10):
+    return house(
+        rule(
+            "welcome_home",
+            kind=RuleTriggerKind.PRESENCE,
+            action=RuleActionKind.DISARM,
+            scenario_id=None,
+            all_areas=True,
+            grace=grace,
+        ),
+        allow_auto_disarm=True,
+    )
+
+
+def test_coming_home_to_a_disarmed_house_does_nothing_at_all():
+    world = World(_welcome_home())
+    empty(world)
+    decision = world.person(LUCA, "home")
+
+    assert not decision.state.pending_rules
+    assert Moment.AUTO_PENDING not in decision.moments
+    assert Moment.AUTO_BLOCKED not in decision.moments
+    decision = world.advance(30)
+    assert not decision.moments
+
+
+def test_that_arrival_does_not_disarm_the_house_armed_later():
+    """The arrival is spent: arming afterwards, with the person still home,
+    must not be undone by a rule that already saw them come in."""
+    world = World(_welcome_home(grace=0))
+    empty(world)
+    world.person(LUCA, "home")
+    world.arm("away")
+    world.advance(30)
+    assert world.states()["ground"] == "armed"
+    world.advance(600)
+    assert world.states()["ground"] == "armed"
+
+
+def test_coming_home_to_an_armed_house_still_disarms_it():
+    world = World(_welcome_home(grace=0))
+    world.arm("away")
+    world.advance(30)
+    empty(world)
+    world.person(LUCA, "home")
+    assert world.states()["ground"] == "disarmed"

@@ -1643,7 +1643,7 @@ drawn in §6.3 applies.
 
 | Element | Options |
 |---|---|
-| **Trigger** | `absence` — every selected person `not_home` for N minutes · `presence` — a selected person arrives · `time` — at HH:MM on chosen weekdays · `entity` — an entity holds a state for N minutes |
+| **Trigger** | `absence` — every selected person away (`not_home`, or in another zone such as *Work*) for N minutes · `presence` — a selected person arrives · `time` — at HH:MM on chosen weekdays · `entity` — an entity holds a state for N minutes |
 | **Action** | arm a scenario · disarm named areas · switch to another scenario |
 | **Active window** | weekdays plus a time range; the rule simply does not exist outside it |
 | **Guards** | only if currently disarmed · only if every zone is ready · only if no interior zone has detected motion for N minutes |
@@ -2915,3 +2915,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 163 | A disarm rule may name *every area*, read as the areas the house has when it acts | A list written once goes stale as areas are added and removed, and a household starting out wants "disarm the house" before it knows which areas are the perimeter; the perimeter rule of §9.4 point 3 still takes those areas out |
 | 164 | A notification that works when sent straight to a service proves the contact channels on that service; one that fails does not break them | The same transport to the same phone is evidence, and a household whose alarms arrive should not read "never used"; a failure may come from the action's own data, and a channel declared broken by mistake would be announced as a fault that is not there |
 | 165 | After a start, a zone fault is held back from being announced for a grace (120 s by default, 0–900); it is in `faults` at once, blocks arming and shows, and a zone back in time is never announced | Zigbee2MQTT and similar integrations bring their entities back after Home Assistant reports it has started, and every restart announced every one of them as a fault; INV-4 is about not treating an unreadable zone as quiet, which the grace never does — only the message waits |
+| 166 | `absence` reads a person as away when readable and not `home`, whatever zone they are in; a disarm rule with every area already disarmed does nothing and spends the arrival | Home Assistant names the zone a person is in, so reading only `not_home` kept a house whose people were at work from ever arming, silently; and a countdown and a notification for a disarm with nothing to disarm is noise on every ordinary arrival |

@@ -520,6 +520,10 @@ class _RuleDecision:
     suspension: Suspension | None = None
     substituted: bool = False
     block: RuleBlock | None = None
+    # A disarm with nothing to disarm: every area it may touch is already
+    # disarmed. Not a block — nothing stopped it — and not news: somebody
+    # coming home to a disarmed house is an ordinary afternoon (decision 166).
+    idle: bool = False
 
     @property
     def disarms(self) -> bool:
@@ -3646,6 +3650,8 @@ class _Run:
             if rule is None or not rule.enabled:
                 continue
             decided = self.rule_decision(rule, scenario_id=pending.scenario_id)
+            if decided.idle:
+                continue  # disarmed meanwhile: nothing left to do
             if decided.block is not None:
                 spent = self.rule_blocked(rule, decided.block, decided.suspension)
                 if not spent:
@@ -3684,6 +3690,13 @@ class _Run:
                 self.rules_runtime[rule.id] = runtime
                 continue
             decided = self.rule_decision(rule)
+            if decided.idle:
+                # Spent without acting: the arrival has happened, and must
+                # not disarm the house later when somebody arms it.
+                self.rules_runtime[rule.id] = _spend(
+                    rule, runtime, occurrence, acted=True
+                )
+                continue
             if decided.block is not None:
                 self.rules_runtime[rule.id] = _spend(rule, runtime, occurrence)
                 self.rule_blocked(rule, decided.block, decided.suspension)
@@ -3879,6 +3892,12 @@ class _Run:
                 # Every area it named is the perimeter, so there is nothing
                 # left for it to do (§9.4 point 3).
                 return replace(decided, block=RuleBlock.PERIMETER)
+            if all(
+                self.areas[a].state is AreaState.DISARMED
+                for a in allowed
+                if a in self.areas
+            ):
+                return replace(decided, idle=True)
         else:
             scenario = self.config.scenario(scenario_id)
             target_areas = tuple(scenario.areas) if scenario else ()
