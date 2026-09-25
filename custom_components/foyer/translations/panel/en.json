@@ -1677,6 +1677,65 @@
     "access_recovered": "Access recovered",
     "auto_outcome": "Automatic rule outcome"
   },
+  "words": {
+    "reason": {
+      "alarm_in_progress": "an alarm is in progress",
+      "ambiguous_mode": "more than one scenario for that mode",
+      "area_not_allowed": "area not allowed",
+      "arm_hold_expired": "a zone stayed open",
+      "auto_disarm_disabled": "automatic disarming is off",
+      "bad_code": "wrong code",
+      "bad_token": "wrong device token",
+      "battery_unavailable": "battery unreadable",
+      "channel_down": "a notification channel is down",
+      "code_required": "a code is required",
+      "coordinator_down": "the radio coordinator is down",
+      "device_not_registered": "unknown device",
+      "entry_expired": "entry delay expired",
+      "expired": "time ran out",
+      "invalid_state": "not possible in the current state",
+      "locked_out": "too many wrong codes",
+      "mains_lost": "mains power lost",
+      "mains_unknown": "mains power unknown",
+      "manual": "by hand",
+      "missed": "Home Assistant was off at that time",
+      "motion": "motion inside",
+      "no_scenario_for_mode": "no scenario for that mode",
+      "not_disarmed": "the house is not disarmed",
+      "not_loaded": "Foyer was reloading",
+      "not_numeric": "not a number",
+      "not_permitted": "not permitted",
+      "not_ready": "a zone is not ready",
+      "not_ready_refused": "a zone was not ready",
+      "nothing_to_acknowledge": "nothing to acknowledge",
+      "nothing_to_cancel": "nothing to cancel",
+      "perimeter": "it would disarm the perimeter",
+      "plain_http_not_confirmed": "unencrypted reading not confirmed",
+      "refused": "the arming was refused",
+      "rf_interference": "radio interference suspected",
+      "scenario_not_allowed": "scenario not allowed",
+      "scope_not_granted": "the device may not do that",
+      "siren_cutoff": "siren time over",
+      "supervision": "silent too long",
+      "suspended": "automatic rules are suspended",
+      "switch_off": "automatic rules are off",
+      "unavailable": "not responding",
+      "unknown_action": "unknown request",
+      "unknown_area": "unknown area",
+      "unknown_rule": "unknown rule",
+      "unknown_scenario": "unknown scenario",
+      "unknown_suspension": "unknown suspension",
+      "unknown_zone": "unknown zone",
+      "unlock_required": "the device is locked",
+      "user_not_valid": "the person is disabled or out of their dates",
+      "walk_test": "a walk test is running",
+      "walk_test_active": "a walk test is running",
+      "watchdog_unreachable": "the watchdog is unreachable",
+      "zone_fault": "a zone is not responding",
+      "zone_not_bypassable": "a zone cannot be excluded",
+      "zone_open": "a zone is open"
+    }
+  },
   "condition": {
     "add": "Add a condition",
     "time": "Time window",
@@ -1748,7 +1807,42 @@
     "duress_hint": "Raised by every use of a duress code, whatever it was for. Only the default profile answers it, and it runs silent. Send it to somebody outside the house.",
     "duress_not_default": "This is not the default profile, so this action never answers a duress code.",
     "duress_persistent": "A Home Assistant notification shows on every Home Assistant screen, the wall tablet included — where the person who typed the duress code may be standing beside whoever made them. Send a notification to a contact instead.",
-    "duress_silent": "{kind} is on the silent list, so it never runs for a duress code: a sound in the house would tell the room."
+    "duress_silent": "{kind} is on the silent list, so it never runs for a duress code: a sound in the house would tell the room.",
+    "template": {
+      "button": "From a template",
+      "title": "Ready-made notifications",
+      "intro": "Creates a new profile with five notifications, one for each kind of moment, so an alarm never looks like an arming: 🚨 alarm, 🔥 technical alarm, 🔒 armed, 🔓 disarmed, ⚠️ warnings. It opens in the editor, and nothing is saved until you press Save. Then choose it as the Default profile in Settings, or on an area.",
+      "contacts": "Who receives them",
+      "telegram_hint": "For a contact reached on Telegram, set How to attach it to Telegram on the two alarm notifications, or their pictures will not arrive.",
+      "no_contacts": "Add a contact on the Contacts page first: these notifications need somebody to reach.",
+      "create": "Create the profile",
+      "profile_name": "Notifications",
+      "alarm": {
+        "name": "Alarm",
+        "title": "🚨 ALARM — {{ area }}",
+        "message": "Intrusion: {{ incident_zones }} at {{ time }}"
+      },
+      "technical": {
+        "name": "Technical alarm",
+        "title": "🔥 TECHNICAL ALARM — {{ area }}",
+        "message": "{{ zone }} at {{ time }}. Disarming does not stop it: acknowledge it once it is safe."
+      },
+      "armed": {
+        "name": "Armed",
+        "title": "🔒 {{ event }} — {{ area }}",
+        "message": "{{ user }}, {{ time }}"
+      },
+      "disarmed": {
+        "name": "Disarmed",
+        "title": "🔓 {{ event }} — {{ area }}",
+        "message": "{{ user }}, {{ time }}"
+      },
+      "warning": {
+        "name": "Warnings",
+        "title": "⚠️ {{ event }} — {{ area }}",
+        "message": "{{ zone }}: {{ reason }} ({{ time }})"
+      }
+    }
   },
   "camera_mode": {
     "snapshot": "Snapshot",

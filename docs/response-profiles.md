@@ -357,16 +357,56 @@ profile is saved, so a typo is found then rather than arriving blank.
 | `{{ zone }}` | The zone or zones behind this moment |
 | `{{ area }}` | The area or areas |
 | `{{ scenario }}` | The scenario |
-| `{{ user }}` | The person who acted, as established by a code, a token or a linked account — never a name a request only claimed |
+| `{{ event }}` | Which moment this is, in words: *Armed*, *Alarm*, *Zone fault*… |
+| `{{ user }}` | The person who acted, as established by a code, a token or a linked account — never a name a request only claimed. When nobody acted in person, what did: *Automatic rule*, *Automation* |
 | `{{ channel }}` | Through which channel: the panel, a keypad, a tag, an automatic rule… |
 | `{{ time }}`, `{{ date }}` | Local time as HH:MM, date as YYYY-MM-DD |
-| `{{ state }}` | The area's state |
+| `{{ state }}` | The area's state, in words: *Armed*, *Entry delay*… |
 | `{{ open_zones }}` | The zones open right now |
-| `{{ reason }}` | Why: an arming refused, a fault, what caused the moment |
+| `{{ reason }}` | Why, in words: *a zone is open*, *not responding*… Empty when the moment has no reason, as an arming that worked has none |
 | `{{ incident_zones }}` | Every zone that has joined the current incident, in the order they joined |
 | `{{ operation }}` | What a request made with a duress code asked for: `disarm`, `arm`, `bypass_zone`, `export_log`, `unlock`… The full list is in [notification channels](notification-channels.md#answering-a-duress-code) |
 
-A variable the moment does not carry is left empty.
+A variable the moment does not carry is left empty. `{{ event }}`,
+`{{ user }}`, `{{ channel }}`, `{{ state }}`, `{{ reason }}` and
+`{{ operation }}` are written in the language of outgoing messages (*Settings*);
+a value Foyer has no words for is written as it is.
+
+---
+
+## Ready-made notifications
+
+**Tell an alarm from an arming at a glance.** One notification per kind of
+moment, rather than one for everything, is what makes that possible: each
+has its own title, and each can have its own sound — a critical alert for the
+alarm, nothing loud for an arming. One action answering every moment cannot,
+because its extra data is the same whatever the moment.
+
+*From a template* on this page builds that for you: pick the contacts to
+reach, and a new profile called *Notifications* opens in the editor with the
+five notifications below. Nothing is saved until you press *Save*. Then
+choose it as the *Default profile* under *Settings*, or on an area. The
+words come in the language the panel speaks.
+
+| Notification | Moments | Title | Message | Pictures |
+|---|---|---|---|---|
+| Alarm | *Alarm*, *Zone joined the incident* | `🚨 ALARM — {{ area }}` | `Intrusion: {{ incident_zones }} at {{ time }}` | The cameras of the zones behind the alarm |
+| Technical alarm | *Technical alarm* | `🔥 TECHNICAL ALARM — {{ area }}` | `{{ zone }} at {{ time }}. Disarming does not stop it: acknowledge it once it is safe.` | The cameras of the zones behind the alarm |
+| Armed | *Armed* | `🔒 {{ event }} — {{ area }}` | `{{ user }}, {{ time }}` | None |
+| Disarmed | *Disarmed* | `🔓 {{ event }} — {{ area }}` | `{{ user }}, {{ time }}` | None |
+| Warnings | *Arming failed*, *Forced arming*, *Zone fault*, *Low battery* | `⚠️ {{ event }} — {{ area }}` | `{{ zone }}: {{ reason }} ({{ time }})` | None |
+
+To build them by hand, or to add one to an existing profile, copy the title
+and the message from the table into a *Notification* action with those moments.
+Two things the template cannot guess:
+
+- **Telegram.** For a contact reached on Telegram, set *How to attach it* to
+  *Telegram — a photo file* on the two alarm notifications, or their pictures
+  do not arrive.
+- **A louder alarm.** For the Companion app, give the two alarm notifications
+  the critical-alert data from [notification channels](notification-channels.md),
+  and leave the others without it. A Telegram chat takes only a title and a
+  message, so there the emoji carry the difference.
 
 ---
 

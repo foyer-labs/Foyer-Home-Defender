@@ -1677,6 +1677,65 @@
     "access_recovered": "Accesso recuperato",
     "auto_outcome": "Esito di una regola automatica"
   },
+  "words": {
+    "reason": {
+      "alarm_in_progress": "allarme in corso",
+      "ambiguous_mode": "più scenari per quella modalità",
+      "area_not_allowed": "area non consentita",
+      "arm_hold_expired": "una zona è rimasta aperta",
+      "auto_disarm_disabled": "disinserimento automatico spento",
+      "bad_code": "codice errato",
+      "bad_token": "token del dispositivo errato",
+      "battery_unavailable": "batteria illeggibile",
+      "channel_down": "un canale di notifica non funziona",
+      "code_required": "serve un codice",
+      "coordinator_down": "il coordinatore radio non risponde",
+      "device_not_registered": "dispositivo sconosciuto",
+      "entry_expired": "ritardo d'ingresso scaduto",
+      "expired": "tempo scaduto",
+      "invalid_state": "non possibile nello stato attuale",
+      "locked_out": "troppi codici errati",
+      "mains_lost": "rete elettrica assente",
+      "mains_unknown": "stato della rete elettrica sconosciuto",
+      "manual": "a mano",
+      "missed": "Home Assistant era spento a quell'ora",
+      "motion": "movimento in casa",
+      "no_scenario_for_mode": "nessuno scenario per quella modalità",
+      "not_disarmed": "la casa non è disinserita",
+      "not_loaded": "Foyer si stava ricaricando",
+      "not_numeric": "valore non numerico",
+      "not_permitted": "non consentito",
+      "not_ready": "una zona non è pronta",
+      "not_ready_refused": "una zona non era pronta",
+      "nothing_to_acknowledge": "niente di cui prendere atto",
+      "nothing_to_cancel": "niente da annullare",
+      "perimeter": "disinserirebbe il perimetro",
+      "plain_http_not_confirmed": "lettura non cifrata non confermata",
+      "refused": "inserimento rifiutato",
+      "rf_interference": "sospetta interferenza radio",
+      "scenario_not_allowed": "scenario non consentito",
+      "scope_not_granted": "il dispositivo non ha quel permesso",
+      "siren_cutoff": "tempo della sirena finito",
+      "supervision": "muta da troppo tempo",
+      "suspended": "regole automatiche sospese",
+      "switch_off": "regole automatiche spente",
+      "unavailable": "non risponde",
+      "unknown_action": "richiesta sconosciuta",
+      "unknown_area": "area sconosciuta",
+      "unknown_rule": "regola sconosciuta",
+      "unknown_scenario": "scenario sconosciuto",
+      "unknown_suspension": "sospensione sconosciuta",
+      "unknown_zone": "zona sconosciuta",
+      "unlock_required": "dispositivo bloccato",
+      "user_not_valid": "persona disattivata o fuori dal periodo di validità",
+      "walk_test": "walk test in corso",
+      "walk_test_active": "walk test in corso",
+      "watchdog_unreachable": "il watchdog non è raggiungibile",
+      "zone_fault": "una zona non risponde",
+      "zone_not_bypassable": "una zona non può essere esclusa",
+      "zone_open": "una zona è aperta"
+    }
+  },
   "condition": {
     "add": "Aggiungi una condizione",
     "time": "Finestra oraria",
@@ -1748,7 +1807,42 @@
     "duress_hint": "Scatta a ogni uso di un codice di coercizione, qualunque cosa si stesse facendo. Risponde solo il profilo predefinito, e in silenzio. Mandalo a qualcuno fuori casa.",
     "duress_not_default": "Questo non è il profilo predefinito, quindi questa azione non risponde mai a un codice di coercizione.",
     "duress_persistent": "Una notifica di Home Assistant compare su ogni schermo di Home Assistant, tablet a muro compreso — dove chi ha digitato il codice di coercizione può trovarsi accanto a chi l'ha costretto. Manda invece una notifica a un contatto.",
-    "duress_silent": "Le azioni «{kind}» sono nell'elenco silenzioso, quindi non vengono mai eseguite per un codice di coercizione: un suono in casa lo direbbe a chi è nella stanza."
+    "duress_silent": "Le azioni «{kind}» sono nell'elenco silenzioso, quindi non vengono mai eseguite per un codice di coercizione: un suono in casa lo direbbe a chi è nella stanza.",
+    "template": {
+      "button": "Da un modello",
+      "title": "Notifiche pronte",
+      "intro": "Crea un nuovo profilo con cinque notifiche, una per ogni tipo di momento, così un allarme non si confonde mai con un inserimento: 🚨 allarme, 🔥 allarme tecnico, 🔒 inserito, 🔓 disinserito, ⚠️ avvisi. Si apre nell'editor, e non viene salvato nulla finché non premi Salva. Poi sceglilo come Profilo predefinito nelle Impostazioni, o su un'area.",
+      "contacts": "Chi le riceve",
+      "telegram_hint": "Per un contatto raggiunto su Telegram, imposta Come allegarla su Telegram nelle due notifiche d'allarme, altrimenti le immagini non arrivano.",
+      "no_contacts": "Aggiungi prima un contatto nella pagina Contatti: queste notifiche hanno bisogno di qualcuno da raggiungere.",
+      "create": "Crea il profilo",
+      "profile_name": "Notifiche",
+      "alarm": {
+        "name": "Allarme",
+        "title": "🚨 ALLARME — {{ area }}",
+        "message": "Intrusione: {{ incident_zones }} alle {{ time }}"
+      },
+      "technical": {
+        "name": "Allarme tecnico",
+        "title": "🔥 ALLARME TECNICO — {{ area }}",
+        "message": "{{ zone }} alle {{ time }}. Il disinserimento non lo ferma: prendine atto quando è sicuro."
+      },
+      "armed": {
+        "name": "Inserito",
+        "title": "🔒 {{ event }} — {{ area }}",
+        "message": "{{ user }}, {{ time }}"
+      },
+      "disarmed": {
+        "name": "Disinserito",
+        "title": "🔓 {{ event }} — {{ area }}",
+        "message": "{{ user }}, {{ time }}"
+      },
+      "warning": {
+        "name": "Avvisi",
+        "title": "⚠️ {{ event }} — {{ area }}",
+        "message": "{{ zone }}: {{ reason }} ({{ time }})"
+      }
+    }
   },
   "camera_mode": {
     "snapshot": "Scatto",

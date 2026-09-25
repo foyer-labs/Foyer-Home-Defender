@@ -372,18 +372,64 @@ allora invece di vederlo arrivare vuoto.
 | `{{ zone }}` | La zona o le zone dietro questo momento |
 | `{{ area }}` | L'area o le aree |
 | `{{ scenario }}` | Lo scenario |
-| `{{ user }}` | La persona che ha agito, come stabilito da un codice, un token o un account collegato — mai un nome che una richiesta si è solo attribuita |
+| `{{ event }}` | Quale momento è, in parole: *Inserito*, *Allarme*, *Guasto di zona*… |
+| `{{ user }}` | La persona che ha agito, come stabilito da un codice, un token o un account collegato — mai un nome che una richiesta si è solo attribuita. Quando nessuno ha agito di persona, cosa ha agito: *Regola automatica*, *Automazione* |
 | `{{ channel }}` | Attraverso quale canale: il pannello, un tastierino, un tag, una regola automatica… |
 | `{{ time }}`, `{{ date }}` | Ora locale come HH:MM, data come YYYY-MM-DD |
-| `{{ state }}` | Lo stato dell'area |
+| `{{ state }}` | Lo stato dell'area, in parole: *Inserito*, *Ritardo di ingresso*… |
 | `{{ open_zones }}` | Le zone aperte in questo momento |
-| `{{ reason }}` | Il perché: un inserimento rifiutato, un guasto, cosa ha causato il momento |
+| `{{ reason }}` | Il perché, in parole: *una zona è aperta*, *non risponde*… Vuota quando il momento non ha un perché, come un inserimento riuscito |
 | `{{ incident_zones }}` | Ogni zona che si è aggiunta all'incidente in corso, nell'ordine in cui si sono aggiunte |
 | `{{ operation }}` | Cosa chiedeva una richiesta fatta con un codice di coercizione: `disarm`, `arm`, `bypass_zone`, `export_log`, `unlock`… L'elenco completo è in [canali di notifica](notification-channels.it.md#answering-a-duress-code) |
 
-Una variabile che il momento non porta con sé resta vuota.
+Una variabile che il momento non porta con sé resta vuota. `{{ event }}`,
+`{{ user }}`, `{{ channel }}`, `{{ state }}`, `{{ reason }}` e
+`{{ operation }}` sono scritte nella lingua dei messaggi in uscita
+(*Impostazioni*); un valore per cui Foyer non ha parole è scritto così com'è.
 
 ---
+
+<a id="ready-made-notifications"></a>
+
+## Notifiche pronte
+
+**Distinguere un allarme da un inserimento con un'occhiata.** Lo rende
+possibile una notifica per ogni tipo di momento, invece di una per tutto:
+ognuna ha il suo titolo, e ognuna può avere il suo suono — un avviso critico
+per l'allarme, niente di rumoroso per un inserimento. Un'unica azione che
+risponde a ogni momento non può farlo, perché i suoi dati extra sono gli
+stessi qualunque sia il momento.
+
+*Da un modello*, in questa pagina, lo prepara per te: scegli i contatti da
+raggiungere, e si apre nell'editor un nuovo profilo chiamato *Notifiche* con
+le cinque notifiche qui sotto. Non viene salvato nulla finché non premi
+*Salva*. Poi sceglilo come *Profilo predefinito* nelle *Impostazioni*, o su
+un'area. I testi arrivano nella lingua del pannello.
+
+| Notifica | Momenti | Titolo | Messaggio | Immagini |
+|---|---|---|---|---|
+| Allarme | *Allarme*, *Zona aggiunta all'incidente* | `🚨 ALLARME — {{ area }}` | `Intrusione: {{ incident_zones }} alle {{ time }}` | Le telecamere delle zone che hanno dato l'allarme |
+| Allarme tecnico | *Allarme tecnico* | `🔥 ALLARME TECNICO — {{ area }}` | `{{ zone }} alle {{ time }}. Il disinserimento non lo ferma: prendine atto quando è sicuro.` | Le telecamere delle zone che hanno dato l'allarme |
+| Inserito | *Inserito* | `🔒 {{ event }} — {{ area }}` | `{{ user }}, {{ time }}` | Nessuna |
+| Disinserito | *Disinserito* | `🔓 {{ event }} — {{ area }}` | `{{ user }}, {{ time }}` | Nessuna |
+| Avvisi | *Inserimento fallito*, *Inserimento forzato*, *Guasto di zona*, *Batteria scarica* | `⚠️ {{ event }} — {{ area }}` | `{{ zone }}: {{ reason }} ({{ time }})` | Nessuna |
+
+Per crearle a mano, o per aggiungerne una a un profilo esistente, copia
+titolo e messaggio dalla tabella in un'azione *Notifica* con quei momenti.
+Due cose che il modello non può indovinare:
+
+- **Telegram.** Per un contatto raggiunto su Telegram, imposta *Come
+  allegarla* su *Telegram — foto come file* nelle due notifiche d'allarme,
+  altrimenti le immagini non arrivano.
+- **Un allarme più forte.** Per l'app Companion, dai alle due notifiche
+  d'allarme i dati dell'avviso critico descritti nei
+  [canali di notifica](notification-channels.it.md), e lascia le altre senza.
+  Una chat Telegram accetta solo titolo e messaggio, quindi lì la differenza
+  la fanno le emoji.
+
+---
+
+<a id="pictures-in-a-notification"></a>
 
 ## Immagini in una notifica
 

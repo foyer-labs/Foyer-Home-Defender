@@ -883,6 +883,22 @@ operation of §8.2, or for a command that is none of them the name its
 service in §14.1 or its device `action` in §9.2.2 gives it (`disarm`,
 `bypass_zone`, `unlock`, `export_log`…). A duress message that cannot say
 what the person was made to do tells its contact half of it (decision 134)
+`{{ event }}` — which moment this is, in words ("Armed", "Alarm")
+
+**What a person reads is said in words** (decision 160). `{{ event }}`,
+`{{ reason }}`, `{{ state }}`, `{{ channel }}` and `{{ operation }}` are
+identifiers in the engine, and the engine reads no translation file (INV-1),
+so it renders every other variable and leaves these as written; the executor
+says them in the language of outgoing messages (§15.1) just before sending,
+and a value it has no words for goes as it came. `{{ user }}` is worded too:
+when nobody acted in person it names what did — an automatic rule, an
+automation — instead of leaving a gap.
+
+**A ready-made profile** (decision 161): page 5 builds, on request, an unsaved
+profile with one notification per kind of moment — alarm, technical alarm,
+armed, disarmed, warnings — addressed to the contacts the household ticks,
+with its words taken from the panel's translations. It is an ordinary profile
+from then on; nothing about it is special to the engine.
 
 ### 6.5 Profile severity
 
@@ -2865,3 +2881,5 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 157 | The sidebar entry reads *Home Defender*, not *Foyer* | Foyer is the brand and Home Defender the product; the sidebar names the thing you open, as the panel's header and the integration's name already do. The brand stays where it signs something — notification titles, the card's name |
 | 158 | A Telegram chat that is a notify entity receives its pictures through `telegram_bot.send_photo`; any other notify entity says in the log that it got none | Home Assistant deprecated the YAML `notify.telegram` service, so a Telegram chat is now an entity, and entities carry only a title and a message: the text arrived and the pictures vanished without a word. The bot's own service takes the same entity and a file, and a picture that fails still costs nothing but itself |
 | 159 | A camera folder that starts with `media` is inside Home Assistant's own media folder, wherever the installation keeps it | On Home Assistant OS the media folder is `/media`, not `<config>/media`, and only the media folders are allowed by default: the default `media/foyer` resolved to a folder Home Assistant refused, and every Telegram snapshot failed. Mapping it to the real media folder keeps the stored setting and puts the pictures where *Media* shows them |
+| 160 | `{{ event }}` names the moment, and `{{ reason }}`, `{{ state }}`, `{{ channel }}`, `{{ operation }}` and a missing `{{ user }}` are said in words by the executor | A message is read by a person: `zone_open` and `armed_away` are not sentences, and one action serving several moments could not say which it was. The engine keeps handing over identifiers, because it reads no translation file (INV-1) |
+| 161 | Page 5 offers a ready-made notifications profile, built unsaved from the translations for the contacts the household picks | One notification per kind of moment is what lets an alarm be told from an arming, and lets each have its own sound; writing five of them from nothing is where households stop. Unsaved, because a profile nobody has read is not one to answer an alarm with |

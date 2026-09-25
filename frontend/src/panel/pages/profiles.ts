@@ -162,6 +162,23 @@ function blankAction(kind: ActionKind): ActionConfig {
   };
 }
 
+// The ready-made notifications a household starts from (decision 161): one
+// notification per kind of moment, so each can be told apart at a glance —
+// and each can be given its own sound or priority, which one action serving
+// every moment cannot. The words come from the translations; the recipients
+// are whoever the household ticks.
+const TEMPLATE_ACTIONS: { key: string; moments: string[]; images: string }[] = [
+  { key: "alarm", moments: ["triggered", "incident_joined"], images: "zone" },
+  { key: "technical", moments: ["technical_raised"], images: "zone" },
+  { key: "armed", moments: ["armed"], images: "none" },
+  { key: "disarmed", moments: ["disarmed"], images: "none" },
+  {
+    key: "warning",
+    moments: ["arm_failed", "forced_arm", "zone_fault", "low_battery"],
+    images: "none",
+  },
+];
+
 /** Who a notify action reaches, read the way the backend reads it. */
 function notifyContacts(action: ActionConfig): NotifyContact[] {
   const raw = (action.params as { contacts?: unknown }).contacts;
@@ -184,6 +201,8 @@ class FoyerPageProfiles extends LitElement {
     _busy: { state: true },
     _tested: { state: true },
     _confirming: { state: true },
+    _templating: { state: true },
+    _templateContacts: { state: true },
   };
 
   ctx?: PanelContext;
@@ -199,6 +218,93 @@ class FoyerPageProfiles extends LitElement {
   // waiting for its confirmation (§11.4: it really executes, so it asks).
   private _tested: Record<string, { ok: boolean; error?: string }> = {};
   private _confirming?: string;
+  // The ready-made profile being prepared, and the contacts ticked for it.
+  private _templating = false;
+  private _templateContacts: string[] = [];
+
+  /** A new, unsaved profile with the ready-made notifications (decision
+   * 161). It opens in the editor like any other: nothing is stored until
+   * the household has read it and pressed Save. */
+  private _fromTemplate(s: Strings): void {
+    const contacts = this._templateContacts.map((id) => ({
+      contact_id: id,
+      channel_id: null,
+    }));
+    const actions = TEMPLATE_ACTIONS.map(({ key, moments, images }) => {
+      const action = blankAction("notify");
+      return {
+        ...action,
+        name: t(s, `profiles.template.${key}.name`),
+        moments,
+        params: {
+          ...action.params,
+          title: t(s, `profiles.template.${key}.title`),
+          message: t(s, `profiles.template.${key}.message`),
+          images,
+          contacts,
+        },
+      };
+    });
+    this._templating = false;
+    this._templateContacts = [];
+    this._edit({ name: t(s, "profiles.template.profile_name"), severity: 1, actions });
+  }
+
+  private _renderTemplate(s: Strings) {
+    const contacts = this.ctx?.config?.contacts ?? [];
+    const chosen = this._templateContacts;
+    return html`<div class="card editor">
+      <div class="card-hd"><h2>${t(s, "profiles.template.title")}</h2></div>
+      <div class="card-bd">
+        <p class="hint">${t(s, "profiles.template.intro")}</p>
+        ${
+          contacts.length
+            ? html`<div class="field">
+                <span class="lbl">${t(s, "profiles.template.contacts")}</span>
+                ${contacts.map(
+                  (contact) =>
+                    html`<label class="check"
+                      ><input
+                        type="checkbox"
+                        .checked=${live(chosen.includes(contact.id ?? ""))}
+                        @change=${(e: Event) => {
+                          // The list as it is now, not as it was drawn: two
+                          // ticks before the next render must both count.
+                          const id = contact.id ?? "";
+                          const current = this._templateContacts.filter((c) => c !== id);
+                          this._templateContacts = (e.target as HTMLInputElement).checked
+                            ? [...current, id]
+                            : current;
+                        }}
+                      />
+                      ${contact.name}</label
+                    >`,
+                )}
+              </div>
+              <p class="hint">${t(s, "profiles.template.telegram_hint")}</p>`
+            : html`<p class="hint">${t(s, "profiles.template.no_contacts")}</p>`
+        }
+        <div class="actions">
+          <button
+            class="btn primary"
+            ?disabled=${!chosen.length}
+            @click=${() => this._fromTemplate(s)}
+          >
+            ${t(s, "profiles.template.create")}
+          </button>
+          <button
+            class="btn"
+            @click=${() => {
+              this._templating = false;
+              this._templateContacts = [];
+            }}
+          >
+            ${t(s, "common.cancel")}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
 
   private _edit(profile?: ProfileConfig): void {
     // Not while a save or a delete is on its way: its answer would land in
@@ -310,7 +416,12 @@ class FoyerPageProfiles extends LitElement {
       <div class="card">
         <div class="card-hd">
           <h2>${t(s, "profiles.title")}</h2>
-          <button class="btn primary" @click=${() => this._edit()}>${t(s, "profiles.add")}</button>
+          <div class="hd-buttons">
+            <button class="btn" @click=${() => (this._templating = !this._templating)}>
+              ${t(s, "profiles.template.button")}
+            </button>
+            <button class="btn primary" @click=${() => this._edit()}>${t(s, "profiles.add")}</button>
+          </div>
         </div>
         ${
           profiles.length
@@ -357,6 +468,7 @@ class FoyerPageProfiles extends LitElement {
             : html`<div class="empty">${t(s, "profiles.none")}</div>`
         }
       </div>
+      ${this._templating ? this._renderTemplate(s) : nothing}
       ${this._draft ? this._renderEditor(s, this._draft) : nothing}
     `;
   }
@@ -1343,6 +1455,11 @@ class FoyerPageProfiles extends LitElement {
     formStyles,
     stateStyles,
     css`
+      .hd-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
       .hint.bad {
         color: var(--error-color, #d32f2f);
       }
