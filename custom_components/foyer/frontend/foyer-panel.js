@@ -11115,7 +11115,13 @@ var An = [
 	"zones.md",
 	"response-profiles.md",
 	"security-model.md",
-	"settings.md"
+	"settings.md",
+	"keypads.md",
+	"notification-channels.md",
+	"automation-rules.md",
+	"simulator.md",
+	"privacy.md",
+	"system-health.md"
 ]) };
 function In(e, t) {
 	let n = Pn[e];

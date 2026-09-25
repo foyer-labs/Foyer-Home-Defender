@@ -171,12 +171,12 @@ l'area a cui punta:
   `badge`, che non ha niente da premere, mostra comunque il suo chip: un badge
   che dice *Inserito* mentre ogni risposta è trattenuta sarebbe la cosa più
   fuorviante della dashboard
-  ([walk test](simulator.md#walk-test--which-zones-never-saw-you), in inglese).
+  ([walk test](simulator.it.md#walk-test--which-zones-never-saw-you)).
 - **Una regola automatica in conto alla rovescia** — *Tutti fuori: inserisce
   Fuori casa fra 95 s.*, con *Annulla*. Non viene filtrata in base all'area
   della card, perché una regola inserisce uno scenario, e una card
   dell'ingresso che restasse zitta mentre la casa sta per inserirsi da sola
-  trarrebbe in inganno ([automation rules](automation-rules.md), in inglese).
+  trarrebbe in inganno ([regole automatiche](automation-rules.it.md)).
 - **Un allarme tecnico** e **un incidente**, ciascuno con il nome delle sue
   zone, ciascuno con il suo *Prendi atto* finché nessuno ne ha preso atto.
 

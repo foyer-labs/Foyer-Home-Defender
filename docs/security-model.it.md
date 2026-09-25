@@ -346,8 +346,7 @@ sulla persona che chiede, e una richiesta che non identifica nessuno non ne ha
 da controllare.
 
 A cosa serve il walk test, e come leggerlo, è in
-[simulator.md](simulator.md#walk-test--which-zones-never-saw-you) (in
-inglese).
+[simulatore](simulator.it.md#walk-test--which-zones-never-saw-you).
 
 ---
 
@@ -388,8 +387,7 @@ profilo predefinito non dipende dal registro. Svuotare il registro con un
 codice di coercizione non cancella la riga `duress` di quella stessa
 richiesta.
 
-[Come rispondere](notification-channels.md#answering-a-duress-code) (in
-inglese).
+[Come rispondere](notification-channels.it.md#answering-a-duress-code).
 
 ---
 
@@ -411,11 +409,11 @@ Foyer dice se ognuna esiste, e mai quale sia:
 - **L'URL del watchdog** — scritto e mai riletto; *Stato del sistema* dice
   solo che ce n'è uno impostato. Chi lo ha potrebbe tenere il controllo verde
   per sempre, e così zittire l'unica cosa che segnala la morte di Foyer stesso.
-  [Il dettaglio](system-health.md#the-url-is-a-credential) (in inglese).
+  [Il dettaglio](system-health.it.md#the-url-is-a-credential).
 
 Nessuna è in un backup di Foyer, e nessuna è nel download della diagnostica di
 Home Assistant, che lascia fuori anche nomi, hash dei codici e id reali delle
-entità ([che cosa contiene](system-health.md#the-diagnostics-download)). Un
+entità ([che cosa contiene](system-health.it.md#the-diagnostics-download)). Un
 backup di Home Assistant è un'altra cosa: copia la cartella di configurazione,
 `.storage/foyer.config` compreso, quindi contiene tutto quello che l'elenco
 sopra dice che un amministratore può leggere.
@@ -429,7 +427,7 @@ successiva. Non può inserire, disinserire, leggere il registro o cambiare
 niente. Non esiste finché non lo accendi, l'id è generato a caso, il pannello
 ne mostra l'indirizzo una sola volta — quando viene generato — e spegnendolo
 viene dimenticato; per rivederlo se ne genera uno nuovo.
-[I dettagli](notification-channels.md#twilio-voice-call) (in inglese).
+[I dettagli](notification-channels.it.md#twilio-voice-call).
 
 ---
 
@@ -466,8 +464,8 @@ viene dimenticato; per rivederlo se ne genera uno nuovo.
   sempre una persona, e non è mai ammesso sull'endpoint, dove il token da solo
   sarebbe la chiave di casa.
 
-Come si configura ogni tipo di dispositivo: [keypads.md](keypads.md) (in
-inglese), e [l'endpoint dei dispositivi](keypads.md#the-device-endpoint).
+Come si configura ogni tipo di dispositivo: [tastierini](keypads.it.md), e
+[l'endpoint dei dispositivi](keypads.it.md#the-device-endpoint).
 
 ---
 
@@ -540,8 +538,7 @@ e **nessuna regola disinserisce mai un'area segnata come perimetro** — lo
 impone il motore, con un test che lo verifica sulla decisione stessa. La
 presenza si deduce da un telefono, e un telefono rubato non deve aprire la
 casa.
-[automation-rules.md](automation-rules.md#why-automatic-disarming-is-restricted)
-(in inglese) spiega perché, senza addolcirlo.
+[automation-rules.md](automation-rules.it.md#why-automatic-disarming-is-restricted) spiega perché, senza addolcirlo.
 
 ## Verso l'esterno, Foyer dice il minimo
 
@@ -553,25 +550,24 @@ casa» dice a un estraneo esattamente quando venire:
 - il ping del **watchdog esterno** è una richiesta vuota di serie; il
   contenuto facoltativo è spento, e porta solo due conteggi e un sì o no sullo
   stato di salute
-  ([system-health.md](system-health.md#the-heartbeat-carries-nothing), in
-  inglese);
+  ([stato del sistema](system-health.it.md#the-heartbeat-carries-nothing));
 - il **messaggio di stato MQTT** mantenuto parte dal livello `minimal`, senza
   scenario, senza nomi di aree e senza nomi di zone, e lo si alza sapendo
-  quello che si fa ([keypads.md](keypads.md#the-mqtt-contract), in inglese);
+  quello che si fa ([tastierini](keypads.it.md#the-mqtt-contract));
 - un **dispositivo API** non legge niente finché i suoi permessi non sono
   spuntati; poi, di serie, lo stato dell'allarme con il solo token, e tutto il
   resto solo dopo che qualcuno ha digitato un codice sul dispositivo, finché
   non resta senza letture per un breve periodo (due minuti di serie) o
   qualcuno inserisce o disinserisce attraverso di esso
-  ([keypads.md](keypads.md#api-devices-displays-relays-and-modules-of-your-own)).
+  ([tastierini](keypads.it.md#api-devices-displays-relays-and-modules-of-your-own)).
 
 ---
 
 ## Come puoi verificarlo invece di fidarti
 
 Tre di queste cose le puoi fare stasera: provare una notte nel
-[simulatore](simulator.md#the-simulator) (in inglese), girare la casa con il
-[walk test](simulator.md#walk-test--which-zones-never-saw-you) e vedere quali
+[simulatore](simulator.it.md#the-simulator), girare la casa con il
+[walk test](simulator.it.md#walk-test--which-zones-never-saw-you) e vedere quali
 zone non ti hanno mai notato, e premere il pulsante di prova accanto alla tua
 sirena. Il resto è strutturale, ed è il motivo per cui vale la pena credere
 alle prime tre.
@@ -610,7 +606,7 @@ che non sia successo niente. Ma un amministratore con accesso alla cartella di
 configurazione può cancellare `foyer-log.db` e basta, e niente di quello che
 fa Foyer cambia questo. Il registro serve a rispondere a domande oneste dopo,
 non a sopravvivere a qualcuno deciso a riscriverlo. Che cosa contiene sulle
-persone, e come lasciarne andare una: [privacy.md](privacy.md) (in inglese).
+persone, e come lasciarne andare una: [privacy](privacy.it.md).
 
 ## Non è un sistema antincendio
 

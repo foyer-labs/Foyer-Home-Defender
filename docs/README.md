@@ -53,6 +53,6 @@ behind every decision, is in [SPEC.md](SPEC.md).
 | [Support](../SUPPORT.md) | What to expect from an issue: best effort, with no promise of an answer or a fix |
 | [Contributing](../CONTRIBUTING.md) · [Security policy](../SECURITY.md) · [Changelog](../CHANGELOG.md) | How to contribute, how to report a vulnerability, what changed in each release |
 
-Documents written before version 0.1.0-beta.23 — notification channels,
-keypads, automation rules, privacy, resilience, simulator, system health — are
-in English only; the others are in English and Italian.
+Every document above is in English and Italian. The design (SPEC), the API
+contracts and the project files — support, contributing, security policy,
+changelog — are in English only.

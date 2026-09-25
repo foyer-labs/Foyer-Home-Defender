@@ -41,12 +41,12 @@ partire niente.
 - **Chiedi prima di fidarti.** Un simulatore che prova una notte senza che
   succeda niente, un walk test che mostra quali zone non ti hanno mai visto, e
   un pulsante di prova che fa suonare la sirena sul serio.
-  [Simulatore](docs/simulator.md) (in inglese)
+  [Simulatore](docs/simulator.it.md)
 - **Un incidente per effrazione, e una notifica che continua a cercare.** La
   finestra, il corridoio e le scale diventano un solo incidente con una sola
   presa d'atto; push adesso, SMS fra un minuto, poi una seconda persona,
   finché qualcuno non risponde. [Profili di risposta](docs/response-profiles.it.md) ·
-  [Canali di notifica](docs/notification-channels.md) (in inglese)
+  [Canali di notifica](docs/notification-channels.it.md)
 - **Un codice per ogni persona, verificato solo nel backend.** Permessi per
   persona, un codice di coercizione che funziona come quello normale e fa
   scattare un allarme silenzioso, il blocco dopo codici sbagliati ripetuti, e
@@ -54,18 +54,18 @@ partire niente.
 - **Tastierini, tag e telecomandi.** Tastierini Ring e Zigbee, tag NFC e
   telecomandi, con un rifiuto che dice quale zona è aperta — e dispositivi che
   costruisci tu, [più sotto](#costruisci-i-tuoi-dispositivi).
-  [Tastierini](docs/keypads.md) (in inglese)
+  [Tastierini](docs/keypads.it.md)
 - **Fumo, gas e acqua su un canale separato.** Attivo che la casa sia inserita
   o no, e mai annunciato come un'effrazione. [Zone](docs/zones.it.md#il-canale-tecnico)
 - **Una casa che si inserisce da sola quando escono tutti**, dopo un conto
   alla rovescia che puoi annullare. Il disinserimento automatico è spento di
-  serie e non tocca mai il perimetro. [Regole automatiche](docs/automation-rules.md) (in inglese)
+  serie e non tocca mai il perimetro. [Regole automatiche](docs/automation-rules.it.md)
 - **Un allarme che dice quando ha smesso di funzionare.** Rete elettrica, ogni
   canale di notifica, un watchdog esterno e le interferenze radio.
-  [Stato del sistema](docs/system-health.md) (in inglese)
+  [Stato del sistema](docs/system-health.it.md)
 - **Un registro tutto suo, trenta giorni di serie**, con gli strumenti per
   consegnare a qualcuno i suoi dati o toglierlo dal registro.
-  [Privacy](docs/privacy.md) (in inglese)
+  [Privacy](docs/privacy.it.md)
 - Una configurazione di Alarmo esistente si può portare in Foyer.
   [Passare da Alarmo](docs/migrating-from-alarmo.it.md)
 
@@ -108,8 +108,8 @@ ESP32 o un Arduino: l'hardware è tuo, e anche l'idea.
   <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-api-device-it.png" alt="Un dispositivo sull'endpoint e cosa può leggere e fare: lo stato leggibile senza codice, zone, batterie e registro solo dopo un codice, inserire e disinserire concessi, escludere zone e prendere atto no" width="760">
 </p>
 
-[Tastierini e dispositivi API](docs/keypads.md#api-devices-displays-relays-and-modules-of-your-own)
-(in inglese) spiega i permessi, lo sblocco e le richieste con esempi;
+[Tastierini e dispositivi API](docs/keypads.it.md#api-devices-displays-relays-and-modules-of-your-own)
+spiega i permessi, lo sblocco e le richieste con esempi;
 [il contratto HTTP](docs/api/openapi.yaml) e [il contratto MQTT](docs/api/asyncapi.yaml)
 sono il riferimento.
 
@@ -163,15 +163,11 @@ il resto.
 | [Per iniziare](docs/getting-started.it.md) | Installazione, procedura guidata, i primi quindici minuti, la Panoramica |
 | [Zone, aree e scenari](docs/zones.it.md) | Stati di scatto, contatti NC e NA, ritardi, politiche di inserimento, gruppi di verifica, il canale tecnico |
 | [Profili di risposta](docs/response-profiles.it.md) | Cosa succede, quando, e perché ha suonato |
-| [Canali di notifica](docs/notification-channels.md) | Ricette, dall'app Companion a un modem GSM (in inglese) |
+| [Canali di notifica](docs/notification-channels.it.md) | Ricette, dall'app Companion a un modem GSM |
 | [Modello di sicurezza](docs/security-model.it.md) | Da cosa proteggono i codici, e da cosa no |
-| [Simulatore](docs/simulator.md) | Diagnostica, simulatore, walk test e prova delle azioni (in inglese) |
-| [Tastierini e dispositivi API](docs/keypads.md) | I contratti del servizio, MQTT e HTTP, i permessi, gli adattatori inclusi, l'hardware (in inglese) |
+| [Simulatore](docs/simulator.it.md) | Diagnostica, simulatore, walk test e prova delle azioni |
+| [Tastierini e dispositivi API](docs/keypads.it.md) | I contratti del servizio, MQTT e HTTP, i permessi, gli adattatori inclusi, l'hardware |
 | [Tutti i documenti](docs/README.it.md) | Tastierini, regole automatiche, stato del sistema, resilienza, privacy, impostazioni, la card, risoluzione dei problemi, domande frequenti… |
-
-I documenti scritti prima di questa versione — tastierini, canali di notifica,
-regole automatiche, privacy, resilienza, simulatore, stato del sistema — sono
-in inglese; tutti gli altri sono in entrambe le lingue.
 
 ## Stato
 

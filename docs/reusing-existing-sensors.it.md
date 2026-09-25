@@ -159,7 +159,7 @@ identici.
 
 **Un sensore a 433 MHz disturbato non diventa `unavailable`.** Il controllo
 di Foyer sulle
-[interferenze radio](system-health.md#radio-interference) (in inglese)
+[interferenze radio](system-health.it.md#radio-interference)
 conta le zone di una stessa radio che diventano non disponibili insieme.
 Un'entità MQTT alimentata da un ricevitore mantiene il suo ultimo stato
 quando i messaggi smettono di arrivare, quindi disturbare questa banda non
@@ -179,7 +179,7 @@ sensore preso in prestito è qui sotto.
 | *Trigger* | Lo stato che vuol dire aperto o rilevato, verificato sul sensore reale. La zona di una centrale, un ingresso PGM e un codice RF non sono d'accordo su `on` = aperto: un ingresso normalmente chiuso (NC) si legge al contrario di uno normalmente aperto (NA). Apri la porta, guarda lo stato, poi spunta *Ho verificato questi stati sul sensore reale* |
 | *Tipo* | In base a dove si trova il sensore: *Ritardata* per la porta da cui entri, *Istantanea* o *Percorso* per il resto |
 | *Limite di silenzio (secondi)* | Vedi sotto |
-| *Entità della batteria* | Se la strada ne fornisce una: per la diagnostica e per l'[avviso di batteria](simulator.md#batteries) (in inglese) |
+| *Entità della batteria* | Se la strada ne fornisce una: per la diagnostica e per l'[avviso di batteria](simulator.it.md#batteries) |
 
 ### La manomissione come zona a sé
 
@@ -218,7 +218,7 @@ cambiato o no. Il limite si può impostare da 60 secondi a 7 giorni.
   l'integrazione non riporta gli stati invariati, e il limite va spento.
 
 Poi controlla il tutto senza far scattare niente: la
-[tabella di diagnostica e il simulatore](simulator.md) (in inglese), e un
+[tabella di diagnostica e il simulatore](simulator.it.md), e un
 walk test per trovare il sensore che non ti ha mai visto.
 
 ---

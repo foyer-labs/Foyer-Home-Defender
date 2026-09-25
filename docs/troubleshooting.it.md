@@ -29,8 +29,7 @@ sembra fuori posto fino alla notte in cui conta. Apri *Test e diagnostica*,
 apri la porta o passaci davanti, premi *Aggiorna* mentre il sensore è ancora
 scattato — la tabella è un'istantanea e non si aggiorna da sola — e leggi la
 colonna *Valutazione del trigger*
-([come leggerla](simulator.md#diagnostics-am-i-looking-at-the-right-sensor),
-in inglese). Se dice *Non scatterebbe* mentre la porta è aperta, gli stati di
+([come leggerla](simulator.it.md#diagnostics-am-i-looking-at-the-right-sensor)). Se dice *Non scatterebbe* mentre la porta è aperta, gli stati di
 scatto sono sbagliati: correggili nella pagina *Zone* e spunta di nuovo *Ho
 verificato questi stati sul sensore reale*. L'editor della zona non cambia
 l'entità di una zona esistente: per osservare un'altra entità, crea di nuovo la
@@ -101,8 +100,7 @@ Se gli stati di scatto sono giusti, scorri questo elenco.
 Per vedere se una zona si muove del tutto mentre la casa è disinserita, attiva
 la categoria del registro *Attività zone (disinserito)* in *Impostazioni* per
 il tempo che ti serve a guardare, poi spegnila: un sensore di movimento la
-riempie con migliaia di righe al giorno. Il [simulatore](simulator.md) (in
-inglese) prova cosa fa il motore con una zona; il walk test, nella stessa
+riempie con migliaia di righe al giorno. Il [simulatore](simulator.it.md) prova cosa fa il motore con una zona; il walk test, nella stessa
 pagina, dimostra che il sensore ti vede.
 
 ---
@@ -163,8 +161,7 @@ Poi:
   non è stata sorvegliata.
 - **Un allarme senza nessuna zona.** Un'interferenza radio confermata con la
   casa inserita apre un incidente senza zone, perché non è stata una zona — è
-  stata la radio. [Stato del sistema](system-health.md#radio-interference) (in
-  inglese) spiega cosa conta e i quattro eventi ordinari che hanno esattamente
+  stata la radio. [Stato del sistema](system-health.it.md#radio-interference) spiega cosa conta e i quattro eventi ordinari che hanno esattamente
   lo stesso aspetto.
 
 ---
@@ -206,7 +203,7 @@ aprono una.
 
 Molte zone di una stessa radio che diventano non disponibili insieme sono un
 evento della radio più che tanti guasti:
-[Stato del sistema](system-health.md#radio-interference) (in inglese).
+[Stato del sistema](system-health.it.md#radio-interference).
 
 ---
 
@@ -282,7 +279,7 @@ a ogni tentativo e non arrivare mai al blocco. Il rifiuto lascia una riga
 *Foyer: dispositivo sconosciuto*. Un tastierino dichiarato sull'endpoint dei
 dispositivi risponde solo lì: il suo nome via MQTT o in una chiamata di
 servizio viene rifiutato allo stesso modo, e la notifica dice che il nome è
-stato usato sulla strada sbagliata. Vedi [tastierini](keypads.md) (in inglese).
+stato usato sulla strada sbagliata. Vedi [tastierini](keypads.it.md).
 
 **«Come mai ieri sera non si è inserito?»** Filtra il registro su quella notte:
 
@@ -302,7 +299,7 @@ stato usato sulla strada sbagliata. Vedi [tastierini](keypads.md) (in inglese).
 - *Azione automatica trattenuta* sotto *Sistema*, quando una regola automatica
   è stata fermata da uno dei suoi controlli di sicurezza, da una sospensione o
   dall'interruttore generale. Vedi
-  [regole automatiche](automation-rules.md) (in inglese).
+  [regole automatiche](automation-rules.it.md).
 
 ---
 
@@ -401,8 +398,7 @@ stato digitato.
   *Servizio assente* o *Invii falliti*. Un canale su cui non è ancora stato
   mandato niente è *Mai usato*, non in ordine: solo un invio dimostra che
   consegna. Vedi
-  [lo stato dei canali di notifica](system-health.md#notification-channel-health)
-  (in inglese).
+  [lo stato dei canali di notifica](system-health.it.md#notification-channel-health).
 - **Controlla che qualcosa la mandi.** Il profilo predefinito di una nuova
   installazione risponde con una notifica di Home Assistant e nient'altro. Un
   messaggio sul telefono, e ogni passo dell'escalation, è un'azione notify
@@ -411,8 +407,7 @@ stato digitato.
 - **Un'entità notify non è un servizio notify.** Un'entità prende un titolo e
   un messaggio e scarta tutto il resto — il pulsante per prendere atto, un
   avviso critico, un'immagine. Vedi
-  [canali di notifica](notification-channels.md#a-notify-entity-is-not-a-notify-service)
-  (in inglese).
+  [canali di notifica](notification-channels.it.md#a-notify-entity-is-not-a-notify-service).
 - **Immagini.** Il *Come allegarla* della notifica indica il trasporto: l'app
   Companion scarica un link in diretta attraverso il proxy delle telecamere di
   Home Assistant; Telegram ha bisogno di un file, scritto nella *Cartella

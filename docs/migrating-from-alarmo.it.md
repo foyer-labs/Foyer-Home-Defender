@@ -115,7 +115,7 @@ Ognuna di queste cose è una riga del report, non un tentativo di indovinare:
 - **I codici.** Nessuno, mai: vedi [più sotto](#le-persone-arrivano-senza-codice).
 - **Le notifiche.** Una notifica che arriva dove non dovrebbe è peggio di una
   che imposti di nuovo. In Foyer le notifiche vanno ai contatti, nella pagina
-  *Contatti*; vedi [canali di notifica](notification-channels.md) (in inglese).
+  *Contatti*; vedi [canali di notifica](notification-channels.it.md).
 - **Le altre automazioni**: quelle disattivate in Alarmo; quelle che partono
   dallo stato di un'entità o dall'inizio dell'inserimento, per cui un profilo
   di risposta non ha un momento; quelle limitate ad alcune modalità, a meno
@@ -199,8 +199,7 @@ Dopo *Applica*, la scheda dice cosa viene dopo. In ordine:
 
 - [ ] **Conferma ogni zona sul suo sensore.** Aprilo, chiudilo o passagli
       davanti, guarda cambiare lo stato, correggi il trigger se è sbagliato,
-      spunta la conferma e attiva la zona. La [diagnostica](simulator.md#diagnostics-am-i-looking-at-the-right-sensor)
-      (in inglese) mostra lo stato grezzo accanto alla lettura che ne fa Foyer.
+      spunta la conferma e attiva la zona. La [diagnostica](simulator.it.md#diagnostics-am-i-looking-at-the-right-sensor) mostra lo stato grezzo accanto alla lettura che ne fa Foyer.
 - [ ] **Dai un codice a ogni persona importata** in *Utenti*, e controlla i
       suoi permessi e le sue aree.
 - [ ] **Rifai le notifiche** come contatti in *Contatti*, e controlla in
@@ -210,9 +209,9 @@ Dopo *Applica*, la scheda dice cosa viene dopo. In ordine:
       membri sono confermati.
 - [ ] **Rileggi ogni scenario** in *Scenari*: cosa inserisce, il suo ritardo
       d'uscita, la durata della sirena.
-- [ ] **Fai il giro della casa** con un [walk test](simulator.md#walk-test--which-zones-never-saw-you),
+- [ ] **Fai il giro della casa** con un [walk test](simulator.it.md#walk-test--which-zones-never-saw-you),
       e guarda quali zone non si sono accorte di te.
-- [ ] **Prova una notte nel [simulatore](simulator.md#the-simulator)** prima
+- [ ] **Prova una notte nel [simulatore](simulator.it.md#the-simulator)** prima
       di inserire per davvero.
 
 ## Usarli tutti e due insieme

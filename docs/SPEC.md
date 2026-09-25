@@ -2449,8 +2449,11 @@ art is discussed.
 
 **Every document added from Phase 5 part 4 on is written in English and in
 Italian** (`<name>.md` and `<name>.it.md`), with a link to the other language
-at the top (decision 149). The documents written before it stay in English,
-and the Italian README says so where it links them.
+at the top (decision 149). The documents written before it have since been
+translated too. `SPEC.md`, the API contracts, the project files (`SUPPORT`,
+`CONTRIBUTING`, `SECURITY`, `CHANGELOG`) and `docs/panel-prototype.html`, a
+design sketch for building the panel rather than a document for its users,
+stay in English.
 
 | File | Content |
 |---|---|
@@ -2462,17 +2465,17 @@ and the Italian README says so where it links them.
 | `docs/card.md` (+ `.it.md`) | The card: its four layouts, its editor, how it asks for a code and forgets it, what it shows during a delay, an alarm and a walk test |
 | `docs/zones.md` (+ `.it.md`) | Zone types, trigger specs, NC vs NO contacts, supervision, arm policies, exclusions, key zones, the technical channel, chime, cross-zone verification and groups |
 | `docs/response-profiles.md` (+ `.it.md`) | Inheritance (the area is the unit of response), incidents, moments, actions, conditions, templates including `{{ operation }}`, silent zones, cameras |
-| `docs/notification-channels.md` | Recipes: Companion app + critical alerts, Pushover priority 2, Twilio SMS, Twilio voice, GSM modem, Telegram, Signal |
-| `docs/resilience.md` | Cut power and cut fibre; UPS on the router; why a local GSM channel is the only one that survives |
-| `docs/keypads.md` | Hardware comparison, the MQTT contract, writing your own adapter |
+| `docs/notification-channels.md` (+ `.it.md`) | Recipes: Companion app + critical alerts, Pushover priority 2, Twilio SMS, Twilio voice, GSM modem, Telegram, Signal |
+| `docs/resilience.md` (+ `.it.md`) | Cut power and cut fibre; UPS on the router; why a local GSM channel is the only one that survives |
+| `docs/keypads.md` (+ `.it.md`) | Hardware comparison, the service, MQTT and endpoint contracts, API devices and their scopes, the shipped adapters, writing your own adapter |
 | `docs/reusing-existing-sensors.md` (+ `.it.md`) | Reusing an existing alarm's sensors: native panel integrations, programmable relay outputs, wired-bus sniffing, 433 MHz reception via rtl_433 or an RF bridge, and why 868 MHz systems whose radio is encrypted (Ajax, by its maker's own documentation) cannot be sniffed. Includes the honest caveats: wireless sensors sleep for minutes after a detection, passive reception loses supervision, and tampering with a monitored panel may void the contract |
-| `docs/automation-rules.md` | Presence-based arming, the guards, suspensions and expected-visitor windows, and an unhedged explanation of why automatic disarming is restricted |
+| `docs/automation-rules.md` (+ `.it.md`) | Presence-based arming, the guards, suspensions and expected-visitor windows, and an unhedged explanation of why automatic disarming is restricted |
 | `docs/brand.md` (+ `.it.md`) | The asset set, the palette, and the rule that the sidebar icon is redrawn rather than scaled |
-| `docs/privacy.md` | What the log contains, the GDPR household exemption, and the point at which it stops applying — logging a cleaner, a B&B guest or an employee |
-| `docs/system-health.md` | Mains power and UPS, notification channel health, the external watchdog and its limits, and RF interference detection stated plainly as a heuristic |
+| `docs/privacy.md` (+ `.it.md`) | What the log contains, the GDPR household exemption, and the point at which it stops applying — logging a cleaner, a B&B guest or an employee |
+| `docs/system-health.md` (+ `.it.md`) | Mains power and UPS, notification channel health, the external watchdog and its limits, and RF interference detection stated plainly as a heuristic |
 | `docs/choosing-sensors.md` (+ `.it.md`) | What makes a sensor suitable for alarm use rather than automation: tamper, supervision interval, magnet defeat, radio band. Why a layered zone beats a better sensor, and why the cheapest real upgrade is usually a second sensor in a verification group rather than a more expensive contact |
 | `docs/migrating-from-alarmo.md` (+ `.it.md`) | What the importer converts, what it cannot, and what to check afterwards (imported zones start disabled until their trigger is confirmed); running both side by side |
-| `docs/simulator.md` | How to read a decision trace |
+| `docs/simulator.md` (+ `.it.md`) | How to read a decision trace |
 | `docs/troubleshooting.md` (+ `.it.md`) | Zone never triggers (the trigger spec, first paragraph), false alarms, faults, the refusals people meet (armed-house edits, codes, lockouts), the card missing after an install, how to open an answerable issue |
 | `docs/faq.md` (+ `.it.md`) | The questions people ask: who can disarm, Home Assistant's own cards and voice assistants, the administrator with no code, working without internet, updates, why not automations alone |
 

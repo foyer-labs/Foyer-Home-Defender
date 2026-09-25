@@ -19,7 +19,7 @@ Tre cose conviene saperle prima dei dettagli:
   finestra, il corridoio e le scale che scattano uno dopo l'altro sono un
   evento solo, con una sola escalation e una sola presa d'atto.
 - **Puoi controllare un profilo prima di fidartene.** Il
-  [simulatore](simulator.md) (in inglese) mostra quale profilo ha risposto a
+  [simulatore](simulator.it.md) mostra quale profilo ha risposto a
   ogni passo e perché ogni azione è partita o no, e il pulsante di prova
   accanto a ogni azione la esegue per davvero.
 
@@ -167,8 +167,7 @@ non è qualcuno che ha visto l'allarme.
 **Sullo stato del sistema** — l'alimentazione, i canali di notifica, il
 watchdog e le radio, ciascuno con il momento che dice che è finita. Sono
 elencati, con ciò che li fa scattare, in
-[stato del sistema](system-health.md#the-moments-a-profile-can-answer) (in
-inglese).
+[stato del sistema](system-health.it.md#the-moments-a-profile-can-answer).
 
 ### Codice di coercizione usato
 
@@ -186,8 +185,7 @@ entrambe le cose. **Non va mai in escalation**, e un walk test non lo
 trattiene mai. Non gli risponde niente finché non aggiungi un'azione:
 mandalo a qualcuno fuori casa, con `{{ operation }}` nel messaggio. La
 ricetta è in
-[canali di notifica](notification-channels.md#answering-a-duress-code) (in
-inglese), e a cosa serve un codice di coercizione è nel
+[canali di notifica](notification-channels.it.md#answering-a-duress-code), e a cosa serve un codice di coercizione è nel
 [modello di sicurezza](security-model.it.md).
 
 ### Durante un walk test
@@ -330,8 +328,7 @@ vengono considerate, perché sono regole sugli allarmi, non sul fatto che il
 telefono squilli. Prova la versione salvata dell'azione, quindi salva prima;
 un *Attendi* non ha niente da provare. Lo stesso pulsante è in *Test e
 diagnostica* —
-[la prova delle azioni](simulator.md#action-test--press-the-button-before-the-night-you-need-it)
-(in inglese).
+[la prova delle azioni](simulator.it.md#action-test--press-the-button-before-the-night-you-need-it).
 
 ---
 
@@ -380,7 +377,7 @@ allora invece di vederlo arrivare vuoto.
 | `{{ open_zones }}` | Le zone aperte in questo momento |
 | `{{ reason }}` | Il perché: un inserimento rifiutato, un guasto, cosa ha causato il momento |
 | `{{ incident_zones }}` | Ogni zona che si è aggiunta all'incidente in corso, nell'ordine in cui si sono aggiunte |
-| `{{ operation }}` | Cosa chiedeva una richiesta fatta con un codice di coercizione: `disarm`, `arm`, `bypass_zone`, `export_log`, `unlock`… L'elenco completo è in [canali di notifica](notification-channels.md#answering-a-duress-code) (in inglese) |
+| `{{ operation }}` | Cosa chiedeva una richiesta fatta con un codice di coercizione: `disarm`, `arm`, `bypass_zone`, `export_log`, `unlock`… L'elenco completo è in [canali di notifica](notification-channels.it.md#answering-a-duress-code) |
 
 Una variabile che il momento non porta con sé resta vuota.
 
@@ -488,7 +485,7 @@ chiamata vocale e riportato attraverso il webhook di presa d'atto, oppure
 `foyer.acknowledge` (e `button.foyer_acknowledge`). Ogni presa d'atto
 registra chi e attraverso quale canale. I trasporti, il pulsante e il
 webhook — che è una credenziale — sono in
-[canali di notifica](notification-channels.md) (in inglese).
+[canali di notifica](notification-channels.it.md).
 
 **Se nessuno prende atto**, l'uscita dell'ultimo passo fa scattare
 *Escalation esaurita*, un momento a cui un profilo può rispondere come a
@@ -548,6 +545,6 @@ a un incidente silenzioso.
 La sirena è spuntata per *Rilevamento confermato* perché è il momento a cui
 risponde il gruppo; i passi sono spuntati per *Allarme* perché è il momento
 su cui un incidente va in escalation. Provalo nel
-[simulatore](simulator.md) (in inglese): forza un sensore, poi l'altro trenta
+[simulatore](simulator.it.md): forza un sensore, poi l'altro trenta
 secondi dopo, poi di nuovo a novanta secondi di distanza, e leggi quale
 profilo ha risposto a ogni passo.

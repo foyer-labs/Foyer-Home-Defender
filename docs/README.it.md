@@ -22,20 +22,20 @@ proprio, con le ragioni dietro ogni decisione, è in [SPEC.md](SPEC.md)
 |---|---|---|
 | [Zone, aree e scenari](zones.it.md) | Tipi di zona, trigger, contatti NC e NA, ritardi, regole all'inserimento, esclusioni, supervisione, il canale tecnico, il campanello, i gruppi di verifica | *Aree*, *Zone*, *Scenari*, *Gruppi di verifica* |
 | [Profili di risposta](response-profiles.it.md) | Quale profilo risponde, momenti, incidenti, azioni, condizioni, template, immagini, escalation | *Profili di risposta* |
-| [Canali di notifica](notification-channels.md) (in inglese) | Ricette: app Companion, Pushover, SMS e chiamate con Twilio, un modem GSM, Telegram, Signal; rispondere a un codice di coercizione | *Contatti* |
+| [Canali di notifica](notification-channels.it.md) | Ricette: app Companion, Pushover, SMS e chiamate con Twilio, un modem GSM, Telegram, Signal; rispondere a un codice di coercizione | *Contatti* |
 | [Modello di sicurezza](security-model.it.md) | Da cosa proteggono i codici e da cosa no, i permessi, il codice di coercizione, le credenziali, cosa può fare un amministratore | *Utenti* |
-| [Tastierini, tag e telecomandi](keypads.md) (in inglese) | I contratti del servizio, MQTT e HTTP, i dispositivi API, gli adattatori inclusi, l'hardware | *Dispositivi di inserimento*, *API* |
-| [Regole automatiche](automation-rules.md) (in inglese) | Inserire in base a presenza, orario o un'entità; condizioni di sicurezza, sospensioni, e perché il disinserimento automatico è limitato | *Regole automatiche* |
+| [Tastierini, tag e telecomandi](keypads.it.md) | I contratti del servizio, MQTT e HTTP, i dispositivi API, gli adattatori inclusi, l'hardware | *Dispositivi di inserimento*, *API* |
+| [Regole automatiche](automation-rules.it.md) | Inserire in base a presenza, orario o un'entità; condizioni di sicurezza, sospensioni, e perché il disinserimento automatico è limitato | *Regole automatiche* |
 | [Impostazioni](settings.it.md) | Valori predefiniti globali, il registro, backup e ripristino, la lingua dei messaggi, la rimozione dell'integrazione | *Impostazioni* |
 
 ## Verificarlo, e conviverci
 
 | Documento | Di cosa parla | Pagina del pannello |
 |---|---|---|
-| [Simulatore](simulator.md) (in inglese) | La diagnostica, il simulatore e la traccia delle sue decisioni, il walk test, la prova delle azioni | *Test e diagnostica* |
-| [Stato del sistema](system-health.md) (in inglese) | Alimentazione di rete, canali di notifica, il watchdog esterno, le interferenze radio, le segnalazioni da riparare, la diagnostica | *Stato del sistema* |
-| [Resilienza](resilience.md) (in inglese) | Cosa sopravvive a un blackout o alla fibra tagliata, e le quattro cose che aiutano | — |
-| [Privacy](privacy.md) (in inglese) | Cosa contiene il registro, l'esenzione domestica e dove finisce, cancellare ed esportare i dati di una persona | *Registro* |
+| [Simulatore](simulator.it.md) | La diagnostica, il simulatore e la traccia delle sue decisioni, il walk test, la prova delle azioni | *Test e diagnostica* |
+| [Stato del sistema](system-health.it.md) | Alimentazione di rete, canali di notifica, il watchdog esterno, le interferenze radio, le segnalazioni da riparare, la diagnostica | *Stato del sistema* |
+| [Resilienza](resilience.it.md) | Cosa sopravvive a un blackout o alla fibra tagliata, e le quattro cose che aiutano | — |
+| [Privacy](privacy.it.md) | Cosa contiene il registro, l'esenzione domestica e dove finisce, cancellare ed esportare i dati di una persona | *Registro* |
 | [Risoluzione dei problemi](troubleshooting.it.md) | Una zona che non scatta mai, i falsi allarmi, i guasti, i rifiuti che si incontrano, aprire una segnalazione a cui si possa rispondere | — |
 
 ## Hardware
@@ -54,6 +54,6 @@ proprio, con le ragioni dietro ogni decisione, è in [SPEC.md](SPEC.md)
 | [Supporto](../SUPPORT.md) (in inglese) | Cosa aspettarsi da una issue: al meglio delle possibilità, senza garanzia di risposta né di correzione |
 | [Contribuire](../CONTRIBUTING.md) · [Politica di sicurezza](../SECURITY.md) · [Changelog](../CHANGELOG.md) (in inglese) | Come contribuire, come segnalare una vulnerabilità, cosa è cambiato in ogni versione |
 
-I documenti scritti prima della versione 0.1.0-beta.23 (canali di notifica,
-tastierini, regole automatiche, privacy, resilienza, simulatore, stato del
-sistema) sono solo in inglese; gli altri sono in inglese e in italiano.
+Ogni documento qui sopra è in inglese e in italiano. Il progetto (SPEC), i
+contratti API e i file del progetto — supporto, contribuire, politica di
+sicurezza, changelog — sono solo in inglese.

@@ -30,14 +30,14 @@ codici — ha un documento suo, linkato dove se ne parla.
   hardware.
 - **Un servizio `notify.*` che funzioni.** Foyer decide chi avvisare e quando;
   l'invio lo fanno le integrazioni di notifica di Home Assistant.
-  [Notification channels](notification-channels.md) (in inglese) ha una
+  [Canali di notifica](notification-channels.it.md) ha una
   ricetta per ciascuna di quelle più comuni, compreso quali reggono a una fibra
   tagliata.
 - **Una sirena, un interruttore o una presa smart**, se vuoi far rumore.
   Facoltativo.
 - **Un tastierino, un tag NFC, un badge o un telecomando**, se vuoi inserire
-  dal muro invece che dal telefono. Facoltativo, e [keypads](keypads.md) (in
-  inglese) dice cosa vale ogni tipo di hardware prima che tu lo compri.
+  dal muro invece che dal telefono. Facoltativo, e [tastierini](keypads.it.md)
+  dice cosa vale ogni tipo di hardware prima che tu lo compri.
 - **Un broker MQTT solo se un dispositivo che scegli parla MQTT.** Il contratto
   MQTT di Foyer resta spento finché non lo accendi tu, nella pagina
   *Dispositivi di inserimento*.
@@ -45,7 +45,7 @@ codici — ha un documento suo, linkato dove se ne parla.
 Nient'altro: nessun account cloud e nessun abbonamento. Foyer non apre nessuna
 connessione verso l'esterno per conto suo, a meno che tu non configuri il
 watchdog esterno nella pagina *Stato del sistema*
-([system health](system-health.md), in inglese), che resta spento finché non
+([stato del sistema](system-health.it.md)), che resta spento finché non
 gli dai un indirizzo. Le notifiche escono di casa attraverso le integrazioni di
 Home Assistant che hai scelto tu, non attraverso qualcosa di Foyer.
 
@@ -69,7 +69,7 @@ Quella cartella è tutto ciò che serve a Foyer: il pannello, la card e le icone
 sono già compilati e inclusi lì dentro, in `custom_components/foyer/frontend`,
 quindi non c'è niente da compilare e nessuna risorsa da aggiungere alla
 dashboard. Gli unici a stare fuori sono i blueprint dei tastierini, e
-[keypads](keypads.md) (in inglese) spiega come importarli. HACS fa rispettare
+[tastierini](keypads.it.md) spiega come importarli. HACS fa rispettare
 la versione minima di Home Assistant; un'installazione a mano no, quindi
 controlla prima la tua versione.
 
@@ -388,11 +388,11 @@ quando lo chiede la politica; [la card](card.it.md) ha il resto.
   politiche di inserimento, esclusioni, il canale tecnico.
 - [Profili di risposta](response-profiles.it.md) — cosa succede quando, a chi,
   e perché ha suonato.
-- [Notification channels](notification-channels.md) (in inglese) — ricette per
+- [Canali di notifica](notification-channels.it.md) — ricette per
   l'app Companion, SMS, chiamate vocali, Telegram e altri.
 - [Modello di sicurezza](security-model.it.md) — da cosa proteggono i codici, e
   da cosa no.
-- [Simulator](simulator.md) (in inglese) — chiedere cosa succederebbe, senza
+- [Simulatore](simulator.it.md) — chiedere cosa succederebbe, senza
   che succeda niente.
 - [Risoluzione dei problemi](troubleshooting.it.md) — una zona che non scatta
   mai, una card che non compare, e come aprire una segnalazione a cui si possa

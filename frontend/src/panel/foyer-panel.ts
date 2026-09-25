@@ -148,6 +148,12 @@ const TRANSLATED_DOCS: Record<string, ReadonlySet<string>> = {
     "response-profiles.md",
     "security-model.md",
     "settings.md",
+    "keypads.md",
+    "notification-channels.md",
+    "automation-rules.md",
+    "simulator.md",
+    "privacy.md",
+    "system-health.md",
   ]),
 };
 

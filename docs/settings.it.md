@@ -23,7 +23,7 @@ codici, la lunghezza del codice e il blocco stanno nella pagina *Utenti*,
 accanto alle persone a cui si applicano; li spiega
 [il modello di sicurezza](security-model.it.md). La rete elettrica, il
 watchdog, i controlli dei canali e le radio stanno in *Stato del sistema*;
-vedi [system-health.md](system-health.md) (in inglese).
+vedi [stato del sistema](system-health.it.md).
 
 ---
 
@@ -101,14 +101,14 @@ d'uscita. Vedi [zone](zones.it.md).
 considerata scarica. Una batteria scarica avvisa e non blocca mai
 l'inserimento, ed è per questo che questa impostazione resta libera anche da
 inserito; un `binary_sensor` di batteria si legge invece dal suo `on`. Vedi
-[simulator.md](simulator.md#batteries) (in inglese).
+[simulatore](simulator.it.md#batteries).
 
 **Timeout del walk test** è per quanto un walk test resta attivo senza
 rilevazioni prima di chiudersi da solo. Ogni rilevazione lo rimanda, e un
 tetto di tre ore dall'inizio lo chiude comunque. La chiusura automatica è
 obbligatoria, quindi nessun valore qui la disattiva. Resta bloccato da inserito
 perché un walk test zittisce anche le aree che ha inserito qualcun altro. Vedi
-[simulator.md](simulator.md#walk-test--which-zones-never-saw-you).
+[simulatore](simulator.it.md#walk-test--which-zones-never-saw-you).
 
 ---
 
@@ -201,8 +201,7 @@ gli risponde, e il profilo predefinito gli risponde comunque.
 case con personale domestico: quelle sono le categorie che nominano persone,
 mentre le altre portano guasti e stati delle porte, che non nominano nessuno e
 sono quello che si legge quando un sensore non ha reagito tre settimane fa.
-Vedi [privacy.md](privacy.md#keep-less-retention-and-the-short-preset) (in
-inglese).
+Vedi [privacy](privacy.it.md#keep-less-retention-and-the-short-preset).
 
 ---
 
@@ -210,7 +209,7 @@ inglese).
 
 Due impostazioni dell'installazione; cancellare o esportare le righe di una
 singola persona si fa dalla pagina *Registro*. Libere anche da inserito. Vedi
-[privacy.md](privacy.md) (in inglese).
+[privacy](privacy.it.md).
 
 - **Sostituisci i nomi nelle righe più vecchie** — disattivato per
   impostazione predefinita. Se lo attivi, le righe più vecchie del numero di
@@ -221,7 +220,7 @@ singola persona si fa dalla pagina *Registro*. Libere anche da inserito. Vedi
   nessun nome. Il pannello chiede conferma prima di attivarlo, perché la prima
   passata gira al prossimo avvio, e salvare una qualsiasi impostazione è un
   avvio. L'attivazione e la disattivazione vengono registrate entrambe. Vedi
-  [privacy.md](privacy.md#or-let-it-happen-by-itself-timed-pseudonymisation).
+  [privacy](privacy.it.md#or-let-it-happen-by-itself-timed-pseudonymisation).
 - **Cancella il database del registro se Foyer viene rimosso** — disattivato
   per impostazione predefinita. Vedi
   [Rimuovere l'integrazione](#rimuovere-lintegrazione) più sotto.
@@ -334,7 +333,7 @@ resta disattivato, il file rimane nella cartella di configurazione come
 Gli scatti delle telecamere non vengono mai cancellati. Sono fotografie
 dell'interno della casa, in una cartella che hai scelto tu e che può contenere
 file che non sono mai stati di Foyer, quindi rimuoverli sta a te.
-[privacy.md](privacy.md#when-foyer-is-removed) (in inglese) ha i dettagli.
+[privacy](privacy.it.md#when-foyer-is-removed) ha i dettagli.
 
 ---
 

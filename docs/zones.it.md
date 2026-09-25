@@ -100,8 +100,7 @@ finestra esterna. È imposto nel motore, con un test di regressione che lo
 verifica direttamente; una regola che cambia scenario lascia invece l'area
 perimetrale inserita per conto suo. Tu, un tastierino o una zona chiave la
 disinserite come sempre. Il ragionamento è nelle
-[regole automatiche](automation-rules.md#why-automatic-disarming-is-restricted)
-(in inglese).
+[regole automatiche](automation-rules.it.md#why-automatic-disarming-is-restricted).
 
 ---
 
@@ -324,8 +323,7 @@ si può leggere, così un pulsante antipanico nuovo non tiene la sua area non
 inserita finché qualcuno non lo preme; `unavailable` per lei resta un guasto.
 Un guasto **blocca l'inserimento della sua area**, genera una volta *Guasto di zona*, accende `binary_sensor.foyer_fault`
 e compare nella Panoramica, nella pagina *Zone* e in
-[Test e diagnostica](simulator.md#diagnostics-am-i-looking-at-the-right-sensor)
-(in inglese). Un'entità che diventa non disponibile conserva l'ultima lettura,
+[Test e diagnostica](simulator.it.md#diagnostics-am-i-looking-at-the-right-sensor). Un'entità che diventa non disponibile conserva l'ultima lettura,
 quindi non chiude mai una porta aperta. *Consenti l'inserimento anche in
 guasto* fa sì che il guasto di questa sola zona non blocchi — per il sensore
 di allagamento con la batteria scarica la mattina in cui parti. Lascialo
@@ -344,7 +342,7 @@ Un'**entità batteria** — un `sensor` in percentuale o un `binary_sensor` di
 batteria — alimenta la diagnostica e l'avviso di batteria scarica. Una
 batteria scarica avvisa e non blocca mai l'inserimento; un'entità batteria che
 non si può leggere è un guasto, e lo blocca. I motivi e la soglia sono nella
-[pagina del simulatore](simulator.md#batteries) (in inglese).
+[pagina del simulatore](simulator.it.md#batteries).
 
 ### Le altre impostazioni di una zona
 

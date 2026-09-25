@@ -25,7 +25,7 @@ modelli. Per i sensori che appartengono a un antifurto esistente, vedi
 | Interruttore antimanomissione | Dice che il contenitore è stato aperto o il sensore staccato dal muro | Una seconda zona, di tipo *Manomissione* |
 | Intervallo di supervisione | Dice che il sensore è vivo quando non succede niente | *Limite di silenzio (secondi)* sulla zona |
 | Resistenza all'elusione con un magnete | Un contatto che si può tenere chiuso da fuori non protegge niente | Niente in Foyer può rimediare; si sceglie al momento dell'acquisto |
-| Radio | Decide cosa gli fanno un jammer, un router spento o una banda affollata | [Interferenze radio](system-health.md#radio-interference) (in inglese) |
+| Radio | Decide cosa gli fanno un jammer, un router spento o una banda affollata | [Interferenze radio](system-health.it.md#radio-interference) |
 | Segnalazione della batteria | Una pila si scarica in silenzio se niente lo segnala | *Entità della batteria* sulla zona |
 | Immunità agli animali e tempo cieco dei PIR | Decidono i falsi allarmi e il secondo rilevamento che non arriva mai | *Attivazioni necessarie*, gruppi di verifica |
 
@@ -100,7 +100,7 @@ Qualsiasi radio si può disturbare. Home Assistant non può misurare il
 disturbo, ma Foyer ne sorveglia la firma — molte zone di una stessa radio
 che diventano non disponibili insieme, mentre il coordinatore risponde
 ancora — e a impianto inserito la tratta come un allarme:
-[interferenze radio](system-health.md#radio-interference) (in inglese).
+[interferenze radio](system-health.it.md#radio-interference).
 Quel controllo funziona solo per i sensori che *diventano* non disponibili
 quando smettono di essere sentiti, che è un motivo in più per preferire una
 radio con segnali di presenza.
@@ -116,7 +116,7 @@ dove `on` vuol dire scarica. Una batteria scarica avvisa e non blocca mai
 l'inserimento; un'entità della batteria che non si riesce a leggere affatto è
 un guasto, e quella sì che blocca. La soglia è *Batteria scarica sotto* nella
 pagina *Impostazioni*, 20 % di default. Il ragionamento è in
-[batterie](simulator.md#batteries) (in inglese).
+[batterie](simulator.it.md#batteries).
 
 ### PIR: immunità agli animali e tempo cieco
 

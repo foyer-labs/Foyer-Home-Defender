@@ -60,7 +60,7 @@ tutto il resto, e Foyer è costruito proprio attorno a quelle parti:
   recorder di Home Assistant ha cancellato quella notte (per impostazione
   predefinita tiene dieci giorni). Foyer tiene un registro suo in un database
   separato, trenta giorni per categoria per impostazione predefinita. Vedi
-  [privacy](privacy.md) (in inglese) per sapere cosa contiene.
+  [privacy](privacy.it.md) per sapere cosa contiene.
 
 Le tue automazioni restano benvenute. Ogni riga che Foyer scrive nel registro
 viene anche emessa sul bus degli eventi di Home Assistant come `foyer_event`,
@@ -173,14 +173,13 @@ pagina *Utenti*.
 Sì. Foyer non richiede né un account cloud né un broker MQTT, e non apre
 nessuna connessione verso l'esterno per conto suo tranne il ping del watchdog
 esterno, e solo dopo che gli hai dato un URL (vedi
-[stato del sistema](system-health.md#the-external-watchdog), in inglese).
+[stato del sistema](system-health.it.md#the-external-watchdog)).
 
 Se le tue *notifiche* sopravvivano a una linea tagliata è un'altra domanda. Una
 notifica push no. Ed è per questo che un'escalation è una lista di canali e non
 uno solo, e per cui almeno un canale locale, per esempio un modem GSM USB, va
-messo da qualche parte in quella lista. [Resilience](resilience.md) (in
-inglese) spiega cosa sopravvive a un blackout o a una fibra tagliata, e
-[notification channels](notification-channels.md) (in inglese) ha le ricette.
+messo da qualche parte in quella lista. [Resilienza](resilience.it.md) spiega cosa sopravvive a un blackout o a una fibra tagliata, e
+[canali di notifica](notification-channels.it.md) ha le ricette.
 
 ## La mia configurazione sopravvive a un aggiornamento?
 
@@ -194,7 +193,7 @@ Se ne vanno con lei la sua configurazione, le entità, il pannello nella barra
 laterale e il messaggio MQTT conservato sul broker. Il database del registro
 resta, a meno che tu non abbia attivato l'opzione per cancellarlo, e gli scatti
 delle telecamere non vengono mai cancellati;
-[privacy](privacy.md#when-foyer-is-removed) (in inglese) ha l'elenco completo.
+[privacy](privacy.it.md#when-foyer-is-removed) ha l'elenco completo.
 
 ## È disponibile nella mia lingua?
 
@@ -215,5 +214,5 @@ Non uno mantenuto da questo progetto nella v1. Un tastierino ESPHome fatto in
 casa rispetta il contratto come qualsiasi altro tastierino: può pubblicare sul
 topic MQTT, chiamare `foyer.arm` e `foyer.disarm`, oppure parlare con
 l'endpoint dei dispositivi di Foyer.
-[Keypads](keypads.md#choosing-the-hardware) (in inglese) confronta l'hardware e
+[Tastierini](keypads.it.md#choosing-the-hardware) confronta l'hardware e
 descrive tutte e tre le strade.
