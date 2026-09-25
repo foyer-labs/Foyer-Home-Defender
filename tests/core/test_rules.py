@@ -1132,3 +1132,56 @@ def test_an_arm_rule_keeps_a_perimeter_area_armed_when_it_may_disarm():
     assert decision.state.area("ground").state is AreaState.ARMED
     assert decision.state.area("ground").scenario_id is None
     assert decision.state.area("garage").state is AreaState.DISARMED
+
+
+# --- every area (decision 163) -----------------------------------------------------
+
+
+def _every_area():
+    return perimeter_house(
+        rule(
+            "let_me_in",
+            kind=RuleTriggerKind.PRESENCE,
+            action=RuleActionKind.DISARM,
+            area_ids=(),
+            scenario_id=None,
+            grace=0,
+            all_areas=True,
+        ),
+        allow_auto_disarm=True,
+    )
+
+
+def test_every_area_disarms_all_but_the_perimeter():
+    world = World(_every_area())
+    world.arm("away")
+    world.advance(30)
+    empty(world)
+    decision = world.person(LUCA, "home")
+
+    disarmed = {o.area_id for o in decision.occurrences if o.moment is Moment.DISARMED}
+    assert "upstairs" in disarmed
+    assert "ground" not in disarmed
+    assert decision.state.area("ground").state is AreaState.ARMED
+
+
+def test_every_area_follows_the_areas_the_house_has_now():
+    """An area added after the rule was written is disarmed too: the rule
+    names the house, not a list written once."""
+    config = _every_area()
+    assert rules_engine.named_areas(config, config.rules[0]) == tuple(
+        a.id for a in config.areas
+    )
+    added = replace(
+        config,
+        areas=(*config.areas, replace(config.areas[-1], id="attic", name="Attic")),
+    )
+    assert "attic" in rules_engine.named_areas(added, added.rules[0])
+
+
+def test_every_area_needs_no_list_to_be_saved():
+    from custom_components.foyer.core.validation import validate
+
+    codes = {p.code for p in validate(_every_area())}
+    assert "rule_without_areas" not in codes
+    assert "rule_only_perimeter" not in codes

@@ -313,7 +313,7 @@ def next_action(
                 action=rule.action,
                 at=max(at, now),
                 scenario_id=rule.scenario_id,
-                area_ids=rule.area_ids,
+                area_ids=named_areas(config, rule),
                 suspension=covering(state, rule, at),
             )
         )
@@ -422,13 +422,21 @@ def disarm_targets(
     (part 2 decision 6). Whoever walks in on a stolen phone still finds every
     external door and window protected.
     """
-    named = rule.area_ids if rule.action is RuleActionKind.DISARM else ()
+    named = named_areas(config, rule) if rule.action is RuleActionKind.DISARM else ()
     areas: tuple[Area, ...] = tuple(
         a for a in (config.area(a_id) for a_id in named) if a is not None
     )
     allowed = tuple(a.id for a in areas if not a.is_perimeter)
     refused = tuple(a.id for a in areas if a.is_perimeter)
     return allowed, refused
+
+
+def named_areas(config: FoyerConfig, rule: AutoRule) -> tuple[str, ...]:
+    """The areas a ``disarm`` rule names: its list, or every area the house
+    has right now when it names them all (decision 163)."""
+    if rule.all_areas:
+        return tuple(a.id for a in config.areas)
+    return rule.area_ids
 
 
 def switch_drops(

@@ -422,7 +422,7 @@ async def test_the_diagnostics_download_carries_no_names(
     assert "notify.mobile_app_luca" not in text
     assert ZONE not in text
     assert document["config"]["zones"][0]["entity"].startswith("binary_sensor.zone_")
-    assert document["integration"]["config_schema"] == "8.4"
+    assert document["integration"]["config_schema"] == "8.5"
 
 
 @pytest.mark.parametrize("language", ["en", "it"])

@@ -589,6 +589,15 @@ def _v8_3_to_v8_4(data: Document) -> Document:
     return out
 
 
+def _v8_4_to_v8_5(data: Document) -> Document:
+    """A disarm rule may name every area (decision 163). Every rule stored
+    before keeps its own list, as it always has."""
+    out = copy.deepcopy(data)
+    for rule in out.get("rules", []):
+        rule.setdefault("all_areas", False)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -623,6 +632,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (8, 1): (_v8_1_to_v8_2, (8, 2)),
     (8, 2): (_v8_2_to_v8_3, (8, 3)),
     (8, 3): (_v8_3_to_v8_4, (8, 4)),
+    (8, 4): (_v8_4_to_v8_5, (8, 5)),
 }
 
 

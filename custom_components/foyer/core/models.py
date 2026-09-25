@@ -1605,6 +1605,11 @@ class AutoRule:
     # Arm anyway, excluding the open zones that are bypassable (decision
     # 126). Off by default: a forced arming nobody typed a code for.
     exclude_open_zones: bool = False
+    # A ``disarm`` of every area the house has when it acts, rather than of
+    # a list written once (decision 163): an area added later is included
+    # and a deleted one does not leave the rule half-broken. The perimeter
+    # is still taken out by the engine, whatever this says.
+    all_areas: bool = False
 
 
 @dataclass(frozen=True, slots=True)

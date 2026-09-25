@@ -218,8 +218,11 @@ from ..core.models import (
 # 8.4 is additive: the mains may be known from devices outside the UPS
 # (decision 162). An 8.3 build reading it ignores them and watches no mains,
 # which is what it did for a house with no smart UPS anyway.
+# 8.5 is additive: a disarm rule may name every area (decision 163). An 8.4
+# build reading it finds the rule's list empty and refuses to act on it,
+# which disarms less, never more.
 STORAGE_VERSION = 8
-STORAGE_MINOR_VERSION = 4
+STORAGE_MINOR_VERSION = 5
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -1025,6 +1028,7 @@ def rule_from_dict(r: dict[str, Any]) -> AutoRule:
         notify_contact_ids=tuple(r.get("notify_contact_ids", ())),
         enabled=bool(r["enabled"]),
         exclude_open_zones=bool(r.get("exclude_open_zones", False)),
+        all_areas=bool(r.get("all_areas", False)),
     )
 
 
@@ -1057,6 +1061,7 @@ def rule_to_dict(r: AutoRule) -> dict[str, Any]:
         "notify_contact_ids": list(r.notify_contact_ids),
         "enabled": r.enabled,
         "exclude_open_zones": r.exclude_open_zones,
+        "all_areas": r.all_areas,
     }
 
 

@@ -3841,9 +3841,8 @@ class _Run:
         target_areas: tuple[str, ...] = ()
         if rule.action is RuleActionKind.DISARM:
             allowed, refused = rules_engine.disarm_targets(self.config, rule)
-            if not rule.area_ids or any(
-                self.config.area(a) is None for a in rule.area_ids
-            ):
+            named = rules_engine.named_areas(self.config, rule)
+            if not named or any(self.config.area(a) is None for a in named):
                 return replace(decided, block=RuleBlock.UNKNOWN_AREA)
             decided = replace(decided, area_ids=allowed, refused=refused)
             if not allowed:

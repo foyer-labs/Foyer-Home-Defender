@@ -496,12 +496,16 @@ def _rule_problems(config: FoyerConfig) -> list[Problem]:
                 add("weekday_invalid", field)
 
         if rule.action is RuleActionKind.DISARM:
-            if not rule.area_ids:
+            if not rule.area_ids and not rule.all_areas:
                 add("rule_without_areas", "area_ids")
-            for area_id in rule.area_ids:
+            for area_id in () if rule.all_areas else rule.area_ids:
                 if area_id not in area_ids:
                     add("unknown_area", "area_ids")
-            named = [config.area(a) for a in rule.area_ids]
+            named = (
+                list(config.areas)
+                if rule.all_areas
+                else [config.area(a) for a in rule.area_ids]
+            )
             if named and all(a is not None and a.is_perimeter for a in named):
                 # It would never do anything: §9.4 point 3 takes every area
                 # it names out of the action. Better said here, once, than
