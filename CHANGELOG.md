@@ -8,6 +8,17 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.9] — a channel that is used says so
+
+### Fixed
+- **A contact channel no longer reads *Never used* while its notifications
+  arrive.** A notification a profile sent straight to a `notify.*` service,
+  rather than to a contact, proved nothing about the contact channel on that
+  same service, so *System health* kept calling it never used. A send that
+  works now marks every contact channel on that service as working. A send
+  that fails is not held against them, since the action's own data may
+  differ from the channel's.
+
 ## [1.0.8] — what still uses it
 
 Nothing changes in how the alarm behaves.
