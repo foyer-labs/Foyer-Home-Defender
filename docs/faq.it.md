@@ -122,7 +122,7 @@ senza codice, anche quello della persona esentata.
 - **Finché qualcuno può usare l'esenzione**, Home Assistant non chiede niente. La persona
   esentata inserisce senza codice; chiunque altro a cui Foyer chieda un codice
   viene rifiutato da Foyer, con una riga nel registro e un messaggio che dice
-  dove digitarlo: la card di Foyer, il pannello di Foyer, o la card *Pannello
+  dove digitarlo: la card di Foyer, il pannello Home Defender, o la card *Pannello
   degli Allarmi* di Home Assistant, che mostra un campo per il codice ovunque
   un codice possa essere chiesto, ma offre l'inserimento solo finché il
   pannello è disinserito.

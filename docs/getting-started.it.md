@@ -139,7 +139,7 @@ di configurazione non viene più riproposto.
 
 ## La procedura guidata del primo avvio
 
-Nella barra laterale compare una voce **Foyer**. La prima volta che la apre
+Nella barra laterale compare una voce **Home Defender**. La prima volta che la apre
 qualcuno che può cambiare la configurazione — un amministratore di Home
 Assistant, o un utente Foyer con il permesso di modificare la configurazione —
 un riquadro intitolato *Completa la configurazione di Foyer* compare sopra

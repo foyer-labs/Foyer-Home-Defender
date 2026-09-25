@@ -13,7 +13,7 @@
       },
       "setup": {
         "title": "Set up Foyer Home Defender",
-        "description": "Start with one area, one zone and one scenario. Add everything else from the Foyer panel in the sidebar.",
+        "description": "Start with one area, one zone and one scenario. Add everything else from the Home Defender panel in the sidebar.",
         "data": {
           "area_name": "Area name",
           "scenario_name": "Scenario name",
@@ -114,10 +114,10 @@
       "message": "A code is required."
     },
     "panel_arm_code_required": {
-      "message": "A code is required to arm. Type it in Home Assistant's Alarm panel card, in Foyer's card or in the Foyer panel."
+      "message": "A code is required to arm. Type it in Home Assistant's Alarm panel card, in Foyer's card or in the Home Defender panel."
     },
     "panel_arm_code_required_not_disarmed": {
-      "message": "A code is required to arm. Type it in Foyer's card or in the Foyer panel."
+      "message": "A code is required to arm. Type it in Foyer's card or in the Home Defender panel."
     },
     "rejected_zone_fault": {
       "message": "Cannot arm: zone in fault: {zones}."

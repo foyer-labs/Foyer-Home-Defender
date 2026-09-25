@@ -133,7 +133,7 @@ is not asked again.
 
 ## The first-run wizard
 
-A **Foyer** entry appears in the sidebar. The first time somebody who may
+A **Home Defender** entry appears in the sidebar. The first time somebody who may
 change the configuration opens it — a Home Assistant administrator, or a Foyer
 user with permission to edit the configuration — a panel titled *Finish
 setting up Foyer* sits above whichever page is open. It continues from what

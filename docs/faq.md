@@ -111,7 +111,7 @@ a code, the exempt person's included.
 - **While somebody can use the exemption**, Home Assistant asks for nothing. The exempt
   person arms with no code; anybody else Foyer wants a code from is refused by
   Foyer, with a row in the log and a message saying where to type one: Foyer's
-  card, the Foyer panel, or Home Assistant's *Alarm panel* card, which shows
+  card, the Home Defender panel, or Home Assistant's *Alarm panel* card, which shows
   a code field wherever a code may be asked but offers arming only while the
   panel is disarmed.
 - **Changing mode while the house is armed** is a change of scenario, which asks

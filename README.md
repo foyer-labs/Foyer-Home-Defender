@@ -24,7 +24,7 @@ yourself, a response that keeps looking for somebody until they answer — and
 a way to check all of it without setting anything off.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-en.png" alt="The Foyer panel: two areas armed by one scenario, one counting down its entry delay, the zones that are not ready, and the last few events" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-en.png" alt="The Home Defender panel: two areas armed by one scenario, one counting down its entry delay, the zones that are not ready, and the last few events" width="900">
 </p>
 
 ## What you get
@@ -130,7 +130,7 @@ no broker unless a device of yours speaks MQTT.
 2. *Settings → Devices & services → Add integration → Foyer Home Defender*:
    accept the text above, then confirm the states in which your first zone
    counts as triggered.
-3. Open **Foyer** in the sidebar: a five-step wizard finishes the setup.
+3. Open **Home Defender** in the sidebar: a five-step wizard finishes the setup.
 
 [Getting started](docs/getting-started.md) covers the manual install, the
 wizard and the first fifteen minutes; [the card](docs/card.md) puts the alarm

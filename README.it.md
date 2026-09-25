@@ -25,7 +25,7 @@ qualcuno finché non risponde — e un modo per verificare tutto senza far
 partire niente.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-it.png" alt="Il pannello di Foyer: due aree inserite da un solo scenario, una in conto alla rovescia sul ritardo d'ingresso, le zone non pronte e gli ultimi eventi" width="900">
+  <img src="https://raw.githubusercontent.com/foyer-labs/Foyer-Home-Defender/master/docs/screenshots/panel-overview-it.png" alt="Il pannello Home Defender: due aree inserite da un solo scenario, una in conto alla rovescia sul ritardo d'ingresso, le zone non pronte e gli ultimi eventi" width="900">
 </p>
 
 ## Cosa ottieni
@@ -136,7 +136,7 @@ account cloud, e nessun broker a meno che un tuo dispositivo parli MQTT.
 2. *Impostazioni → Dispositivi e servizi → Aggiungi integrazione → Foyer Home
    Defender*: accetta il testo qui sopra, poi conferma gli stati in cui la
    prima zona conta come scattata.
-3. Apri **Foyer** nella barra laterale: una procedura guidata di cinque passi
+3. Apri **Home Defender** nella barra laterale: una procedura guidata di cinque passi
    completa la configurazione.
 
 [Per iniziare](docs/getting-started.it.md) spiega l'installazione a mano, la

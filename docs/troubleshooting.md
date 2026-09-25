@@ -236,7 +236,7 @@ and a mode that needs none is refused by Home Assistant until a code is typed â€
 from an automation too, which arms it through `foyer.arm` instead. When
 somebody can use the exemption, those buttons stop asking, and a person Foyer does want a
 code from is refused with *A code is required to arm*, and told where it can
-be typed: Foyer's card, the Foyer panel, or Home Assistant's *Alarm panel*
+be typed: Foyer's card, the Home Defender panel, or Home Assistant's *Alarm panel*
 card while the panel is disarmed, which is the only time that card offers
 arming. The [FAQ](faq.md) covers Home Assistant's cards and voice assistants
 in full.

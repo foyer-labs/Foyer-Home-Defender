@@ -23,7 +23,9 @@ DISCLAIMER_VERSION: Final = 1
 # Frontend
 PANEL_URL_PATH: Final = "foyer"
 PANEL_ELEMENT: Final = "foyer-panel"
-PANEL_TITLE: Final = "Foyer"  # brand name, identical in every language
+# The product's name, identical in every language: Foyer is the brand, Home
+# Defender the product (decision 157).
+PANEL_TITLE: Final = "Home Defender"
 # An mdi icon, not the Foyer shield, and the reason is worth recording.
 # A custom icon set is registered by a module; when the sidebar draws its
 # icons before that module has run — which is what the companion app does

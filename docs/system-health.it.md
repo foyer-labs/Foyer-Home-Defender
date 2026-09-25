@@ -373,7 +373,7 @@ permettono di distinguere i casi la mattina dopo.
 
 I problemi persistenti diventano segnalazioni di riparazione di Home Assistant,
 in Impostazioni, dove un utente di Home Assistant le incontra senza mai aprire
-il pannello di Foyer:
+il pannello Home Defender:
 
 | Segnalazione | Viene aperta quando |
 |---|---|

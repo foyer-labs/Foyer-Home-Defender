@@ -13,7 +13,7 @@
       },
       "setup": {
         "title": "Configura Foyer Home Defender",
-        "description": "Si parte da un'area, una zona e uno scenario. Tutto il resto si aggiunge dal pannello Foyer nella barra laterale.",
+        "description": "Si parte da un'area, una zona e uno scenario. Tutto il resto si aggiunge dal pannello Home Defender nella barra laterale.",
         "data": {
           "area_name": "Nome dell'area",
           "scenario_name": "Nome dello scenario",
@@ -114,10 +114,10 @@
       "message": "Serve un codice."
     },
     "panel_arm_code_required": {
-      "message": "Per inserire serve un codice. Digitalo nella card Pannello degli Allarmi di Home Assistant, nella card di Foyer o nel pannello di Foyer."
+      "message": "Per inserire serve un codice. Digitalo nella card Pannello degli Allarmi di Home Assistant, nella card di Foyer o nel pannello Home Defender."
     },
     "panel_arm_code_required_not_disarmed": {
-      "message": "Per inserire serve un codice. Digitalo nella card di Foyer o nel pannello di Foyer."
+      "message": "Per inserire serve un codice. Digitalo nella card di Foyer o nel pannello Home Defender."
     },
     "rejected_zone_fault": {
       "message": "Impossibile inserire: zona in guasto: {zones}."

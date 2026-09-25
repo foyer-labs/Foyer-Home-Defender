@@ -325,7 +325,7 @@ what let you tell the cases apart in the morning.
 ## Repair issues
 
 Persistent problems become Home Assistant repair issues, in Settings, where a
-Home Assistant user meets them without ever opening the Foyer panel:
+Home Assistant user meets them without ever opening the Home Defender panel:
 
 | Issue | Raised when |
 |---|---|

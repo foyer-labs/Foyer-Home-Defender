@@ -265,7 +265,7 @@ Home Assistant finché non si digita un codice — anche da un'automazione, che
 per questo inserisce con `foyer.arm`. Quando qualcuno può usare l'esenzione, quei pulsanti
 smettono di chiederlo, e una persona a cui Foyer vuole chiedere un codice viene
 rifiutata con *Per inserire serve un codice*, e le viene detto dove digitarlo:
-la card di Foyer, il pannello di Foyer, o la card *Pannello degli Allarmi* di
+la card di Foyer, il pannello Home Defender, o la card *Pannello degli Allarmi* di
 Home Assistant finché il pannello è disinserito, che è l'unico momento in cui
 quella card offre l'inserimento. Le [domande frequenti](faq.it.md) trattano per
 intero le card di Home Assistant e gli assistenti vocali.

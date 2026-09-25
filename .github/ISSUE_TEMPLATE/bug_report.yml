@@ -69,7 +69,7 @@ body:
     attributes:
       label: Foyer's log around that moment
       description: |
-        Page 10 of the Foyer panel. The row usually contains the answer — a refusal
+        Page 10 of the Home Defender panel. The row usually contains the answer — a refusal
         carries its reason and the zones that caused it — so a screenshot or a
         copy of the rows is worth more than a description. If Home Assistant's own
         log has errors from `custom_components.foyer`, paste them here too:

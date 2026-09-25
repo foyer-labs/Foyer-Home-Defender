@@ -1998,7 +1998,7 @@ you find out, from somewhere else, that the power went out at home.
 - Persistent problems — a zone unreachable for days, a broken notification channel,
   a watchdog that has never succeeded — are raised as **Home Assistant repair
   issues**, so they appear in Settings where a user sees them without opening the
-  Foyer panel.
+  Home Defender panel.
 - Home Assistant's standard **download diagnostics** button produces an anonymised
   dump of configuration and state: no codes, no hashes, no credentials — the
   webhook id, the watchdog URL, a device's token — no personal names, entity
@@ -2856,3 +2856,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 154 | Issues labelled `needs info` close by themselves after 14 days without the author; nothing else closes by itself | The one wait that is the reporter's; a real defect the maintainer has not reached must not vanish on a timer |
 | 155 | Foyer is the personal, non-commercial project of one individual publishing as Foyer Labs; donations are gifts and buy no support or priority | That is what it is, and the exclusions for free software supplied outside a commercial activity depend on it staying so |
 | 156 | 1.0.0 promises no compatibility: a 1.x release may change behaviour, a service, a device contract (a break is a new contract version, §9.2.2) or the stored configuration, and says so first in the changelog | It is a first release with one author; the fixes it will need cannot all wait for a 2.0, and a promise that would be broken by the first serious bug is worse than none. What is promised is that nothing changes silently |
+| 157 | The sidebar entry reads *Home Defender*, not *Foyer* | Foyer is the brand and Home Defender the product; the sidebar names the thing you open, as the panel's header and the integration's name already do. The brand stays where it signs something — notification titles, the card's name |

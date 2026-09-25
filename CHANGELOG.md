@@ -8,6 +8,13 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [Unreleased]
+
+### Changed
+- **The sidebar entry reads *Home Defender*** instead of *Foyer*: Foyer is the
+  brand, Home Defender the product. The messages that send you to the panel
+  name it the same way.
+
 ## [1.0.0] — the first stable release
 
 The same alarm as 1.0.0-rc.2: nothing changes in how it behaves. It is a
