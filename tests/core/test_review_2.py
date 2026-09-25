@@ -348,7 +348,9 @@ def test_user_is_the_person_who_asked():
     world.advance(30)
     decision = world.disarm(user_id="luca", code=CodeResult.VALID)
     sent = next(i for i in decision.actions if i.action_id == "n")
-    assert sent.params["message"] == "Disarmed by Luca"
+    # The executor says it in words (decision 160); the engine carries who.
+    assert sent.params["message"] == "Disarmed by {{ user }}"
+    assert sent.placeholders["user"] == "Luca"
 
 
 def test_a_smoke_sounder_ignores_the_night_scenarios_shorter_siren():

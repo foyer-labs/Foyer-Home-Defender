@@ -26,6 +26,7 @@ from custom_components.foyer.core.models import (
     TimeCondition,
 )
 from custom_components.foyer.core.response import effective_profile
+from custom_components.foyer.core.templates import TEMPLATE_VARIABLES, WORDED, render
 from custom_components.foyer.store.schema import state_from_dict, state_to_dict
 
 from .helpers import BATH, DOOR, PATIO, WINDOW, World, make_house
@@ -601,3 +602,32 @@ def test_a_notification_without_a_camera_is_told_nothing_about_folders():
 
     notify = next(a for a in decision.actions if a.kind == "notify")
     assert "directory" not in notify.params
+
+
+def test_the_worded_variables_are_left_for_the_executor():
+    """The engine reads no translation file (INV-1): the variables that must
+    be said in the house's words stay as written, and travel as identifiers
+    in the placeholders (decision 160)."""
+    config = house(
+        profile(
+            "p",
+            notify(
+                "n",
+                Moment.TRIGGERED,
+                message="{{ event }}: {{ zone }} ({{ state }}, {{ reason }})",
+            ),
+        )
+    )
+    world = armed(config)
+    [intent] = world.set(WINDOW, "on").actions
+
+    assert intent.params["message"] == "{{ event }}: Window ({{ state }}, {{ reason }})"
+    assert intent.placeholders["event"] == "triggered"
+    assert intent.placeholders["state"] == "triggered"
+
+
+def test_render_keeps_what_it_is_told_to_keep():
+    assert render("{{ event }} {{ zone }}", {"event": "x", "zone": "Door"}, WORDED) == (
+        "{{ event }} Door"
+    )
+    assert "event" in TEMPLATE_VARIABLES and set(TEMPLATE_VARIABLES) >= WORDED

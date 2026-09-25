@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import logging
 import os
 import secrets
@@ -37,6 +37,7 @@ from ..core.models import (
     Decision,
     Moment,
 )
+from ..core.templates import render
 from . import notices
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,6 +94,54 @@ def _worded(strings: dict[str, Any], placeholders: Mapping[str, str]) -> dict[st
         worded = i18n.translate(strings, key)
         values["operation"] = operation if worded == key else worded
     return values
+
+
+def _each(value: str) -> list[str]:
+    return [item for item in value.split(", ") if item]
+
+
+def _words(strings: dict[str, Any], intent: ActionIntent) -> dict[str, str]:
+    """The worded variables of a profile's text, in the house's words.
+
+    The engine hands them over as identifiers (decision 160): the moment, a
+    reason, an area state, a channel, a duress operation. A message is read
+    by a person, and `zone_open` or `armed_away` is not a sentence. An
+    identifier the translation files do not name stays as it came rather
+    than being dropped, as ``operation`` always has (decision 134).
+    """
+    values = intent.placeholders
+
+    def said(prefixes: tuple[str, ...], raw: str) -> str:
+        out = []
+        for item in _each(raw):
+            for prefix in prefixes:
+                key = f"{prefix}.{item}"
+                if (word := i18n.translate(strings, key)) != key:
+                    out.append(word)
+                    break
+            else:
+                out.append(item)
+        return ", ".join(out)
+
+    channel = said(("log_channel",), values.get("channel", ""))
+    return {
+        "event": said(("moment",), values.get("event") or intent.moment.value),
+        "reason": said(("words.reason",), values.get("reason", "")),
+        "state": said(("state",), values.get("state", "")),
+        "channel": channel,
+        # Nobody in person: say what acted instead — an automatic rule, an
+        # automation — rather than leave a gap after "by".
+        "user": values.get("user", "") or channel,
+        "operation": said(("operation",), values.get("operation", "")),
+    }
+
+
+def _render_all(value: Any, words: Mapping[str, str]) -> Any:
+    if isinstance(value, str):
+        return render(value, words) if "{{" in value else value
+    if isinstance(value, Mapping):
+        return {key: _render_all(item, words) for key, item in value.items()}
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,6 +239,7 @@ class Executor:
     async def _async_run_one(
         self, intent: ActionIntent, sends: dict[str, bool]
     ) -> None:
+        intent = await self._with_words(intent)
         if intent.kind == ActionKind.NOTIFY.value:
             # The one action that learns something about a channel, and the
             # only one handed the map to write it into.
@@ -211,6 +261,25 @@ class Executor:
             _LOGGER.error("Foyer: no executor for action kind %r", intent.kind)
             return
         await runner(intent)
+
+    async def _with_words(self, intent: ActionIntent) -> ActionIntent:
+        """The intent with the worded variables said (decision 160).
+
+        Only a profile's own text carries them: the engine rendered every
+        other variable and left these as written, because it reads no
+        translation file (INV-1).
+        """
+        if not any(
+            isinstance(value, (str, Mapping)) and "{{" in str(value)
+            for value in intent.params.values()
+        ):
+            return intent
+        words = _words(await self._strings(), intent)
+        params = {
+            key: value if key == "recipients" else _render_all(value, words)
+            for key, value in intent.params.items()
+        }
+        return replace(intent, params=params)
 
     # --- notifications --------------------------------------------------------
 

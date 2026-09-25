@@ -49,7 +49,7 @@ from .models import (
     TimeCondition,
     Zone,
 )
-from .templates import render
+from .templates import WORDED, render
 from .validation import notify_contacts, notify_images
 
 # The log's own scale, ordered (§10.1). A contact's quiet hours are read
@@ -595,6 +595,8 @@ def variables(ctx: PlanContext, group: Sequence[Occurrence]) -> dict[str, str]:
         # request made with a duress code asked for — or one refused for
         # its code, which names it too (decision 134).
         "operation": detail.get("operation", ""),
+        # Which moment, as an identifier; the executor names it (decision 160).
+        "event": _names([o.moment.value for o in group], {}),
         # Not a §6.4 variable: the built-in notification's own placeholder for
         # every zone of the batch, kept from Phase 0 so its text is unchanged.
         "zones": _names(zone_ids, zones),
@@ -626,15 +628,17 @@ def _params(
     moment: Moment = Moment.TRIGGERED,
 ) -> dict[str, Any]:
     """The action's parameters, with every template already rendered."""
+    # The worded variables stay as written: the executor says them in the
+    # house's language (decision 160).
     params = {
-        key: render(value, values) if isinstance(value, str) else value
+        key: render(value, values, WORDED) if isinstance(value, str) else value
         for key, value in action.params.items()
     }
     if action.kind is ActionKind.CALL_SERVICE and isinstance(
         params.get("data"), Mapping
     ):
         params["data"] = {
-            key: render(value, values) if isinstance(value, str) else value
+            key: render(value, values, WORDED) if isinstance(value, str) else value
             for key, value in params["data"].items()
         }
     if action.kind is ActionKind.SIREN:
