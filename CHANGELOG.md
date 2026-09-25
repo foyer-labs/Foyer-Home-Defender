@@ -13,11 +13,11 @@ first, under *Changed — read these before you update*.
 The same alarm as 1.0.0-rc.2: nothing changes in how it behaves. It is a
 first release, not a promise that nothing will change: more fixes will follow
 soon, and some may change behaviour, the services, the device endpoint and
-MQTT contracts or the stored configuration without waiting for a 2.0. A change
-that breaks a device written for the v1 contract is still published as a new
-contract version, as the contract documents say.
-Any such change is listed first, under *Changed — read these before you
-update*, in the release that makes it.
+MQTT contracts or the stored configuration without waiting for a 2.0. Any
+such change is listed first, under *Changed — read these before you update*,
+in the release that makes it; one that breaks a device written for the v1
+contract is also published as a new contract version, as the contract
+documents say.
 
 ### Changed
 - The manifest names the integration's owner (`codeowners`), which HACS
