@@ -5,6 +5,36 @@ All notable changes are recorded here. The project follows
 is what lets you decide whether to take an update, so entries say what changed
 in behaviour, not just "fixes".
 
+## [1.0.0-rc.2] — every document in Italian, and an icon
+
+No change in how the alarm behaves. The configuration, the services and the
+device and MQTT contracts are as in 1.0.0-rc.1.
+
+### Added
+- **Every document for people who use Foyer is now in Italian as well**:
+  keypads and API devices, automatic rules, notification channels, privacy,
+  resilience, the simulator and system health joined the others. With the
+  panel in Italian, *Learn more* now opens the Italian document on all fifteen
+  pages instead of eight.
+- **The integration has an icon and a logo**, in
+  `custom_components/foyer/brand/`, for Home Assistant's integration pages
+  and for HACS. They are rendered from the existing symbol and lockup by
+  `scripts/build_brand_images.py`.
+- **The READMEs show what you can build yourself** — a lamp, a display, an
+  ESP32 or Arduino keypad — against the v1 contract, and where it is written.
+
+### Fixed
+- The external watchdog's warning in *System health* said that, switched on,
+  the ping carries only how many areas are armed. It carries three values:
+  how many areas are armed, how many there are, and whether anything is
+  wrong. The code did not change; the sentence did.
+- Documents that no longer matched the code: five Android notification keys
+  counted as four, a channel check described as future work that system
+  health already does, three limits of the log pseudonym counted as two, four
+  things about automatic rules counted as three, three service fields counted
+  as two, and the simulator's *Silence limit* column and siren line named as
+  they are not in the panel.
+
 ## [1.0.0-rc.1] — the fix phase
 
 The defects found while the documentation was written, corrected. This is
