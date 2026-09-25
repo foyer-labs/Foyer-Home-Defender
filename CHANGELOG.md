@@ -8,6 +8,27 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.4] — notifications that say what happened
+
+### Changed — read these before you update
+- **Some template variables now come in words.** `{{ reason }}`,
+  `{{ state }}`, `{{ channel }}` and `{{ operation }}` used to write
+  identifiers — `zone_open`, `armed`, `automation`, `disarm` — and now write
+  them in the language of outgoing messages: *a zone is open*, *Armed*,
+  *Automation*, *Disarm*. `{{ user }}`, when nobody acted in person, now names
+  what did (*Automatic rule*, *Automation*) instead of staying empty. A
+  message that relied on the identifiers will read differently.
+
+### Added
+- **`{{ event }}`**, the moment in words — *Armed*, *Alarm*, *Zone fault* —
+  so a notification can say what happened, and one action serving several
+  moments can tell them apart.
+- **Ready-made notifications.** *From a template* on the *Response profiles*
+  page asks which contacts to reach and opens a new profile, not yet saved,
+  with five notifications: 🚨 alarm, 🔥 technical alarm, 🔒 armed,
+  🔓 disarmed and ⚠️ warnings. The same five are in the documentation as a
+  table to copy from.
+
 ## [1.0.3] — snapshots on Home Assistant OS
 
 ### Fixed
