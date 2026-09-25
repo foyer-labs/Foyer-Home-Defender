@@ -620,6 +620,22 @@ DEFAULT_LOW_BATTERY_THRESHOLD = 20
 MIN_LOW_BATTERY_THRESHOLD = 1
 MAX_LOW_BATTERY_THRESHOLD = 100
 
+# How the mains is known (§12.1, decision 162). ``sensor``: an entity that
+# reports the mains itself — a smart UPS, a power sensor — in the states the
+# household confirms. ``outside_ups``: devices powered from outside the UPS
+# that keeps Home Assistant running — a smart plug, an energy monitor — whose
+# going silent together *is* the power cut, which is what most households
+# with a plain UPS can actually offer.
+MAINS_SENSOR = "sensor"
+MAINS_OUTSIDE_UPS = "outside_ups"
+MAINS_MODES: tuple[str, ...] = (MAINS_SENSOR, MAINS_OUTSIDE_UPS)
+# How long every device outside the UPS must have been silent before it is a
+# power cut: long enough for a Wi-Fi hiccup or a plug rebooting, short enough
+# to still be news.
+DEFAULT_MAINS_OUTSIDE_DELAY = 120
+MIN_MAINS_OUTSIDE_DELAY = 30
+MAX_MAINS_OUTSIDE_DELAY = 3600
+
 # System health (§12). Every number here was chosen rather than inherited,
 # and the reasoning is in docs/system-health.md.
 #
@@ -1399,6 +1415,11 @@ class HealthSettings:
 
     mains_entity_id: str | None = None
     mains_lost_states: tuple[str, ...] = ("on",)
+    # Decision 162: the other way to know the mains, for a house whose UPS
+    # says nothing — devices outside the UPS, all silent for the delay.
+    mains_mode: str = MAINS_SENSOR
+    mains_outside_entity_ids: tuple[str, ...] = ()
+    mains_outside_delay: int = DEFAULT_MAINS_OUTSIDE_DELAY
     watchdog: WatchdogSettings = field(default_factory=WatchdogSettings)
     radios: tuple[Radio, ...] = ()
     rf_zones: int = DEFAULT_RF_ZONES
@@ -2446,11 +2467,21 @@ class SystemHealth:
     # every restart. An id leaves this set when its problem clears, so the
     # next occurrence raises the card again.
     acknowledged_issues: frozenset[str] = frozenset()
+    # The devices outside the UPS (decision 162): when each went silent, as
+    # Foyer saw it happen, and which ones Foyer has seen answer since Home
+    # Assistant started. A device already silent when Foyer began watching —
+    # at every restart, before its integration has loaded — says nothing
+    # about the mains, so it is not counted until it has answered once:
+    # what Foyer did not see happen, it does not claim to have seen, the
+    # rule ``unknown_zones`` follows for the radios.
+    mains_quiet_since: Mapping[str, datetime] = field(default_factory=dict)
+    mains_seen: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "channels", _frozen(self.channels))
         object.__setattr__(self, "radios", _frozen(self.radios))
         object.__setattr__(self, "quiet_since", _frozen(self.quiet_since))
+        object.__setattr__(self, "mains_quiet_since", _frozen(self.mains_quiet_since))
 
     def channel(self, key: str) -> ChannelHealth:
         return self.channels.get(key) or ChannelHealth()

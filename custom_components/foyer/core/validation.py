@@ -18,6 +18,7 @@ from .models import (
     ACT_SCOPES,
     ARMED_HA_STATES,
     FAULT_STATES,
+    MAINS_MODES,
     MAX_ARM_HOLD_TIMEOUT,
     MAX_CHANNEL_FAILURES,
     MAX_CHANNEL_SWEEP,
@@ -30,6 +31,7 @@ from .models import (
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
     MAX_LOW_BATTERY_THRESHOLD,
+    MAX_MAINS_OUTSIDE_DELAY,
     MAX_MQTT_QOS,
     MAX_MQTT_TOPIC,
     MAX_RETENTION_DAYS,
@@ -53,6 +55,7 @@ from .models import (
     MIN_LOCKOUT_FAILURES,
     MIN_LOCKOUT_SECONDS,
     MIN_LOW_BATTERY_THRESHOLD,
+    MIN_MAINS_OUTSIDE_DELAY,
     MIN_RETENTION_DAYS,
     MIN_RF_CONFIRM,
     MIN_RF_WINDOW,
@@ -206,6 +209,9 @@ FREE_WHILE_ARMED: tuple[str, ...] = (
     # What reports and never opens an incident (§12).
     "health.mains_entity_id",
     "health.mains_lost_states",
+    "health.mains_mode",
+    "health.mains_outside_entity_ids",
+    "health.mains_outside_delay",
     "health.watchdog",
     "health.channel_sweep",
     "health.channel_failures",
@@ -1146,6 +1152,17 @@ def _health_problems(config: FoyerConfig) -> list[Problem]:
         add("health_entity_invalid", "mains_entity_id")
     if entity and not health.mains_lost_states:
         add("mains_states_required", "mains_lost_states")
+    if health.mains_mode not in MAINS_MODES:
+        add("invalid", "mains_mode")
+    outside = health.mains_outside_entity_ids
+    if any("." not in e for e in outside):
+        add("health_entity_invalid", "mains_outside_entity_ids")
+    if len(set(outside)) != len(outside):
+        add("duplicate_id", "mains_outside_entity_ids")
+    if not _in_range(
+        health.mains_outside_delay, MIN_MAINS_OUTSIDE_DELAY, MAX_MAINS_OUTSIDE_DELAY
+    ):
+        add("health_out_of_range", "mains_outside_delay")
 
     watchdog = health.watchdog
     if watchdog.enabled and not watchdog_url_valid(watchdog.url):

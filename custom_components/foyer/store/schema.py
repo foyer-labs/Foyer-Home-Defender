@@ -16,6 +16,7 @@ from typing import Any
 from ..core.models import (
     DEFAULT_CHANNEL_FAILURES,
     DEFAULT_CHANNEL_SWEEP,
+    DEFAULT_MAINS_OUTSIDE_DELAY,
     DEFAULT_REPAIR_AFTER,
     DEFAULT_RF_CONFIRM,
     DEFAULT_RF_WINDOW,
@@ -24,6 +25,7 @@ from ..core.models import (
     DEFAULT_WATCHDOG_FAILURES,
     DEFAULT_WATCHDOG_INTERVAL,
     DEFAULT_WATCHDOG_TIMEOUT,
+    MAINS_SENSOR,
     Acknowledgement,
     ActionKind,
     Activation,
@@ -213,8 +215,11 @@ from ..core.models import (
 # 8.2 is additive: API devices gain scopes (§9.2.2). An 8.1 build reading it
 # ignores them and serves its keypads as it always did.
 # 8.3 is additive too: a rule may exclude open zones (decision 126).
+# 8.4 is additive: the mains may be known from devices outside the UPS
+# (decision 162). An 8.3 build reading it ignores them and watches no mains,
+# which is what it did for a house with no smart UPS anyway.
 STORAGE_VERSION = 8
-STORAGE_MINOR_VERSION = 3
+STORAGE_MINOR_VERSION = 4
 
 # The runtime state grows additively and is read with defaults (a 1.1 file
 # from an older build restores as "nothing technical, no incident, chime
@@ -288,6 +293,13 @@ def health_from_dict(h: dict[str, Any]) -> HealthSettings:
         # `on` hid that — a mains alarm on a power sensor that never fires
         # (second review).
         mains_lost_states=tuple(h.get("mains_lost_states", ("on",)) or ()),
+        mains_mode=str(h.get("mains_mode") or MAINS_SENSOR),
+        mains_outside_entity_ids=tuple(
+            str(e) for e in h.get("mains_outside_entity_ids") or () if e
+        ),
+        mains_outside_delay=int(
+            h.get("mains_outside_delay", DEFAULT_MAINS_OUTSIDE_DELAY)
+        ),
         watchdog=WatchdogSettings(
             enabled=bool(w.get("enabled", False)),
             url=str(w.get("url", "")),
@@ -310,6 +322,9 @@ def health_to_dict(h: HealthSettings) -> dict[str, Any]:
     return {
         "mains_entity_id": h.mains_entity_id,
         "mains_lost_states": list(h.mains_lost_states),
+        "mains_mode": h.mains_mode,
+        "mains_outside_entity_ids": list(h.mains_outside_entity_ids),
+        "mains_outside_delay": h.mains_outside_delay,
         "watchdog": {
             "enabled": h.watchdog.enabled,
             "url": h.watchdog.url,
@@ -1138,6 +1153,15 @@ def _health_from(
             z for z in (data.get("unknown_zones") or ()) if z in zone_ids
         ),
         acknowledged_issues=frozenset(data.get("acknowledged_issues") or ()),
+        # When each device outside the UPS went silent: kept, so a power cut
+        # outlives a restart. Which of them Foyer has *seen* answer is not
+        # stored at all (decision 162): after a restart it must start empty,
+        # or a device still loading would be taken for one that just died.
+        mains_quiet_since={
+            e: _required_dt(at)
+            for e, at in (data.get("mains_quiet_since") or {}).items()
+            if e in config.health.mains_outside_entity_ids
+        },
     )
 
 
@@ -1346,6 +1370,9 @@ def state_to_dict(state: RuntimeState) -> dict[str, Any]:
             },
             "unknown_zones": sorted(state.health.unknown_zones),
             "acknowledged_issues": sorted(state.health.acknowledged_issues),
+            "mains_quiet_since": {
+                e: at.isoformat() for e, at in state.health.mains_quiet_since.items()
+            },
         },
         "lockouts": {
             key: {

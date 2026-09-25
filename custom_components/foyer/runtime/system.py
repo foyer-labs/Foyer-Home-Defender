@@ -1177,6 +1177,10 @@ class FoyerSystem:
         # notices at the next door opening.
         if self.config.health.mains_entity_id:
             entities.add(self.config.health.mains_entity_id)
+        # The devices outside the UPS: their going silent is the reading
+        # (decision 162), so a change nobody subscribed to is a power cut
+        # Foyer notices at the next door opening.
+        entities.update(self.config.health.mains_outside_entity_ids)
         entities.update(
             r.coordinator_entity_id
             for r in self.config.health.radios
@@ -1293,8 +1297,20 @@ class FoyerSystem:
                     if config.mains_entity_id
                     else None
                 ),
-                "lost": health_engine.mains_state(self.config, snapshot),
+                "lost": health_engine.mains_state(
+                    self.config, snapshot, state.mains_quiet_since, now
+                ),
                 "since": _iso(state.mains_lost_since),
+                "mode": config.mains_mode,
+                "outside_delay": config.mains_outside_delay,
+                "outside": [
+                    {
+                        "entity_id": entity_id,
+                        "state": snapshot.entity(entity_id).state,
+                        "quiet_since": _iso(state.mains_quiet_since.get(entity_id)),
+                    }
+                    for entity_id in config.mains_outside_entity_ids
+                ],
             },
             "watchdog": {
                 "enabled": config.watchdog.enabled,

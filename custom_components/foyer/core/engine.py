@@ -39,6 +39,7 @@ from .models import (
     CUSTOM_BYPASS,
     ESCALATION_RESTART_GRACE,
     FAULT_STATES,
+    MAINS_OUTSIDE_UPS,
     MAX_WALK_TEST_TIMEOUT,
     MAX_WALK_TEST_TOTAL,
     MIN_WALK_TEST_TIMEOUT,
@@ -455,6 +456,21 @@ def next_wakeup(
         if due is not None and due > now:
             # Strictly after the window, matching supervision_lapsed().
             dues.append(due + timedelta(microseconds=1))
+    health = config.health
+    quiet = state.health.mains_quiet_since
+    if (
+        health.mains_mode == MAINS_OUTSIDE_UPS
+        and state.health.mains_lost_since is None
+        and health.mains_outside_entity_ids
+        and all(e in quiet for e in health.mains_outside_entity_ids)
+    ):
+        # Every device outside the UPS has gone silent: the power cut is
+        # due when the last of them has been silent for the delay.
+        due = max(quiet[e] for e in health.mains_outside_entity_ids) + timedelta(
+            seconds=health.mains_outside_delay
+        )
+        if due > now:
+            dues.append(due)
     return min(dues, default=None)
 
 
@@ -709,6 +725,13 @@ class _Run:
             if zone_id in zone_ids
         }
         self.unknown_zones = set(health.unknown_zones & zone_ids)
+        # The devices outside the UPS (decision 162), kept only while they
+        # are still configured, like every other map here.
+        outside = set(config.health.mains_outside_entity_ids)
+        self.mains_quiet_since = {
+            e: at for e, at in health.mains_quiet_since.items() if e in outside
+        }
+        self.mains_seen = set(health.mains_seen & outside)
         # Carried, never decided here: the engine has no opinion about a
         # card in Home Assistant's Settings, and dropping the set on the
         # next decision would undo every acknowledgement.
@@ -1985,19 +2008,29 @@ class _Run:
 
     def reconcile_mains(self) -> None:
         """A mains failure notifies at once and is never a quiet night (§12.1)."""
-        if not self.config.health.mains_entity_id:
+        health = self.config.health
+        outside = health.mains_mode == MAINS_OUTSIDE_UPS
+        if not (health.mains_outside_entity_ids if outside else health.mains_entity_id):
             # The picker was cleared. Nothing about the house changed, so
             # nothing is announced: a "power restored" row for an entity
             # somebody unconfigured is the log saying something that did not
             # happen.
             self.mains_lost_since = None
             return
-        lost = health_engine.mains_state(self.config, self.world())
+        if outside:
+            self.watch_outside_ups()
+        lost = health_engine.mains_state(
+            self.config, self.world(), self.mains_quiet_since, self.now
+        )
         if lost is True and self.mains_lost_since is None:
             self.mains_lost_since = self.now
             self.occur(
                 Moment.SYSTEM_POWER_LOST,
-                detail={"entity_id": self.config.health.mains_entity_id or ""},
+                detail={
+                    "entity_id": ", ".join(health.mains_outside_entity_ids)
+                    if outside
+                    else health.mains_entity_id or ""
+                },
             )
         elif lost is False and self.mains_lost_since is not None:
             since = self.mains_lost_since
@@ -2009,6 +2042,27 @@ class _Run:
                     "seconds": str(int((self.now - since).total_seconds())),
                 },
             )
+
+    def watch_outside_ups(self) -> None:
+        """When each device outside the UPS went silent (decision 162).
+
+        A device is timed only from a silence Foyer saw begin: it answered,
+        then stopped. At a restart every device starts unseen, because each
+        one is silent until its integration has loaded, and a restart is not
+        a power cut. A silence that began before the restart is kept, so a
+        power cut that outlives Home Assistant restarting is still one.
+        """
+        if self.restarted:
+            self.mains_seen.clear()
+        world = self.world()
+        for entity_id in self.config.health.mains_outside_entity_ids:
+            if not health_engine.is_unreadable(world.entity(entity_id)):
+                self.mains_seen.add(entity_id)
+                self.mains_quiet_since.pop(entity_id, None)
+            elif (
+                entity_id in self.mains_seen and entity_id not in self.mains_quiet_since
+            ):
+                self.mains_quiet_since[entity_id] = self.now
 
     def reconcile_channels(self) -> None:
         """A broken channel is announced over one that still works (§12.2)."""
@@ -4273,6 +4327,8 @@ class _Run:
                 radios=self.radios,
                 quiet_since=self.quiet_since,
                 unknown_zones=frozenset(self.unknown_zones),
+                mains_quiet_since=self.mains_quiet_since,
+                mains_seen=frozenset(self.mains_seen),
                 acknowledged_issues=self.acknowledged_issues,
             ),
         )

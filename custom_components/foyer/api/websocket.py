@@ -44,6 +44,7 @@ from ..core.models import (
     MAX_LOCKOUT_FAILURES,
     MAX_LOCKOUT_SECONDS,
     MAX_LOW_BATTERY_THRESHOLD,
+    MAX_MAINS_OUTSIDE_DELAY,
     MAX_RETENTION_DAYS,
     MAX_RF_CONFIRM,
     MAX_RF_WINDOW,
@@ -62,6 +63,7 @@ from ..core.models import (
     MIN_LOCKOUT_FAILURES,
     MIN_LOCKOUT_SECONDS,
     MIN_LOW_BATTERY_THRESHOLD,
+    MIN_MAINS_OUTSIDE_DELAY,
     MIN_RETENTION_DAYS,
     MIN_RF_CONFIRM,
     MIN_RF_WINDOW,
@@ -796,6 +798,7 @@ def _meta() -> dict[str, Any]:
             "rf_zones": [MIN_RF_ZONES, MAX_RF_ZONES],
             "rf_window": [MIN_RF_WINDOW, MAX_RF_WINDOW],
             "rf_confirm": [MIN_RF_CONFIRM, MAX_RF_CONFIRM],
+            "mains_outside_delay": [MIN_MAINS_OUTSIDE_DELAY, MAX_MAINS_OUTSIDE_DELAY],
         },
         # What page 5 needs to build an action editor without knowing the
         # engine: the catalogue, where each kind may point, and the moments.

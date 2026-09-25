@@ -578,6 +578,17 @@ def _v8_2_to_v8_3(data: Document) -> Document:
     return out
 
 
+def _v8_3_to_v8_4(data: Document) -> Document:
+    """The mains may be known from devices outside the UPS (decision 162).
+    Every configuration stored before keeps its sensor, as it always has."""
+    out = copy.deepcopy(data)
+    health = out.setdefault("health", {})
+    health.setdefault("mains_mode", "sensor")
+    health.setdefault("mains_outside_entity_ids", [])
+    health.setdefault("mains_outside_delay", 120)
+    return out
+
+
 # The categories of SPEC §10.2, spelled out rather than imported: a migration
 # is a pure function of the document and must not change when an enum does.
 LOG_CATEGORIES = (
@@ -611,6 +622,7 @@ STEPS: dict[Version, tuple[Callable[[Document], Document], Version]] = {
     (7, 4): (_v7_4_to_v8_1, (8, 1)),
     (8, 1): (_v8_1_to_v8_2, (8, 2)),
     (8, 2): (_v8_2_to_v8_3, (8, 3)),
+    (8, 3): (_v8_3_to_v8_4, (8, 4)),
 }
 
 

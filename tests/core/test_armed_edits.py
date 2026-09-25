@@ -287,6 +287,11 @@ FREE_CHANGES = {
     "settings.ack_webhook_id": _settings(ack_webhook_id="a" * 64),
     "health.mains_entity_id": _health(mains_entity_id="binary_sensor.ups"),
     "health.mains_lost_states": _health(mains_lost_states=("off",)),
+    "health.mains_mode": _health(mains_mode="outside_ups"),
+    "health.mains_outside_entity_ids": _health(
+        mains_outside_entity_ids=("switch.fridge_plug",)
+    ),
+    "health.mains_outside_delay": _health(mains_outside_delay=300),
     "health.watchdog": _health(
         watchdog=replace(HealthSettings().watchdog, payload=True, interval=600)
     ),

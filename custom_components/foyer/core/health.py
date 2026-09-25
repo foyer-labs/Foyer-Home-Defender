@@ -20,6 +20,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 
 from .models import (
+    MAINS_OUTSIDE_UPS,
     AreaState,
     ChannelFault,
     ChannelHealth,
@@ -45,15 +46,47 @@ def is_unreadable(entity: EntityState | None) -> bool:
 # --- mains power (§12.1) -----------------------------------------------------------
 
 
-def mains_state(config: FoyerConfig, snapshot: SystemSnapshot) -> bool | None:
+def mains_state(
+    config: FoyerConfig,
+    snapshot: SystemSnapshot,
+    quiet_since: Mapping[str, datetime] | None = None,
+    now: datetime | None = None,
+) -> bool | None:
     """True when the mains has failed, False when it is fine, None unreadable.
 
     The three answers are deliberately not two. An entity Foyer cannot read
     is not a power cut — a UPS integration that has not finished loading
     would announce one at every restart — and it is not "all quiet" either,
     which is the whole of INV-4.
+
+    With devices outside the UPS (decision 162) silence *is* the reading,
+    so the rule turns round: the mains is present while any of them
+    answers, and lost once every one has been silent for the delay since
+    Foyer saw it go (``quiet_since``). A device silent since before Foyer
+    was watching is not in ``quiet_since``, and while one of them is among
+    the silent the answer is None — not known — rather than a power cut
+    Foyer never saw happen. Without ``now`` the delay cannot be measured and
+    a silence still counts as present: the established failure is carried by
+    ``mains_lost_since``, which the engine sets.
     """
-    entity_id = config.health.mains_entity_id
+    health = config.health
+    if health.mains_mode == MAINS_OUTSIDE_UPS:
+        entity_ids = health.mains_outside_entity_ids
+        if not entity_ids:
+            return False
+        entities = [snapshot.entity(e) for e in entity_ids]
+        if any(e is None or e.state is None for e in entities):
+            return None  # removed from Home Assistant: a configuration fault
+        if not all(is_unreadable(e) for e in entities):
+            return False
+        since = quiet_since or {}
+        if not all(e in since for e in entity_ids):
+            return None
+        if now is None:
+            return False
+        started = max(since[e] for e in entity_ids)
+        return now - started >= timedelta(seconds=health.mains_outside_delay)
+    entity_id = health.mains_entity_id
     if not entity_id:
         return False  # nothing configured: not a failure, and not unreadable
     entity = snapshot.entity(entity_id)
@@ -276,7 +309,7 @@ def causes(
     found: list[HealthCause] = []
     if snapshot.state.faults:
         found.append(HealthCause.ZONE_FAULT)
-    mains = mains_state(config, snapshot)
+    mains = mains_state(config, snapshot, health.mains_quiet_since)
     # A failure already established stands even when the entity stops
     # answering — which is the realistic case, because the NUT server and
     # the router die with the mains (§12.3). Withdrawing a fault because
