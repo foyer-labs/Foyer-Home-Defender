@@ -8,6 +8,19 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.6] — entities you can find
+
+Nothing changes in how the alarm behaves.
+
+### Changed
+- **Choosing entities no longer means scrolling rows of tick-boxes.** The
+  people an *Absence* or *Presence* rule watches, the entity of an *Entity
+  state* rule and the devices outside the UPS are now a list: type a name or
+  an id, pick from the suggestions, *Add*; each entity chosen shows its name,
+  its id and what it reads right now, with *Remove* beside it. An id that is
+  not in Home Assistant is not taken, and one that has since disappeared
+  says so.
+
 ## [1.0.5] — the mains from a plain UPS
 
 The stored configuration moves to schema 8.4. The step is additive: an older

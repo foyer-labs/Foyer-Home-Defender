@@ -31,8 +31,8 @@ body:
     id: foyer_version
     attributes:
       label: Foyer version
-      description: In HACS, on Foyer Home Defender's entry — for example `1.0.5`.
-      placeholder: 1.0.5
+      description: In HACS, on Foyer Home Defender's entry — for example `1.0.6`.
+      placeholder: 1.0.6
     validations:
       required: true
 
