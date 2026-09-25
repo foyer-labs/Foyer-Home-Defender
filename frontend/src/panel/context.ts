@@ -221,6 +221,70 @@ export function problemText(s: Strings, problem: Problem): string {
   return t(s, `problem.${problem.code}`, { field, detail: problem.detail ?? "" });
 }
 
+/** A refusal to delete something still in use, with *what* uses it.
+ *
+ * The backend says only that something does (it has the ids, not the words),
+ * and in a house with dozens of zones "something" is a search. The page has
+ * the configuration, so it names each place, grouped by page, in the reader's
+ * language; the backend check itself is unchanged. */
+export function explainInUse(
+  s: Strings,
+  config: FoyerConfig | undefined,
+  problems: Problem[],
+): Problem[] {
+  if (!config) return problems;
+  return problems.map((problem) => {
+    const id = problem.ref;
+    if (!id) return problem;
+    const places: string[] = [];
+    const named = (page: string, names: string[]): void => {
+      if (names.length) places.push(`${t(s, `nav.${page}`)}: ${names.join(", ")}`);
+    };
+    if (problem.code === "profile_in_use") {
+      if (config.settings.default_profile_id === id) {
+        places.push(`${t(s, "nav.settings")}: ${t(s, "profiles.used_default")}`);
+      }
+      if (config.settings.technical_profile_id === id) {
+        places.push(`${t(s, "nav.settings")}: ${t(s, "profiles.used_technical")}`);
+      }
+      named("areas", config.areas.filter((a) => a.response_profile_id === id).map((a) => a.name));
+      named("zones", config.zones.filter((z) => z.response_profile_id === id).map((z) => z.name));
+      named(
+        "scenarios",
+        config.scenarios.filter((c) => c.response_profile_id === id).map((c) => c.name),
+      );
+      named("groups", config.groups.filter((g) => g.response_profile_id === id).map((g) => g.name));
+    } else if (problem.code === "contact_in_use") {
+      places.push(
+        ...config.profiles
+          .filter((p) =>
+            p.actions.some((a) => {
+              const raw = (a.params as { contacts?: unknown }).contacts;
+              return (
+                Array.isArray(raw) &&
+                raw.some((c) => (typeof c === "string" ? c : c?.contact_id) === id)
+              );
+            }),
+          )
+          .map((p) => p.name),
+      );
+    } else if (problem.code === "scenario_in_use") {
+      places.push(
+        ...config.zones.filter((z) => z.key?.scenario_id === id).map((z) => z.name),
+      );
+    } else {
+      return problem;
+    }
+    return places.length
+      ? {
+          ...problem,
+          code: `${problem.code}_where`,
+          detail: places.join(problem.code === "profile_in_use" ? " · " : ", "),
+        }
+      : problem;
+  });
+}
+
 /** "" becomes null: an empty number field means "inherit" or "off". */
 /** Enter or Space on a focused clickable row opens it, as a click does.
  * Every list opened its editor on a mouse click only, so nobody using a

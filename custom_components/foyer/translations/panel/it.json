@@ -275,7 +275,10 @@
     "watchdog_url_invalid": "L'URL del watchdog deve iniziare con http:// o https://.",
     "armed_code_policy": "Finché un'area è inserita, non si può cambiare per cosa un'area o uno scenario chiede il codice: vale per ogni comando che tocca l'area inserita. Disinserisci prima tutte le aree.",
     "code_required_here": "Questo passo serve a una persona con un codice: digitalo due volte, oppure salta il passo.",
-    "unknown_ha_user": "Quell'account di Home Assistant non si può collegare: non esiste, oppure è uno che Home Assistant usa per sé, come quello di Home Assistant Cloud."
+    "unknown_ha_user": "Quell'account di Home Assistant non si può collegare: non esiste, oppure è uno che Home Assistant usa per sé, come quello di Home Assistant Cloud.",
+    "profile_in_use_where": "Questo profilo è ancora in uso — {detail}. Scegli un altro profilo in ciascuno di questi punti, poi eliminalo.",
+    "contact_in_use_where": "Le notifiche raggiungono ancora questo contatto in questi profili di risposta: {detail}. Toglilo da lì, poi eliminalo.",
+    "scenario_in_use_where": "Una zona chiave inserisce ancora questo scenario: {detail}. Modifica prima quelle zone."
   },
   "field": {
     "name": "Nome",

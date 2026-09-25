@@ -929,7 +929,9 @@ export interface Problem {
   kind: string;
   ref: string | null;
   field: string | null;
-  detail?: string; // only for request_failed: what Home Assistant said
+  // What Home Assistant said, for request_failed; or, for a refusal to
+  // delete something in use, the places that use it (explainInUse).
+  detail?: string;
 }
 
 export interface EditResult {

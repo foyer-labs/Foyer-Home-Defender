@@ -275,7 +275,10 @@
     "watchdog_url_invalid": "The watchdog URL has to start with http:// or https://.",
     "armed_code_policy": "While an area is armed, what an area or a scenario asks a code for cannot change: it takes part in every command that touches the armed area. Disarm every area first.",
     "code_required_here": "This step is for a person with a code: type one, twice, or skip the step.",
-    "unknown_ha_user": "That Home Assistant account cannot be linked: it does not exist, or it is one Home Assistant runs itself, such as Home Assistant Cloud's."
+    "unknown_ha_user": "That Home Assistant account cannot be linked: it does not exist, or it is one Home Assistant runs itself, such as Home Assistant Cloud's.",
+    "profile_in_use_where": "This profile is still in use — {detail}. Choose another profile in each of those places, then delete it.",
+    "contact_in_use_where": "Notifications still reach this contact in these response profiles: {detail}. Take the contact out of them, then delete it.",
+    "scenario_in_use_where": "A key zone still arms this scenario: {detail}. Change those zones first."
   },
   "field": {
     "name": "Name",

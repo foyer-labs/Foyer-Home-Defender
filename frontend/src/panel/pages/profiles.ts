@@ -23,6 +23,7 @@ import {
   activateOnKey,
   revealEditor,
   revealProblems,
+  explainInUse,
 } from "../context";
 import "../delete-button";
 import {
@@ -397,7 +398,7 @@ class FoyerPageProfiles extends LitElement {
     this._busy = true;
     try {
       const result = await this.ctx.remove("profile", this._draft.id);
-      this._problems = result.problems;
+      this._problems = explainInUse(this.ctx.strings, this.ctx.config, result.problems);
       if (result.success) this._draft = undefined;
     } finally {
       this._busy = false;
