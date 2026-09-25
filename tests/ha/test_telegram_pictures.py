@@ -67,11 +67,13 @@ async def test_a_telegram_chat_receives_one_photo_per_camera(
     await _settle(hass, photos, 1)
 
     assert [c.data["message"] for c in texts] == ["Alarm: Front door"]
-    assert [c.data["entity_id"] for c in snapshots] == [KITCHEN, DINING]
+    # The snapshots are taken together, so they may be asked for in either
+    # order; the photos go in the order of the cameras.
+    taken = {c.data["filename"]: c.data["entity_id"] for c in snapshots}
+    assert sorted(taken.values()) == sorted([KITCHEN, DINING])
     assert [c.data["caption"] for c in photos] == ["Kitchen", "Dining room"]
-    for call, snapshot in zip(photos, snapshots, strict=True):
-        assert call.data["entity_id"] == [CHAT]
-        assert call.data["file"] == snapshot.data["filename"]
+    assert [taken[c.data["file"]] for c in photos] == [KITCHEN, DINING]
+    assert all(c.data["entity_id"] == [CHAT] for c in photos)
 
 
 async def test_another_notify_entity_says_it_got_no_picture(
