@@ -258,7 +258,15 @@ uno.
 
 ## Telegram
 
-**Integrazione:** `telegram_bot`. **Servizio:** `notify.telegram`.
+**Integrazione:** `telegram_bot`, configurata in *Impostazioni → Dispositivi e
+servizi*. **Canale:** l'entità notify che crea per ogni chat (`notify.<chat>`).
+
+Home Assistant ha deprecato il vecchio servizio YAML `notify.telegram`, quindi
+ora una chat è un'entità notify. Le entità non portano immagini (vedi sotto),
+con un'eccezione: quando l'allegato è *Telegram — foto come file* e il canale è
+una chat Telegram, Foyer manda ogni immagine con il servizio dell'integrazione,
+`telegram_bot.send_photo`, dopo il testo. Un vecchio servizio `notify.telegram`
+funziona ancora finché Home Assistant lo mantiene.
 
 Gratis, immediato, e porta le immagini — ed è per questo che l'azione `notify`
 chiede per quale mezzo è pensato un allegato della telecamera. Il server di
@@ -299,7 +307,8 @@ Compaiono entrambi nel menu a tendina, e non sono equivalenti. Un **servizio**
 capisca — che è ciò che porta un avviso critico di iOS, una foto Telegram o il
 pulsante di presa d'atto. Un'**entità** notify accetta un messaggio e un titolo
 e nient'altro; tutto il resto viene scartato, e Foyer lo dice nel registro di
-Home Assistant invece di lasciarlo sparire.
+Home Assistant invece di lasciarlo sparire. L'unica eccezione sono le immagini
+per una chat Telegram, descritte [sopra](#telegram).
 
 Quindi: per un canale che deve fare più che dire una frase, scegli il servizio.
 La pagina 6 dice la stessa cosa accanto alla casella di spunta.

@@ -411,7 +411,9 @@ un trasporto scarta in silenzio una chiave che non riconosce:
   fuori casa e senza sessione, quindi quel link non può seguirlo. Foyer
   scatta un'immagine fissa nel momento della notifica, la scrive nella
   cartella telecamere — che deve essere in `allowlist_external_dirs` — e
-  spedisce il file.
+  spedisce il file. Una chat Telegram configurata dall'interfaccia è
+  un'entità notify, che da sola non porta immagini, quindi Foyer le manda ogni
+  scatto con `telegram_bot.send_photo`.
 
 Foyer te lo chiede invece di indovinarlo dal nome del servizio, perché
 altrimenti lo scopri così, mesi dopo: «ho allegato una telecamera e non è

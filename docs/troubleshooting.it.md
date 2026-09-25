@@ -406,7 +406,8 @@ stato digitato.
   notifica di prova della procedura guidata non ne aggiunge nessuna.
 - **Un'entità notify non è un servizio notify.** Un'entità prende un titolo e
   un messaggio e scarta tutto il resto — il pulsante per prendere atto, un
-  avviso critico, un'immagine. Vedi
+  avviso critico, un'immagine (tranne le immagini per una chat Telegram, che
+  Foyer manda con `telegram_bot.send_photo`). Vedi
   [canali di notifica](notification-channels.it.md#a-notify-entity-is-not-a-notify-service).
 - **Immagini.** Il *Come allegarla* della notifica indica il trasporto: l'app
   Companion scarica un link in diretta attraverso il proxy delle telecamere di

@@ -233,7 +233,15 @@ This is the channel §7.3 recommends every installation have one of.
 
 ## Telegram
 
-**Integration:** `telegram_bot`. **Service:** `notify.telegram`.
+**Integration:** `telegram_bot`, set up under *Settings → Devices & services*.
+**Channel:** the notify entity it creates for each chat (`notify.<chat>`).
+
+Home Assistant has deprecated the old YAML `notify.telegram` service, so a
+chat is now a notify entity. Entities carry no pictures (see below), with one
+exception: when the attachment is *Telegram — a photo file* and the channel is
+a Telegram chat, Foyer sends each picture through the integration's own
+`telegram_bot.send_photo`, after the text. An old `notify.telegram` service
+still works for as long as Home Assistant keeps it.
 
 Free, instant, and it carries pictures — which is why the `notify` action asks
 which transport a camera attachment is for. Telegram's own server fetches the
@@ -268,7 +276,8 @@ Both appear in the dropdown, and they are not equivalent. A `notify.*`
 understands — which is what carries an iOS critical alert, a Telegram photo or
 the acknowledge button. A notify **entity** takes a message and a title and
 nothing else; everything else is dropped, and Foyer says so in the Home
-Assistant log rather than letting it vanish.
+Assistant log rather than letting it vanish. The one exception is a Telegram
+chat's pictures, described [above](#telegram).
 
 So: for a channel that needs to do more than say a sentence, pick the service.
 Page 6 says the same thing beside the tick-box.

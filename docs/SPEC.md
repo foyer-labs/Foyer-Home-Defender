@@ -775,7 +775,10 @@ Four rules the catalogue depends on:
   in and fetches the live picture itself, and nothing is written to disk.
   Telegram reads `photo` and needs a **file**, because its own server does the
   fetching, from outside the house and with no session — a relative proxy path
-  is unreachable to it by construction. A transport discards a key it does not
+  is unreachable to it by construction. A Telegram chat set up from the UI is
+  a notify *entity*, which carries no `photo`; for it Foyer sends each still
+  through `telegram_bot.send_photo`, which takes that entity and a file, after
+  the text (decision 158). A transport discards a key it does not
   know without a word, so guessing is indistinguishable from working until the
   night it matters. For the file transports Foyer takes the snapshot at the
   moment of the notification, bounded, and sends the message without the
@@ -2857,3 +2860,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 155 | Foyer is the personal, non-commercial project of one individual publishing as Foyer Labs; donations are gifts and buy no support or priority | That is what it is, and the exclusions for free software supplied outside a commercial activity depend on it staying so |
 | 156 | 1.0.0 promises no compatibility: a 1.x release may change behaviour, a service, a device contract (a break is a new contract version, §9.2.2) or the stored configuration, and says so first in the changelog | It is a first release with one author; the fixes it will need cannot all wait for a 2.0, and a promise that would be broken by the first serious bug is worse than none. What is promised is that nothing changes silently |
 | 157 | The sidebar entry reads *Home Defender*, not *Foyer* | Foyer is the brand and Home Defender the product; the sidebar names the thing you open, as the panel's header and the integration's name already do. The brand stays where it signs something — notification titles, the card's name |
+| 158 | A Telegram chat that is a notify entity receives its pictures through `telegram_bot.send_photo`; any other notify entity says in the log that it got none | Home Assistant deprecated the YAML `notify.telegram` service, so a Telegram chat is now an entity, and entities carry only a title and a message: the text arrived and the pictures vanished without a word. The bot's own service takes the same entity and a file, and a picture that fails still costs nothing but itself |

@@ -24,6 +24,7 @@ from homeassistant.components.siren import SirenEntityFeature
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util, slugify
 
 from .. import i18n
@@ -57,6 +58,13 @@ PICTURE_KINDS: frozenset[str] = frozenset({"push", "chat"})
 # which a second notification replaces the first. The picture would take the
 # place of the message that carries the acknowledgement.
 PICTURE_DROPPED_KEYS: frozenset[str] = frozenset({"actions", "tag"})
+
+# The Telegram bot integration. Since Home Assistant moved it to the UI, a
+# chat is a notify *entity*, which carries a title and a message and nothing
+# else; the old `notify.telegram` service that took a `photo` is deprecated.
+# The integration's own `send_photo` takes that same entity and a file, so a
+# Telegram picture goes through it (decision 158).
+TELEGRAM_BOT = "telegram_bot"
 
 # How long a notification may take to be accepted before it counts as
 # failed. Long enough for a slow provider, short enough that the retry still
@@ -405,16 +413,30 @@ class Executor:
         """
         # A notify entity carries a title and a message and nothing else,
         # so it would receive the name of a camera and no picture: four
-        # messages saying nothing, and — for Telegram — four snapshots taken
-        # for nobody.
-        recipients = tuple(
-            r
-            for r in recipients
-            if self.hass.states.get(str(r.get("service") or "")) is None
-        )
+        # messages saying nothing. A Telegram chat is the exception, sent
+        # through its integration's own service (decision 158); any other
+        # entity is told in the log rather than skipped in silence, because
+        # "the text came and the picture did not" is otherwise a mystery.
+        telegram = intent.params.get("attachment") == ATTACH_TELEGRAM
+        kept: list[Mapping[str, Any]] = []
+        for recipient in recipients:
+            service = str(recipient.get("service") or "")
+            if self.hass.states.get(service) is None or (
+                telegram and self._is_telegram(service)
+            ):
+                kept.append(recipient)
+            else:
+                _LOGGER.warning(
+                    "Foyer: %s is a notify entity, which carries no picture; "
+                    "the cameras were not sent to it. %s",
+                    service,
+                    "Choose the Telegram attachment for a Telegram chat"
+                    if self._is_telegram(service)
+                    else "Use the notify service behind it to receive them",
+                )
+        recipients = tuple(kept)
         if not recipients:
             return
-        telegram = intent.params.get("attachment") == ATTACH_TELEGRAM
         files: dict[str, str | None] = {}
         if telegram:
             directory = str(intent.params.get("directory") or DEFAULT_CAMERA_DIR)
@@ -444,6 +466,10 @@ class Executor:
             )
             for recipient in recipients:
                 service = str(recipient.get("service") or "")
+                if self.hass.states.get(service) is not None:
+                    # A Telegram chat, the only entity kept above.
+                    await self._async_send_photo(service, str(files[camera]), name)
+                    continue
                 # The data of the channel, so the picture arrives the way that
                 # channel delivers anything; but no buttons, and no `tag`,
                 # under which the Companion app would replace the text (and
@@ -589,8 +615,15 @@ class Executor:
             # no transport data, no action button. Whatever else was asked
             # for is said out loud rather than dropped in silence, because a
             # channel that reports success while losing the button is the
-            # discovery §11.4 exists to move earlier.
-            lost = [key for key in ("data", "target") if data.get(key)]
+            # discovery §11.4 exists to move earlier. The one exception is a
+            # Telegram chat's photo, which its integration sends on its own.
+            extra = dict(data.get("data") or {})
+            photos = extra.pop("photo", None) if self._is_telegram(service) else None
+            lost = [
+                key
+                for key, value in (("data", extra), ("target", data.get("target")))
+                if value
+            ]
             if lost:
                 _LOGGER.warning(
                     "Foyer: %s is a notify entity, which carries only a title "
@@ -603,11 +636,44 @@ class Executor:
             if title := data.get("title"):
                 payload["title"] = title
             await self._call_and_wait("notify", "send_message", payload)
+            if photos and not isinstance(photos, list):
+                photos = [photos]
+            for photo in photos or ():
+                # After the text, and never counted against it: the message
+                # is what the acknowledgement and channel health rest on.
+                await self._async_send_photo(
+                    service, str(photo.get("file")), str(photo.get("caption") or "")
+                )
             return
         domain, _, name = service.partition(".")
         if not name:
             raise ValueError(f"not a notify service: {service!r}")
         await self._call_and_wait(domain, name, data)
+
+    def _is_telegram(self, service: str) -> bool:
+        """Whether a notify entity is a chat of the Telegram bot integration."""
+        entry = er.async_get(self.hass).async_get(service)
+        return entry is not None and entry.platform == TELEGRAM_BOT
+
+    async def _async_send_photo(self, entity_id: str, file: str, caption: str) -> None:
+        """A snapshot to a Telegram chat, through the bot's own service.
+
+        A picture that does not go is logged and costs nothing else: the text
+        has already gone, and it is the one that matters (§6.2.1).
+        """
+        try:
+            await self._call_and_wait(
+                TELEGRAM_BOT,
+                "send_photo",
+                {ATTR_ENTITY_ID: [entity_id], "file": file, "caption": caption},
+            )
+        except Exception:
+            _LOGGER.warning(
+                "Foyer: %s did not accept the picture %s",
+                entity_id,
+                file,
+                exc_info=True,
+            )
 
     async def _call_and_wait(
         self, domain: str, service: str, data: dict[str, Any]

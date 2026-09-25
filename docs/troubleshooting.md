@@ -363,7 +363,8 @@ the card keeps none beyond the command it was typed for.
   profile for the moments you want; the wizard's test notification adds none.
 - **A notify entity is not a notify service.** An entity takes a title and a
   message and drops everything else — the acknowledge button, a critical
-  alert, a picture. See
+  alert, a picture (except a Telegram chat's pictures, which Foyer sends
+  through `telegram_bot.send_photo`). See
   [notification channels](notification-channels.md#a-notify-entity-is-not-a-notify-service).
 - **Pictures.** The notification's *How to attach it* names the transport: the
   Companion app fetches a live link through Home Assistant's camera proxy;

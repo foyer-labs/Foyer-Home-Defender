@@ -395,7 +395,9 @@ transport drops a key it does not recognise in silence:
   from outside the house and with no session, so it cannot follow that link.
   Foyer takes a still at the moment of the notification, writes it to the
   camera folder — which must be in `allowlist_external_dirs` — and sends the
-  file.
+  file. A Telegram chat set up from the UI is a notify entity, which carries
+  no picture itself, so Foyer sends it each still through
+  `telegram_bot.send_photo`.
 
 Foyer asks rather than guessing from the service name, because "I attached a
 camera and nothing arrived" is otherwise how you find out, months later.
