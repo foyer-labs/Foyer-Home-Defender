@@ -83,6 +83,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          # Home Assistant's test packages are most of this job's time; the
+          # downloads are kept between runs. There is no requirements file,
+          # so the workflow itself is the key: a changed pin starts afresh.
+          cache: pip
+          cache-dependency-path: .github/workflows/ci.yml
       # pytest-xdist runs the suite on every core the runner has: the same
       # tests, in a fraction of the time.
       - run: pip install ${{ matrix.packages }} pytest-xdist
