@@ -8,6 +8,24 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.5] — the mains from a plain UPS
+
+The stored configuration moves to schema 8.4. The step is additive: an older
+release reading it ignores the new setting and keeps its mains sensor.
+
+### Added
+- **The mains can be known from devices outside the UPS.** A plain UPS keeps
+  Home Assistant running and says nothing; a smart plug or an energy monitor
+  plugged in outside it goes unavailable when the power goes. On *System
+  health*, *How Foyer knows the mains* now offers *Devices outside the UPS*:
+  pick one or more, and when every one of them has been silent for the delay
+  (two minutes by default) it is a power cut; one answering again is the
+  power back. A device silent when Home Assistant starts counts only once it
+  has answered, so a restart is never a power cut. The documentation says how
+  long Wi-Fi and Zigbee integrations take to mark a device unavailable.
+- **The mains fields suggest Home Assistant's entities** as you type a name
+  or an id, instead of being plain text.
+
 ## [1.0.4] — notifications that say what happened
 
 ### Changed — read these before you update
