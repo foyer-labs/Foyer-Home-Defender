@@ -170,6 +170,14 @@ un servizio esiste; solo un invio prova che consegna, quindi il controllo può
 escludere un canale ma non può mai promuoverlo. Il pulsante di prova alla
 pagina 6 manda davvero, ed è quello che trasforma «Mai usato» in una risposta.
 
+Conta anche una notifica che un profilo manda direttamente a un servizio
+`notify.*`, invece che a un contatto: quando va a buon fine, ogni canale di
+contatto che usa quello stesso servizio risulta funzionante, perché ha fatto
+la stessa strada verso lo stesso telefono. Quando fallisce non viene
+addebitata a quei canali — i dati dell'azione possono essere diversi da quelli
+del canale — quindi un canale risulta rotto solo se sono falliti i suoi
+invii, o la sua prova.
+
 **Un canale che Foyer ritiene rotto viene comunque tentato**, per tutto tranne
 il messaggio che dice che è rotto. Due invii falliti possono essere un fornitore
 con un singhiozzo, e sbagliarsi su un canale non deve mai essere il motivo per

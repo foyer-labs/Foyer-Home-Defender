@@ -401,6 +401,10 @@ class Executor:
         recipients = intent.params.get("recipients")
         if not recipients:
             await self._async_notify_call(service, data)
+            # It worked: so does every contact channel on this service
+            # (decision 164). A failure is not counted against them.
+            for key in intent.params.get("same_channels") or ():
+                sends.setdefault(str(key), True)
             if cameras:
                 self._pictures_later(intent, cameras, ({"service": service},))
             return

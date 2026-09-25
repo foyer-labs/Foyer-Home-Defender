@@ -1991,6 +1991,10 @@ Foyer periodically verifies that every configured channel is still real:
 - the GSM modem is present and registered on the network,
 - the last send actually succeeded.
 
+A send straight to a `notify.*` service, rather than to a contact, that
+succeeds also counts as a successful send for every contact channel on that
+service; one that fails is not counted against them (decision 164).
+
 A broken channel is surfaced on the Contacts page and, when it participates in an
 escalation policy, **announced through a different channel**. Warning you about a
 dead channel over the dead channel is the joke that writes itself.
@@ -2900,3 +2904,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 161 | Page 5 offers a ready-made notifications profile, built unsaved from the translations for the contacts the household picks | One notification per kind of moment is what lets an alarm be told from an arming, and lets each have its own sound; writing five of them from nothing is where households stop. Unsaved, because a profile nobody has read is not one to answer an alarm with |
 | 162 | The mains can be known from devices outside the UPS: all of them unavailable for a delay is a power cut, and a silence Foyer did not see begin does not count | Most Home Assistant houses have a plain UPS that reports nothing and a smart plug or energy monitor outside it. One device can drop off Wi-Fi, so it takes all of them; every device is silent while its integration loads, so a restart must never read as a power cut |
 | 163 | A disarm rule may name *every area*, read as the areas the house has when it acts | A list written once goes stale as areas are added and removed, and a household starting out wants "disarm the house" before it knows which areas are the perimeter; the perimeter rule of §9.4 point 3 still takes those areas out |
+| 164 | A notification that works when sent straight to a service proves the contact channels on that service; one that fails does not break them | The same transport to the same phone is evidence, and a household whose alarms arrive should not read "never used"; a failure may come from the action's own data, and a channel declared broken by mistake would be announced as a fault that is not there |

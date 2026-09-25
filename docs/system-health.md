@@ -159,6 +159,13 @@ Foyer can see that a service exists; only a send proves it delivers, so the
 sweep can rule a channel out and never rule one in. The test button on page 6
 really sends, and it is what turns "never used" into an answer.
 
+A notification a profile sends straight to a `notify.*` service, rather than
+to a contact, counts too: when it works, every contact channel on that same
+service is marked as working, because it went the same way to the same phone.
+When it fails it is not held against those channels — the action's own data
+may differ from the channel's — so a broken channel is only ever one whose own
+sends, or whose test, failed.
+
 **A channel Foyer believes is broken is still tried**, for everything except
 the message saying it is broken. Two failed sends can be a provider with a
 hiccup, and being wrong about a channel must never be the reason an alarm

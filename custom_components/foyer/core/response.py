@@ -48,6 +48,7 @@ from .models import (
     TechnicalAlarm,
     TimeCondition,
     Zone,
+    channel_key,
 )
 from .templates import WORDED, render
 from .validation import notify_contacts, notify_images
@@ -667,6 +668,24 @@ def _params(
         recipients, quiet = reachable(ctx, action, moment)
         params["recipients"] = recipients
         params["quiet"] = quiet
+    if (
+        action.kind is ActionKind.NOTIFY
+        and params.get("service")
+        and not (notify_contacts(action))
+    ):
+        # A notification straight to a service is evidence about every
+        # contact channel on that same service (decision 164): the same
+        # transport to the same phone. Named here, from the configuration,
+        # because the executor opens none (INV-1); it counts them only if
+        # the send works, never as broken, since the action's own data may
+        # differ from the channel's.
+        service = params["service"]
+        params["same_channels"] = [
+            channel_key(contact.id, channel.id)
+            for contact in ctx.config.contacts
+            for channel in contact.channels
+            if channel.service == service
+        ]
     if ctx.impaired:
         _drop_impaired(params, ctx)
     if action.kind is ActionKind.NOTIFY:
