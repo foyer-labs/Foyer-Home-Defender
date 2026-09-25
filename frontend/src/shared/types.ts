@@ -724,6 +724,12 @@ export interface HealthConfig {
   /** Which states of that entity mean the mains has failed. Explicit for the
    * same reason INV-5 exists: a UPS says `on` and a power sensor says `off`. */
   mains_lost_states: string[];
+  /** How the mains is known (decision 162): an entity that reports it, or
+   * devices outside the UPS whose going silent together is the power cut. */
+  mains_mode: "sensor" | "outside_ups";
+  mains_outside_entity_ids: string[];
+  /** Seconds every device outside the UPS must have been silent. */
+  mains_outside_delay: number;
   watchdog: WatchdogConfig;
   radios: RadioConfig[];
   rf_zones: number;
@@ -747,6 +753,9 @@ export interface HealthStatus {
     state: string | null;
     lost: boolean | null;
     since: string | null;
+    mode: "sensor" | "outside_ups";
+    outside_delay: number;
+    outside: { entity_id: string; state: string | null; quiet_since: string | null }[];
   };
   watchdog: {
     enabled: boolean;

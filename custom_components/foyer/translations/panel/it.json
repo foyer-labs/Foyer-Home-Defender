@@ -17,7 +17,9 @@
     "edit": "Modifica",
     "move_up": "Sposta su",
     "move_down": "Sposta giù",
-    "confirm_delete": "Eliminare {name}? Non si può annullare."
+    "confirm_delete": "Eliminare {name}? Non si può annullare.",
+    "add": "Aggiungi",
+    "remove": "Rimuovi"
   },
   "nav": {
     "overview": "Panoramica",
@@ -421,7 +423,10 @@
     "radios": "Radio",
     "ack_webhook_id": "Indirizzo del webhook di presa d'atto",
     "watchdog": "Watchdog",
-    "watchdog_url": "URL del watchdog"
+    "watchdog_url": "URL del watchdog",
+    "mains_mode": "Come Foyer sa della rete elettrica",
+    "mains_outside_entity_ids": "Dispositivi fuori dall'UPS",
+    "mains_outside_delay": "Muti da (secondi)"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -2919,7 +2924,21 @@
     "last_result": "Ultimo esito",
     "url_set_placeholder": "Impostato — scrivi un nuovo URL per sostituirlo",
     "url_set_hint": "C'è un URL salvato. Foyer non lo mostra più, perché chi lo possiede può tenere verde il controllo per sempre. Lascia il campo vuoto per mantenerlo, o scrivi di nuovo l'URL intero per correggerlo.",
-    "radios_armed": "Un'area è inserita: radio e soglie restano come sono finché tutte le aree non sono disinserite. Rete elettrica, watchdog e controlli dei canali si possono ancora cambiare."
+    "radios_armed": "Un'area è inserita: radio e soglie restano come sono finché tutte le aree non sono disinserite. Rete elettrica, watchdog e controlli dei canali si possono ancora cambiare.",
+    "mains_mode": {
+      "sensor": "Un'entità che segnala la rete",
+      "outside_ups": "Dispositivi fuori dall'UPS"
+    },
+    "mains_mode_hint": {
+      "sensor": "Un UPS intelligente, o un sensore che dice se c'è corrente: indichi a Foyer quali suoi stati significano blackout.",
+      "outside_ups": "Per un UPS semplice che non comunica niente: scegli prese smart o misuratori di energia collegati fuori dall'UPS. Quando tutti sono muti, è andata via la corrente."
+    },
+    "mains_outside_meta": "{count} dispositivi, {silent} muti",
+    "mains_outside_none": "Ancora nessun dispositivo.",
+    "mains_outside_placeholder": "Scrivi un nome o un ID di entità",
+    "mains_outside_hint": "Alimentati dalla presa a muro, non dall'UPS, e se puoi su prese diverse fra loro. Più di uno fa sì che un disturbo del Wi-Fi su uno di loro non sia un blackout. I dispositivi Wi-Fi (Shelly, Tasmota, ESPHome) diventano muti entro un minuto; quelli Zigbee possono metterci molto di più, secondo come l'integrazione li segna non disponibili. Un dispositivo muto all'avvio di Home Assistant conta solo dopo aver risposto una volta.",
+    "mains_outside_delay_hint": "Per quanto tempo devono essere tutti muti prima che sia un blackout: abbastanza per una presa che si riavvia, poco abbastanza da essere ancora una notizia.",
+    "missing": "non trovata"
   },
   "images": {
     "zone": "Le telecamere delle zone che hanno dato l'allarme",

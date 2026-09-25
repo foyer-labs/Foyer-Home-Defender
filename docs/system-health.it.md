@@ -41,6 +41,11 @@ sistema**. Prima dei dettagli, tre cose da sapere:
 
 <p align="center"><img src="screenshots/panel-health-it.png" alt="La pagina Stato del sistema: rete elettrica presente, il watchdog che riporta ogni quindici minuti con un contenuto vuoto, e ogni canale di notifica con il suo ultimo invio riuscito o il fatto che non è mai stato usato" width="900"></p>
 
+Foyer può sapere della rete elettrica in due modi, da scegliere alla pagina 14
+in *Come Foyer sa della rete elettrica*: un'entità che la segnala, oppure
+[dispositivi fuori dall'UPS](#devices-outside-the-ups) che diventano muti
+quando va via la corrente.
+
 Un UPS collegato tramite NUT, o una presa smart che riporta la propria
 alimentazione, ti dà già un `binary_sensor`. Indicalo alla pagina 14 e di' quale
 dei suoi stati significa che la rete elettrica è mancata.
@@ -65,6 +70,46 @@ UPS che non ha finito di caricarsi ne annuncerebbe uno a ogni riavvio.
 **La stessa entità può essere anche una zona di tipo `technical`**, e in quel
 caso conserva il suo allarme e la sua presa d'atto. Indicarla qui serve solo a
 dire a Foyer qual è la rete elettrica.
+
+<a id="devices-outside-the-ups"></a>
+
+### Dispositivi fuori dall'UPS
+
+La maggior parte delle case con Home Assistant ha un UPS semplice, che tiene
+acceso il computer di Home Assistant e il router e non comunica niente a
+nessuno. Quello che spesso c'è, invece, è una presa smart o un misuratore di
+energia collegato alla presa a muro, fuori dall'UPS. Quando va via la
+corrente, Home Assistant resta acceso sulla batteria, e quei dispositivi
+diventano muti: la loro integrazione li segna *non disponibili*. Il loro
+silenzio è la lettura.
+
+Scegli *Dispositivi fuori dall'UPS*, aggiungine uno o più — il campo suggerisce
+le entità di Home Assistant mentre scrivi un nome o un ID — e imposta per quanto
+tempo devono restare muti:
+
+- **Tutti muti, per il ritardo** (due minuti di serie, da 30 secondi a un'ora)
+  è un blackout: `system_power_lost`, come sopra. Un dispositivo che risponde
+  ancora vuol dire che la corrente c'è, quindi un disturbo del Wi-Fi su una
+  presa non è un blackout. Se puoi, scegline due o tre, su prese diverse.
+- **Uno di loro che risponde di nuovo** è la corrente tornata, con
+  `system_power_restored` e per quanto tempo è mancata.
+- **Un dispositivo muto all'avvio di Home Assistant conta solo dopo aver
+  risposto.** A ogni riavvio ogni dispositivo è muto finché la sua
+  integrazione non si è caricata, e un riavvio non è un blackout. Finché non
+  risponde, la pagina dice che la rete non si può leggere e il sensore di
+  stato del sistema porta `mains_unknown`. Un blackout già in corso quando
+  Home Assistant si riavvia resta.
+- **Un dispositivo che non esiste più in Home Assistant** — rinominato o
+  rimosso — rende la rete sconosciuta, mai un blackout.
+
+Quanto velocemente un dispositivo viene segnato non disponibile dipende dalla
+sua integrazione, non da Foyer. I dispositivi Wi-Fi — Shelly, Tasmota,
+ESPHome — di solito entro un minuto. Quelli Zigbee possono metterci molto di
+più: ZHA concede ore a un dispositivo alimentato a rete prima di considerarlo
+non disponibile, a meno che non lo riduci nelle sue impostazioni, e
+Zigbee2MQTT non segna niente come non disponibile finché non attivi la sua
+opzione di disponibilità. Stacca la spina una volta e guarda quanto ci mette
+l'entità, prima di fidarti.
 
 Quello che succede dopo è l'argomento di [resilience.it.md](resilience.it.md), ed
 è la versione breve di tutta questa pagina: un ladro che taglia la corrente ha

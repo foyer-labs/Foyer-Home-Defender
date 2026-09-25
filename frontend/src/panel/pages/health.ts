@@ -35,6 +35,7 @@ class FoyerPageHealth extends LitElement {
     ctx: { attribute: false },
     _status: { state: true },
     _draft: { state: true },
+    _outsideDraft: { state: true },
     _candidates: { state: true },
     _problems: { state: true },
     _busy: { state: true },
@@ -44,6 +45,8 @@ class FoyerPageHealth extends LitElement {
   ctx?: PanelContext;
   private _status?: HealthStatus;
   private _draft?: HealthConfig;
+  // What is being typed into the add field of the devices outside the UPS.
+  private _outsideDraft = "";
   private _candidates: RadioCandidate[] = [];
   private _problems: Problem[] = [];
   private _busy = false;
@@ -206,7 +209,9 @@ class FoyerPageHealth extends LitElement {
 
   private _renderTiles(s: Strings, status: HealthStatus) {
     const mains = status.mains;
-    const mainsTone: Tone = !mains.entity_id
+    const outside = mains.mode === "outside_ups";
+    const mainsSet = outside ? mains.outside.length > 0 : Boolean(mains.entity_id);
+    const mainsTone: Tone = !mainsSet
       ? "idle"
       : mains.lost === true
         ? "crit"
@@ -224,14 +229,19 @@ class FoyerPageHealth extends LitElement {
     return html`<div class="tiles">
       ${this._tile(
         t(s, "health.mains"),
-        !mains.entity_id
+        !mainsSet
           ? t(s, "health.not_configured")
           : mains.lost === true
             ? t(s, "health.mains_lost")
             : mains.lost === null
               ? t(s, "health.unreadable")
               : t(s, "health.mains_present"),
-        mains.entity_id ?? t(s, "health.mains_pick"),
+        outside && mainsSet
+          ? t(s, "health.mains_outside_meta", {
+              count: String(mains.outside.length),
+              silent: String(mains.outside.filter((o) => o.quiet_since).length),
+            })
+          : (mains.entity_id ?? t(s, "health.mains_pick")),
         mainsTone,
       )}
       ${this._tile(
@@ -438,6 +448,121 @@ class FoyerPageHealth extends LitElement {
     return (this.ctx?.meta?.bounds[key] as [number, number] | undefined) ?? fallback;
   }
 
+  /** Every entity Home Assistant has, for the fields below to suggest
+   * from as the household types a name or an id. A suggestion, never a
+   * restriction: an entity that is not there yet can still be typed. */
+  private _renderEntityList() {
+    const states = Object.values(this.ctx?.hass.states ?? {}).sort((a, b) =>
+      a.entity_id.localeCompare(b.entity_id),
+    );
+    return html`<datalist id="foyer-entities">
+      ${states.map(
+        (e) =>
+          html`<option value=${e.entity_id}>
+            ${String(e.attributes.friendly_name ?? e.entity_id)}
+          </option>`,
+      )}
+    </datalist>`;
+  }
+
+  private _renderSensor(s: Strings, draft: HealthConfig) {
+    return html`<div class="grid-form">
+      <label class="field">
+        <span class="lbl">${t(s, "field.mains_entity_id")}</span>
+        <input
+          list="foyer-entities"
+          .value=${draft.mains_entity_id ?? ""}
+          placeholder=${t(s, "health.mains_placeholder")}
+          @input=${(e: Event) =>
+            this._set("mains_entity_id", (e.target as HTMLInputElement).value.trim() || null)}
+        />
+        <span class="hint">${t(s, "health.mains_hint")}</span>
+      </label>
+      <label class="field">
+        <span class="lbl">${t(s, "field.mains_lost_states")}</span>
+        <input
+          .value=${draft.mains_lost_states.join(", ")}
+          @input=${(e: Event) =>
+            this._set(
+              "mains_lost_states",
+              (e.target as HTMLInputElement).value
+                .split(",")
+                .map((v) => v.trim())
+                .filter(Boolean),
+            )}
+        />
+        <span class="hint">${t(s, "health.mains_states_hint")}</span>
+      </label>
+    </div>`;
+  }
+
+  /** Devices outside the UPS (decision 162): a list to add to and take
+   * from, each with what it reads now, and the delay. */
+  private _renderOutside(s: Strings, draft: HealthConfig) {
+    const [minDelay, maxDelay] = this._bounds("mains_outside_delay", [30, 3600]);
+    const chosen = draft.mains_outside_entity_ids;
+    const states = this.ctx?.hass.states ?? {};
+    const add = (): void => {
+      const id = this._outsideDraft.trim();
+      if (!id || chosen.includes(id)) return;
+      this._set("mains_outside_entity_ids", [...chosen, id]);
+      this._outsideDraft = "";
+    };
+    return html`<div class="field">
+        <span class="lbl">${t(s, "field.mains_outside_entity_ids")}</span>
+        ${chosen.length
+          ? html`<ul class="outside">
+              ${chosen.map(
+                (id) => html`<li>
+                  <span>
+                    <strong>${String(states[id]?.attributes.friendly_name ?? id)}</strong>
+                    <span class="muted">${id} · ${states[id]?.state ?? t(s, "health.missing")}</span>
+                  </span>
+                  <button
+                    class="btn"
+                    @click=${() =>
+                      this._set(
+                        "mains_outside_entity_ids",
+                        chosen.filter((c) => c !== id),
+                      )}
+                  >
+                    ${t(s, "common.remove")}
+                  </button>
+                </li>`,
+              )}
+            </ul>`
+          : html`<span class="hint">${t(s, "health.mains_outside_none")}</span>`}
+        <div class="add-row">
+          <input
+            list="foyer-entities"
+            .value=${live(this._outsideDraft)}
+            placeholder=${t(s, "health.mains_outside_placeholder")}
+            @input=${(e: Event) => (this._outsideDraft = (e.target as HTMLInputElement).value)}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Enter") add();
+            }}
+          />
+          <button class="btn" ?disabled=${!this._outsideDraft.trim()} @click=${add}>
+            ${t(s, "common.add")}
+          </button>
+        </div>
+        <span class="hint">${t(s, "health.mains_outside_hint")}</span>
+      </div>
+      <div class="grid-form">
+        <label class="field">
+          <span class="lbl">${t(s, "field.mains_outside_delay")}</span>
+          <input
+            type="number"
+            min=${minDelay}
+            max=${maxDelay}
+            .value=${String(draft.mains_outside_delay)}
+            @input=${(e: Event) => whenNumber(e, (n) => this._set("mains_outside_delay", n))}
+          />
+          <span class="hint">${t(s, "health.mains_outside_delay_hint")}</span>
+        </label>
+      </div>`;
+  }
+
   private _renderEditor(s: Strings, draft: HealthConfig) {
     const [minInterval, maxInterval] = this._bounds("watchdog_interval", [60, 86400]);
     const [minTimeout, maxTimeout] = this._bounds("watchdog_timeout", [5, 120]);
@@ -450,33 +575,30 @@ class FoyerPageHealth extends LitElement {
         <h2>${t(s, "health.settings")}</h2>
       </div>
       <div class="card-bd">
+        ${this._renderEntityList()}
         <div class="grid-form">
           <label class="field">
-            <span class="lbl">${t(s, "field.mains_entity_id")}</span>
-            <input
-              .value=${draft.mains_entity_id ?? ""}
-              placeholder=${t(s, "health.mains_placeholder")}
-              @input=${(e: Event) =>
-                this._set("mains_entity_id", (e.target as HTMLInputElement).value || null)}
-            />
-            <span class="hint">${t(s, "health.mains_hint")}</span>
-          </label>
-          <label class="field">
-            <span class="lbl">${t(s, "field.mains_lost_states")}</span>
-            <input
-              .value=${draft.mains_lost_states.join(", ")}
-              @input=${(e: Event) =>
+            <span class="lbl">${t(s, "field.mains_mode")}</span>
+            <select
+              @change=${(e: Event) =>
                 this._set(
-                  "mains_lost_states",
-                  (e.target as HTMLInputElement).value
-                    .split(",")
-                    .map((v) => v.trim())
-                    .filter(Boolean),
+                  "mains_mode",
+                  (e.target as HTMLSelectElement).value as HealthConfig["mains_mode"],
                 )}
-            />
-            <span class="hint">${t(s, "health.mains_states_hint")}</span>
+            >
+              ${(["sensor", "outside_ups"] as const).map(
+                (mode) =>
+                  html`<option .value=${mode} .selected=${live(draft.mains_mode === mode)}>
+                    ${t(s, `health.mains_mode.${mode}`)}
+                  </option>`,
+              )}
+            </select>
+            <span class="hint">${t(s, `health.mains_mode_hint.${draft.mains_mode}`)}</span>
           </label>
         </div>
+        ${draft.mains_mode === "outside_ups"
+          ? this._renderOutside(s, draft)
+          : this._renderSensor(s, draft)}
 
         <fieldset>
           <legend>${t(s, "health.watchdog")}</legend>
@@ -699,6 +821,31 @@ class FoyerPageHealth extends LitElement {
     stateStyles,
     formStyles,
     css`
+      ul.outside {
+        list-style: none;
+        margin: 4px 0 8px;
+        padding: 0;
+      }
+      ul.outside li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--divider-color, #e0e0e0);
+      }
+      ul.outside li > span {
+        display: flex;
+        flex-direction: column;
+      }
+      .add-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .add-row input {
+        flex: 1;
+      }
       .tiles {
         display: grid;
         gap: 12px;

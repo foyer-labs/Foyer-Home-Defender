@@ -1963,6 +1963,21 @@ mains failure raises `system_power_lost`, notifies immediately, is logged,
 and can drive a response profile. It never opens an incident. It must never
 be confused with a quiet night.
 
+**Or from devices outside the UPS** (decision 162). A plain UPS says nothing,
+but a smart plug or an energy monitor powered from outside it goes
+*unavailable* when the power goes, while Home Assistant stays up. In this
+mode the household picks one or more such entities and a delay (120 s by
+default, 30 s to an hour): the mains is lost when every one of them has been
+unreadable for the delay, counted from the last to fall silent, and back the
+moment any answers. Only a silence Foyer saw begin counts. Which devices have
+answered since Home Assistant started is kept in memory and never stored, so
+after a restart — when every device is silent until its integration loads —
+none counts until it has answered once, and until then the mains is
+`mains_unknown`, not lost; when each went silent is stored, so a power cut
+already under way survives the restart (INV-3). A device missing from Home
+Assistant makes the mains unknown. How fast a device is marked unavailable is
+its integration's, and the document says so plainly.
+
 Documented alongside it in `docs/resilience.md`: a burglar cuts the power. Without
 a UPS on the router, every internet-dependent notification channel dies with it,
 which is why §7.3 recommends a local GSM channel.
@@ -2883,3 +2898,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 159 | A camera folder that starts with `media` is inside Home Assistant's own media folder, wherever the installation keeps it | On Home Assistant OS the media folder is `/media`, not `<config>/media`, and only the media folders are allowed by default: the default `media/foyer` resolved to a folder Home Assistant refused, and every Telegram snapshot failed. Mapping it to the real media folder keeps the stored setting and puts the pictures where *Media* shows them |
 | 160 | `{{ event }}` names the moment, and `{{ reason }}`, `{{ state }}`, `{{ channel }}`, `{{ operation }}` and a missing `{{ user }}` are said in words by the executor | A message is read by a person: `zone_open` and `armed_away` are not sentences, and one action serving several moments could not say which it was. The engine keeps handing over identifiers, because it reads no translation file (INV-1) |
 | 161 | Page 5 offers a ready-made notifications profile, built unsaved from the translations for the contacts the household picks | One notification per kind of moment is what lets an alarm be told from an arming, and lets each have its own sound; writing five of them from nothing is where households stop. Unsaved, because a profile nobody has read is not one to answer an alarm with |
+| 162 | The mains can be known from devices outside the UPS: all of them unavailable for a delay is a power cut, and a silence Foyer did not see begin does not count | Most Home Assistant houses have a plain UPS that reports nothing and a smart plug or energy monitor outside it. One device can drop off Wi-Fi, so it takes all of them; every device is silent while its integration loads, so a restart must never read as a power cut |

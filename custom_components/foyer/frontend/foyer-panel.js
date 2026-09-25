@@ -9802,13 +9802,14 @@ function En(e, t) {
 }
 var Dn = class extends j {
 	constructor(...e) {
-		super(...e), this._candidates = [], this._problems = [], this._busy = !1, this._error = "";
+		super(...e), this._outsideDraft = "", this._candidates = [], this._problems = [], this._busy = !1, this._error = "";
 	}
 	static {
 		this.properties = {
 			ctx: { attribute: !1 },
 			_status: { state: !0 },
 			_draft: { state: !0 },
+			_outsideDraft: { state: !0 },
 			_candidates: { state: !0 },
 			_problems: { state: !0 },
 			_busy: { state: !0 },
@@ -9922,14 +9923,17 @@ var Dn = class extends j {
     </div>`;
 	}
 	_renderTiles(e, t) {
-		let n = t.mains, r = n.entity_id ? n.lost === !0 ? "crit" : n.lost === null ? "warn" : "ok" : "idle", i = t.watchdog, a = i.enabled ? i.down_since ? "crit" : "ok" : "idle", o = t.channels.filter((e) => e.fault).length, s = t.channels.filter((e) => !e.fault && !e.checked).length;
+		let n = t.mains, r = n.mode === "outside_ups", i = r ? n.outside.length > 0 : !!n.entity_id, a = i ? n.lost === !0 ? "crit" : n.lost === null ? "warn" : "ok" : "idle", o = t.watchdog, s = o.enabled ? o.down_since ? "crit" : "ok" : "idle", c = t.channels.filter((e) => e.fault).length, l = t.channels.filter((e) => !e.fault && !e.checked).length;
 		return C`<div class="tiles">
-      ${this._tile(N(e, "health.mains"), n.entity_id ? n.lost === !0 ? N(e, "health.mains_lost") : n.lost === null ? N(e, "health.unreadable") : N(e, "health.mains_present") : N(e, "health.not_configured"), n.entity_id ?? N(e, "health.mains_pick"), r)}
-      ${this._tile(N(e, "health.watchdog"), i.enabled ? i.down_since ? N(e, "health.unreachable") : N(e, "health.reporting") : N(e, "health.off"), i.enabled ? N(e, "health.watchdog_meta", {
-			every: String(Math.round(i.interval / 60)),
-			payload: N(e, i.payload ? "health.with_payload" : "health.no_payload")
-		}) : N(e, "health.watchdog_off_hint"), a)}
-      ${this._tile(N(e, "health.channels"), o ? N(e, "health.channels_broken", { n: String(o) }) : N(e, "health.channels_ok", { n: String(t.channels.length) }), N(e, "health.channels_meta", { n: String(s) }), o ? "crit" : t.channels.length ? "ok" : "idle")}
+      ${this._tile(N(e, "health.mains"), i ? n.lost === !0 ? N(e, "health.mains_lost") : n.lost === null ? N(e, "health.unreadable") : N(e, "health.mains_present") : N(e, "health.not_configured"), r && i ? N(e, "health.mains_outside_meta", {
+			count: String(n.outside.length),
+			silent: String(n.outside.filter((e) => e.quiet_since).length)
+		}) : n.entity_id ?? N(e, "health.mains_pick"), a)}
+      ${this._tile(N(e, "health.watchdog"), o.enabled ? o.down_since ? N(e, "health.unreachable") : N(e, "health.reporting") : N(e, "health.off"), o.enabled ? N(e, "health.watchdog_meta", {
+			every: String(Math.round(o.interval / 60)),
+			payload: N(e, o.payload ? "health.with_payload" : "health.no_payload")
+		}) : N(e, "health.watchdog_off_hint"), s)}
+      ${this._tile(N(e, "health.channels"), c ? N(e, "health.channels_broken", { n: String(c) }) : N(e, "health.channels_ok", { n: String(t.channels.length) }), N(e, "health.channels_meta", { n: String(l) }), c ? "crit" : t.channels.length ? "ok" : "idle")}
     </div>`;
 	}
 	_renderChannels(e, t) {
@@ -10065,6 +10069,86 @@ var Dn = class extends j {
 	_bounds(e, t) {
 		return this.ctx?.meta?.bounds[e] ?? t;
 	}
+	_renderEntityList() {
+		return C`<datalist id="foyer-entities">
+      ${Object.values(this.ctx?.hass.states ?? {}).sort((e, t) => e.entity_id.localeCompare(t.entity_id)).map((e) => C`<option value=${e.entity_id}>
+            ${String(e.attributes.friendly_name ?? e.entity_id)}
+          </option>`)}
+    </datalist>`;
+	}
+	_renderSensor(e, t) {
+		return C`<div class="grid-form">
+      <label class="field">
+        <span class="lbl">${N(e, "field.mains_entity_id")}</span>
+        <input
+          list="foyer-entities"
+          .value=${t.mains_entity_id ?? ""}
+          placeholder=${N(e, "health.mains_placeholder")}
+          @input=${(e) => this._set("mains_entity_id", e.target.value.trim() || null)}
+        />
+        <span class="hint">${N(e, "health.mains_hint")}</span>
+      </label>
+      <label class="field">
+        <span class="lbl">${N(e, "field.mains_lost_states")}</span>
+        <input
+          .value=${t.mains_lost_states.join(", ")}
+          @input=${(e) => this._set("mains_lost_states", e.target.value.split(",").map((e) => e.trim()).filter(Boolean))}
+        />
+        <span class="hint">${N(e, "health.mains_states_hint")}</span>
+      </label>
+    </div>`;
+	}
+	_renderOutside(e, t) {
+		let [n, r] = this._bounds("mains_outside_delay", [30, 3600]), i = t.mains_outside_entity_ids, a = this.ctx?.hass.states ?? {}, o = () => {
+			let e = this._outsideDraft.trim();
+			e && !i.includes(e) && (this._set("mains_outside_entity_ids", [...i, e]), this._outsideDraft = "");
+		};
+		return C`<div class="field">
+        <span class="lbl">${N(e, "field.mains_outside_entity_ids")}</span>
+        ${i.length ? C`<ul class="outside">
+              ${i.map((t) => C`<li>
+                  <span>
+                    <strong>${String(a[t]?.attributes.friendly_name ?? t)}</strong>
+                    <span class="muted">${t} · ${a[t]?.state ?? N(e, "health.missing")}</span>
+                  </span>
+                  <button
+                    class="btn"
+                    @click=${() => this._set("mains_outside_entity_ids", i.filter((e) => e !== t))}
+                  >
+                    ${N(e, "common.remove")}
+                  </button>
+                </li>`)}
+            </ul>` : C`<span class="hint">${N(e, "health.mains_outside_none")}</span>`}
+        <div class="add-row">
+          <input
+            list="foyer-entities"
+            .value=${G(this._outsideDraft)}
+            placeholder=${N(e, "health.mains_outside_placeholder")}
+            @input=${(e) => this._outsideDraft = e.target.value}
+            @keydown=${(e) => {
+			e.key === "Enter" && o();
+		}}
+          />
+          <button class="btn" ?disabled=${!this._outsideDraft.trim()} @click=${o}>
+            ${N(e, "common.add")}
+          </button>
+        </div>
+        <span class="hint">${N(e, "health.mains_outside_hint")}</span>
+      </div>
+      <div class="grid-form">
+        <label class="field">
+          <span class="lbl">${N(e, "field.mains_outside_delay")}</span>
+          <input
+            type="number"
+            min=${n}
+            max=${r}
+            .value=${String(t.mains_outside_delay)}
+            @input=${(e) => U(e, (e) => this._set("mains_outside_delay", e))}
+          />
+          <span class="hint">${N(e, "health.mains_outside_delay_hint")}</span>
+        </label>
+      </div>`;
+	}
 	_renderEditor(e, t) {
 		let [n, r] = this._bounds("watchdog_interval", [60, 86400]), [i, a] = this._bounds("watchdog_timeout", [5, 120]), [o, s] = this._bounds("watchdog_failures", [1, 20]), [c, l] = this._bounds("rf_zones", [2, 50]), [u, d] = this._bounds("rf_window", [5, 3600]), [f, ee] = this._bounds("rf_confirm", [0, 3600]);
 		return C`<div class="card">
@@ -10072,25 +10156,21 @@ var Dn = class extends j {
         <h2>${N(e, "health.settings")}</h2>
       </div>
       <div class="card-bd">
+        ${this._renderEntityList()}
         <div class="grid-form">
           <label class="field">
-            <span class="lbl">${N(e, "field.mains_entity_id")}</span>
-            <input
-              .value=${t.mains_entity_id ?? ""}
-              placeholder=${N(e, "health.mains_placeholder")}
-              @input=${(e) => this._set("mains_entity_id", e.target.value || null)}
-            />
-            <span class="hint">${N(e, "health.mains_hint")}</span>
-          </label>
-          <label class="field">
-            <span class="lbl">${N(e, "field.mains_lost_states")}</span>
-            <input
-              .value=${t.mains_lost_states.join(", ")}
-              @input=${(e) => this._set("mains_lost_states", e.target.value.split(",").map((e) => e.trim()).filter(Boolean))}
-            />
-            <span class="hint">${N(e, "health.mains_states_hint")}</span>
+            <span class="lbl">${N(e, "field.mains_mode")}</span>
+            <select
+              @change=${(e) => this._set("mains_mode", e.target.value)}
+            >
+              ${["sensor", "outside_ups"].map((n) => C`<option .value=${n} .selected=${G(t.mains_mode === n)}>
+                    ${N(e, `health.mains_mode.${n}`)}
+                  </option>`)}
+            </select>
+            <span class="hint">${N(e, `health.mains_mode_hint.${t.mains_mode}`)}</span>
           </label>
         </div>
+        ${t.mains_mode === "outside_ups" ? this._renderOutside(e, t) : this._renderSensor(e, t)}
 
         <fieldset>
           <legend>${N(e, "health.watchdog")}</legend>
@@ -10284,6 +10364,31 @@ var Dn = class extends j {
 			P,
 			F,
 			o`
+      ul.outside {
+        list-style: none;
+        margin: 4px 0 8px;
+        padding: 0;
+      }
+      ul.outside li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--divider-color, #e0e0e0);
+      }
+      ul.outside li > span {
+        display: flex;
+        flex-direction: column;
+      }
+      .add-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .add-row input {
+        flex: 1;
+      }
       .tiles {
         display: grid;
         gap: 12px;

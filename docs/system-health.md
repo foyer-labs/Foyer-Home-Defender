@@ -38,6 +38,11 @@ things are worth knowing before the detail:
 
 <p align="center"><img src="screenshots/panel-health-en.png" alt="The System health page: mains power present, the watchdog reporting every fifteen minutes with an empty payload, and every notification channel with its last successful send or the fact that it has never been used" width="900"></p>
 
+Foyer can know the mains in two ways, chosen on page 14 under *How Foyer
+knows the mains*: an entity that reports it, or
+[devices outside the UPS](#devices-outside-the-ups) that go silent when the
+power goes.
+
 A UPS over NUT, or a smart plug that reports its own supply, already gives you
 a `binary_sensor`. Name it on page 14 and say which of its states means the
 mains has failed.
@@ -61,6 +66,43 @@ finished loading would otherwise announce one at every restart.
 **The same entity can also be a zone of type `technical`**, and if it is, it
 keeps its own alarm and its own acknowledgement. Naming it here only tells
 Foyer which one is the mains.
+
+### Devices outside the UPS
+
+Most houses running Home Assistant have a plain UPS that keeps the Home
+Assistant box and the router alive and says nothing to anybody. What they
+often do have is a smart plug or an energy monitor plugged into the wall,
+outside the UPS. When the power goes, Home Assistant stays up on the battery,
+and those devices go silent: their integration marks them *unavailable*.
+Their silence is the reading.
+
+Choose *Devices outside the UPS*, add one or more of them — the field
+suggests Home Assistant's entities as you type a name or an id — and set how
+long they must be silent:
+
+- **Every one of them silent, for the delay** (two minutes by default,
+  30 seconds to an hour) is a power cut: `system_power_lost`, as above. One
+  device still answering means the power is there, so a Wi-Fi hiccup on one
+  plug is not a power cut. Pick two or three, on different sockets, if you
+  can.
+- **One of them answering again** is the power back, with
+  `system_power_restored` and how long it was gone.
+- **A device silent when Home Assistant starts counts only once it has
+  answered.** At every restart each device is silent until its integration
+  has loaded, and a restart is not a power cut. Until it answers, the page
+  says the mains cannot be read and the health sensor carries
+  `mains_unknown`. A power cut already under way when Home Assistant
+  restarts is kept.
+- **A device that no longer exists in Home Assistant** — renamed or removed —
+  makes the mains unknown, never a power cut.
+
+How quickly a device is marked unavailable is up to its integration, not to
+Foyer. Wi-Fi devices — Shelly, Tasmota, ESPHome — usually go within a
+minute. Zigbee ones can take far longer: ZHA gives a mains-powered device
+hours before it counts as unavailable, unless you shorten that in its
+settings, and Zigbee2MQTT marks nothing unavailable until its availability
+option is switched on. Pull the plug once and watch how long the entity
+takes before you trust it.
 
 What happens next is the subject of [resilience.md](resilience.md), and it is
 the short version of this whole page: a burglar who cuts the power has cut the
