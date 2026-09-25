@@ -8,6 +8,22 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.3] — snapshots on Home Assistant OS
+
+### Fixed
+- **Camera snapshots are written on Home Assistant OS.** The default camera
+  folder, `media/foyer`, was taken as `<config>/media/foyer`; on Home
+  Assistant OS the media folder is `/media`, and only the media folders are
+  allowed by default, so every snapshot was refused — and with it every
+  picture sent to Telegram, which needs a file. A camera folder that starts
+  with `media` now means Home Assistant's own media folder, wherever the
+  installation keeps it, and the snapshots appear under *Media*. The setting
+  does not change; the Companion app, which needs no file, was never
+  affected.
+- **Home Assistant no longer reports a blocking call** from Foyer's
+  translations: the list of languages is read once, when the integration
+  loads, instead of from the disk on every request of the panel.
+
 ## [1.0.2] — pictures reach a Telegram chat
 
 ### Fixed
