@@ -8,7 +8,9 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
-## [Unreleased]
+## [1.0.1] — the sidebar names the product
+
+Nothing changes in how the alarm behaves.
 
 ### Changed
 - **The sidebar entry reads *Home Defender*** instead of *Foyer*: Foyer is the
