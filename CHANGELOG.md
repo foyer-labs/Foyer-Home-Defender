@@ -8,6 +8,20 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.2] — pictures reach a Telegram chat
+
+### Fixed
+- **Camera pictures now reach a Telegram chat set up from the UI.** Home
+  Assistant has deprecated the YAML `notify.telegram` service, so a Telegram
+  chat is now a notify entity, and a notify entity carries only a title and a
+  message: the alarm's text arrived and every picture was dropped without a
+  word. With *Telegram — a photo file* as the attachment, Foyer now sends each
+  picture through `telegram_bot.send_photo`, after the text. This covers both
+  *The cameras of the zones behind the alarm* and *Always the same camera*. A picture that fails is logged and
+  costs nothing but itself.
+- **Any other notify entity says in the log that it received no picture**,
+  instead of skipping it in silence.
+
 ## [1.0.1] — the sidebar names the product
 
 Nothing changes in how the alarm behaves.
