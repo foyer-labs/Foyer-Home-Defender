@@ -8,6 +8,21 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.11] — away is anywhere but home
+
+### Fixed
+- **An *Absence* rule now arms when everybody is away, wherever they are.**
+  It read a person as away only when Home Assistant said `not_home`; a person
+  in another zone reads that zone's name — *Work*, *School* — so a house
+  whose people were at work never armed, and nothing in the log said why.
+  Away is now anything readable that is not `home`. A person who cannot be
+  read still does not count as away.
+- **Coming home to a disarmed house no longer starts a disarm.** A disarm
+  rule whose areas were all disarmed already counted down, notified, and then
+  gave up because the areas could not be disarmed. It now does nothing, and
+  the arrival is spent, so arming afterwards with that person home is not
+  undone.
+
 ## [1.0.10] — a restart without a storm of faults
 
 The stored configuration moves to schema 8.6. The step is additive: an older
