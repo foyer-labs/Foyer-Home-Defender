@@ -8,6 +8,19 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.8] — what still uses it
+
+Nothing changes in how the alarm behaves.
+
+### Changed
+- **A refusal to delete says what is in the way.** Deleting a response
+  profile that something still uses used to say only that something did. It
+  now names each place — the default or technical profile in *Settings*, and
+  the areas, zones, scenarios and verification groups that point at it — so
+  it can be moved without a search. Deleting a contact names the response
+  profiles that still notify it, and deleting a scenario the key zones that
+  still arm it.
+
 ## [1.0.7] — disarm every area
 
 The stored configuration moves to schema 8.5. The step is additive: an older
