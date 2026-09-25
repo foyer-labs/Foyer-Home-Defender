@@ -21,6 +21,11 @@
     "add": "Aggiungi",
     "remove": "Rimuovi"
   },
+  "entity_list": {
+    "placeholder": "Scrivi un nome o un ID di entità, poi Aggiungi",
+    "missing": "non trovata in Home Assistant",
+    "replace": "Sostituisci"
+  },
   "nav": {
     "overview": "Panoramica",
     "areas": "Aree",
@@ -2934,11 +2939,8 @@
       "outside_ups": "Per un UPS semplice che non comunica niente: scegli prese smart o misuratori di energia collegati fuori dall'UPS. Quando tutti sono muti, è andata via la corrente."
     },
     "mains_outside_meta": "{count} dispositivi, {silent} muti",
-    "mains_outside_none": "Ancora nessun dispositivo.",
-    "mains_outside_placeholder": "Scrivi un nome o un ID di entità",
     "mains_outside_hint": "Alimentati dalla presa a muro, non dall'UPS, e se puoi su prese diverse fra loro. Più di uno fa sì che un disturbo del Wi-Fi su uno di loro non sia un blackout. I dispositivi Wi-Fi (Shelly, Tasmota, ESPHome) diventano muti entro un minuto; quelli Zigbee possono metterci molto di più, secondo come l'integrazione li segna non disponibili. Un dispositivo muto all'avvio di Home Assistant conta solo dopo aver risposto una volta.",
-    "mains_outside_delay_hint": "Per quanto tempo devono essere tutti muti prima che sia un blackout: abbastanza per una presa che si riavvia, poco abbastanza da essere ancora una notizia.",
-    "missing": "non trovata"
+    "mains_outside_delay_hint": "Per quanto tempo devono essere tutti muti prima che sia un blackout: abbastanza per una presa che si riavvia, poco abbastanza da essere ancora una notizia."
   },
   "images": {
     "zone": "Le telecamere delle zone che hanno dato l'allarme",

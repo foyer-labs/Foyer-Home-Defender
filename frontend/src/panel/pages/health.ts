@@ -21,6 +21,7 @@ import type {
   RadioConfig,
 } from "../../shared/types";
 import { anyArmed, problemText, type PanelContext, whenNumber } from "../context";
+import { allEntities, entityListStyles, renderEntityList } from "../entity-list";
 
 /** A timestamp as the rest of the panel writes one. An absent one is a dash
  * rather than an empty cell: "nothing has happened yet" is an answer. */
@@ -35,7 +36,6 @@ class FoyerPageHealth extends LitElement {
     ctx: { attribute: false },
     _status: { state: true },
     _draft: { state: true },
-    _outsideDraft: { state: true },
     _candidates: { state: true },
     _problems: { state: true },
     _busy: { state: true },
@@ -45,8 +45,6 @@ class FoyerPageHealth extends LitElement {
   ctx?: PanelContext;
   private _status?: HealthStatus;
   private _draft?: HealthConfig;
-  // What is being typed into the add field of the devices outside the UPS.
-  private _outsideDraft = "";
   private _candidates: RadioCandidate[] = [];
   private _problems: Problem[] = [];
   private _busy = false;
@@ -500,52 +498,16 @@ class FoyerPageHealth extends LitElement {
    * from, each with what it reads now, and the delay. */
   private _renderOutside(s: Strings, draft: HealthConfig) {
     const [minDelay, maxDelay] = this._bounds("mains_outside_delay", [30, 3600]);
-    const chosen = draft.mains_outside_entity_ids;
-    const states = this.ctx?.hass.states ?? {};
-    const add = (): void => {
-      const id = this._outsideDraft.trim();
-      if (!id || chosen.includes(id)) return;
-      this._set("mains_outside_entity_ids", [...chosen, id]);
-      this._outsideDraft = "";
-    };
     return html`<div class="field">
         <span class="lbl">${t(s, "field.mains_outside_entity_ids")}</span>
-        ${chosen.length
-          ? html`<ul class="outside">
-              ${chosen.map(
-                (id) => html`<li>
-                  <span>
-                    <strong>${String(states[id]?.attributes.friendly_name ?? id)}</strong>
-                    <span class="muted">${id} · ${states[id]?.state ?? t(s, "health.missing")}</span>
-                  </span>
-                  <button
-                    class="btn"
-                    @click=${() =>
-                      this._set(
-                        "mains_outside_entity_ids",
-                        chosen.filter((c) => c !== id),
-                      )}
-                  >
-                    ${t(s, "common.remove")}
-                  </button>
-                </li>`,
-              )}
-            </ul>`
-          : html`<span class="hint">${t(s, "health.mains_outside_none")}</span>`}
-        <div class="add-row">
-          <input
-            list="foyer-entities"
-            .value=${live(this._outsideDraft)}
-            placeholder=${t(s, "health.mains_outside_placeholder")}
-            @input=${(e: Event) => (this._outsideDraft = (e.target as HTMLInputElement).value)}
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter") add();
-            }}
-          />
-          <button class="btn" ?disabled=${!this._outsideDraft.trim()} @click=${add}>
-            ${t(s, "common.add")}
-          </button>
-        </div>
+        ${renderEntityList({
+          hass: this.ctx!.hass,
+          s,
+          chosen: draft.mains_outside_entity_ids,
+          candidates: allEntities(this.ctx!.hass),
+          listId: "foyer-outside-ups",
+          onChange: (next) => this._set("mains_outside_entity_ids", next),
+        })}
         <span class="hint">${t(s, "health.mains_outside_hint")}</span>
       </div>
       <div class="grid-form">
@@ -820,32 +782,8 @@ class FoyerPageHealth extends LitElement {
   static override styles = [
     stateStyles,
     formStyles,
+    entityListStyles,
     css`
-      ul.outside {
-        list-style: none;
-        margin: 4px 0 8px;
-        padding: 0;
-      }
-      ul.outside li {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 6px 0;
-        border-bottom: 1px solid var(--divider-color, #e0e0e0);
-      }
-      ul.outside li > span {
-        display: flex;
-        flex-direction: column;
-      }
-      .add-row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .add-row input {
-        flex: 1;
-      }
       .tiles {
         display: grid;
         gap: 12px;

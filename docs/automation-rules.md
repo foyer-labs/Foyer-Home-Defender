@@ -56,7 +56,10 @@ The common rule, and the one worth building first:
 2. On page 12, add a rule: trigger **Absence**, the people it watches, and a
    number of minutes. Five is enough for a phone that loses the network at the
    end of the drive; thirty is enough that nobody's afternoon nap arms the
-   house around them.
+   house around them. Add the people by typing a name or an id — the field
+   suggests them — and each shows what it reads right now, so a tracker that
+   has said `unknown` for a week is caught before the rule relies on it. The
+   **Entity state** trigger picks its one entity the same way.
 3. Choose the scenario it arms.
 4. Leave the first two guards on — a new rule has them on already. The
    third, "no interior motion for N minutes", is a number you type and is off

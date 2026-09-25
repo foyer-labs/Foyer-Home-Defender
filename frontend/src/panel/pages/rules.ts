@@ -21,6 +21,7 @@ import type {
   RuleTriggerKind,
   SuspensionConfig,
 } from "../../shared/types";
+import { allEntities, entityListStyles, renderEntityList } from "../entity-list";
 import { entityTargets } from "../ha-targets";
 import {
   anyArmed,
@@ -505,43 +506,33 @@ class FoyerPageRules extends LitElement {
           ${trigger.kind === "absence" || trigger.kind === "presence"
             ? html`<div class="block">
                 <div class="lbl strong">${t(s, "rules.people")}</div>
-                <div class="chips">
-                  ${people.length
-                    ? people.map((person) => {
-                        const on = trigger.entity_ids.includes(person.id);
-                        return html`<label class="chip">
-                          <input
-                            type="checkbox"
-                            .checked=${live(on)}
-                            @change=${(e: Event) =>
-                              this._setTrigger(
-                                "entity_ids",
-                                (e.target as HTMLInputElement).checked
-                                  ? [...trigger.entity_ids, person.id]
-                                  : trigger.entity_ids.filter((id) => id !== person.id),
-                              )}
-                          />
-                          <span>${person.name}</span>
-                        </label>`;
-                      })
-                    : html`<span class="hint">${t(s, "rules.no_people")}</span>`}
-                </div>
+                ${people.length
+                  ? renderEntityList({
+                      hass: ctx.hass,
+                      s,
+                      chosen: trigger.entity_ids,
+                      candidates: people,
+                      listId: "foyer-rule-people",
+                      onChange: (next) => this._setTrigger("entity_ids", next),
+                    })
+                  : html`<span class="hint">${t(s, "rules.no_people")}</span>`}
                 <span class="hint">${t(s, "rules.people_hint")}</span>
               </div>`
             : nothing}
           ${trigger.kind === "entity"
-            ? html`<div class="grid-form">
-                <label class="field">
+            ? html`<div class="field">
                   <span class="lbl">${t(s, "field.entity_id")}</span>
-                  <input
-                    .value=${trigger.entity_ids[0] ?? ""}
-                    @change=${(e: Event) =>
-                      this._setTrigger(
-                        "entity_ids",
-                        [(e.target as HTMLInputElement).value].filter(Boolean),
-                      )}
-                  />
-                </label>
+                  ${renderEntityList({
+                    hass: ctx.hass,
+                    s,
+                    chosen: trigger.entity_ids,
+                    candidates: allEntities(ctx.hass),
+                    listId: "foyer-rule-entity",
+                    single: true,
+                    onChange: (next) => this._setTrigger("entity_ids", next),
+                  })}
+                </div>
+                <div class="grid-form">
                 <label class="field">
                   <span class="lbl">${t(s, "field.state")}</span>
                   <input
@@ -1019,6 +1010,7 @@ class FoyerPageRules extends LitElement {
   static override styles = [
     stateStyles,
     formStyles,
+    entityListStyles,
     css`
       .banner {
         display: flex;

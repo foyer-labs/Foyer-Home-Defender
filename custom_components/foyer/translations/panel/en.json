@@ -21,6 +21,11 @@
     "add": "Add",
     "remove": "Remove"
   },
+  "entity_list": {
+    "placeholder": "Type a name or an entity id, then Add",
+    "missing": "not found in Home Assistant",
+    "replace": "Replace"
+  },
   "nav": {
     "overview": "Overview",
     "areas": "Areas",
@@ -2934,11 +2939,8 @@
       "outside_ups": "For a plain UPS that says nothing: pick smart plugs or energy monitors plugged in outside it. When every one of them has gone silent, the power has gone."
     },
     "mains_outside_meta": "{count} devices, {silent} silent",
-    "mains_outside_none": "No device yet.",
-    "mains_outside_placeholder": "Type a name or an entity id",
     "mains_outside_hint": "Powered from the wall, not from the UPS, and on a different socket from each other if you can. More than one means a Wi-Fi hiccup on one of them is not a power cut. Wi-Fi devices (Shelly, Tasmota, ESPHome) go silent within a minute; Zigbee ones can take far longer, depending on how the integration marks them unavailable. A device that is silent when Home Assistant starts counts only once it has answered.",
-    "mains_outside_delay_hint": "How long all of them must have been silent before it is a power cut: long enough for a plug that reboots, short enough to still be news.",
-    "missing": "not found"
+    "mains_outside_delay_hint": "How long all of them must have been silent before it is a power cut: long enough for a plug that reboots, short enough to still be news."
   },
   "images": {
     "zone": "The cameras of the zones behind the alarm",

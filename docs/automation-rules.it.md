@@ -65,7 +65,11 @@ La regola più comune, e quella da costruire per prima:
 2. Nella pagina 12 aggiungi una regola: attivazione **Assenza**, le persone che
    osserva, e un numero di minuti. Cinque bastano per un telefono che perde la
    rete alla fine del vialetto; trenta bastano perché il pisolino pomeridiano
-   di qualcuno non inserisca la casa intorno a lui.
+   di qualcuno non inserisca la casa intorno a lui. Aggiungi le persone
+   scrivendo un nome o un ID — il campo le suggerisce — e ognuna mostra cosa
+   segna in questo momento, così un tracker fermo su `unknown` da una
+   settimana lo scopri prima che la regola ci conti. L'attivazione
+   **Stato di un'entità** sceglie la sua unica entità nello stesso modo.
 3. Scegli lo scenario che inserisce.
 4. Lascia accese le prime due condizioni di sicurezza — in una regola nuova lo
    sono già. La terza, «nessun movimento interno da N minuti», è un numero che
