@@ -1,5 +1,7 @@
 # Notification channels
 
+**English** · [Italiano](notification-channels.it.md)
+
 Recipes for the transports an escalation reaches people through, and what each
 one is honestly worth when the house is being broken into.
 
@@ -95,7 +97,7 @@ technical channel, for the same reason `button.foyer_acknowledge` does — the
 person pressed a button that says "I have seen it", and guessing which alarm
 they meant is how a smoke detector closes a burglary.
 
-**Android.** These four keys keep the notification out of the battery-saving
+**Android.** These five keys keep the notification out of the battery-saving
 queue and out of the notification drawer's quiet pile:
 
 ```yaml
@@ -352,7 +354,7 @@ the escalation carries on at its own times: a channel that is dead stays dead,
 and the next step is what reaches somebody.
 
 Checking that a channel is *still* real — that the service still exists, that
-the modem is still registered, that the last send worked — is system health,
-and it lands with the rest of §12. Until then, the test button on page 6 is how
-you find out, and it is worth pressing after every Home Assistant update that
-touches an integration you notify through.
+the modem is still registered, that the last send worked — is
+[system health](system-health.md#notification-channel-health)'s job, and it
+does it on its own. The test button on page 6 is still worth pressing after
+every Home Assistant update that touches an integration you notify through.

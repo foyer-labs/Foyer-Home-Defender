@@ -1,5 +1,7 @@
 # The simulator, and how to read a decision trace
 
+**English** · [Italiano](simulator.it.md)
+
 The point of an alarm you configured yourself is that you can check it before
 trusting it. This page is about the two tabs of **Test & diagnostics** that do
 the checking without setting anything off: the live zone table, and the
@@ -27,7 +29,7 @@ table shows what is actually there, one row per mapped zone.
 | **Health** | Reachable, or the reason it is not |
 | **Battery** | The level its battery entity reports, and whether that counts as low |
 | **Signal** | The radio quality, where the integration exposes one |
-| **Supervision** | The window within which this sensor has to report something |
+| **Silence limit** | The window within which this sensor has to report something |
 | **Arming** | Whether this zone would stop its area arming, and which of the two reasons |
 
 ### Why "trigger evaluation" is a separate column from "state"
@@ -153,7 +155,7 @@ A worked example, of the case that is hardest to reason about:
           Incident opened 20260914-193300-1
             Profile "Silent", inherited from the zone
             ✓ Notify Luca
-          ⏱ siren cutoff at 21:36:00
+          ⏱ siren stops at 21:36:00
 21:33:30  Zone "Open plan PIR 2" → on
           Group "Open plan": 2 of 2 within 60 s → SATISFIED
           Zone joined the incident 20260914-193300-1

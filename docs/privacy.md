@@ -1,5 +1,7 @@
 # The log is about people
 
+**English** · [Italiano](privacy.it.md)
+
 *Practical information, not legal advice.*
 
 Foyer's event log records who was in the house, when they arrived and when they
@@ -217,7 +219,7 @@ safety feature, and Foyer will not present it as one.
 It is also irreversible. Switching it off stops the sweep; it brings no name
 back. Both switching it on and switching it off are recorded, with who did it.
 
-Two limits worth knowing:
+Three limits worth knowing:
 
 - It works from the **users page**: it can only replace a name with the
   identifier of somebody this installation still has. Rows naming a person who

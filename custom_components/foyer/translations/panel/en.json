@@ -2779,7 +2779,7 @@
     "failures_hint": "How many pings in a row must fail before Foyer says so here.",
     "payload": "Include the state of the house in the ping",
     "payload_hint": "Off by default.",
-    "payload_warning": "A ping that says “armed, nobody home” tells whoever runs that service exactly when your house is empty. Even switched on, Foyer sends only how many areas are armed — never which scenario, which areas, or which zones are open.",
+    "payload_warning": "A ping that says “armed, nobody home” tells whoever runs that service exactly when your house is empty. Even switched on, Foyer sends only how many areas are armed, how many there are, and whether anything is wrong — never which scenario, which areas, or which zones are open.",
     "channels": "Notification channels",
     "channels_ok": "{n} healthy",
     "channels_broken": "{n} failing",

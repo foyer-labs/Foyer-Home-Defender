@@ -1,5 +1,7 @@
 # Resilience
 
+**English** · [Italiano](resilience.it.md)
+
 What survives when somebody cuts the power, and what does not.
 
 This is the shortest honest summary of everything below: **a project that

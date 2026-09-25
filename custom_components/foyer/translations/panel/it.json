@@ -2779,7 +2779,7 @@
     "failures_hint": "Quanti ping consecutivi devono fallire prima che Foyer lo dica qui.",
     "payload": "Includi lo stato della casa nel ping",
     "payload_hint": "Disattivato di base.",
-    "payload_warning": "Un ping che dice «inserito, non c'è nessuno» racconta a chi gestisce quel servizio esattamente quando la tua casa è vuota. Anche se attivato, Foyer manda solo quante aree sono inserite: mai quale scenario, quali aree o quali zone sono aperte.",
+    "payload_warning": "Un ping che dice «inserito, non c'è nessuno» racconta a chi gestisce quel servizio esattamente quando la tua casa è vuota. Anche se attivato, Foyer manda solo quante aree sono inserite, quante sono in tutto e se qualcosa non va: mai quale scenario, quali aree o quali zone sono aperte.",
     "channels": "Canali di notifica",
     "channels_ok": "{n} in ordine",
     "channels_broken": "{n} da sistemare",

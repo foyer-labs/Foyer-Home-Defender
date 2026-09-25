@@ -1,9 +1,11 @@
 # Automation rules
 
+**English** · [Italiano](automation-rules.it.md)
+
 Letting the house arm itself, and the reasons it is allowed to do far less in
 the other direction.
 
-Everything here is configured on **page 12 — Automation rules**. Three things
+Everything here is configured on **page 12 — Automation rules**. Four things
 are worth reading before writing a rule:
 
 - **This is a closed rule model, not an automation engine.** Four triggers,

@@ -1,5 +1,7 @@
 # System health
 
+**English** · [Italiano](system-health.it.md)
+
 An alarm that cannot tell you it has stopped working has stopped working.
 
 This page is about the four failures that silently defeat a do-it-yourself
