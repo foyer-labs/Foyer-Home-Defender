@@ -331,6 +331,14 @@ Il punto 3 è un vincolo rigido nel motore, non un'impostazione predefinita
 che qualcuno può aggirare a parole, e un test di regressione lo verifica
 direttamente sulla Decision invece che attraverso lo schermo.
 
+Una regola di disinserimento indica le sue aree, oppure spunta **Tutte le
+aree**. Tutte le aree vuol dire le aree che la casa ha quando la regola
+agisce: una aggiunta dopo è compresa, e una eliminata non lascia la regola a
+metà. È anche il modo più semplice di cominciare. Lascia che una regola
+disinserisca tutte le aree mentre impari come si comporta la casa, poi segna
+come perimetrali le porte e le finestre esterne un'area alla volta; da quel
+momento la regola le lascia inserite senza bisogno di modificarla.
+
 Due conseguenze da conoscere:
 
 - **Un'azione «passa a un altro scenario» conta come disinserimento** ogni

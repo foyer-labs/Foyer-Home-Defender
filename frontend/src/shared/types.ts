@@ -296,6 +296,8 @@ export interface RuleConfig {
   enabled: boolean;
   /** Arm anyway, excluding open zones that are bypassable (decision 126). */
   exclude_open_zones: boolean;
+  /** A disarm of every area the house has when it acts (decision 163). */
+  all_areas?: boolean;
 }
 
 /** A suspension, or an expected-visitor window (§9.4). Runtime state, not

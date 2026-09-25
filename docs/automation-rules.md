@@ -284,6 +284,13 @@ Point 3 is a hard constraint in the engine, not a default somebody can talk
 their way past, and a regression test asserts it directly on the Decision
 rather than through the screen.
 
+A disarm rule names its areas, or ticks **Every area**. Every area means the
+areas the house has when the rule acts: one added later is included, and one
+deleted does not leave the rule half-broken. It is also the easiest way to
+start. Let a rule disarm every area while you learn how the house behaves,
+then mark the outside doors and windows as the perimeter one area at a time;
+from that moment the rule leaves them armed without being edited.
+
 Two consequences worth knowing:
 
 - **A "switch to another scenario" action counts as disarming** whenever it

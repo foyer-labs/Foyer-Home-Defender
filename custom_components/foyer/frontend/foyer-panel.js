@@ -7966,6 +7966,7 @@ var xn = class extends A {
 	}
 	_actionText(e, t) {
 		if (t.action === "disarm") {
+			if (t.all_areas) return M(e, "rules.action_disarm_all");
 			let n = this.ctx?.config?.areas ?? [];
 			return M(e, "rules.action_disarm", { areas: t.area_ids.map((e) => n.find((t) => t.id === e)).filter((e) => e !== void 0).map((e) => e.name).join(", ") });
 		}
@@ -8008,7 +8009,7 @@ var xn = class extends A {
                     >
                       <td><strong>${t.name}</strong></td>
                       <td>${this._triggerText(e, t)}</td>
-                      <td>
+                      <td class="action-cell">
                         <span class=${t.action === "arm" ? "pill ok" : "pill warn"}>
                           ${this._actionText(e, t)}
                         </span>
@@ -8286,10 +8287,21 @@ var xn = class extends A {
     </div>`;
 	}
 	_renderDisarmAreas(e, t) {
-		let n = this.ctx?.config?.areas ?? [];
+		let n = this.ctx?.config?.areas ?? [], r = !!t.all_areas;
 		return C`<div class="block">
       <div class="lbl strong">${M(e, "field.area_ids")}</div>
-      <div class="chips">
+      <label class="check">
+        <input
+          type="checkbox"
+          .checked=${U(r)}
+          @change=${(e) => this._set("all_areas", e.target.checked)}
+        />
+        <span>
+          ${M(e, "rules.all_areas")}
+          <span class="hint">${M(e, "rules.all_areas_hint")}</span>
+        </span>
+      </label>
+      <div class="chips" ?hidden=${r}>
         ${n.map((n) => {
 			let r = t.area_ids.includes(n.id ?? "");
 			return C`<label class=${n.is_perimeter ? "chip never" : "chip"}>
@@ -8469,6 +8481,16 @@ var xn = class extends A {
 			P,
 			_n,
 			o`
+      /* A disarm naming many areas wraps inside its own column instead of
+         pushing every other column off the screen. */
+      .action-cell {
+        max-width: 260px;
+      }
+      .action-cell .pill {
+        white-space: normal;
+        border-radius: 10px;
+        line-height: 1.35;
+      }
       .banner {
         display: flex;
         align-items: center;

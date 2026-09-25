@@ -349,6 +349,7 @@ class FoyerPageRules extends LitElement {
 
   private _actionText(s: Strings, rule: RuleConfig): string {
     if (rule.action === "disarm") {
+      if (rule.all_areas) return t(s, "rules.action_disarm_all");
       const areas = this.ctx?.config?.areas ?? [];
       const named = rule.area_ids
         .map((id) => areas.find((a) => a.id === id))
@@ -409,7 +410,7 @@ class FoyerPageRules extends LitElement {
                     >
                       <td><strong>${rule.name}</strong></td>
                       <td>${this._triggerText(s, rule)}</td>
-                      <td>
+                      <td class="action-cell">
                         <span class=${rule.action === "arm" ? "pill ok" : "pill warn"}>
                           ${this._actionText(s, rule)}
                         </span>
@@ -781,9 +782,21 @@ class FoyerPageRules extends LitElement {
    * the engine takes it out whatever this screen shows (§9.4 point 3). */
   private _renderDisarmAreas(s: Strings, draft: RuleConfig) {
     const areas = this.ctx?.config?.areas ?? [];
+    const all = Boolean(draft.all_areas);
     return html`<div class="block">
       <div class="lbl strong">${t(s, "field.area_ids")}</div>
-      <div class="chips">
+      <label class="check">
+        <input
+          type="checkbox"
+          .checked=${live(all)}
+          @change=${(e: Event) => this._set("all_areas", (e.target as HTMLInputElement).checked)}
+        />
+        <span>
+          ${t(s, "rules.all_areas")}
+          <span class="hint">${t(s, "rules.all_areas_hint")}</span>
+        </span>
+      </label>
+      <div class="chips" ?hidden=${all}>
         ${areas.map((area) => {
           const on = draft.area_ids.includes(area.id ?? "");
           return html`<label class=${area.is_perimeter ? "chip never" : "chip"}>
@@ -1012,6 +1025,16 @@ class FoyerPageRules extends LitElement {
     formStyles,
     entityListStyles,
     css`
+      /* A disarm naming many areas wraps inside its own column instead of
+         pushing every other column off the screen. */
+      .action-cell {
+        max-width: 260px;
+      }
+      .action-cell .pill {
+        white-space: normal;
+        border-radius: 10px;
+        line-height: 1.35;
+      }
       .banner {
         display: flex;
         align-items: center;

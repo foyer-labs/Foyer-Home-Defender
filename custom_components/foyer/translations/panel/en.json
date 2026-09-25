@@ -2853,7 +2853,10 @@
     "exclude_open_warning": "This is a forced arming nobody types a code for: the house arms with that window uncovered. The countdown and the message afterwards name what was excluded.",
     "exclude_open_no_effect": "With “only if every zone is ready” on, the rule never starts while a zone is open, so this has no effect.",
     "notify_outcome_hint": "They receive the countdown, and a second message when the arming did not go as announced: not armed and why, armed later, or armed with zones excluded. That one reaches them even in their quiet hours.",
-    "allow_disarm_armed": "An area is armed: whether rules may disarm cannot change until every area is disarmed. A rule can still be switched off or suspended, and the global switch still stops them all."
+    "allow_disarm_armed": "An area is armed: whether rules may disarm cannot change until every area is disarmed. A rule can still be switched off or suspended, and the global switch still stops them all.",
+    "action_disarm_all": "Disarm every area",
+    "all_areas": "Every area",
+    "all_areas_hint": "The areas the house has when the rule acts, so one added later is included and one deleted leaves nothing behind. The perimeter areas are still left armed."
   },
   "health": {
     "settings": "System health settings",

@@ -2853,7 +2853,10 @@
     "exclude_open_warning": "È un inserimento forzato che nessuno conferma con un codice: la casa si inserisce con quella finestra scoperta. Il conto alla rovescia e il messaggio dopo dicono cosa è stato escluso.",
     "exclude_open_no_effect": "Con «solo se ogni zona è pronta» attivo, la regola non parte mai con una zona aperta, quindi questa opzione non ha effetto.",
     "notify_outcome_hint": "Ricevono il conto alla rovescia, e un secondo messaggio quando l'inserimento non va come annunciato: non inserita e perché, inserita più tardi, o inserita con zone escluse. Quello arriva anche nelle ore di silenzio.",
-    "allow_disarm_armed": "Un'area è inserita: se le regole possano disinserire non cambia finché tutte le aree non sono disinserite. Una regola si può ancora disattivare o sospendere, e l'interruttore generale le ferma ancora tutte."
+    "allow_disarm_armed": "Un'area è inserita: se le regole possano disinserire non cambia finché tutte le aree non sono disinserite. Una regola si può ancora disattivare o sospendere, e l'interruttore generale le ferma ancora tutte.",
+    "action_disarm_all": "Disinserisci tutte le aree",
+    "all_areas": "Tutte le aree",
+    "all_areas_hint": "Le aree che la casa ha quando la regola agisce, così una aggiunta dopo è compresa e una eliminata non lascia la regola a metà. Le aree perimetrali restano comunque inserite."
   },
   "health": {
     "settings": "Impostazioni dello stato del sistema",
