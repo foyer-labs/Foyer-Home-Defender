@@ -269,7 +269,8 @@ integration that published it and would go on telling whoever connects to that
 broker next what the house was doing when Foyer last spoke.
 
 What it does **not** take: **camera snapshots**. Foyer writes them under
-`media/foyer` by default, and they are photographs of the inside of a house —
+`media/foyer` by default — inside Home Assistant's media folder, `/media` on
+Home Assistant OS — and they are photographs of the inside of a house —
 the one thing on this page nobody thinks to look for. The folder is
 configurable, may point anywhere and may hold files that were never Foyer's, so
 removing them is left to you. Go and look.

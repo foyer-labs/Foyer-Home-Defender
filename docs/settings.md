@@ -118,11 +118,14 @@ Everything in this card is kept while an area is armed.
   not answer differently depending on how the house is armed. Empty, the
   default profile answers.
 - **Camera folder** — where camera snapshots and recordings are written,
-  relative to the configuration folder, `media/foyer` by default. An absolute
-  path, `..` and any folder under `www` are refused, because Home Assistant
-  serves `www` without authentication and the inside of a house is not
-  something to publish. The folder must also be in Home Assistant's
-  `allowlist_external_dirs`, or nothing can be written there.
+  `media/foyer` by default. A folder that starts with `media` is inside Home
+  Assistant's own media folder — `/media` on Home Assistant OS,
+  `<config>/media` elsewhere — which Home Assistant allows by default and
+  shows under *Media*. Any other folder is relative to the configuration
+  folder and must be added to Home Assistant's `allowlist_external_dirs`, or
+  nothing can be written there. An absolute path, `..` and any folder under
+  `www` are refused, because Home Assistant serves `www` without
+  authentication and the inside of a house is not something to publish.
 - **A silent zone suppresses** — the action kinds a zone marked silent runs
   its response without: *Siren*, *Spoken message* and *Chime* by default, any action kind
   allowed. Silence belongs to the zone; another zone joining the same incident

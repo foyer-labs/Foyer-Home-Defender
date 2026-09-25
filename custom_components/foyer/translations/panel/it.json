@@ -1722,7 +1722,7 @@
     "escalation_later": "Un passo di escalation è una notifica con un tempo sopra: dagli un ritardo dall'inizio dell'allarme e aspetterà invece di partire subito. Chi raggiunge si sceglie sulla notifica stessa; le persone e i loro canali stanno nella pagina Contatti.",
     "future_moment": "Arriva in un prossimo aggiornamento.",
     "attach_hint": "L'immagine dal vivo accompagna la notifica, attraverso il proxy autenticato di Home Assistant. Nessun file viene scritto.",
-    "attach_hint_telegram": "Telegram scarica l'immagine da fuori casa, quindi uno scatto viene salvato nella cartella telecamere e spedito con il messaggio. Quella cartella deve essere in allowlist_external_dirs. Funziona anche una chat Telegram configurata dall'interfaccia: l'immagine passa dal servizio del bot Telegram.",
+    "attach_hint_telegram": "Telegram scarica l'immagine da fuori casa, quindi uno scatto viene salvato nella cartella telecamere e spedito con il messaggio. La cartella predefinita sta dentro la cartella multimediale di Home Assistant e non richiede nulla; qualunque altra deve essere in allowlist_external_dirs. Funziona anche una chat Telegram configurata dall'interfaccia: l'immagine passa dal servizio del bot Telegram.",
     "pick_or_type": "Scegline uno, oppure scrivilo: un'integrazione non caricata adesso non compare nell'elenco.",
     "notify_hint": "Un servizio notify (app Companion, Telegram) o un'entità notify. Vanno bene entrambi.",
     "filter": "Cerca…",

@@ -795,7 +795,8 @@ class Executor:
         # the same camera in the same second, and one file rewritten under
         # the other's send is a picture that arrives empty (found in review).
         name = f"{slugify(entity_id)}-{stamp}-{secrets.token_hex(3)}.{suffix}"
-        path = self.hass.config.path(directory, name)
+        folder = self._camera_folder(directory)
+        path = os.path.join(folder, name)
 
         def _prepare() -> bool:
             # Both of these touch the filesystem, and `is_allowed_path` needs
@@ -806,9 +807,28 @@ class Executor:
 
         if not await self.hass.async_add_executor_job(_prepare):
             raise ValueError(
-                f"{directory} is not an allowed path; add it to allowlist_external_dirs"
+                f"{folder} is not an allowed path; add it to allowlist_external_dirs"
             )
         return path
+
+    def _camera_folder(self, directory: str) -> str:
+        """The camera folder as a path on this machine.
+
+        A folder that starts with `media` — the default, `media/foyer`, among
+        them — means Home Assistant's own media folder, wherever this
+        installation keeps it: `<config>/media` on a plain install, but
+        `/media` on Home Assistant OS, where `<config>/media` is not an
+        allowed path and every snapshot was refused (decision 159). Home
+        Assistant allows its media folders by default, and shows them under
+        *Media*. Anything else is relative to the configuration folder, or
+        absolute as written.
+        """
+        head, _, rest = directory.replace("\\", "/").partition("/")
+        media = self.hass.config.media_dirs
+        if head == "media" and media:
+            base = media.get("local") or next(iter(media.values()))
+            return os.path.join(base, *filter(None, rest.split("/")))
+        return self.hass.config.path(directory)
 
     async def _async_snapshot(self, entity_id: str, directory: str) -> str:
         """One still, written and waited for, so it exists before it is sent."""

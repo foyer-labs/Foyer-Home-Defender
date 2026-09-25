@@ -1722,7 +1722,7 @@
     "escalation_later": "An escalation step is a notification with a time on it: give one a delay from the alarm start, and it waits instead of firing at once. Who it reaches is chosen on the notification itself; the people and their channels live on the Contacts page.",
     "future_moment": "Arrives in a later version.",
     "attach_hint": "The live picture goes with the notification, through Home Assistant's authenticated proxy. No file is written.",
-    "attach_hint_telegram": "Telegram fetches the picture from outside the house, so a still is written to the camera folder and sent with the message. That folder must be in allowlist_external_dirs. A Telegram chat set up from the UI works too: the picture goes through the Telegram bot's own service.",
+    "attach_hint_telegram": "Telegram fetches the picture from outside the house, so a still is written to the camera folder and sent with the message. The default folder is inside Home Assistant's media folder and needs nothing; any other must be in allowlist_external_dirs. A Telegram chat set up from the UI works too: the picture goes through the Telegram bot's own service.",
     "pick_or_type": "Pick one, or type it: an integration that is not loaded right now is not in the list.",
     "notify_hint": "A notify service (the Companion app, Telegram) or a notify entity. Both work.",
     "filter": "Search…",

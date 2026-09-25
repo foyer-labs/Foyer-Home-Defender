@@ -300,7 +300,8 @@ pubblicato e continuerebbe a dire a chiunque si colleghi a quel broker dopo cosa
 stava facendo la casa l'ultima volta che Foyer ha parlato.
 
 Cosa **non** si porta via: le **istantanee delle telecamere**. Foyer le scrive di
-serie sotto `media/foyer`, e sono fotografie dell'interno di una casa — l'unica
+serie sotto `media/foyer` — dentro la cartella multimediale di Home Assistant,
+`/media` su Home Assistant OS — e sono fotografie dell'interno di una casa — l'unica
 cosa in questa pagina che a nessuno viene in mente di cercare. La cartella è
 configurabile, può puntare ovunque e può contenere file che non sono mai stati
 di Foyer, quindi toglierli è lasciato a te. Vai a guardare.

@@ -287,9 +287,11 @@ Cinque regole su cui il catalogo si regge:
   antifumo.
 - **La cartella telecamere è `media/foyer` per impostazione predefinita, e
   mai `www`**, che Home Assistant serve senza autenticazione. Si imposta in
-  *Impostazioni* (*Cartella telecamere*), dentro la cartella di
-  configurazione, e deve stare in `allowlist_external_dirs` di Home
-  Assistant: Home Assistant si rifiuta di scrivere fuori da lì, e così ogni
+  *Impostazioni* (*Cartella telecamere*). Una cartella che inizia con
+  `media` sta dentro la cartella multimediale di Home Assistant (`/media` su
+  Home Assistant OS), che Home Assistant autorizza di serie; qualunque altra
+  deve stare in `allowlist_external_dirs`: Home Assistant si rifiuta di
+  scrivere fuori da lì, e così ogni
   trasporto che spedisce un file. Foyer controlla prima di scrivere e, se il
   controllo fallisce, ti dice quale impostazione guardare.
 - **Una notifica di Home Assistant non ha bisogno di una rubrica di
@@ -410,7 +412,7 @@ un trasporto scarta in silenzio una chiave che non riconosce:
 - ***Telegram — foto come file.*** A scaricare è il server di Telegram, da
   fuori casa e senza sessione, quindi quel link non può seguirlo. Foyer
   scatta un'immagine fissa nel momento della notifica, la scrive nella
-  cartella telecamere — che deve essere in `allowlist_external_dirs` — e
+  cartella telecamere e
   spedisce il file. Una chat Telegram configurata dall'interfaccia è
   un'entità notify, che da sola non porta immagini, quindi Foyer le manda ogni
   scatto con `telegram_bot.send_photo`.

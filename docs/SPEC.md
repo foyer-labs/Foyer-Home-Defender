@@ -766,7 +766,10 @@ Four rules the catalogue depends on:
   cutoff stops what it started.
 - A `camera` writes its file under a **configurable folder, `media/foyer` by
   default, and never under `www`**, which Home Assistant serves without
-  authentication. That folder must be in `allowlist_external_dirs`: Home
+  authentication. A folder that starts with `media` is inside Home
+  Assistant's own media folder — `/media` on Home Assistant OS,
+  `<config>/media` elsewhere — which Home Assistant allows by default
+  (decision 159); any other folder must be in `allowlist_external_dirs`: Home
   Assistant refuses to write outside it, and so does every transport that
   sends a file.
 - **A notification names the transport it is attaching a picture for**
@@ -2861,3 +2864,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 156 | 1.0.0 promises no compatibility: a 1.x release may change behaviour, a service, a device contract (a break is a new contract version, §9.2.2) or the stored configuration, and says so first in the changelog | It is a first release with one author; the fixes it will need cannot all wait for a 2.0, and a promise that would be broken by the first serious bug is worse than none. What is promised is that nothing changes silently |
 | 157 | The sidebar entry reads *Home Defender*, not *Foyer* | Foyer is the brand and Home Defender the product; the sidebar names the thing you open, as the panel's header and the integration's name already do. The brand stays where it signs something — notification titles, the card's name |
 | 158 | A Telegram chat that is a notify entity receives its pictures through `telegram_bot.send_photo`; any other notify entity says in the log that it got none | Home Assistant deprecated the YAML `notify.telegram` service, so a Telegram chat is now an entity, and entities carry only a title and a message: the text arrived and the pictures vanished without a word. The bot's own service takes the same entity and a file, and a picture that fails still costs nothing but itself |
+| 159 | A camera folder that starts with `media` is inside Home Assistant's own media folder, wherever the installation keeps it | On Home Assistant OS the media folder is `/media`, not `<config>/media`, and only the media folders are allowed by default: the default `media/foyer` resolved to a folder Home Assistant refused, and every Telegram snapshot failed. Mapping it to the real media folder keeps the stored setting and puts the pictures where *Media* shows them |

@@ -17,8 +17,17 @@ PANEL_TRANSLATIONS = Path(__file__).parent / "translations" / "panel"
 FALLBACK_LANGUAGE = "en"
 
 
+# Read once, when the module is imported — which Home Assistant does off the
+# event loop. The files ship with the integration and never change while it
+# runs, and listing the folder on every request was a blocking call inside the
+# loop, which Home Assistant reports.
+_LANGUAGES: tuple[str, ...] = tuple(
+    sorted(p.stem for p in PANEL_TRANSLATIONS.glob("*.json"))
+)
+
+
 def available_languages() -> list[str]:
-    return sorted(p.stem for p in PANEL_TRANSLATIONS.glob("*.json"))
+    return list(_LANGUAGES)
 
 
 def resolve_language(language: str | None) -> str:

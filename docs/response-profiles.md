@@ -276,9 +276,11 @@ Five rules the catalogue depends on:
   own: a disarm is an intrusion command, and never silences a smoke sounder.
 - **The camera folder is `media/foyer` by default, and never `www`**, which
   Home Assistant serves without authentication. It is set on *Settings*
-  (*Camera folder*), inside the configuration directory, and it must be in
-  Home Assistant's `allowlist_external_dirs`: Home Assistant refuses to
-  write outside it, and so does every transport that sends a file. Foyer
+  (*Camera folder*). A folder that starts with `media` is inside Home
+  Assistant's own media folder (`/media` on Home Assistant OS), which Home
+  Assistant allows by default; any other must be in
+  `allowlist_external_dirs`: Home Assistant refuses to write outside it, and
+  so does every transport that sends a file. Foyer
   checks before writing and names the setting when the check fails.
 - **A Home Assistant notification needs no contact book**, and appears on
   every Home Assistant screen. That makes it a good answer to a fault and the
@@ -394,7 +396,7 @@ transport drops a key it does not recognise in silence:
 - ***Telegram — a photo file.*** Telegram's own server does the fetching,
   from outside the house and with no session, so it cannot follow that link.
   Foyer takes a still at the moment of the notification, writes it to the
-  camera folder — which must be in `allowlist_external_dirs` — and sends the
+  camera folder and sends the
   file. A Telegram chat set up from the UI is a notify entity, which carries
   no picture itself, so Foyer sends it each still through
   `telegram_bot.send_photo`.

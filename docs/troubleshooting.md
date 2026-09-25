@@ -369,7 +369,8 @@ the card keeps none beyond the command it was typed for.
 - **Pictures.** The notification's *How to attach it* names the transport: the
   Companion app fetches a live link through Home Assistant's camera proxy;
   Telegram needs a file, written to the *Camera folder* (`media/foyer` by
-  default, never `www`), which must be in `allowlist_external_dirs` or nothing
+  default, inside Home Assistant's own media folder; never `www`). A folder
+  outside the media folder must be in `allowlist_external_dirs`, or nothing
   is written. With *The cameras of the zones behind the alarm*, pictures go
   only at an alarm, never when an entry delay starts, and to a contact only
   over a push or chat channel; *Always the same camera* attaches its one picture to the

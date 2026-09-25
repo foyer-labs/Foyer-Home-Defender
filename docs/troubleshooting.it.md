@@ -412,8 +412,10 @@ stato digitato.
 - **Immagini.** Il *Come allegarla* della notifica indica il trasporto: l'app
   Companion scarica un link in diretta attraverso il proxy delle telecamere di
   Home Assistant; Telegram ha bisogno di un file, scritto nella *Cartella
-  telecamere* (`media/foyer` per impostazione predefinita, mai `www`), che deve
-  stare in `allowlist_external_dirs` altrimenti non viene scritto niente. Con
+  telecamere* (`media/foyer` per impostazione predefinita, dentro la cartella
+  multimediale di Home Assistant; mai `www`). Una cartella fuori da quella
+  multimediale deve stare in `allowlist_external_dirs`, altrimenti non viene
+  scritto niente. Con
   *Le telecamere delle zone che hanno dato l'allarme*, le immagini partono
   solo a un allarme, mai quando parte un ritardo d'ingresso, e a un contatto
   solo su un canale push o di chat; *Sempre la stessa telecamera* allega la sua unica immagine alla

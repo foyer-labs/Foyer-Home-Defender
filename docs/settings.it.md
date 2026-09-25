@@ -126,12 +126,16 @@ Tutto ciò che sta in questa scheda resta bloccato mentre un'area è inserita.
   rilevatore non deve rispondere in modo diverso a seconda di come è inserita
   la casa. Se è vuoto, risponde il profilo predefinito.
 - **Cartella telecamere** — dove vengono scritti gli scatti e le registrazioni
-  delle telecamere, relativa alla cartella di configurazione, `media/foyer` per
-  impostazione predefinita. Un percorso assoluto, `..` e qualsiasi cartella
+  delle telecamere, `media/foyer` per impostazione predefinita. Una cartella
+  che inizia con `media` sta dentro la cartella multimediale di Home
+  Assistant — `/media` su Home Assistant OS, `<config>/media` altrove — che
+  Home Assistant autorizza di serie e mostra in *Media*; qualunque altra è
+  relativa alla cartella di configurazione. Un percorso assoluto, `..` e qualsiasi cartella
   dentro `www` vengono rifiutati, perché Home Assistant serve `www` senza
   autenticazione e l'interno di una casa non è una cosa da pubblicare. La
-  cartella deve anche stare negli `allowlist_external_dirs` di Home Assistant,
-  altrimenti lì non si può scrivere niente.
+  cartella che non inizia con `media` deve anche stare negli
+  `allowlist_external_dirs` di Home Assistant, altrimenti lì non si può
+  scrivere niente.
 - **Una zona silenziosa sopprime** — i tipi di azione senza i quali una zona
   marcata silenziosa esegue la sua risposta: per impostazione predefinita
   *Sirena*, *Messaggio parlato* e *Campanello*, ma si può scegliere qualsiasi

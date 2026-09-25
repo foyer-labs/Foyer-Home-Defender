@@ -12,9 +12,12 @@ received no picture.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import async_mock_service
+
+from custom_components.foyer import i18n
 
 from .conftest import ZONE
 from .test_part3 import _allow_media
@@ -152,3 +155,45 @@ async def test_the_actions_own_camera_reaches_a_telegram_chat(
     assert len(photos) == 1
     assert photos[0].data["entity_id"] == [CHAT]
     assert photos[0].data["file"] == snapshots[0].data["filename"]
+
+
+async def test_the_default_folder_is_home_assistants_own_media_folder(
+    hass,
+    pictures,  # noqa: F811
+    freezer,
+    tmp_path,
+):
+    """On Home Assistant OS the media folder is `/media`, not `<config>/media`,
+    and only the media folders are allowed by default: every Telegram snapshot
+    was refused there (decision 159)."""
+    _calls, client = pictures
+    media = tmp_path / "media"
+    hass.config.media_dirs = {"local": str(media)}
+    hass.config.allowlist_external_dirs = {str(media)}
+    _chat(hass)
+    snapshots = async_mock_service(hass, "camera", "snapshot")
+    async_mock_service(hass, "notify", "send_message")
+    photos = async_mock_service(hass, "telegram_bot", "send_photo")
+    await _to_the_chat(hass, client)
+    await _arm(hass, freezer)
+
+    hass.states.async_set(ZONE, "on")
+    await _settle(hass, photos, 1)
+
+    assert len(photos) == 2
+    for snapshot in snapshots:
+        written = Path(snapshot.data["filename"])
+        assert written.parent == media / "foyer"
+        assert written.parent.is_dir()
+
+
+def test_the_languages_are_listed_without_touching_the_disk(monkeypatch):
+    """Listing them on every request was a blocking call inside the event
+    loop, which Home Assistant reports; they are read once, at import."""
+
+    def refuse(*_args, **_kwargs):
+        raise AssertionError("the disk was read inside the event loop")
+
+    monkeypatch.setattr(Path, "glob", refuse)
+    assert i18n.available_languages() == ["en", "it"]
+    assert i18n.resolve_language("it-IT") == "it"
