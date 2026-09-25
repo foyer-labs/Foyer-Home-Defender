@@ -329,6 +329,16 @@ guasto* fa sì che il guasto di questa sola zona non blocchi — per il sensore
 di allagamento con la batteria scarica la mattina in cui parti. Lascialo
 spento a meno che tu non sappia perché.
 
+**Subito dopo un riavvio, un guasto aspetta prima di essere annunciato.**
+Zigbee2MQTT e integrazioni simili riportano i loro dispositivi poco dopo che
+Home Assistant si dichiara avviato, e a ogni riavvio ognuno arrivava come
+*Guasto di zona*. Per la *Tolleranza dopo un riavvio* in *Stato del sistema*
+(due minuti di serie, da 0 a quindici) una zona che non risponde è comunque
+un guasto — blocca l'inserimento e si vede ovunque qui sopra — ma *Guasto di
+zona* viene generato solo se è ancora giù allo scadere della tolleranza. Una
+zona tornata in tempo non viene mai annunciata. Impostala a 0 per saperlo
+subito.
+
 **La supervisione è spenta di default e si imposta sensore per sensore.**
 *Limite di silenzio (secondi)* è quanto a lungo la zona può restare senza
 nessun messaggio prima di diventare un guasto. Conta qualunque messaggio,

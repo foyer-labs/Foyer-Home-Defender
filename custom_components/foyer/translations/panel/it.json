@@ -434,7 +434,8 @@
     "watchdog_url": "URL del watchdog",
     "mains_mode": "Come Foyer sa della rete elettrica",
     "mains_outside_entity_ids": "Dispositivi fuori dall'UPS",
-    "mains_outside_delay": "Muti da (secondi)"
+    "mains_outside_delay": "Muti da (secondi)",
+    "startup_grace": "Tolleranza dopo un riavvio (secondi)"
   },
   "ha_state": {
     "armed_home": "Inserito in casa",
@@ -2946,7 +2947,8 @@
     },
     "mains_outside_meta": "{count} dispositivi, {silent} muti",
     "mains_outside_hint": "Alimentati dalla presa a muro, non dall'UPS, e se puoi su prese diverse fra loro. Più di uno fa sì che un disturbo del Wi-Fi su uno di loro non sia un blackout. I dispositivi Wi-Fi (Shelly, Tasmota, ESPHome) diventano muti entro un minuto; quelli Zigbee possono metterci molto di più, secondo come l'integrazione li segna non disponibili. Un dispositivo muto all'avvio di Home Assistant conta solo dopo aver risposto una volta.",
-    "mains_outside_delay_hint": "Per quanto tempo devono essere tutti muti prima che sia un blackout: abbastanza per una presa che si riavvia, poco abbastanza da essere ancora una notizia."
+    "mains_outside_delay_hint": "Per quanto tempo devono essere tutti muti prima che sia un blackout: abbastanza per una presa che si riavvia, poco abbastanza da essere ancora una notizia.",
+    "startup_grace_hint": "Dopo l'avvio di Home Assistant, una zona che non risponde ancora è comunque un guasto — blocca l'inserimento e si vede qui — ma viene annunciata solo se è ancora giù allo scadere di questo tempo. Zigbee2MQTT e integrazioni simili riportano i dispositivi entro un minuto circa. 0 annuncia subito, come prima."
   },
   "images": {
     "zone": "Le telecamere delle zone che hanno dato l'allarme",

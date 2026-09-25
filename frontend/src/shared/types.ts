@@ -732,6 +732,8 @@ export interface HealthConfig {
   mains_outside_entity_ids: string[];
   /** Seconds every device outside the UPS must have been silent. */
   mains_outside_delay: number;
+  /** Seconds after a start during which a zone fault is not yet announced. */
+  startup_grace: number;
   watchdog: WatchdogConfig;
   radios: RadioConfig[];
   rf_zones: number;

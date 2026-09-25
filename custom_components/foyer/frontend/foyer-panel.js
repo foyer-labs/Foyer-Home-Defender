@@ -10263,6 +10263,22 @@ var jn = class extends j {
         </label>
       </div>`;
 	}
+	_renderStartupGrace(e, t) {
+		let [n, r] = this._bounds("startup_grace", [0, 900]);
+		return C`<div class="grid-form">
+      <label class="field">
+        <span class="lbl">${N(e, "field.startup_grace")}</span>
+        <input
+          type="number"
+          min=${n}
+          max=${r}
+          .value=${String(t.startup_grace ?? 120)}
+          @input=${(e) => H(e, (e) => this._set("startup_grace", e))}
+        />
+        <span class="hint">${N(e, "health.startup_grace_hint")}</span>
+      </label>
+    </div>`;
+	}
 	_renderEditor(e, t) {
 		let [n, r] = this._bounds("watchdog_interval", [60, 86400]), [i, a] = this._bounds("watchdog_timeout", [5, 120]), [o, s] = this._bounds("watchdog_failures", [1, 20]), [c, l] = this._bounds("rf_zones", [2, 50]), [u, d] = this._bounds("rf_window", [5, 3600]), [f, ee] = this._bounds("rf_confirm", [0, 3600]);
 		return C`<div class="card">
@@ -10285,6 +10301,7 @@ var jn = class extends j {
           </label>
         </div>
         ${t.mains_mode === "outside_ups" ? this._renderOutside(e, t) : this._renderSensor(e, t)}
+        ${this._renderStartupGrace(e, t)}
 
         <fieldset>
           <legend>${N(e, "health.watchdog")}</legend>

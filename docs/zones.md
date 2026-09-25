@@ -305,6 +305,15 @@ open door. *Allow arming while in fault* stops this one zone's fault from
 blocking — for the flood sensor with a dead battery on the morning you leave.
 Leave it off unless you know why.
 
+**Right after a restart, a fault waits before it is announced.** Zigbee2MQTT
+and similar integrations bring their devices back a little after Home
+Assistant says it has started, and every one of them used to arrive as a
+*Zone fault* at every restart. For the *Grace after a restart* on *System
+health* (two minutes by default, 0 to fifteen) a zone that is not answering
+is still a fault — it blocks arming and shows everywhere above — but *Zone
+fault* is raised only if it is still down when the grace runs out. A zone
+back in time is never announced. Set it to 0 to be told at once.
+
 **Supervision is off by default and set per sensor.** *Silence limit
 (seconds)* is how long the zone may go without any report before it is a
 fault. Any report counts, changed or not — Foyer reads Home Assistant's

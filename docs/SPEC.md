@@ -126,6 +126,15 @@ configured supervision window, is a **fault**. It must:
 
 and it must never be silently treated as "closed" or "no motion".
 
+The one thing that may wait is the announcement, and only right after a
+start: while Home Assistant is still starting, and for the startup grace
+after it (decision 165), a zone that is not answering is a fault that blocks
+arming and shows, but its `zone_fault` is raised only if it is still down
+when the grace ends. Integrations such as Zigbee2MQTT bring their entities
+back after Home Assistant reports it has started, and announcing each of
+them at every restart taught people to ignore the notification that
+matters.
+
 ### INV-5 — Never assume `on` means alarm
 
 Every zone declares its own trigger condition. NC and NO magnetic contacts behave
@@ -2905,3 +2914,4 @@ activity — which is a reason to keep it that way, not a legal opinion.
 | 162 | The mains can be known from devices outside the UPS: all of them unavailable for a delay is a power cut, and a silence Foyer did not see begin does not count | Most Home Assistant houses have a plain UPS that reports nothing and a smart plug or energy monitor outside it. One device can drop off Wi-Fi, so it takes all of them; every device is silent while its integration loads, so a restart must never read as a power cut |
 | 163 | A disarm rule may name *every area*, read as the areas the house has when it acts | A list written once goes stale as areas are added and removed, and a household starting out wants "disarm the house" before it knows which areas are the perimeter; the perimeter rule of §9.4 point 3 still takes those areas out |
 | 164 | A notification that works when sent straight to a service proves the contact channels on that service; one that fails does not break them | The same transport to the same phone is evidence, and a household whose alarms arrive should not read "never used"; a failure may come from the action's own data, and a channel declared broken by mistake would be announced as a fault that is not there |
+| 165 | After a start, a zone fault is held back from being announced for a grace (120 s by default, 0–900); it is in `faults` at once, blocks arming and shows, and a zone back in time is never announced | Zigbee2MQTT and similar integrations bring their entities back after Home Assistant reports it has started, and every restart announced every one of them as a fault; INV-4 is about not treating an unreadable zone as quiet, which the grace never does — only the message waits |

@@ -434,7 +434,8 @@
     "watchdog_url": "Watchdog URL",
     "mains_mode": "How Foyer knows the mains",
     "mains_outside_entity_ids": "Devices outside the UPS",
-    "mains_outside_delay": "Silent for (seconds)"
+    "mains_outside_delay": "Silent for (seconds)",
+    "startup_grace": "Grace after a restart (seconds)"
   },
   "ha_state": {
     "armed_home": "Armed home",
@@ -2946,7 +2947,8 @@
     },
     "mains_outside_meta": "{count} devices, {silent} silent",
     "mains_outside_hint": "Powered from the wall, not from the UPS, and on a different socket from each other if you can. More than one means a Wi-Fi hiccup on one of them is not a power cut. Wi-Fi devices (Shelly, Tasmota, ESPHome) go silent within a minute; Zigbee ones can take far longer, depending on how the integration marks them unavailable. A device that is silent when Home Assistant starts counts only once it has answered.",
-    "mains_outside_delay_hint": "How long all of them must have been silent before it is a power cut: long enough for a plug that reboots, short enough to still be news."
+    "mains_outside_delay_hint": "How long all of them must have been silent before it is a power cut: long enough for a plug that reboots, short enough to still be news.",
+    "startup_grace_hint": "After Home Assistant starts, a zone that is not answering yet is still a fault — it blocks arming and shows here — but it is announced only if it is still down when this runs out. Zigbee2MQTT and similar integrations bring their devices back within a minute or so. 0 announces at once, as before."
   },
   "images": {
     "zone": "The cameras of the zones behind the alarm",

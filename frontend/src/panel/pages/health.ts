@@ -525,6 +525,25 @@ class FoyerPageHealth extends LitElement {
       </div>`;
   }
 
+  /** Decision 165: how long after a start a zone may take to answer before
+   * its fault is news. */
+  private _renderStartupGrace(s: Strings, draft: HealthConfig) {
+    const [low, high] = this._bounds("startup_grace", [0, 900]);
+    return html`<div class="grid-form">
+      <label class="field">
+        <span class="lbl">${t(s, "field.startup_grace")}</span>
+        <input
+          type="number"
+          min=${low}
+          max=${high}
+          .value=${String(draft.startup_grace ?? 120)}
+          @input=${(e: Event) => whenNumber(e, (n) => this._set("startup_grace", n))}
+        />
+        <span class="hint">${t(s, "health.startup_grace_hint")}</span>
+      </label>
+    </div>`;
+  }
+
   private _renderEditor(s: Strings, draft: HealthConfig) {
     const [minInterval, maxInterval] = this._bounds("watchdog_interval", [60, 86400]);
     const [minTimeout, maxTimeout] = this._bounds("watchdog_timeout", [5, 120]);
@@ -561,6 +580,7 @@ class FoyerPageHealth extends LitElement {
         ${draft.mains_mode === "outside_ups"
           ? this._renderOutside(s, draft)
           : this._renderSensor(s, draft)}
+        ${this._renderStartupGrace(s, draft)}
 
         <fieldset>
           <legend>${t(s, "health.watchdog")}</legend>
