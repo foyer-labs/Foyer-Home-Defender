@@ -8,6 +8,22 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.7] — disarm every area
+
+The stored configuration moves to schema 8.5. The step is additive: an older
+release reading a rule set to every area finds its list empty and refuses to
+act on it, which disarms less, never more.
+
+### Added
+- **A disarm rule can name every area.** *Every area* means the areas the
+  house has when the rule acts, so one added later is included and one
+  deleted does not leave the rule half-broken. The perimeter areas are still
+  left armed, as always.
+
+### Changed
+- **The *Action* column of the rules table wraps** instead of growing with
+  every area a disarm rule names, so the other columns stay readable.
+
 ## [1.0.6] — entities you can find
 
 Nothing changes in how the alarm behaves.
