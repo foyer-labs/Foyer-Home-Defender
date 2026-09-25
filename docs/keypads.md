@@ -1,5 +1,7 @@
 # Keypads, tags and remotes
 
+**English** · [Italiano](keypads.it.md)
+
 How to arm and disarm Foyer from something other than a phone, and what each
 piece of hardware is honestly worth.
 
@@ -88,7 +90,7 @@ The services: `foyer.arm`, `foyer.disarm`, `foyer.bypass_zone`,
 `foyer.unbypass_zone`, `foyer.acknowledge`, `foyer.export_log`,
 `foyer.export_config`, `foyer.import_config`.
 
-Two fields deserve a sentence each.
+Three fields deserve a sentence each.
 
 **`channel`** may only say `api` or `automation`. Anything physical —
 `keypad`, `nfc` — is a property of a *registered device*, never a claim a
