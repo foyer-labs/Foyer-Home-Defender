@@ -7,6 +7,7 @@ import { LitElement, css, html } from "lit";
 
 import { t, type Strings } from "../shared/i18n";
 import { formStyles } from "../shared/styles";
+import { define } from "../shared/define";
 
 class FoyerDeleteButton extends LitElement {
   static override properties = {
@@ -98,6 +99,4 @@ class FoyerDeleteButton extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-delete-button")) {
-  customElements.define("foyer-delete-button", FoyerDeleteButton);
-}
+define("foyer-delete-button", FoyerDeleteButton);

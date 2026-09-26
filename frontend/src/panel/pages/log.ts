@@ -12,6 +12,7 @@ import { inHouseZone } from "../../shared/time";
 import { formStyles, stateStyles } from "../../shared/styles";
 import type { LogQuery, LogRow, PersonCounts } from "../../shared/types";
 import { download, type PanelContext, activateOnKey } from "../context";
+import { define } from "../../shared/define";
 
 const PAGE_SIZE = 50;
 
@@ -907,6 +908,4 @@ function severityClass(severity: string): string {
   return "disarmed";
 }
 
-if (!customElements.get("foyer-page-log")) {
-  customElements.define("foyer-page-log", FoyerPageLog);
-}
+define("foyer-page-log", FoyerPageLog);

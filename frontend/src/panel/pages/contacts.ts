@@ -42,6 +42,7 @@ import {
   explainInUse,
 } from "../context";
 import "../delete-button";
+import { define } from "../../shared/define";
 
 /** Put text on the clipboard, and say whether it got there.
  *
@@ -957,4 +958,4 @@ class FoyerPageContacts extends LitElement {
   ];
 }
 
-customElements.define("foyer-page-contacts", FoyerPageContacts);
+define("foyer-page-contacts", FoyerPageContacts);

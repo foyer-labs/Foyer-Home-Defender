@@ -25,6 +25,7 @@ import {
   whenNumber,
 } from "../context";
 import { chimeTargets, entityTargets } from "../ha-targets";
+import { define } from "../../shared/define";
 
 // What the switch starts at when somebody turns it on. Thirty days is the
 // retention every category has by default, so names age out with the rows
@@ -1042,6 +1043,4 @@ class FoyerPageSettings extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-settings")) {
-  customElements.define("foyer-page-settings", FoyerPageSettings);
-}
+define("foyer-page-settings", FoyerPageSettings);

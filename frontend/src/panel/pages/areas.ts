@@ -17,6 +17,7 @@ import {
 } from "../context";
 import "../delete-button";
 import { effectiveHint, profileField } from "../profile-picker";
+import { define } from "../../shared/define";
 
 const NEW_AREA: AreaConfig = {
   name: "",
@@ -252,6 +253,4 @@ class FoyerPageAreas extends LitElement {
   static override styles = [stateStyles, formStyles];
 }
 
-if (!customElements.get("foyer-page-areas")) {
-  customElements.define("foyer-page-areas", FoyerPageAreas);
-}
+define("foyer-page-areas", FoyerPageAreas);

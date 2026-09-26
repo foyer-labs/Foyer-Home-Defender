@@ -33,6 +33,7 @@ import {
   serviceDomains,
   type Target,
 } from "../ha-targets";
+import { define } from "../../shared/define";
 
 // The three groups of SPEC §6.1, plus the moments this phase added for the
 // log and the simulator's trace.
@@ -1585,6 +1586,4 @@ class FoyerPageProfiles extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-profiles")) {
-  customElements.define("foyer-page-profiles", FoyerPageProfiles);
-}
+define("foyer-page-profiles", FoyerPageProfiles);

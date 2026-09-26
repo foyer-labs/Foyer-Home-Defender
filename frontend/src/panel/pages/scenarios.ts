@@ -18,6 +18,7 @@ import {
 import "../delete-button";
 import { codeFields } from "../code-fields";
 import { profileField } from "../profile-picker";
+import { define } from "../../shared/define";
 
 const NEW_SCENARIO: ScenarioConfig = {
   name: "",
@@ -343,6 +344,4 @@ class FoyerPageScenarios extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-scenarios")) {
-  customElements.define("foyer-page-scenarios", FoyerPageScenarios);
-}
+define("foyer-page-scenarios", FoyerPageScenarios);

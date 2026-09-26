@@ -33,6 +33,7 @@ import type {
   TraceStep,
 } from "../../shared/types";
 import { reasonText, type PanelContext } from "../context";
+import { define } from "../../shared/define";
 
 type Tab = "diagnostics" | "simulator" | "walktest" | "actiontest";
 
@@ -1439,6 +1440,4 @@ export function testReason(s: Strings, reason: string | null): string {
   return text.startsWith("action_test.reason.") ? reason : text;
 }
 
-if (!customElements.get("foyer-page-test")) {
-  customElements.define("foyer-page-test", FoyerPageTest);
-}
+define("foyer-page-test", FoyerPageTest);

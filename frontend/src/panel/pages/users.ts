@@ -27,6 +27,7 @@ import {
   revealProblems,
 } from "../context";
 import "../delete-button";
+import { define } from "../../shared/define";
 
 interface Draft extends UserConfig {
   /** Typed here, sent once, never read back. */
@@ -661,4 +662,4 @@ class FoyerPageUsers extends LitElement {
   ];
 }
 
-customElements.define("foyer-page-users", FoyerPageUsers);
+define("foyer-page-users", FoyerPageUsers);

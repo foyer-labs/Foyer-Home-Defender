@@ -27,6 +27,7 @@ import type {
   PendingRuleAction,
   StatusArea,
 } from "../shared/types";
+import { define, whenReady } from "../shared/define";
 
 type Layout = "full" | "compact" | "badge" | "keypad";
 
@@ -1624,7 +1625,7 @@ class FoyerCard extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-card")) customElements.define("foyer-card", FoyerCard);
+define("foyer-card", FoyerCard);
 
 
 // --- the visual editor (§15.3) ------------------------------------------------------
@@ -1752,9 +1753,7 @@ class FoyerCardEditor extends LitElement {
   `;
 }
 
-if (!customElements.get("foyer-card-editor")) {
-  customElements.define("foyer-card-editor", FoyerCardEditor);
-}
+define("foyer-card-editor", FoyerCardEditor);
 
 
 // Listed in the dashboard's "add card" picker.
@@ -1763,7 +1762,11 @@ declare global {
     customCards?: { type: string; name: string; description?: string; preview?: boolean }[];
   }
 }
-window.customCards = window.customCards ?? [];
-if (!window.customCards.some((c) => c.type === "foyer-card")) {
-  window.customCards.push({ type: "foyer-card", name: "Foyer Home Defender", preview: true });
-}
+// After the definition (shared/define.ts): a picker entry whose element is not
+// registered yet is a card the picker lists and cannot create.
+whenReady(() => {
+  window.customCards = window.customCards ?? [];
+  if (!window.customCards.some((c) => c.type === "foyer-card")) {
+    window.customCards.push({ type: "foyer-card", name: "Foyer Home Defender", preview: true });
+  }
+});

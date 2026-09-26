@@ -17,6 +17,7 @@ import {
 } from "../context";
 import "../delete-button";
 import { profileField } from "../profile-picker";
+import { define } from "../../shared/define";
 
 interface Row {
   group: GroupConfig;
@@ -341,6 +342,4 @@ class FoyerPageGroups extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-groups")) {
-  customElements.define("foyer-page-groups", FoyerPageGroups);
-}
+define("foyer-page-groups", FoyerPageGroups);

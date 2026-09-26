@@ -23,6 +23,7 @@ import type {
 } from "../shared/types";
 import { problemText, type PanelContext, whenNumber } from "./context";
 import { notifyTargets, stateLabel } from "./ha-targets";
+import { define } from "../shared/define";
 
 type Step = "area" | "zones" | "scenario" | "user" | "test";
 
@@ -819,6 +820,4 @@ class FoyerWizard extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-wizard")) {
-  customElements.define("foyer-wizard", FoyerWizard);
-}
+define("foyer-wizard", FoyerWizard);

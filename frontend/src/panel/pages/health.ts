@@ -22,6 +22,7 @@ import type {
 } from "../../shared/types";
 import { anyArmed, problemText, type PanelContext, whenNumber } from "../context";
 import { allEntities, entityListStyles, renderEntityList } from "../entity-list";
+import { define } from "../../shared/define";
 
 /** A timestamp as the rest of the panel writes one. An absent one is a dash
  * rather than an empty cell: "nothing has happened yet" is an answer. */
@@ -862,6 +863,4 @@ class FoyerPageHealth extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-health")) {
-  customElements.define("foyer-page-health", FoyerPageHealth);
-}
+define("foyer-page-health", FoyerPageHealth);

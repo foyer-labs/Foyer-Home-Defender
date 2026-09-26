@@ -41,6 +41,7 @@ import "./pages/settings";
 import "./pages/health";
 import "./pages/api";
 import "./wizard";
+import { define } from "../shared/define";
 
 // Fourteen tabs in one row read as one undifferentiated list (UX review).
 // So they come in two groups: what a household opens every week, then the
@@ -1325,4 +1326,4 @@ class FoyerPanel extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-panel")) customElements.define("foyer-panel", FoyerPanel);
+define("foyer-panel", FoyerPanel);

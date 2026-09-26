@@ -34,6 +34,7 @@ import {
   revealProblems,
 } from "../context";
 import "../delete-button";
+import { define } from "../../shared/define";
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
@@ -1113,6 +1114,4 @@ class FoyerPageRules extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-rules")) {
-  customElements.define("foyer-page-rules", FoyerPageRules);
-}
+define("foyer-page-rules", FoyerPageRules);

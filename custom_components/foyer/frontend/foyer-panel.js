@@ -500,7 +500,7 @@ var Ne = (e, t, n) => {
 		r._$litPart$ = i = new O(t.insertBefore(y(), e), e, void 0, n ?? {});
 	}
 	return i._$AI(e), i;
-}, A = globalThis, j = class extends h {
+}, Pe = globalThis, A = class extends h {
 	constructor() {
 		super(...arguments), this.renderOptions = { host: this }, this._$Do = void 0;
 	}
@@ -522,22 +522,22 @@ var Ne = (e, t, n) => {
 		return w;
 	}
 };
-j._$litElement$ = !0, j.finalized = !0, A.litElementHydrateSupport?.({ LitElement: j });
-var Pe = A.litElementPolyfillSupport;
-Pe?.({ LitElement: j }), (A.litElementVersions ??= []).push("4.2.2");
+A._$litElement$ = !0, A.finalized = !0, Pe.litElementHydrateSupport?.({ LitElement: A });
+var Fe = Pe.litElementPolyfillSupport;
+Fe?.({ LitElement: A }), (Pe.litElementVersions ??= []).push("4.2.2");
 //#endregion
 //#region node_modules/lit-html/directive.js
-var M = {
+var j = {
 	ATTRIBUTE: 1,
 	CHILD: 2,
 	PROPERTY: 3,
 	BOOLEAN_ATTRIBUTE: 4,
 	EVENT: 5,
 	ELEMENT: 6
-}, Fe = (e) => (...t) => ({
+}, Ie = (e) => (...t) => ({
 	_$litDirective$: e,
 	values: t
-}), Ie = class {
+}), Le = class {
 	constructor(e) {}
 	get _$AU() {
 		return this._$AM._$AU;
@@ -551,9 +551,9 @@ var M = {
 	update(e, t) {
 		return this.render(...t);
 	}
-}, Le = class extends Ie {
+}, Re = class extends Le {
 	constructor(e) {
-		if (super(e), this.it = T, e.type !== M.CHILD) throw Error(this.constructor.directiveName + "() can only be used in child bindings");
+		if (super(e), this.it = T, e.type !== j.CHILD) throw Error(this.constructor.directiveName + "() can only be used in child bindings");
 	}
 	render(e) {
 		if (e === T || e == null) return this._t = void 0, this.it = e;
@@ -569,28 +569,28 @@ var M = {
 		};
 	}
 };
-Le.directiveName = "unsafeHTML", Le.resultType = 1;
+Re.directiveName = "unsafeHTML", Re.resultType = 1;
 //#endregion
 //#region node_modules/lit-html/directives/unsafe-svg.js
-var Re = class extends Le {};
-Re.directiveName = "unsafeSVG", Re.resultType = 2;
-var ze = Fe(Re), Be = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" width=\"256\" height=\"256\" role=\"img\" aria-label=\"Foyer Home Defender\">\n  <title>Foyer Home Defender</title>\n  <path d=\"M32 5.5 L55 13.5 V32 C55 44 45 53.5 32 58.5 C19 53.5 9 44 9 32 V13.5 Z\" fill=\"none\" stroke=\"#E8ECF2\" stroke-width=\"3.2\" stroke-linejoin=\"round\"/>\n  <polyline points=\"19,32 32,21.5 45,32\" fill=\"none\" stroke=\"#E8ECF2\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.5\"/>\n  <polyline points=\"24,38 32,31.5 40,38\" fill=\"none\" stroke=\"#E8ECF2\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n  <rect x=\"28.5\" y=\"45.5\" width=\"7\" height=\"7\" fill=\"#F0A835\"/>\n  <circle cx=\"32\" cy=\"45.5\" r=\"3.5\" fill=\"#F0A835\"/>\n</svg>\n", Ve = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" width=\"256\" height=\"256\" role=\"img\" aria-label=\"Foyer Home Defender\">\n  <title>Foyer Home Defender</title>\n  <path d=\"M32 5.5 L55 13.5 V32 C55 44 45 53.5 32 58.5 C19 53.5 9 44 9 32 V13.5 Z\" fill=\"none\" stroke=\"#0D1014\" stroke-width=\"3.2\" stroke-linejoin=\"round\"/>\n  <polyline points=\"19,32 32,21.5 45,32\" fill=\"none\" stroke=\"#0D1014\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.5\"/>\n  <polyline points=\"24,38 32,31.5 40,38\" fill=\"none\" stroke=\"#0D1014\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n  <rect x=\"28.5\" y=\"45.5\" width=\"7\" height=\"7\" fill=\"#F0A835\"/>\n  <circle cx=\"32\" cy=\"45.5\" r=\"3.5\" fill=\"#F0A835\"/>\n</svg>\n";
+var ze = class extends Re {};
+ze.directiveName = "unsafeSVG", ze.resultType = 2;
+var Be = Ie(ze), Ve = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" width=\"256\" height=\"256\" role=\"img\" aria-label=\"Foyer Home Defender\">\n  <title>Foyer Home Defender</title>\n  <path d=\"M32 5.5 L55 13.5 V32 C55 44 45 53.5 32 58.5 C19 53.5 9 44 9 32 V13.5 Z\" fill=\"none\" stroke=\"#E8ECF2\" stroke-width=\"3.2\" stroke-linejoin=\"round\"/>\n  <polyline points=\"19,32 32,21.5 45,32\" fill=\"none\" stroke=\"#E8ECF2\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.5\"/>\n  <polyline points=\"24,38 32,31.5 40,38\" fill=\"none\" stroke=\"#E8ECF2\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n  <rect x=\"28.5\" y=\"45.5\" width=\"7\" height=\"7\" fill=\"#F0A835\"/>\n  <circle cx=\"32\" cy=\"45.5\" r=\"3.5\" fill=\"#F0A835\"/>\n</svg>\n", He = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" width=\"256\" height=\"256\" role=\"img\" aria-label=\"Foyer Home Defender\">\n  <title>Foyer Home Defender</title>\n  <path d=\"M32 5.5 L55 13.5 V32 C55 44 45 53.5 32 58.5 C19 53.5 9 44 9 32 V13.5 Z\" fill=\"none\" stroke=\"#0D1014\" stroke-width=\"3.2\" stroke-linejoin=\"round\"/>\n  <polyline points=\"19,32 32,21.5 45,32\" fill=\"none\" stroke=\"#0D1014\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" opacity=\"0.5\"/>\n  <polyline points=\"24,38 32,31.5 40,38\" fill=\"none\" stroke=\"#0D1014\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n  <rect x=\"28.5\" y=\"45.5\" width=\"7\" height=\"7\" fill=\"#F0A835\"/>\n  <circle cx=\"32\" cy=\"45.5\" r=\"3.5\" fill=\"#F0A835\"/>\n</svg>\n";
 //#endregion
 //#region src/shared/brand.ts
-function He(e) {
-	return e ? Be : Ve;
+function Ue(e) {
+	return e ? Ve : He;
 }
 //#endregion
 //#region src/shared/i18n.ts
-var Ue = /* @__PURE__ */ new Map();
-function We(e) {
-	let t = e.language, n = Ue.get(t);
+var We = /* @__PURE__ */ new Map();
+function Ge(e) {
+	let t = e.language, n = We.get(t);
 	return n || (n = e.callWS({
 		type: "foyer/translations",
 		language: t
-	}).then((e) => e.strings), n.catch(() => Ue.delete(t)), Ue.set(t, n)), n;
+	}).then((e) => e.strings), n.catch(() => We.delete(t)), We.set(t, n)), n;
 }
-function N(e, t, n = {}) {
+function M(e, t, n = {}) {
 	let r = e;
 	for (let e of t.split(".")) if (r && typeof r == "object" && e in r) r = r[e];
 	else return t;
@@ -598,7 +598,7 @@ function N(e, t, n = {}) {
 }
 //#endregion
 //#region src/shared/styles.ts
-var P = o`
+var N = o`
   .state {
     display: inline-flex;
     align-items: center;
@@ -639,7 +639,7 @@ var P = o`
   .state.disabled {
     color: var(--disabled-text-color, #9e9e9e);
   }
-`, F = o`
+`, P = o`
   .card {
     background: var(--card-background-color);
     border: 1px solid var(--divider-color);
@@ -894,45 +894,45 @@ var P = o`
 `;
 //#endregion
 //#region src/shared/time.ts
-function I(e, t = {}) {
+function F(e, t = {}) {
 	let n = e?.config?.time_zone;
 	return n ? {
 		...t,
 		timeZone: n
 	} : t;
 }
-function Ge(e) {
+function Ke(e) {
 	let t = Math.max(0, Math.round(e));
 	return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 }
-function Ke(e, t = 0) {
+function qe(e, t = 0) {
 	return Math.max(0, Math.round((Date.parse(e) - (Date.now() + t)) / 1e3));
 }
 //#endregion
 //#region src/panel/context.ts
-function qe(e, t, n) {
+function Je(e, t, n) {
 	let r = URL.createObjectURL(new Blob([t], { type: n })), i = document.createElement("a");
 	i.href = r, i.download = e, i.click(), setTimeout(() => URL.revokeObjectURL(r), 1e3);
 }
-function L(e) {
+function I(e) {
 	return e.status.areas.some((e) => e.state !== "disarmed");
 }
-function Je(e, t) {
+function Ye(e, t) {
 	return Math.max(0, Math.round((Date.parse(t) - e.now()) / 1e3));
 }
-function Ye(e, t, n) {
-	let r = t.state?.security?.locked_until;
-	if (t.reason === "locked_out" && r) return Xe(e, n, r);
-	let i = (t.blocking_zones ?? []).map((e) => e.name).join(", ");
-	return N(e, `reason.${t.reason ?? "unknown"}`, { zones: i });
-}
 function Xe(e, t, n) {
-	return N(e, "code.locked_until", { time: new Date(n).toLocaleTimeString(t, {
+	let r = t.state?.security?.locked_until;
+	if (t.reason === "locked_out" && r) return Ze(e, n, r);
+	let i = (t.blocking_zones ?? []).map((e) => e.name).join(", ");
+	return M(e, `reason.${t.reason ?? "unknown"}`, { zones: i });
+}
+function Ze(e, t, n) {
+	return M(e, "code.locked_until", { time: new Date(n).toLocaleTimeString(t, {
 		hour: "2-digit",
 		minute: "2-digit"
 	}) });
 }
-async function R(e) {
+async function L(e) {
 	await e.updateComplete;
 	let t = e.renderRoot.querySelector(".editor");
 	t && (t.scrollIntoView({
@@ -940,27 +940,27 @@ async function R(e) {
 		block: "start"
 	}), t.querySelector("input:not([type=checkbox]):not([disabled]), select, textarea")?.focus({ preventScroll: !0 }));
 }
-async function z(e) {
+async function R(e) {
 	await e.updateComplete, e.renderRoot.querySelector(".editor .problems, .editor .problem")?.scrollIntoView({
 		behavior: "smooth",
 		block: "nearest"
 	});
 }
-function B(e, t) {
-	let n = t.field ? N(e, `field.${t.field}`) : "";
-	return N(e, `problem.${t.code}`, {
+function z(e, t) {
+	let n = t.field ? M(e, `field.${t.field}`) : "";
+	return M(e, `problem.${t.code}`, {
 		field: n,
 		detail: t.detail ?? ""
 	});
 }
-function Ze(e, t, n) {
+function Qe(e, t, n) {
 	return t ? n.map((n) => {
 		let r = n.ref;
 		if (!r) return n;
 		let i = [], a = (t, n) => {
-			n.length && i.push(`${N(e, `nav.${t}`)}: ${n.join(", ")}`);
+			n.length && i.push(`${M(e, `nav.${t}`)}: ${n.join(", ")}`);
 		};
-		if (n.code === "profile_in_use") t.settings.default_profile_id === r && i.push(`${N(e, "nav.settings")}: ${N(e, "profiles.used_default")}`), t.settings.technical_profile_id === r && i.push(`${N(e, "nav.settings")}: ${N(e, "profiles.used_technical")}`), a("areas", t.areas.filter((e) => e.response_profile_id === r).map((e) => e.name)), a("zones", t.zones.filter((e) => e.response_profile_id === r).map((e) => e.name)), a("scenarios", t.scenarios.filter((e) => e.response_profile_id === r).map((e) => e.name)), a("groups", t.groups.filter((e) => e.response_profile_id === r).map((e) => e.name));
+		if (n.code === "profile_in_use") t.settings.default_profile_id === r && i.push(`${M(e, "nav.settings")}: ${M(e, "profiles.used_default")}`), t.settings.technical_profile_id === r && i.push(`${M(e, "nav.settings")}: ${M(e, "profiles.used_technical")}`), a("areas", t.areas.filter((e) => e.response_profile_id === r).map((e) => e.name)), a("zones", t.zones.filter((e) => e.response_profile_id === r).map((e) => e.name)), a("scenarios", t.scenarios.filter((e) => e.response_profile_id === r).map((e) => e.name)), a("groups", t.groups.filter((e) => e.response_profile_id === r).map((e) => e.name));
 		else if (n.code === "contact_in_use") i.push(...t.profiles.filter((e) => e.actions.some((e) => {
 			let t = e.params.contacts;
 			return Array.isArray(t) && t.some((e) => (typeof e == "string" ? e : e?.contact_id) === r);
@@ -974,28 +974,37 @@ function Ze(e, t, n) {
 		} : n;
 	}) : n;
 }
-function V(e) {
+function B(e) {
 	(e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), e.currentTarget.click());
 }
-function H(e, t) {
-	let n = U(e.target.value);
+function V(e, t) {
+	let n = H(e.target.value);
 	n !== null && t(n);
 }
-function U(e) {
+function H(e) {
 	let t = e.trim();
 	if (t === "") return null;
 	let n = Number(t);
 	return Number.isFinite(n) ? n : null;
 }
 //#endregion
+//#region src/shared/define.ts
+var $e = document.querySelector("home-assistant") && !customElements.get("home-assistant") ? customElements.whenDefined("home-assistant") : Promise.resolve(), et = (e) => void $e.then(e);
+function U(e, t) {
+	et(() => {
+		customElements.get(e) || customElements.define(e, t);
+	});
+}
+//#endregion
 //#region src/panel/pages/overview.ts
-function Qe(e, t) {
-	let n = N(e, `event_type.${t}`);
+function tt(e, t) {
+	let n = M(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
-	let r = N(e, `moment.${t}`);
+	let r = M(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extends j {
+var nt = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]);
+U("foyer-page-overview", class extends A {
 	constructor(...e) {
 		super(...e), this._busy = !1, this._perArea = !1, this._recent = [];
 	}
@@ -1016,22 +1025,22 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 				let r = await e();
 				if (r.reason === "cancelled") this._feedback = {
 					ok: !0,
-					text: N(n.strings, "reason.cancelled")
+					text: M(n.strings, "reason.cancelled")
 				};
 				else if (r.success) {
 					let e = r.bypassed_zones.map((e) => e.name).join(", "), t = r.low_battery_zones;
 					this._feedback = t.length ? {
 						ok: !0,
-						text: N(n.strings, "overview.low_battery", { zones: t.map((e) => e.name).join(", ") }),
+						text: M(n.strings, "overview.low_battery", { zones: t.map((e) => e.name).join(", ") }),
 						lowBattery: t
 					} : e ? {
 						ok: !0,
-						text: N(n.strings, "overview.bypassed", { zones: e })
+						text: M(n.strings, "overview.bypassed", { zones: e })
 					} : void 0;
 				} else this._feedback = {
 					ok: !1,
-					text: Ye(n.strings, r, n.hass.language),
-					retry: t && $e.has(r.reason ?? "") ? t : void 0
+					text: Xe(n.strings, r, n.hass.language),
+					retry: t && nt.has(r.reason ?? "") ? t : void 0
 				};
 			} catch (e) {
 				this._feedback = {
@@ -1064,7 +1073,7 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 					if (!e.success) {
 						this._feedback = {
 							ok: e.reason === "cancelled",
-							text: Ye(t.strings, e, t.hass.language)
+							text: Xe(t.strings, e, t.hass.language)
 						};
 						return;
 					}
@@ -1123,18 +1132,18 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		return C`
       ${this._renderTechnical(t)} ${this._renderIncident(t)}
       ${n.security.enforced ? T : C`<div class="notice" role="note">
-            ${N(t, "overview.no_codes_warning")}
+            ${M(t, "overview.no_codes_warning")}
           </div>`}
       ${r.map((e) => {
 			let n = this._zoneNames(e.causes), r = e.state !== "disarmed";
 			return C`<div class="alarm-memory" role="alert">
-          ${e.causes.length ? r ? N(t, "overview.memory_banner_armed", {
+          ${e.causes.length ? r ? M(t, "overview.memory_banner_armed", {
 				area: e.name,
 				zones: n
-			}) : N(t, "overview.memory_banner", {
+			}) : M(t, "overview.memory_banner", {
 				area: e.name,
 				zones: n
-			}) : r ? N(t, "overview.memory_banner_armed_plain", { area: e.name }) : N(t, "overview.memory_banner_plain", { area: e.name })}
+			}) : r ? M(t, "overview.memory_banner_armed_plain", { area: e.name }) : M(t, "overview.memory_banner_plain", { area: e.name })}
         </div>`;
 		})}
       ${this._renderMaster(t)} ${this._renderFeedback(t)}
@@ -1149,10 +1158,10 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "overview.recent")}</h2>
+          <h2>${M(e, "overview.recent")}</h2>
           <span class="spacer"></span>
           <button class="btn sm" @click=${() => t.navigate("log")}>
-            ${N(e, "overview.full_log")}
+            ${M(e, "overview.full_log")}
           </button>
         </div>
         <div class="card-bd">
@@ -1165,7 +1174,7 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		})}</span
                 >
                 <span class="state ${n.severity === "alarm" ? "triggered" : n.severity === "warning" ? "arming" : "disarmed"}"
-                  >${Qe(e, n.event_type)}</span
+                  >${tt(e, n.event_type)}</span
                 >
                 <span class="where">
                   ${[r.get(n.area_id ?? ""), i.get(n.zone_id ?? "")].filter(Boolean).join(" · ")}
@@ -1204,14 +1213,14 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		let n = t.some((e) => !e.acknowledged);
 		return C`
       <div class="banner technical" role="alert">
-        <div class="banner-hd">${N(e, "overview.technical_title")}</div>
+        <div class="banner-hd">${M(e, "overview.technical_title")}</div>
         <div>
-          ${N(e, "overview.technical_banner", { zones: t.map((e) => e.name).join(", ") })}
+          ${M(e, "overview.technical_banner", { zones: t.map((e) => e.name).join(", ") })}
         </div>
         <ul class="plain">
           ${t.map((t) => C`<li>
               <strong>${t.name}</strong> —
-              ${N(e, t.acknowledged ? "technical_state.acknowledged" : t.active ? "technical_state.active" : "technical_state.memory")}
+              ${M(e, t.acknowledged ? "technical_state.acknowledged" : t.active ? "technical_state.active" : "technical_state.memory")}
             </li>`)}
         </ul>
         ${n ? C`<div class="actions">
@@ -1220,7 +1229,7 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
                 ?disabled=${this._busy}
                 @click=${() => this._acknowledge("technical")}
               >
-                ${N(e, "common.acknowledge")}
+                ${M(e, "common.acknowledge")}
               </button>
             </div>` : T}
       </div>
@@ -1231,20 +1240,20 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		return t ? C`
       <div class="banner incident" role="alert">
         <div class="banner-hd">
-          ${N(e, "overview.incident_title", { id: t.id })}
+          ${M(e, "overview.incident_title", { id: t.id })}
           <span class="state ${t.acknowledged ? "memory" : "triggered"}">
-            ${N(e, t.acknowledged ? "overview.incident_acknowledged" : "overview.incident_open")}
+            ${M(e, t.acknowledged ? "overview.incident_acknowledged" : "overview.incident_open")}
           </span>
         </div>
-        <div>${N(e, "overview.incident_zones", { zones: this._zoneNames(t.zone_ids) })}</div>
-        <div class="hint">${N(e, "overview.incident_hint")}</div>
+        <div>${M(e, "overview.incident_zones", { zones: this._zoneNames(t.zone_ids) })}</div>
+        <div class="hint">${M(e, "overview.incident_hint")}</div>
         ${t.acknowledged ? T : C`<div class="actions">
               <button
                 class="btn danger"
                 ?disabled=${this._busy}
                 @click=${() => this._acknowledge("incident")}
               >
-                ${N(e, "common.acknowledge")}
+                ${M(e, "common.acknowledge")}
               </button>
             </div>`}
       </div>
@@ -1255,30 +1264,30 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "overview.master")}</h2>
-          <span class="state ${n.state}">${N(e, `state.${n.state}`)}</span>
-          ${n.mode ? C`<span>${N(e, `ha_state.${n.mode}`)}</span>` : T}
+          <h2>${M(e, "overview.master")}</h2>
+          <span class="state ${n.state}">${M(e, `state.${n.state}`)}</span>
+          ${n.mode ? C`<span>${M(e, `ha_state.${n.mode}`)}</span>` : T}
         </div>
         <div class="card-bd">
-          <div class="label">${N(e, "overview.scenario")}</div>
+          <div class="label">${M(e, "overview.scenario")}</div>
           ${t.scenarios.length ? C`<div class="scenarios">
                 ${t.scenarios.map((t) => this._renderScenario(e, t))}
-              </div>` : C`<div class="muted">${N(e, "overview.no_scenarios")}</div>`}
-          <div class="hint">${N(e, "overview.scenario_hint")}</div>
+              </div>` : C`<div class="muted">${M(e, "overview.no_scenarios")}</div>`}
+          <div class="hint">${M(e, "overview.scenario_hint")}</div>
           <div class="actions">
             <button
               class="btn primary"
               ?disabled=${this._busy || !r}
               @click=${() => this._disarm()}
             >
-              ${N(e, "overview.disarm_all")}
+              ${M(e, "overview.disarm_all")}
             </button>
             <button
               class="link"
               aria-expanded=${this._perArea ? "true" : "false"}
               @click=${() => this._perArea = !this._perArea}
             >
-              ${N(e, this._perArea ? "overview.one_area_hide" : "overview.one_area")}
+              ${M(e, this._perArea ? "overview.one_area_hide" : "overview.one_area")}
             </button>
           </div>
         </div>
@@ -1296,13 +1305,13 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
       >
         ${(n.active_scenario_id && !r ? t.require_code.change ?? t.require_code.arm : t.require_code.arm) ? C`<ha-icon
               icon="mdi:lock-outline"
-              title=${N(e, "overview.code_needed")}
-              aria-label=${N(e, "overview.code_needed")}
+              title=${M(e, "overview.code_needed")}
+              aria-label=${M(e, "overview.code_needed")}
             ></ha-icon>` : T}
-        ${N(e, "overview.arm_scenario", { name: t.name })}
+        ${M(e, "overview.arm_scenario", { name: t.name })}
       </button>
-      ${r ? C`<span class="state armed">${N(e, "scenarios.active")}</span>` : a ? C`<span class="ready ok">${N(e, "overview.ready")}</span>` : C`<span class="ready not">
-              ${o.length ? N(e, "overview.not_ready_zones", { zones: this._zoneNames(o) }) : N(e, "overview.not_ready_plain")}
+      ${r ? C`<span class="state armed">${M(e, "scenarios.active")}</span>` : a ? C`<span class="ready ok">${M(e, "overview.ready")}</span>` : C`<span class="ready not">
+              ${o.length ? M(e, "overview.not_ready_zones", { zones: this._zoneNames(o) }) : M(e, "overview.not_ready_plain")}
             </span>`}
     </div>`;
 	}
@@ -1317,7 +1326,7 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
                 ?disabled=${this._busy}
                 @click=${() => void this._excludeLowBattery(t.lowBattery)}
               >
-                ${N(e, "overview.exclude_low_battery")}
+                ${M(e, "overview.exclude_low_battery")}
               </button>
             </div>` : T}
         ${t.retry ? C`<div class="actions">
@@ -1326,9 +1335,9 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
                 ?disabled=${this._busy}
                 @click=${() => this._force(t.retry)}
               >
-                ${N(e, "overview.force_arm")}
+                ${M(e, "overview.force_arm")}
               </button>
-              <span class="hint">${N(e, "overview.force_arm_hint")}</span>
+              <span class="hint">${M(e, "overview.force_arm_hint")}</span>
             </div>` : T}
       </div>
     ` : T;
@@ -1338,17 +1347,17 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		return C`
       <div class="card tile">
         <div class="card-bd">
-          <div class="label">${N(e, "overview.area")}</div>
+          <div class="label">${M(e, "overview.area")}</div>
           <div class="name">${t.name}</div>
           <div class="row">
-            <span class="state ${t.state}">${N(e, `state.${t.state}`)}</span>
-            ${t.memory ? C`<span class="state memory">${N(e, "overview.memory")}</span>` : T}
+            <span class="state ${t.state}">${M(e, `state.${t.state}`)}</span>
+            ${t.memory ? C`<span class="state memory">${M(e, "overview.memory")}</span>` : T}
           </div>
           ${t.timer && t.timer.kind !== "siren" ? C`<div class="countdown">
-                ${N(e, `timer.${t.timer.kind}`, { seconds: Je(n, t.timer.due) })}
+                ${M(e, `timer.${t.timer.kind}`, { seconds: Ye(n, t.timer.due) })}
               </div>` : T}
           <div class="hint">
-            ${t.state === "disarmed" ? T : r ? N(e, "overview.by_scenario", { scenario: r.name }) : N(e, "overview.on_its_own")}
+            ${t.state === "disarmed" ? T : r ? M(e, "overview.by_scenario", { scenario: r.name }) : M(e, "overview.on_its_own")}
           </div>
           <div class="actions">
             ${t.state === "disarmed" && this._perArea ? C`<button
@@ -1356,14 +1365,14 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
                   ?disabled=${this._busy}
                   @click=${() => this._arm({ area_id: t.id })}
                 >
-                  ${N(e, "overview.arm_area")}
+                  ${M(e, "overview.arm_area")}
                 </button>` : T}
             ${t.state !== "disarmed" || t.memory ? C`<button
                   class="btn"
                   ?disabled=${this._busy}
                   @click=${() => this._disarm([t.id])}
                 >
-                  ${N(e, "overview.disarm_area")}
+                  ${M(e, "overview.disarm_area")}
                 </button>` : T}
           </div>
         </div>
@@ -1374,31 +1383,31 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 		let t = this.ctx, n = new Map(t.status.areas.map((e) => [e.id, e.name])), r = t.status.zones.filter((e) => e.enabled && (e.fault || e.open && e.channel === "intrusion" || e.bypassed));
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "overview.not_ready")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "overview.not_ready")}</h2></div>
         ${r.length ? C`<div class="table-wrap">
               <table class="stack">
                 <thead>
                   <tr>
-                    <th>${N(e, "overview.zone")}</th>
-                    <th>${N(e, "overview.area")}</th>
-                    <th>${N(e, "overview.status")}</th>
-                    <th>${N(e, "overview.entity_state")}</th>
+                    <th>${M(e, "overview.zone")}</th>
+                    <th>${M(e, "overview.area")}</th>
+                    <th>${M(e, "overview.status")}</th>
+                    <th>${M(e, "overview.entity_state")}</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   ${r.map((t) => C`<tr>
                       <td class="lead">${t.name}</td>
-                      <td data-label=${N(e, "overview.area")}>${n.get(t.area_id) ?? ""}</td>
-                      <td data-label=${N(e, "overview.status")}>${this._zoneStatus(e, t)}</td>
-                      <td data-label=${N(e, "overview.entity_state")}>
+                      <td data-label=${M(e, "overview.area")}>${n.get(t.area_id) ?? ""}</td>
+                      <td data-label=${M(e, "overview.status")}>${this._zoneStatus(e, t)}</td>
+                      <td data-label=${M(e, "overview.entity_state")}>
                         <span class="mono">${t.state ?? "—"}</span>
                       </td>
                       <td>${this._renderBypass(e, t)}</td>
                     </tr>`)}
                 </tbody>
               </table>
-            </div>` : C`<div class="empty">${N(e, "overview.all_ready")}</div>`}
+            </div>` : C`<div class="empty">${M(e, "overview.all_ready")}</div>`}
       </div>
     `;
 	}
@@ -1409,29 +1418,29 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
         ?disabled=${this._busy}
         @click=${() => this._run(() => n.bypass(t.id, !1))}
       >
-        ${N(e, "zones.unbypass")}
+        ${M(e, "zones.unbypass")}
       </button>` : t.bypassable ? C`<div class="bypass">
       <button
         class="btn sm"
         ?disabled=${this._busy}
         @click=${() => this._run(() => n.bypass(t.id, !0))}
       >
-        ${N(e, "zones.bypass")}
+        ${M(e, "zones.bypass")}
       </button>
       ${[1, 8].map((r) => C`<button
           class="btn sm ghost"
           ?disabled=${this._busy}
           @click=${() => this._run(() => n.bypass(t.id, !0, r * 3600))}
         >
-          ${N(e, "zones.bypass_hours", { hours: r })}
+          ${M(e, "zones.bypass_hours", { hours: r })}
         </button>`)}
       <label class="minutes">
         <input
           type="number"
           min="1"
           max="10080"
-          placeholder=${N(e, "zones.bypass_minutes_placeholder")}
-          aria-label=${N(e, "zones.bypass_minutes")}
+          placeholder=${M(e, "zones.bypass_minutes_placeholder")}
+          aria-label=${M(e, "zones.bypass_minutes")}
           @keydown=${(e) => {
 			e.key === "Enter" && this._bypassMinutes(t.id, e.target);
 		}}
@@ -1444,7 +1453,7 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 			this._bypassMinutes(t.id, n);
 		}}
         >
-          ${N(e, "zones.bypass_minutes")}
+          ${M(e, "zones.bypass_minutes")}
         </button>
       </label>
     </div>` : T;
@@ -1455,21 +1464,21 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
 	}
 	_zoneStatus(e, t) {
 		let n = this.ctx;
-		if (t.fault) return C`<span class="state fault">${N(e, `fault.${t.fault}`)}</span>`;
+		if (t.fault) return C`<span class="state fault">${M(e, `fault.${t.fault}`)}</span>`;
 		if (t.bypassed) {
-			let r = t.bypass_until ? N(e, "zones.bypass_until", { time: new Date(t.bypass_until).toLocaleTimeString(n.hass.language, {
+			let r = t.bypass_until ? M(e, "zones.bypass_until", { time: new Date(t.bypass_until).toLocaleTimeString(n.hass.language, {
 				hour: "2-digit",
 				minute: "2-digit"
-			}) }) : N(e, "zones.bypass_indefinite");
-			return C`<span class="state bypassed">${N(e, `bypass.${t.bypassed}`)}</span>
+			}) }) : M(e, "zones.bypass_indefinite");
+			return C`<span class="state bypassed">${M(e, `bypass.${t.bypassed}`)}</span>
         <span class="hint">${t.bypassed === "manual" ? r : ""}</span>`;
 		}
-		return C`<span class="state open">${N(e, "zone_status.open")}</span>`;
+		return C`<span class="state open">${M(e, "zone_status.open")}</span>`;
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
 			o`
       .recent {
         display: flex;
@@ -1682,14 +1691,13 @@ var $e = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), et = class extend
     `
 		];
 	}
-};
-customElements.get("foyer-page-overview") || customElements.define("foyer-page-overview", et);
+});
 //#endregion
 //#region node_modules/lit-html/directive-helpers.js
-var { I: tt } = je, nt = (e) => e.strings === void 0, rt = {}, it = (e, t = rt) => e._$AH = t, W = Fe(class extends Ie {
+var { I: rt } = je, it = (e) => e.strings === void 0, at = {}, ot = (e, t = at) => e._$AH = t, W = Ie(class extends Le {
 	constructor(e) {
-		if (super(e), e.type !== M.PROPERTY && e.type !== M.ATTRIBUTE && e.type !== M.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
-		if (!nt(e)) throw Error("`live` bindings can only contain a single expression");
+		if (super(e), e.type !== j.PROPERTY && e.type !== j.ATTRIBUTE && e.type !== j.BOOLEAN_ATTRIBUTE) throw Error("The `live` directive is not allowed on child or event bindings");
+		if (!it(e)) throw Error("`live` bindings can only contain a single expression");
 	}
 	render(e) {
 		return e;
@@ -1697,44 +1705,42 @@ var { I: tt } = je, nt = (e) => e.strings === void 0, rt = {}, it = (e, t = rt) 
 	update(e, [t]) {
 		if (t === w || t === T) return t;
 		let n = e.element, r = e.name;
-		if (e.type === M.PROPERTY) {
+		if (e.type === j.PROPERTY) {
 			if (t === n[r]) return w;
-		} else if (e.type === M.BOOLEAN_ATTRIBUTE) {
+		} else if (e.type === j.BOOLEAN_ATTRIBUTE) {
 			if (!!t === n.hasAttribute(r)) return w;
-		} else if (e.type === M.ATTRIBUTE && n.getAttribute(r) === t + "") return w;
-		return it(e), t;
+		} else if (e.type === j.ATTRIBUTE && n.getAttribute(r) === t + "") return w;
+		return ot(e), t;
 	}
 });
 //#endregion
 //#region src/panel/code-fields.ts
-function at(e, t, n, r) {
+function st(e, t, n, r) {
 	return C`<label class="field">
-    <span class="lbl">${N(e, t)}</span>
+    <span class="lbl">${M(e, t)}</span>
     <select
       @change=${(e) => {
 		let t = e.target.value;
 		r(t === "" ? null : t === "yes");
 	}}
     >
-      <option value="" .selected=${W(n === null)}>${N(e, "code_policy.inherit")}</option>
-      <option value="yes" .selected=${W(n === !0)}>${N(e, "code_policy.required")}</option>
-      <option value="no" .selected=${W(n === !1)}>${N(e, "code_policy.not_required")}</option>
+      <option value="" .selected=${W(n === null)}>${M(e, "code_policy.inherit")}</option>
+      <option value="yes" .selected=${W(n === !0)}>${M(e, "code_policy.required")}</option>
+      <option value="no" .selected=${W(n === !1)}>${M(e, "code_policy.not_required")}</option>
     </select>
   </label>`;
 }
-function ot(e, t, n, r) {
+function ct(e, t, n, r) {
 	return C`
-    ${at(e, "field.require_code_to_arm", t.require_code_to_arm, (e) => n("require_code_to_arm", e))}
-    ${at(e, "field.require_code_to_disarm", t.require_code_to_disarm, (e) => n("require_code_to_disarm", e))}
+    ${st(e, "field.require_code_to_arm", t.require_code_to_arm, (e) => n("require_code_to_arm", e))}
+    ${st(e, "field.require_code_to_disarm", t.require_code_to_disarm, (e) => n("require_code_to_disarm", e))}
     <p class="hint span">
-      ${N(e, "code_policy.strictest")}
-      ${r ? T : C` ${N(e, "code_policy.inert")}`}
+      ${M(e, "code_policy.strictest")}
+      ${r ? T : C` ${M(e, "code_policy.inert")}`}
     </p>
   `;
 }
-//#endregion
-//#region src/panel/delete-button.ts
-var st = class extends j {
+U("foyer-delete-button", class extends A {
 	constructor(...e) {
 		super(...e), this.name = "", this.message = "common.confirm_delete", this.disabled = !1, this._asking = !1;
 	}
@@ -1756,13 +1762,13 @@ var st = class extends j {
 	render() {
 		let e = this.strings;
 		return this._asking ? C`<div class="ask" role="alertdialog" aria-labelledby="q">
-      <span id="q">${N(e, this.message, { name: this.name })}</span>
+      <span id="q">${M(e, this.message, { name: this.name })}</span>
       <span class="buttons">
         <button class="btn danger" ?disabled=${this.disabled} @click=${this._confirm}>
-          ${N(e, "common.delete")}
+          ${M(e, "common.delete")}
         </button>
         <button class="btn" @click=${() => this._asking = !1}>
-          ${N(e, "common.cancel")}
+          ${M(e, "common.cancel")}
         </button>
       </span>
     </div>` : C`<button
@@ -1770,7 +1776,7 @@ var st = class extends j {
         ?disabled=${this.disabled}
         @click=${() => this._asking = !0}
       >
-        ${N(e, "common.delete")}
+        ${M(e, "common.delete")}
       </button>`;
 	}
 	willUpdate(e) {
@@ -1782,7 +1788,7 @@ var st = class extends j {
 		this.renderRoot.querySelector(t)?.focus();
 	}
 	static {
-		this.styles = [F, o`
+		this.styles = [P, o`
       :host {
         display: contents;
       }
@@ -1807,11 +1813,10 @@ var st = class extends j {
       }
     `];
 	}
-};
-customElements.get("foyer-delete-button") || customElements.define("foyer-delete-button", st);
+});
 //#endregion
 //#region src/panel/profile-picker.ts
-function ct(e, t, n = null) {
+function lt(e, t, n = null) {
 	let r = e.areas.find((e) => e.id === t), i = n ? e.scenarios.find((e) => e.id === n) : e.scenarios.find((e) => r?.id && e.areas.includes(r.id) && e.response_profile_id), a = (t) => e.profiles?.find((e) => e.id === t), o = a(r?.response_profile_id);
 	if (o) return {
 		name: o.name,
@@ -1834,9 +1839,9 @@ function ct(e, t, n = null) {
 function G(e, t, n, r) {
 	let i = e.strings, a = e.config?.profiles ?? [];
 	return C`<label class="field">
-    <span class="lbl">${N(i, "field.response_profile_id")}</span>
+    <span class="lbl">${M(i, "field.response_profile_id")}</span>
     <select @change=${(e) => n(e.target.value || null)}>
-      <option value="" .selected=${W(!t)}>${N(i, "profiles.inherit")}</option>
+      <option value="" .selected=${W(!t)}>${M(i, "profiles.inherit")}</option>
       ${a.map((e) => C`<option .value=${e.id ?? ""} .selected=${W(e.id === t)}>
           ${e.name}
         </option>`)}
@@ -1844,19 +1849,19 @@ function G(e, t, n, r) {
     ${r ? C`<span class="hint">${r}</span>` : T}
   </label>`;
 }
-function lt(e, t) {
+function ut(e, t) {
 	if (!e.config) return T;
-	let n = e.status?.areas.find((e) => e.id === t)?.scenario_id ?? null, { name: r, source: i } = ct(e.config, t, n), a = e.strings;
-	return i === "none" ? C`<p class="hint">${N(a, "profiles.inherited_none")}</p>` : C`<p class="hint">
-    ${N(a, "profiles.effective_from", {
+	let n = e.status?.areas.find((e) => e.id === t)?.scenario_id ?? null, { name: r, source: i } = lt(e.config, t, n), a = e.strings;
+	return i === "none" ? C`<p class="hint">${M(a, "profiles.inherited_none")}</p>` : C`<p class="hint">
+    ${M(a, "profiles.effective_from", {
 		profile: r,
-		from: N(a, `profiles.inherited_from_${i}`)
+		from: M(a, `profiles.inherited_from_${i}`)
 	})}
   </p>`;
 }
 //#endregion
 //#region src/panel/pages/areas.ts
-var ut = {
+var dt = {
 	name: "",
 	ha_state_when_armed: "armed_away",
 	default_entry_delay: 30,
@@ -1865,7 +1870,8 @@ var ut = {
 	require_code_to_arm: null,
 	require_code_to_disarm: null,
 	is_perimeter: !1
-}, dt = class extends j {
+};
+U("foyer-page-areas", class extends A {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -1881,10 +1887,10 @@ var ut = {
 		if (this._busy) return;
 		let t = this.ctx?.config?.settings;
 		this._draft = e ? { ...e } : {
-			...ut,
-			default_entry_delay: t?.default_entry_delay ?? ut.default_entry_delay,
-			default_exit_delay: t?.default_exit_delay ?? ut.default_exit_delay
-		}, this._problems = [], R(this);
+			...dt,
+			default_entry_delay: t?.default_entry_delay ?? dt.default_entry_delay,
+			default_exit_delay: t?.default_exit_delay ?? dt.default_exit_delay
+		}, this._problems = [], L(this);
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -1897,7 +1903,7 @@ var ut = {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("area", this._draft);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -1921,21 +1927,21 @@ var ut = {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "areas.title")}</h2>
+          <h2>${M(t, "areas.title")}</h2>
           <button class="btn primary" @click=${() => this._edit()}>
-            ${N(t, "areas.add")}
+            ${M(t, "areas.add")}
           </button>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>${N(t, "field.name")}</th>
-                <th>${N(t, "overview.status")}</th>
-                <th>${N(t, "areas.zones")}</th>
-                <th>${N(t, "field.default_entry_delay")}</th>
-                <th>${N(t, "field.default_exit_delay")}</th>
-                <th>${N(t, "field.ha_state_when_armed")}</th>
+                <th>${M(t, "field.name")}</th>
+                <th>${M(t, "overview.status")}</th>
+                <th>${M(t, "areas.zones")}</th>
+                <th>${M(t, "field.default_entry_delay")}</th>
+                <th>${M(t, "field.default_exit_delay")}</th>
+                <th>${M(t, "field.ha_state_when_armed")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1944,16 +1950,16 @@ var ut = {
 			return C`<tr
                   class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
                   aria-selected=${this._draft?.id === e.id ? "true" : "false"}
                   @click=${() => this._edit(e)}
                 >
                   <td><strong>${e.name}</strong></td>
-                  <td><span class="state ${i}">${N(t, `state.${i}`)}</span></td>
+                  <td><span class="state ${i}">${M(t, `state.${i}`)}</span></td>
                   <td>${r(e.id)}</td>
-                  <td>${N(t, "common.seconds", { n: e.default_entry_delay })}</td>
-                  <td>${N(t, "common.seconds", { n: e.default_exit_delay })}</td>
-                  <td>${N(t, `ha_state.${e.ha_state_when_armed}`)}</td>
+                  <td>${M(t, "common.seconds", { n: e.default_entry_delay })}</td>
+                  <td>${M(t, "common.seconds", { n: e.default_exit_delay })}</td>
+                  <td>${M(t, `ha_state.${e.ha_state_when_armed}`)}</td>
                 </tr>`;
 		})}
             </tbody>
@@ -1968,52 +1974,52 @@ var ut = {
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "areas.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "areas.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.ha_state_when_armed")}</span>
+              <span class="lbl">${M(e, "field.ha_state_when_armed")}</span>
               <select
                 @change=${(e) => this._set("ha_state_when_armed", e.target.value)}
               >
                 ${(n?.ha_states ?? []).map((n) => C`<option .value=${n} .selected=${W(n === t.ha_state_when_armed)}>
-                      ${N(e, `ha_state.${n}`)}
+                      ${M(e, `ha_state.${n}`)}
                     </option>`)}
               </select>
-              <span class="hint">${N(e, "areas.reports_as_hint")}</span>
+              <span class="hint">${M(e, "areas.reports_as_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.default_entry_delay")}</span>
+              <span class="lbl">${M(e, "field.default_entry_delay")}</span>
               <input
                 type="number"
                 min=${r}
                 max=${a}
                 .value=${String(t.default_entry_delay)}
-                @input=${(e) => H(e, (e) => this._set("default_entry_delay", e))}
+                @input=${(e) => V(e, (e) => this._set("default_entry_delay", e))}
               />
-              <span class="hint">${N(e, "areas.entry_hint")}</span>
+              <span class="hint">${M(e, "areas.entry_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.default_exit_delay")}</span>
+              <span class="lbl">${M(e, "field.default_exit_delay")}</span>
               <input
                 type="number"
                 min=${r}
                 max=${i}
                 .value=${String(t.default_exit_delay)}
-                @input=${(e) => H(e, (e) => this._set("default_exit_delay", e))}
+                @input=${(e) => V(e, (e) => this._set("default_exit_delay", e))}
               />
-              <span class="hint">${N(e, "areas.exit_hint")}</span>
+              <span class="hint">${M(e, "areas.exit_hint")}</span>
             </label>
             ${G(this.ctx, t.response_profile_id, (e) => this._set("response_profile_id", e))}
-            ${ot(e, t, (e, t) => this._set(e, t), this.ctx.status.security.enforced)}
+            ${ct(e, t, (e, t) => this._set(e, t), this.ctx.status.security.enforced)}
           </div>
           <label class="check">
             <input
@@ -2022,22 +2028,22 @@ var ut = {
               @change=${(e) => this._set("is_perimeter", e.target.checked)}
             />
             <span>
-              ${N(e, "field.is_perimeter")}
-              <span class="hint">${N(e, "areas.perimeter_hint")}</span>
+              ${M(e, "field.is_perimeter")}
+              <span class="hint">${M(e, "areas.perimeter_hint")}</span>
             </span>
           </label>
-          ${lt(this.ctx, t.id ?? null)}
+          ${ut(this.ctx, t.id ?? null)}
           ${this._problems.length ? C`<div class="problems" role="alert">
                 <ul>
-                  ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                  ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
                 </ul>
               </div>` : T}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-              ${N(e, "common.save")}
+              ${M(e, "common.save")}
             </button>
             <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
-              ${N(e, "common.cancel")}
+              ${M(e, "common.cancel")}
             </button>
             ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -2051,10 +2057,9 @@ var ut = {
     `;
 	}
 	static {
-		this.styles = [P, F];
+		this.styles = [N, P];
 	}
-};
-customElements.get("foyer-page-areas") || customElements.define("foyer-page-areas", dt);
+});
 //#endregion
 //#region src/panel/ha-targets.ts
 function ft(e, t) {
@@ -2151,7 +2156,8 @@ function St(e) {
 		silent: !1
 	};
 }
-var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j {
+var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t);
+U("foyer-page-zones", class extends A {
 	constructor(...e) {
 		super(...e), this._confirmed = !1, this._problems = [], this._busy = !1, this._filter = "", this._customState = "";
 	}
@@ -2171,7 +2177,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 	_edit(e) {
 		if (this._busy) return;
 		let t = this.ctx?.config?.areas[0]?.id ?? "";
-		this._draft = e ? structuredClone(e) : xt(t), this._saved = e, this._proposal = void 0, this._confirmed = !1, this._problems = [], e && this._propose(e.entity_id, !1), R(this);
+		this._draft = e ? structuredClone(e) : xt(t), this._saved = e, this._proposal = void 0, this._confirmed = !1, this._problems = [], e && this._propose(e.entity_id, !1), L(this);
 	}
 	_set(e, t) {
 		this._draft && (this._draft = {
@@ -2246,7 +2252,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("zone", this._draft, this._confirmed);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -2270,36 +2276,36 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		return e.config.areas.length ? C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "zones.title")}</h2>
-          <button class="btn primary" @click=${() => this._edit()}>${N(t, "zones.add")}</button>
+          <h2>${M(t, "zones.title")}</h2>
+          <button class="btn primary" @click=${() => this._edit()}>${M(t, "zones.add")}</button>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>${N(t, "field.name")}</th>
-                <th>${N(t, "field.entity_id")}</th>
-                <th>${N(t, "field.area_id")}</th>
-                <th>${N(t, "field.type")}</th>
-                <th>${N(t, "field.arm_policy")}</th>
-                <th>${N(t, "overview.status")}</th>
+                <th>${M(t, "field.name")}</th>
+                <th>${M(t, "field.entity_id")}</th>
+                <th>${M(t, "field.area_id")}</th>
+                <th>${M(t, "field.type")}</th>
+                <th>${M(t, "field.arm_policy")}</th>
+                <th>${M(t, "overview.status")}</th>
               </tr>
             </thead>
             <tbody>
               ${e.config.zones.map((e) => C`<tr
                   class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
                   aria-selected=${this._draft?.id === e.id ? "true" : "false"}
                   @click=${() => this._edit(e)}
                 >
                   <td><strong>${e.name}</strong></td>
                   <td class="mono">${e.entity_id}</td>
                   <td>${n.get(e.area_id) ?? ""}</td>
-                  <td><span class="tag">${N(t, `zone_type.${e.type}`)}</span></td>
-                  <td>${N(t, `arm_policy.${e.arm_policy}`)}</td>
+                  <td><span class="tag">${M(t, `zone_type.${e.type}`)}</span></td>
+                  <td>${M(t, `arm_policy.${e.arm_policy}`)}</td>
                   <td>
-                    ${e.trigger_confirmed === !1 ? C`<span class="state fault">${N(t, "zone_status.unconfirmed")}</span>` : this._health(t, r.get(e.id ?? ""))}
+                    ${e.trigger_confirmed === !1 ? C`<span class="state fault">${M(t, "zone_status.unconfirmed")}</span>` : this._health(t, r.get(e.id ?? ""))}
                   </td>
                 </tr>`)}
             </tbody>
@@ -2307,25 +2313,25 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
         </div>
       </div>
       ${this._draft ? this._renderEditor(t, this._draft) : T}
-    ` : C`<div class="card"><div class="empty">${N(t, "zones.no_areas")}</div></div>`;
+    ` : C`<div class="card"><div class="empty">${M(t, "zones.no_areas")}</div></div>`;
 	}
 	_health(e, t) {
 		if (!t) return T;
-		if (!t.enabled) return C`<span class="state disabled">${N(e, "zone_status.disabled")}</span>`;
-		if (t.fault) return C`<span class="state fault">${N(e, `fault.${t.fault}`)}</span>`;
-		if (t.bypassed) return C`<span class="state bypassed">${N(e, `bypass.${t.bypassed}`)}</span>`;
+		if (!t.enabled) return C`<span class="state disabled">${M(e, "zone_status.disabled")}</span>`;
+		if (t.fault) return C`<span class="state fault">${M(e, `fault.${t.fault}`)}</span>`;
+		if (t.bypassed) return C`<span class="state bypassed">${M(e, `bypass.${t.bypassed}`)}</span>`;
 		let n = t.open ? "open" : "closed";
-		return C`<span class="state ${n}">${N(e, `zone_status.${n}`)}</span>`;
+		return C`<span class="state ${n}">${M(e, `zone_status.${n}`)}</span>`;
 	}
 	_renderEditor(e, t) {
 		let n = this.ctx;
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "zones.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "zones.new")}</h2>
         </div>
         <div class="card-bd">
-          ${this._saved?.trigger_confirmed === !1 ? C`<div class="notice">${N(e, "zones.unconfirmed_notice")}</div>` : T}
+          ${this._saved?.trigger_confirmed === !1 ? C`<div class="notice">${M(e, "zones.unconfirmed_notice")}</div>` : T}
           ${t.id ? T : this._renderEntityPicker(e, t)}
           ${t.entity_id ? C`
                 ${this._renderTrigger(e, t)} ${this._renderProperties(e, t)}
@@ -2335,7 +2341,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
               ` : T}
           ${this._problems.length ? C`<div class="problems" role="alert">
                 <ul>
-                  ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                  ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
                 </ul>
               </div>` : T}
           <div class="actions">
@@ -2344,10 +2350,10 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
               ?disabled=${this._busy || !t.entity_id || this._needsConfirmation() && !this._confirmed}
               @click=${this._save}
             >
-              ${N(e, "common.save")}
+              ${M(e, "common.save")}
             </button>
             <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
-              ${N(e, "common.cancel")}
+              ${M(e, "common.cancel")}
             </button>
             ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -2356,8 +2362,8 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                 @confirm=${this._delete}
               ></foyer-delete-button>` : T}
           </div>
-          ${this._needsConfirmation() && !this._confirmed && t.entity_id ? C`<div class="hint">${N(e, "zones.confirm_first")}</div>` : T}
-          ${n.status.areas.some((e) => e.id === t.area_id && e.state !== "disarmed") ? C`<div class="notice">${N(e, "zones.area_armed")}</div>` : T}
+          ${this._needsConfirmation() && !this._confirmed && t.entity_id ? C`<div class="hint">${M(e, "zones.confirm_first")}</div>` : T}
+          ${n.status.areas.some((e) => e.id === t.area_id && e.state !== "disarmed") ? C`<div class="notice">${M(e, "zones.area_armed")}</div>` : T}
         </div>
       </div>
     `;
@@ -2370,29 +2376,29 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		return C`
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "zones.search")}</span>
+          <span class="lbl">${M(e, "zones.search")}</span>
           <input
             .value=${this._filter}
             @input=${(e) => this._filter = e.target.value}
           />
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "field.entity_id")}</span>
+          <span class="lbl">${M(e, "field.entity_id")}</span>
           <select
             @change=${(e) => this._propose(e.target.value, !0)}
           >
-            <option value="" .selected=${W(!t.entity_id)}>${N(e, "zones.pick_entity")}</option>
+            <option value="" .selected=${W(!t.entity_id)}>${M(e, "zones.pick_entity")}</option>
             ${o.map((n) => C`<option
                 .value=${n.entity_id}
                 .selected=${W(n.entity_id === t.entity_id)}
               >
-                ${N(e, i.has(n.entity_id) ? "zones.entity_used" : "zones.entity", {
+                ${M(e, i.has(n.entity_id) ? "zones.entity_used" : "zones.entity", {
 			name: String(n.attributes.friendly_name ?? n.entity_id),
 			entity: n.entity_id
 		})}
               </option>`)}
           </select>
-          <span class="hint">${N(e, "zones.entity_hint")}</span>
+          <span class="hint">${M(e, "zones.entity_hint")}</span>
         </label>
       </div>
     `;
@@ -2401,17 +2407,17 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		let n = this.ctx, r = n.hass.states[t.entity_id], i = r?.state ?? "unavailable", a = t.entity_id.split(".")[0], o = t.trigger;
 		return C`
       <fieldset>
-        <legend>${N(e, "zones.trigger_title")}</legend>
+        <legend>${M(e, "zones.trigger_title")}</legend>
         <p class="hint">
-          ${N(e, "zones.trigger_intro", {
+          ${M(e, "zones.trigger_intro", {
 			entity: String(r?.attributes.friendly_name ?? t.entity_id),
 			state: J(n.hass, t.entity_id, i)
 		})}
-          ${this._proposal?.device_class ? N(e, "zones.device_class", { device_class: this._proposal.device_class }) : T}
+          ${this._proposal?.device_class ? M(e, "zones.device_class", { device_class: this._proposal.device_class }) : T}
         </p>
         ${yt.has(a) ? this._renderEventTrigger(e, a, o) : C`
               <label class="field">
-                <span class="lbl">${N(e, "zones.trigger_kind")}</span>
+                <span class="lbl">${M(e, "zones.trigger_kind")}</span>
                 <select
                   @change=${(e) => {
 			let t = e.target.value;
@@ -2428,10 +2434,10 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		}}
                 >
                   <option value="state" .selected=${W(o.kind === "state")}>
-                    ${N(e, "zones.kind_state")}
+                    ${M(e, "zones.kind_state")}
                   </option>
                   <option value="numeric" .selected=${W(o.kind === "numeric")}>
-                    ${N(e, "zones.kind_numeric")}
+                    ${M(e, "zones.kind_numeric")}
                   </option>
                 </select>
               </label>
@@ -2445,8 +2451,8 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
             @change=${(e) => this._confirmed = e.target.checked}
           />
           <span>
-            ${N(e, "zones.confirm")}
-            <span class="hint">${N(e, "zones.confirm_hint")}</span>
+            ${M(e, "zones.confirm")}
+            <span class="hint">${M(e, "zones.confirm_hint")}</span>
           </span>
         </label>
       </fieldset>
@@ -2471,12 +2477,12 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
               @change=${(e) => o(a, e.target.checked)}
             />
             <span>${J(i, t, a)}</span>
-            ${a === r ? C`<span class="tag">${N(e, "zones.now")}</span>` : T}
+            ${a === r ? C`<span class="tag">${M(e, "zones.now")}</span>` : T}
           </label>`)}
       </div>
       <div class="row">
         <label class="field">
-          <span class="lbl">${N(e, "zones.other_state")}</span>
+          <span class="lbl">${M(e, "zones.other_state")}</span>
           <input
             .value=${this._customState}
             @input=${(e) => this._customState = e.target.value}
@@ -2489,10 +2495,10 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			o(this._customState.trim(), !0), this._customState = "";
 		}}
         >
-          ${N(e, "zones.add_state")}
+          ${M(e, "zones.add_state")}
         </button>
       </div>
-      <div class="hint">${N(e, "zones.state_hint")}</div>
+      <div class="hint">${M(e, "zones.state_hint")}</div>
     `;
 	}
 	_renderNumericTrigger(e, t) {
@@ -2503,7 +2509,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		return C`
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "zones.operator")}</span>
+          <span class="lbl">${M(e, "zones.operator")}</span>
           <select
             @change=${(e) => n({ operator: e.target.value })}
           >
@@ -2512,12 +2518,12 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			"lt",
 			"eq"
 		].map((n) => C`<option .value=${n} .selected=${W(n === t.operator)}>
-                  ${N(e, `operator.${n}`)}
+                  ${M(e, `operator.${n}`)}
                 </option>`)}
           </select>
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "zones.threshold")}</span>
+          <span class="lbl">${M(e, "zones.threshold")}</span>
           <input
             type="number"
             step="any"
@@ -2526,7 +2532,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
           />
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "zones.hysteresis")}</span>
+          <span class="lbl">${M(e, "zones.hysteresis")}</span>
           <input
             type="number"
             step="any"
@@ -2535,35 +2541,35 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
             .value=${String(t.hysteresis)}
             @input=${(e) => n({ hysteresis: Number(e.target.value) })}
           />
-          <span class="hint">${N(e, "zones.hysteresis_hint")}</span>
+          <span class="hint">${M(e, "zones.hysteresis_hint")}</span>
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "zones.attribute")}</span>
+          <span class="lbl">${M(e, "zones.attribute")}</span>
           <input
             .value=${t.attribute ?? ""}
             @input=${(e) => n({ attribute: e.target.value.trim() || null })}
           />
-          <span class="hint">${N(e, "zones.attribute_hint")}</span>
+          <span class="hint">${M(e, "zones.attribute_hint")}</span>
         </label>
       </div>
     `;
 	}
 	_renderEventTrigger(e, t, n) {
-		if (t === "tag") return C`<p class="hint">${N(e, "zones.tag_hint")}</p>`;
+		if (t === "tag") return C`<p class="hint">${M(e, "zones.tag_hint")}</p>`;
 		let r = n.kind === "event" ? n.event_type : null;
 		return C`
       <label class="field">
-        <span class="lbl">${N(e, "zones.event_type")}</span>
+        <span class="lbl">${M(e, "zones.event_type")}</span>
         <select
           @change=${(e) => this._set("trigger", {
 			kind: "event",
 			event_type: e.target.value || null
 		})}
         >
-          <option value="" .selected=${W(!r)}>${N(e, "zones.pick_event")}</option>
+          <option value="" .selected=${W(!r)}>${M(e, "zones.pick_event")}</option>
           ${(this._proposal?.options ?? []).map((e) => C`<option .value=${e} .selected=${W(e === r)}>${e}</option>`)}
         </select>
-        <span class="hint">${N(e, "zones.event_hint")}</span>
+        <span class="hint">${M(e, "zones.event_hint")}</span>
       </label>
     `;
 	}
@@ -2579,37 +2585,37 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		}}
         />
         <span>
-          ${N(e, `field.${n}`)}
-          ${r ? C`<span class="hint">${N(e, r)}</span>` : T}
+          ${M(e, `field.${n}`)}
+          ${r ? C`<span class="hint">${M(e, r)}</span>` : T}
         </span>
       </label>
     `;
 		return C`
       <fieldset>
-        <legend>${N(e, "zones.properties_title")}</legend>
+        <legend>${M(e, "zones.properties_title")}</legend>
         <div class="grid-form">
           <label class="field">
-            <span class="lbl">${N(e, "field.name")}</span>
+            <span class="lbl">${M(e, "field.name")}</span>
             <input
               .value=${t.name}
               @input=${(e) => this._set("name", e.target.value)}
             />
           </label>
           <label class="field">
-            <span class="lbl">${N(e, "field.type")}</span>
+            <span class="lbl">${M(e, "field.type")}</span>
             <select @change=${(e) => this._applyType(e.target.value)}>
               ${(r?.zone_types ?? []).map((n) => C`<option
                   .value=${n.type}
                   .selected=${W(n.type === t.type)}
                   ?disabled=${!n.available}
                 >
-                  ${N(e, n.available ? `zone_type.${n.type}` : "zones.type_unavailable", { type: N(e, `zone_type.${n.type}`) })}
+                  ${M(e, n.available ? `zone_type.${n.type}` : "zones.type_unavailable", { type: M(e, `zone_type.${n.type}`) })}
                 </option>`)}
             </select>
-            <span class="hint">${N(e, "zones.type_hint")}</span>
+            <span class="hint">${M(e, "zones.type_hint")}</span>
           </label>
           <label class="field">
-            <span class="lbl">${N(e, "field.area_id")}</span>
+            <span class="lbl">${M(e, "field.area_id")}</span>
             <select
               @change=${(e) => this._set("area_id", e.target.value)}
             >
@@ -2619,7 +2625,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
             </select>
           </label>
           <label class="field">
-            <span class="lbl">${N(e, "field.channel")}</span>
+            <span class="lbl">${M(e, "field.channel")}</span>
             <select
               @change=${(e) => {
 			let n = e.target.value;
@@ -2645,13 +2651,13 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			"key",
 			"technical"
 		].map((n) => C`<option .value=${n} .selected=${W(n === t.channel)}>
-                    ${N(e, `channel.${n}`)}
+                    ${M(e, `channel.${n}`)}
                   </option>`)}
             </select>
           </label>
           ${a ? C`
                 <label class="field">
-                  <span class="lbl">${N(e, "field.entry_mode")}</span>
+                  <span class="lbl">${M(e, "field.entry_mode")}</span>
                   <select
                     ?disabled=${t.always_on}
                     @change=${(e) => {
@@ -2664,25 +2670,25 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			"delayed",
 			"follower"
 		].map((n) => C`<option .value=${n} .selected=${W(n === t.entry_mode)}>
-                          ${N(e, `entry_mode.${n}`)}
+                          ${M(e, `entry_mode.${n}`)}
                         </option>`)}
                   </select>
-                  <span class="hint">${N(e, `entry_mode_hint.${t.entry_mode}`)}</span>
+                  <span class="hint">${M(e, `entry_mode_hint.${t.entry_mode}`)}</span>
                 </label>
                 <label class="field">
-                  <span class="lbl">${N(e, "field.entry_delay")}</span>
+                  <span class="lbl">${M(e, "field.entry_delay")}</span>
                   <input
                     type="number"
                     min="0"
                     max=${r?.bounds.entry_delay?.[1] ?? 300}
-                    placeholder=${N(e, "zones.inherit_seconds", { n: i?.default_entry_delay ?? 30 })}
+                    placeholder=${M(e, "zones.inherit_seconds", { n: i?.default_entry_delay ?? 30 })}
                     .value=${t.entry_delay == null ? "" : String(t.entry_delay)}
-                    @input=${(e) => this._set("entry_delay", U(e.target.value))}
+                    @input=${(e) => this._set("entry_delay", H(e.target.value))}
                   />
-                  <span class="hint">${N(e, "zones.entry_delay_hint")}</span>
+                  <span class="hint">${M(e, "zones.entry_delay_hint")}</span>
                 </label>
                 <label class="field">
-                  <span class="lbl">${N(e, "field.alarm_kind")}</span>
+                  <span class="lbl">${M(e, "field.alarm_kind")}</span>
                   <select
                     @change=${(e) => this._set("alarm_kind", e.target.value)}
                   >
@@ -2691,12 +2697,12 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			"tamper",
 			"panic"
 		].map((n) => C`<option .value=${n} .selected=${W(n === t.alarm_kind)}>
-                          ${N(e, `alarm_kind.${n}`)}
+                          ${M(e, `alarm_kind.${n}`)}
                         </option>`)}
                   </select>
                 </label>
                 <label class="field">
-                  <span class="lbl">${N(e, "field.arm_policy")}</span>
+                  <span class="lbl">${M(e, "field.arm_policy")}</span>
                   <select
                     @change=${(e) => {
 			let t = e.target.value;
@@ -2709,42 +2715,42 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			"arm_after_closing",
 			"ignore"
 		].map((n) => C`<option .value=${n} .selected=${W(n === t.arm_policy)}>
-                          ${N(e, `arm_policy.${n}`)}
+                          ${M(e, `arm_policy.${n}`)}
                         </option>`)}
                   </select>
-                  <span class="hint">${N(e, `arm_policy_hint.${t.arm_policy}`)}</span>
+                  <span class="hint">${M(e, `arm_policy_hint.${t.arm_policy}`)}</span>
                 </label>
                 ${t.arm_policy === "arm_after_closing" ? C`<label class="field">
-                      <span class="lbl">${N(e, "field.arm_hold_timeout")}</span>
+                      <span class="lbl">${M(e, "field.arm_hold_timeout")}</span>
                       <input
                         type="number"
                         min=${r?.bounds.arm_hold_timeout?.[0] ?? 60}
                         max=${r?.bounds.arm_hold_timeout?.[1] ?? 1800}
-                        placeholder=${N(e, "zones.inherit_seconds", { n: n.config?.settings.arm_hold_timeout ?? 300 })}
+                        placeholder=${M(e, "zones.inherit_seconds", { n: n.config?.settings.arm_hold_timeout ?? 300 })}
                         .value=${t.arm_hold_timeout == null ? "" : String(t.arm_hold_timeout)}
-                        @input=${(e) => this._set("arm_hold_timeout", U(e.target.value))}
+                        @input=${(e) => this._set("arm_hold_timeout", H(e.target.value))}
                       />
-                      <span class="hint">${N(e, "zones.hold_hint")}</span>
+                      <span class="hint">${M(e, "zones.hold_hint")}</span>
                     </label>` : T}
               ` : T}
           <label class="field">
-            <span class="lbl">${N(e, "field.supervision_timeout")}</span>
+            <span class="lbl">${M(e, "field.supervision_timeout")}</span>
             <input
               type="number"
               min=${r?.bounds.supervision_timeout?.[0] ?? 60}
-              placeholder=${N(e, "zones.off")}
+              placeholder=${M(e, "zones.off")}
               .value=${t.supervision_timeout == null ? "" : String(t.supervision_timeout)}
-              @input=${(e) => this._set("supervision_timeout", U(e.target.value))}
+              @input=${(e) => this._set("supervision_timeout", H(e.target.value))}
             />
-            <span class="hint">${N(e, "zones.supervision_hint")}</span>
+            <span class="hint">${M(e, "zones.supervision_hint")}</span>
           </label>
           <label class="field">
-            <span class="lbl">${N(e, "field.battery_entity_id")}</span>
+            <span class="lbl">${M(e, "field.battery_entity_id")}</span>
             <select
               @change=${(e) => this._set("battery_entity_id", e.target.value || null)}
             >
               <option value="" .selected=${W(!t.battery_entity_id)}>
-                ${N(e, "zones.no_battery")}
+                ${M(e, "zones.no_battery")}
               </option>
               ${gt(n.hass).map((e) => C`<option
                   .value=${e.id}
@@ -2753,7 +2759,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                   ${e.name}
                 </option>`)}
             </select>
-            <span class="hint">${N(e, "zones.battery_hint")}</span>
+            <span class="hint">${M(e, "zones.battery_hint")}</span>
           </label>
         </div>
         ${this._renderCameras(e, t)}
@@ -2765,9 +2771,9 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
           ${o("allow_arm_when_faulted", "zones.allow_faulted_hint")}
           ${o("enabled", "zones.enabled_hint")}
         </div>
-        ${G(n, t.response_profile_id, (e) => this._set("response_profile_id", e), N(e, "profiles.zone_hint"))}
-        ${t.channel === "technical" ? C`<p class="hint">${N(e, "zones.technical_hint")}</p>
-              <div class="notice fire" role="note">${N(e, "zones.fire_statement")}</div>` : T}
+        ${G(n, t.response_profile_id, (e) => this._set("response_profile_id", e), M(e, "profiles.zone_hint"))}
+        ${t.channel === "technical" ? C`<p class="hint">${M(e, "zones.technical_hint")}</p>
+              <div class="notice fire" role="note">${M(e, "zones.fire_statement")}</div>` : T}
       </fieldset>
     `;
 	}
@@ -2777,7 +2783,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			n.splice(e + t, 0, i), this._set("camera_entity_ids", n);
 		};
 		return C`<div class="field cameras">
-      <span class="lbl">${N(e, "field.camera_entity_ids")}</span>
+      <span class="lbl">${M(e, "field.camera_entity_ids")}</span>
       ${r.length ? C`<ol class="camera-list" role="list">
             ${r.map((t, n) => C`<li>
                 <span class="camera-rank">${n + 1}</span>
@@ -2785,8 +2791,8 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                 <button
                   class="btn sm"
                   ?disabled=${n === 0}
-                  aria-label=${N(e, "zones.camera_up")}
-                  title=${N(e, "zones.camera_up")}
+                  aria-label=${M(e, "zones.camera_up")}
+                  title=${M(e, "zones.camera_up")}
                   @click=${() => o(n, -1)}
                 >
                   ↑
@@ -2794,8 +2800,8 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                 <button
                   class="btn sm"
                   ?disabled=${n === r.length - 1}
-                  aria-label=${N(e, "zones.camera_down")}
-                  title=${N(e, "zones.camera_down")}
+                  aria-label=${M(e, "zones.camera_down")}
+                  title=${M(e, "zones.camera_down")}
                   @click=${() => o(n, 1)}
                 >
                   ↓
@@ -2804,22 +2810,22 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                   class="btn sm"
                   @click=${() => this._set("camera_entity_ids", r.filter((e) => e !== t))}
                 >
-                  ${N(e, "zones.camera_remove")}
+                  ${M(e, "zones.camera_remove")}
                 </button>
               </li>`)}
           </ol>` : T}
       <select
-        aria-label=${N(e, "zones.camera_add")}
+        aria-label=${M(e, "zones.camera_add")}
         @change=${(e) => {
 			let t = e.target;
 			t.value && this._set("camera_entity_ids", [...r, t.value]), t.value = "";
 		}}
       >
-        <option value="" selected>${N(e, "zones.camera_add")}</option>
+        <option value="" selected>${M(e, "zones.camera_add")}</option>
         ${i.filter((e) => !r.includes(e.id)).map((e) => C`<option .value=${e.id}>${e.name}</option>`)}
       </select>
       <span class="hint"
-        >${r.length ? N(e, "zones.cameras_hint") : N(e, "zones.cameras_none_hint")}</span
+        >${r.length ? M(e, "zones.cameras_hint") : M(e, "zones.cameras_none_hint")}</span
       >
     </div>`;
 	}
@@ -2828,32 +2834,32 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		for (let e of n.config?.groups ?? []) e.members.forEach((e) => s.add(e));
 		for (let e of n.config?.zones ?? []) e.id && e.cross_zone_id && e.id !== t.id && e.cross_zone_id !== t.id && (s.add(e.id), s.add(e.cross_zone_id));
 		let c = (n.config?.zones ?? []).filter((e) => e.id !== t.id && e.channel === "intrusion" && (!s.has(e.id ?? "") || e.id === t.cross_zone_id)), l = new Map(n.config?.areas.map((e) => [e.id, e.name])), u = (e) => (t) => {
-			let n = U(t.target.value);
+			let n = H(t.target.value);
 			this._set(e, n ?? (e === "trigger_count" ? 1 : 60));
 		};
 		return C`
       <fieldset>
-        <legend>${N(e, "zones.verification_title")}</legend>
-        ${o ? C`<p class="notice">${N(e, "zones.in_group", { group: o.name })}</p>` : C`<div class="grid-form">
+        <legend>${M(e, "zones.verification_title")}</legend>
+        ${o ? C`<p class="notice">${M(e, "zones.in_group", { group: o.name })}</p>` : C`<div class="grid-form">
               <label class="field">
-                <span class="lbl">${N(e, "field.cross_zone_id")}</span>
+                <span class="lbl">${M(e, "field.cross_zone_id")}</span>
                 <select
                   @change=${(e) => this._set("cross_zone_id", e.target.value || null)}
                 >
                   <option value="" .selected=${W(!t.cross_zone_id)}>
-                    ${N(e, "zones.no_cross_zone")}
+                    ${M(e, "zones.no_cross_zone")}
                   </option>
                   ${c.map((n) => C`<option .value=${n.id ?? ""} .selected=${W(n.id === t.cross_zone_id)}>
-                      ${N(e, "zones.entity", {
+                      ${M(e, "zones.entity", {
 			name: n.name,
 			entity: l.get(n.area_id) ?? n.area_id
 		})}
                     </option>`)}
                 </select>
-                <span class="hint">${N(e, "zones.cross_zone_hint")}</span>
+                <span class="hint">${M(e, "zones.cross_zone_hint")}</span>
               </label>
               ${t.cross_zone_id ? C`<label class="field">
-                    <span class="lbl">${N(e, "field.cross_zone_window")}</span>
+                    <span class="lbl">${M(e, "field.cross_zone_window")}</span>
                     <input
                       type="number"
                       min=${i}
@@ -2861,12 +2867,12 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                       .value=${String(t.cross_zone_window)}
                       @input=${u("cross_zone_window")}
                     />
-                    <span class="hint">${N(e, "groups.window_hint")}</span>
+                    <span class="hint">${M(e, "groups.window_hint")}</span>
                   </label>` : T}
             </div>`}
         <div class="grid-form">
           <label class="field">
-            <span class="lbl">${N(e, "field.trigger_count")}</span>
+            <span class="lbl">${M(e, "field.trigger_count")}</span>
             <input
               type="number"
               min="1"
@@ -2874,10 +2880,10 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
               .value=${String(t.trigger_count)}
               @input=${u("trigger_count")}
             />
-            <span class="hint">${N(e, "zones.trigger_count_hint")}</span>
+            <span class="hint">${M(e, "zones.trigger_count_hint")}</span>
           </label>
           ${t.trigger_count > 1 ? C`<label class="field">
-                <span class="lbl">${N(e, "field.trigger_window")}</span>
+                <span class="lbl">${M(e, "field.trigger_window")}</span>
                 <input
                   type="number"
                   min=${i}
@@ -2885,7 +2891,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                   .value=${String(t.trigger_window)}
                   @input=${u("trigger_window")}
                 />
-                <span class="hint">${N(e, "groups.window_hint")}</span>
+                <span class="hint">${M(e, "groups.window_hint")}</span>
               </label>` : T}
         </div>
       </fieldset>
@@ -2895,7 +2901,7 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		let n = new Map(this.ctx?.config?.areas.map((e) => [e.id, e.name])), r = (this.ctx?.config?.zones ?? []).filter((e) => e.id !== t.id && e.channel === "intrusion" && e.entry_mode === "delayed"), i = (e, n) => this._set("follows", n ? [.../* @__PURE__ */ new Set([...t.follows, e])] : t.follows.filter((t) => t !== e));
 		return C`
       <fieldset>
-        <legend>${N(e, "field.follows")}</legend>
+        <legend>${M(e, "field.follows")}</legend>
         ${r.length ? r.map((r) => C`<label class="check">
                 <input
                   type="checkbox"
@@ -2903,13 +2909,13 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                   @change=${(e) => i(r.id ?? "", e.target.checked)}
                 />
                 <span>
-                  ${N(e, "zones.entity", {
+                  ${M(e, "zones.entity", {
 			name: r.name,
 			entity: n.get(r.area_id) ?? r.area_id
 		})}
                 </span>
-              </label>`) : C`<p class="hint">${N(e, "zones.no_delayed_zones")}</p>`}
-        <p class="hint">${N(e, "zones.follows_hint")}</p>
+              </label>`) : C`<p class="hint">${M(e, "zones.no_delayed_zones")}</p>`}
+        <p class="hint">${M(e, "zones.follows_hint")}</p>
       </fieldset>
     `;
 	}
@@ -2924,10 +2930,10 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 		}), i = this.ctx?.config?.scenarios ?? [];
 		return C`
       <fieldset>
-        <legend>${N(e, "zones.key_title")}</legend>
+        <legend>${M(e, "zones.key_title")}</legend>
         <div class="grid-form">
           <label class="field">
-            <span class="lbl">${N(e, "field.on_activate")}</span>
+            <span class="lbl">${M(e, "field.on_activate")}</span>
             <select
               @change=${(e) => r({ on_activate: e.target.value })}
             >
@@ -2936,17 +2942,17 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
 			"disarm",
 			"toggle"
 		].map((t) => C`<option .value=${t} .selected=${W(t === n.on_activate)}>
-                    ${N(e, `key_command.${t}`)}
+                    ${M(e, `key_command.${t}`)}
                   </option>`)}
             </select>
           </label>
           ${n.on_activate === "disarm" ? T : C`<label class="field">
-                <span class="lbl">${N(e, "field.scenario_id")}</span>
+                <span class="lbl">${M(e, "field.scenario_id")}</span>
                 <select
                   @change=${(e) => r({ scenario_id: e.target.value || null })}
                 >
                   <option value="" .selected=${W(!n.scenario_id)}>
-                    ${N(e, "zones.pick_scenario")}
+                    ${M(e, "zones.pick_scenario")}
                   </option>
                   ${i.map((e) => C`<option .value=${e.id ?? ""} .selected=${W(e.id === n.scenario_id)}>
                         ${e.name}
@@ -2954,12 +2960,12 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
                 </select>
               </label>`}
           <label class="field">
-            <span class="lbl">${N(e, "zones.key_person")}</span>
+            <span class="lbl">${M(e, "zones.key_person")}</span>
             <select
               @change=${(e) => r({ user_id: e.target.value || null })}
             >
               <option value="" .selected=${W(!n.user_id)}>
-                ${N(e, "zones.key_person_none")}
+                ${M(e, "zones.key_person_none")}
               </option>
               ${(this.ctx?.config?.users ?? []).map((e) => C`<option .value=${e.id ?? ""} .selected=${W(e.id === n.user_id)}>
                     ${e.name}
@@ -2967,24 +2973,24 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
             </select>
           </label>
           <label class="field">
-            <span class="lbl">${N(e, "field.on_deactivate")}</span>
+            <span class="lbl">${M(e, "field.on_deactivate")}</span>
             <select
               @change=${(e) => r({ on_deactivate: e.target.value })}
             >
               ${["none", "disarm"].map((t) => C`<option .value=${t} .selected=${W(t === n.on_deactivate)}>
-                    ${N(e, `key_release.${t}`)}
+                    ${M(e, `key_release.${t}`)}
                   </option>`)}
             </select>
           </label>
         </div>
-        <p class="hint">${N(e, "zones.key_hint")}</p>
+        <p class="hint">${M(e, "zones.key_hint")}</p>
       </fieldset>
     `;
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
 			o`
       .cameras {
         display: flex;
@@ -3048,11 +3054,10 @@ var Ct = (e, t) => JSON.stringify(e) === JSON.stringify(t), wt = class extends j
     `
 		];
 	}
-};
-customElements.get("foyer-page-zones") || customElements.define("foyer-page-zones", wt);
+});
 //#endregion
 //#region src/panel/pages/scenarios.ts
-var Tt = {
+var wt = {
 	name: "",
 	areas: [],
 	ha_master_state: "armed_away",
@@ -3063,7 +3068,8 @@ var Tt = {
 	require_code_to_arm: null,
 	require_code_to_disarm: null,
 	allowed_user_ids: null
-}, Et = class extends j {
+};
+U("foyer-page-scenarios", class extends A {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -3077,9 +3083,9 @@ var Tt = {
 	}
 	_edit(e) {
 		this._busy || (this._draft = e ? structuredClone(e) : {
-			...Tt,
+			...wt,
 			areas: []
-		}, this._problems = [], R(this));
+		}, this._problems = [], L(this));
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -3092,7 +3098,7 @@ var Tt = {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("scenario", this._draft);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -3103,7 +3109,7 @@ var Tt = {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.remove("scenario", this._draft.id);
-				this._problems = Ze(this.ctx.strings, this.ctx.config, e.problems), e.success && (this._draft = void 0);
+				this._problems = Qe(this.ctx.strings, this.ctx.config, e.problems), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -3116,46 +3122,46 @@ var Tt = {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "scenarios.title")}</h2>
+          <h2>${M(t, "scenarios.title")}</h2>
           <button class="btn primary" @click=${() => this._edit()}>
-            ${N(t, "scenarios.add")}
+            ${M(t, "scenarios.add")}
           </button>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>${N(t, "field.name")}</th>
-                <th>${N(t, "field.areas")}</th>
-                <th>${N(t, "field.ha_master_state")}</th>
-                <th>${N(t, "field.exit_delay_override")}</th>
-                <th>${N(t, "field.siren_duration_override")}</th>
+                <th>${M(t, "field.name")}</th>
+                <th>${M(t, "field.areas")}</th>
+                <th>${M(t, "field.ha_master_state")}</th>
+                <th>${M(t, "field.exit_delay_override")}</th>
+                <th>${M(t, "field.siren_duration_override")}</th>
               </tr>
             </thead>
             <tbody>
               ${e.config.scenarios.map((i) => C`<tr
                   class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
                   aria-selected=${this._draft?.id === i.id ? "true" : "false"}
                   @click=${() => this._edit(i)}
                 >
                   <td>
                     <strong>${i.name}</strong>
-                    ${i.id === e.status.active_scenario_id ? C`<span class="state armed">${N(t, "scenarios.active")}</span>` : T}
+                    ${i.id === e.status.active_scenario_id ? C`<span class="state armed">${M(t, "scenarios.active")}</span>` : T}
                   </td>
                   <td>
                     ${i.areas.map((e) => C`<span class="tag">${n.get(e) ?? e}</span>`)}
                   </td>
                   <td>
-                    <span>${N(t, `ha_state.${i.ha_master_state}`)}</span>
-                    ${r.filter((e) => e === i.ha_master_state).length > 1 ? C`<div class="hint">${N(t, "scenarios.shared_mode")}</div>` : T}
+                    <span>${M(t, `ha_state.${i.ha_master_state}`)}</span>
+                    ${r.filter((e) => e === i.ha_master_state).length > 1 ? C`<div class="hint">${M(t, "scenarios.shared_mode")}</div>` : T}
                   </td>
                   <td>
-                    ${i.exit_delay_override == null ? N(t, "scenarios.area_default") : N(t, "common.seconds", { n: i.exit_delay_override })}
+                    ${i.exit_delay_override == null ? M(t, "scenarios.area_default") : M(t, "common.seconds", { n: i.exit_delay_override })}
                   </td>
                   <td>
-                    ${i.siren_duration_override == null ? N(t, "scenarios.global_default") : N(t, "common.seconds", { n: i.siren_duration_override })}
+                    ${i.siren_duration_override == null ? M(t, "scenarios.global_default") : M(t, "common.seconds", { n: i.siren_duration_override })}
                   </td>
                 </tr>`)}
             </tbody>
@@ -3170,57 +3176,57 @@ var Tt = {
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "scenarios.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "scenarios.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.ha_master_state")}</span>
+              <span class="lbl">${M(e, "field.ha_master_state")}</span>
               <select
                 @change=${(e) => this._set("ha_master_state", e.target.value)}
               >
                 ${(r?.ha_states ?? []).map((n) => C`<option .value=${n} .selected=${W(n === t.ha_master_state)}>
-                      ${N(e, `ha_state.${n}`)}
+                      ${M(e, `ha_state.${n}`)}
                     </option>`)}
               </select>
-              <span class="hint">${N(e, "scenarios.mode_hint")}</span>
+              <span class="hint">${M(e, "scenarios.mode_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.exit_delay_override")}</span>
+              <span class="lbl">${M(e, "field.exit_delay_override")}</span>
               <input
                 type="number"
                 min="0"
                 max=${r?.bounds.exit_delay?.[1] ?? 300}
-                placeholder=${N(e, "scenarios.area_default")}
+                placeholder=${M(e, "scenarios.area_default")}
                 .value=${t.exit_delay_override == null ? "" : String(t.exit_delay_override)}
-                @input=${(e) => this._set("exit_delay_override", U(e.target.value))}
+                @input=${(e) => this._set("exit_delay_override", H(e.target.value))}
               />
-              <span class="hint">${N(e, "scenarios.exit_hint")}</span>
+              <span class="hint">${M(e, "scenarios.exit_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.siren_duration_override")}</span>
+              <span class="lbl">${M(e, "field.siren_duration_override")}</span>
               <input
                 type="number"
                 min="1"
                 max=${r?.bounds.siren_duration?.[1] ?? 900}
-                placeholder=${N(e, "scenarios.global_seconds", { n: n.config?.settings.siren_duration ?? 180 })}
+                placeholder=${M(e, "scenarios.global_seconds", { n: n.config?.settings.siren_duration ?? 180 })}
                 .value=${t.siren_duration_override == null ? "" : String(t.siren_duration_override)}
-                @input=${(e) => this._set("siren_duration_override", U(e.target.value))}
+                @input=${(e) => this._set("siren_duration_override", H(e.target.value))}
               />
-              <span class="hint">${N(e, "scenarios.siren_hint")}</span>
+              <span class="hint">${M(e, "scenarios.siren_hint")}</span>
             </label>
             ${G(this.ctx, t.response_profile_id, (e) => this._set("response_profile_id", e))}
-            ${ot(e, t, (e, t) => this._set(e, t), n.status.security.enforced)}
+            ${ct(e, t, (e, t) => this._set(e, t), n.status.security.enforced)}
           </div>
           <fieldset>
-            <legend>${N(e, "field.areas")}</legend>
+            <legend>${M(e, "field.areas")}</legend>
             ${(n.config?.areas ?? []).map((e) => C`<label class="check">
                 <input
                   type="checkbox"
@@ -3229,20 +3235,20 @@ var Tt = {
                 />
                 <span>${e.name}</span>
               </label>`)}
-            <p class="hint">${N(e, "scenarios.areas_hint")}</p>
+            <p class="hint">${M(e, "scenarios.areas_hint")}</p>
           </fieldset>
           ${this._renderAllowedUsers(e, t)}
           ${this._problems.length ? C`<div class="problems" role="alert">
                 <ul>
-                  ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                  ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
                 </ul>
               </div>` : T}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-              ${N(e, "common.save")}
+              ${M(e, "common.save")}
             </button>
             <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
-              ${N(e, "common.cancel")}
+              ${M(e, "common.cancel")}
             </button>
             ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -3262,33 +3268,33 @@ var Tt = {
 		};
 		return C`
       <fieldset>
-        <legend>${N(e, "field.allowed_user_ids")}</legend>
+        <legend>${M(e, "field.allowed_user_ids")}</legend>
         <label class="check">
           <input
             type="checkbox"
             .checked=${W(r === null)}
             @change=${(e) => this._set("allowed_user_ids", e.target.checked ? null : n.map((e) => e.id ?? "").filter(Boolean))}
           />
-          <span>${N(e, "scenarios.everyone")}</span>
+          <span>${M(e, "scenarios.everyone")}</span>
         </label>
         ${r === null ? T : n.map((t) => C`<label class="check">
                 <input
                   type="checkbox"
                   .checked=${W(r.includes(t.id ?? ""))}
                   ?disabled=${r.length === 1 && r.includes(t.id ?? "")}
-                  title=${r.length === 1 ? N(e, "scenarios.last_user") : ""}
+                  title=${r.length === 1 ? M(e, "scenarios.last_user") : ""}
                   @change=${(e) => i(t.id ?? "", e.target.checked)}
                 />
                 <span>${t.name}</span>
               </label>`)}
-        <p class="hint">${N(e, "scenarios.allowed_users_hint")}</p>
+        <p class="hint">${M(e, "scenarios.allowed_users_hint")}</p>
       </fieldset>
     `;
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
 			o`
       td .state {
         margin-left: 8px;
@@ -3296,11 +3302,10 @@ var Tt = {
     `
 		];
 	}
-};
-customElements.get("foyer-page-scenarios") || customElements.define("foyer-page-scenarios", Et);
+});
 //#endregion
 //#region src/panel/pages/profiles.ts
-var Dt = {
+var Tt = {
 	alarm: [
 		"entry_started",
 		"triggered",
@@ -3351,31 +3356,31 @@ var Dt = {
 		"radio_coordinator_down",
 		"radio_coordinator_up"
 	]
-}, Ot = ["companion", "telegram"], kt = [
+}, Et = ["companion", "telegram"], Dt = [
 	"zone",
 	"fixed",
 	"none"
-], At = [
+], Ot = [
 	"triggered",
 	"incident_opened",
 	"incident_joined",
 	"verification_satisfied",
 	"technical_raised"
 ];
-function jt(e) {
+function kt(e) {
 	let t = e.params.images;
-	return typeof t == "string" && kt.includes(t) ? t : e.params.camera_entity_id ? "fixed" : "none";
+	return typeof t == "string" && Dt.includes(t) ? t : e.params.camera_entity_id ? "fixed" : "none";
 }
-var Mt = ["notify", "persistent_notification"], Nt = [
+var At = ["notify", "persistent_notification"], jt = [
 	"siren",
 	"light",
 	"switch"
-], Pt = [
+], Mt = [
 	"camera",
 	"scene",
 	"tts"
 ];
-function Ft(e) {
+function Nt(e) {
 	let t = {};
 	return e === "switch" && (t.state = "on"), e === "camera" && (t.mode = "snapshot"), e === "delay" && (t.seconds = 30), (e === "notify" || e === "tts") && (t.message = "{{ zone }}"), e === "notify" && (t.attachment = "companion"), e === "notify" && (t.images = "zone"), {
 		kind: e,
@@ -3388,7 +3393,7 @@ function Ft(e) {
 		escalation_offset: null
 	};
 }
-var It = [
+var Pt = [
 	{
 		key: "alarm",
 		moments: ["triggered", "incident_joined"],
@@ -3420,14 +3425,14 @@ var It = [
 		images: "none"
 	}
 ];
-function Lt(e) {
+function Ft(e) {
 	let t = e.params.contacts;
 	return Array.isArray(t) ? t.map((e) => typeof e == "string" ? {
 		contact_id: e,
 		channel_id: null
 	} : e) : [];
 }
-var Rt = class extends j {
+U("foyer-page-profiles", class extends A {
 	constructor(...e) {
 		super(...e), this._open = -1, this._filters = {}, this._jsonErrors = {}, this._problems = [], this._busy = !1, this._tested = {}, this._templating = !1, this._templateContacts = [];
 	}
@@ -3450,23 +3455,23 @@ var Rt = class extends j {
 		let t = this._templateContacts.map((e) => ({
 			contact_id: e,
 			channel_id: null
-		})), n = It.map(({ key: n, moments: r, images: i }) => {
-			let a = Ft("notify");
+		})), n = Pt.map(({ key: n, moments: r, images: i }) => {
+			let a = Nt("notify");
 			return {
 				...a,
-				name: N(e, `profiles.template.${n}.name`),
+				name: M(e, `profiles.template.${n}.name`),
 				moments: r,
 				params: {
 					...a.params,
-					title: N(e, `profiles.template.${n}.title`),
-					message: N(e, `profiles.template.${n}.message`),
+					title: M(e, `profiles.template.${n}.title`),
+					message: M(e, `profiles.template.${n}.message`),
 					images: i,
 					contacts: t
 				}
 			};
 		});
 		this._templating = !1, this._templateContacts = [], this._edit({
-			name: N(e, "profiles.template.profile_name"),
+			name: M(e, "profiles.template.profile_name"),
 			severity: 1,
 			actions: n
 		});
@@ -3474,11 +3479,11 @@ var Rt = class extends j {
 	_renderTemplate(e) {
 		let t = this.ctx?.config?.contacts ?? [], n = this._templateContacts;
 		return C`<div class="card editor">
-      <div class="card-hd"><h2>${N(e, "profiles.template.title")}</h2></div>
+      <div class="card-hd"><h2>${M(e, "profiles.template.title")}</h2></div>
       <div class="card-bd">
-        <p class="hint">${N(e, "profiles.template.intro")}</p>
+        <p class="hint">${M(e, "profiles.template.intro")}</p>
         ${t.length ? C`<div class="field">
-                <span class="lbl">${N(e, "profiles.template.contacts")}</span>
+                <span class="lbl">${M(e, "profiles.template.contacts")}</span>
                 ${t.map((e) => C`<label class="check"
                       ><input
                         type="checkbox"
@@ -3491,14 +3496,14 @@ var Rt = class extends j {
                       ${e.name}</label
                     >`)}
               </div>
-              <p class="hint">${N(e, "profiles.template.telegram_hint")}</p>` : C`<p class="hint">${N(e, "profiles.template.no_contacts")}</p>`}
+              <p class="hint">${M(e, "profiles.template.telegram_hint")}</p>` : C`<p class="hint">${M(e, "profiles.template.no_contacts")}</p>`}
         <div class="actions">
           <button
             class="btn primary"
             ?disabled=${!n.length}
             @click=${() => this._fromTemplate(e)}
           >
-            ${N(e, "profiles.template.create")}
+            ${M(e, "profiles.template.create")}
           </button>
           <button
             class="btn"
@@ -3506,7 +3511,7 @@ var Rt = class extends j {
 			this._templating = !1, this._templateContacts = [];
 		}}
           >
-            ${N(e, "common.cancel")}
+            ${M(e, "common.cancel")}
           </button>
         </div>
       </div>
@@ -3517,7 +3522,7 @@ var Rt = class extends j {
 			name: "",
 			severity: 1,
 			actions: []
-		}, this._open = -1, this._problems = [], this._filters = {}, this._confirming = void 0, this._jsonErrors = {}, R(this));
+		}, this._open = -1, this._problems = [], this._filters = {}, this._confirming = void 0, this._jsonErrors = {}, L(this));
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -3545,7 +3550,7 @@ var Rt = class extends j {
 	_addAction(e) {
 		this._draft && (this._draft = {
 			...this._draft,
-			actions: [...this._draft.actions, Ft(e)]
+			actions: [...this._draft.actions, Nt(e)]
 		}, this._open = this._draft.actions.length - 1);
 	}
 	_removeAction(e) {
@@ -3578,7 +3583,7 @@ var Rt = class extends j {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("profile", this._draft);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -3589,7 +3594,7 @@ var Rt = class extends j {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.remove("profile", this._draft.id);
-				this._problems = Ze(this.ctx.strings, this.ctx.config, e.problems), e.success && (this._draft = void 0);
+				this._problems = Qe(this.ctx.strings, this.ctx.config, e.problems), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -3600,47 +3605,47 @@ var Rt = class extends j {
 		if (!e?.config) return T;
 		let t = e.strings, n = e.config.profiles ?? [];
 		return C`
-      <p class="page-intro">${N(t, "profiles.intro")}</p>
+      <p class="page-intro">${M(t, "profiles.intro")}</p>
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "profiles.title")}</h2>
+          <h2>${M(t, "profiles.title")}</h2>
           <div class="hd-buttons">
             <button class="btn" @click=${() => this._templating = !this._templating}>
-              ${N(t, "profiles.template.button")}
+              ${M(t, "profiles.template.button")}
             </button>
-            <button class="btn primary" @click=${() => this._edit()}>${N(t, "profiles.add")}</button>
+            <button class="btn primary" @click=${() => this._edit()}>${M(t, "profiles.add")}</button>
           </div>
         </div>
         ${n.length ? C`<div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>${N(t, "field.name")}</th>
-                      <th>${N(t, "field.actions")}</th>
-                      <th>${N(t, "field.severity")}</th>
-                      <th>${N(t, "profiles.used_by")}</th>
+                      <th>${M(t, "field.name")}</th>
+                      <th>${M(t, "field.actions")}</th>
+                      <th>${M(t, "field.severity")}</th>
+                      <th>${M(t, "profiles.used_by")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${n.map((e) => C`<tr
                           class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
                           aria-selected=${this._draft?.id === e.id ? "true" : "false"}
                           @click=${() => this._edit(e)}
                         >
                           <td><strong>${e.name}</strong></td>
                           <td>
                             ${e.actions.length ? e.actions.map((e) => C`<span class="tag"
-                                        >${N(t, `action_kind.${e.kind}`)}</span
-                                      > `) : C`<span class="muted">${N(t, "profiles.no_actions")}</span>`}
+                                        >${M(t, `action_kind.${e.kind}`)}</span
+                                      > `) : C`<span class="muted">${M(t, "profiles.no_actions")}</span>`}
                           </td>
                           <td>${e.severity}</td>
                           <td class="muted">${this._usedBy(t, e)}</td>
                         </tr>`)}
                   </tbody>
                 </table>
-              </div>` : C`<div class="empty">${N(t, "profiles.none")}</div>`}
+              </div>` : C`<div class="empty">${M(t, "profiles.none")}</div>`}
       </div>
       ${this._templating ? this._renderTemplate(t) : T}
       ${this._draft ? this._renderEditor(t, this._draft) : T}
@@ -3648,52 +3653,52 @@ var Rt = class extends j {
 	}
 	_usedBy(e, t) {
 		let n = this.ctx.config, r = [];
-		n.settings.default_profile_id === t.id && r.push(N(e, "profiles.used_default")), n.settings.technical_profile_id === t.id && r.push(N(e, "profiles.used_technical"));
+		n.settings.default_profile_id === t.id && r.push(M(e, "profiles.used_default")), n.settings.technical_profile_id === t.id && r.push(M(e, "profiles.used_technical"));
 		for (let e of [
 			n.areas,
 			n.zones,
 			n.scenarios,
 			n.groups
 		]) for (let n of e) n.response_profile_id === t.id && r.push(n.name);
-		return r.length ? r.join(", ") : N(e, "profiles.unused");
+		return r.length ? r.join(", ") : M(e, "profiles.unused");
 	}
 	_renderEditor(e, t) {
 		let n = this.ctx?.meta?.bounds.severity ?? [1, 10];
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "profiles.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "profiles.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.severity")}</span>
+              <span class="lbl">${M(e, "field.severity")}</span>
               <input
                 type="number"
                 min=${n[0]}
                 max=${n[1]}
                 .value=${String(t.severity)}
-                @input=${(e) => H(e, (e) => this._set("severity", e))}
+                @input=${(e) => V(e, (e) => this._set("severity", e))}
               />
-              <span class="hint">${N(e, "profiles.severity_hint")}</span>
+              <span class="hint">${M(e, "profiles.severity_hint")}</span>
             </label>
           </div>
 
           <div class="actions-list">
             ${t.actions.map((t, n) => this._renderAction(e, t, n))}
           </div>
-          ${t.actions.length ? T : C`<p class="hint">${N(e, "profiles.no_actions")}</p>`}
+          ${t.actions.length ? T : C`<p class="hint">${M(e, "profiles.no_actions")}</p>`}
 
           <div class="add-action">
             <label class="field">
-              <span class="lbl">${N(e, "profiles.add_action")}</span>
+              <span class="lbl">${M(e, "profiles.add_action")}</span>
               <select
                 .value=${""}
                 @change=${(e) => {
@@ -3702,23 +3707,23 @@ var Rt = class extends j {
 		}}
               >
                 <option value=""></option>
-                ${(this.ctx?.meta?.action_kinds ?? []).map((t) => C`<option .value=${t}>${N(e, `action_kind.${t}`)}</option>`)}
+                ${(this.ctx?.meta?.action_kinds ?? []).map((t) => C`<option .value=${t}>${M(e, `action_kind.${t}`)}</option>`)}
               </select>
             </label>
           </div>
-          <p class="hint">${N(e, "profiles.escalation_later")}</p>
+          <p class="hint">${M(e, "profiles.escalation_later")}</p>
 
           ${this._problems.length ? C`<div class="problems" role="alert">
                   <ul>
-                    ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                    ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
                   </ul>
                 </div>` : T}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-              ${N(e, "common.save")}
+              ${M(e, "common.save")}
             </button>
             <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
-              ${N(e, "common.cancel")}
+              ${M(e, "common.cancel")}
             </button>
             ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -3732,13 +3737,13 @@ var Rt = class extends j {
     `;
 	}
 	_renderContacts(e, t, n) {
-		let r = this.ctx?.config?.contacts ?? [], i = Lt(t);
-		if (!r.length) return C`<span class="hint">${N(e, "profiles.no_contacts")}</span>`;
+		let r = this.ctx?.config?.contacts ?? [], i = Ft(t);
+		if (!r.length) return C`<span class="hint">${M(e, "profiles.no_contacts")}</span>`;
 		let a = (e) => {
 			this._setParam(n, "contacts", e.length ? e : null), e.length && this._setParam(n, "service", null);
 		};
 		return C`<div class="field">
-      <span class="lbl">${N(e, "field.contacts")}</span>
+      <span class="lbl">${M(e, "field.contacts")}</span>
       ${r.map((t) => {
 			let n = i.find((e) => e.contact_id === t.id);
 			return C`<div class="contact-row">
@@ -3760,27 +3765,27 @@ var Rt = class extends j {
 			} : n))}
               >
                 <option value="" .selected=${W(!n.channel_id)}>
-                  ${N(e, "profiles.highest_channel")}
+                  ${M(e, "profiles.highest_channel")}
                 </option>
                 ${t.channels.map((t) => C`<option
                     .value=${t.id ?? ""}
                     .selected=${W(t.id === n.channel_id)}
                   >
-                    ${N(e, `channel_kind.${t.kind}`)} · ${t.service}
+                    ${M(e, `channel_kind.${t.kind}`)} · ${t.service}
                   </option>`)}
               </select>` : T}
         </div>`;
 		})}
-      <span class="hint">${N(e, "profiles.contacts_hint")}</span>
+      <span class="hint">${M(e, "profiles.contacts_hint")}</span>
     </div>`;
 	}
 	_renderEscalation(e, t, n) {
 		let r = this.ctx?.meta?.escalation_moments ?? [];
-		if (!Mt.includes(t.kind)) return T;
-		if (!t.moments.length || !t.moments.every((e) => r.includes(e))) return t.escalation_offset === null ? T : C`<span class="hint">${N(e, "profiles.escalation_moment_hint")}</span>`;
+		if (!At.includes(t.kind)) return T;
+		if (!t.moments.length || !t.moments.every((e) => r.includes(e))) return t.escalation_offset === null ? T : C`<span class="hint">${M(e, "profiles.escalation_moment_hint")}</span>`;
 		let i = this.ctx?.meta?.bounds.escalation_offset ?? [0, 3600];
 		return C`<label class="field">
-      <span class="lbl">${N(e, "field.escalation_offset")}</span>
+      <span class="lbl">${M(e, "field.escalation_offset")}</span>
       <input
         type="number"
         min=${i[0]}
@@ -3791,7 +3796,7 @@ var Rt = class extends j {
 			this._setAction(n, { escalation_offset: t === "" ? null : Number(t) });
 		}}
       />
-      <span class="hint">${N(e, "profiles.escalation_hint")}</span>
+      <span class="hint">${M(e, "profiles.escalation_hint")}</span>
     </label>`;
 	}
 	_renderAction(e, t, n) {
@@ -3804,7 +3809,7 @@ var Rt = class extends j {
 			this._open = r ? -1 : n, this._jsonErrors = {};
 		}}
         >
-          <span class="tag">${N(e, `action_kind.${t.kind}`)}</span>
+          <span class="tag">${M(e, `action_kind.${t.kind}`)}</span>
           <span class="summary">${this._summary(e, t)}</span>
           <span class="moments">${this._momentSummary(e, t)}</span>
           ${t.conditions.length ? C`<span class="cond">${t.conditions.length}</span>` : T}
@@ -3816,23 +3821,23 @@ var Rt = class extends j {
                 <div class="actions">
                   <button
                     class="btn"
-                    aria-label=${N(e, "common.move_up")}
-                    title=${N(e, "common.move_up")}
+                    aria-label=${M(e, "common.move_up")}
+                    title=${M(e, "common.move_up")}
                     @click=${() => this._moveAction(n, -1)}
                   >
                     &uarr;
                   </button>
                   <button
                     class="btn"
-                    aria-label=${N(e, "common.move_down")}
-                    title=${N(e, "common.move_down")}
+                    aria-label=${M(e, "common.move_down")}
+                    title=${M(e, "common.move_down")}
                     @click=${() => this._moveAction(n, 1)}
                   >
                     &darr;
                   </button>
                   ${this._renderTestButton(e, t)}
                   <button class="btn danger" @click=${() => this._removeAction(n)}>
-                    ${N(e, "profiles.delete_action")}
+                    ${M(e, "profiles.delete_action")}
                   </button>
                 </div>
               </div>` : T}
@@ -3842,7 +3847,7 @@ var Rt = class extends j {
 	_renderTestButton(e, t) {
 		if (t.kind === "delay" || !t.id || !this._draft?.id) return T;
 		let n = this.ctx?.config?.profiles.find((e) => e.id === this._draft?.id)?.actions.find((e) => e.id === t.id);
-		if (!n || JSON.stringify(n) !== JSON.stringify(t)) return C`<span class="hint">${N(e, "profiles.test_after_save")}</span>`;
+		if (!n || JSON.stringify(n) !== JSON.stringify(t)) return C`<span class="hint">${M(e, "profiles.test_after_save")}</span>`;
 		let r = t.id, i = this._tested[r];
 		return this._confirming === r ? C`
         <button
@@ -3850,17 +3855,17 @@ var Rt = class extends j {
           ?disabled=${this._busy}
           @click=${() => void this._testAction(t)}
         >
-          ${N(e, "action_test.confirm_short")}
+          ${M(e, "action_test.confirm_short")}
         </button>
         <button class="btn" @click=${() => this._confirming = void 0}>
-          ${N(e, "common.cancel")}
+          ${M(e, "common.cancel")}
         </button>
       ` : C`
       <button class="btn" ?disabled=${this._busy} @click=${() => this._confirming = r}>
-        ${N(e, "action_test.test")}
+        ${M(e, "action_test.test")}
       </button>
       ${i ? C`<span class="state ${i.ok ? "closed" : "fault"}" title=${i.error ?? ""}>
-            ${N(e, i.ok ? "action_test.ok" : "action_test.failed")}
+            ${M(e, i.ok ? "action_test.ok" : "action_test.failed")}
           </span>` : T}
     `;
 	}
@@ -3894,18 +3899,18 @@ var Rt = class extends j {
 		}
 	}
 	_momentSummary(e, t) {
-		let n = t.moments.map((t) => N(e, `moment.${t}`));
-		return n.length ? n.length <= 3 ? n.join(", ") : N(e, "profiles.moments_more", {
+		let n = t.moments.map((t) => M(e, `moment.${t}`));
+		return n.length ? n.length <= 3 ? n.join(", ") : M(e, "profiles.moments_more", {
 			moments: n.slice(0, 2).join(", "),
 			count: n.length - 2
-		}) : N(e, "profiles.no_moments");
+		}) : M(e, "profiles.no_moments");
 	}
 	_summary(e, t) {
 		let n = t.params;
-		if (t.kind === "delay") return N(this.ctx.strings, "common.seconds", { n: String(n.seconds ?? 0) });
+		if (t.kind === "delay") return M(this.ctx.strings, "common.seconds", { n: String(n.seconds ?? 0) });
 		if (t.kind === "call_service") return `${n.domain ?? ""}.${n.service ?? ""}`;
 		if (t.kind === "notify") return String(n.service ?? "");
-		if (t.kind === "persistent_notification") return String(n.message ?? N(e, "profiles.inherit"));
+		if (t.kind === "persistent_notification") return String(n.message ?? M(e, "profiles.inherit"));
 		let r = n.entity_ids ?? n.entity_id ?? "";
 		return Array.isArray(r) ? r.join(", ") : String(r);
 	}
@@ -3915,7 +3920,7 @@ var Rt = class extends j {
 	_suggested(e, t, n, r, i, a) {
 		let o = `foyer-${r}-${n}`;
 		return C`<label class="field">
-      <span class="lbl">${N(e, `field.${r}`)}</span>
+      <span class="lbl">${M(e, `field.${r}`)}</span>
       <input
         list=${o}
         .value=${String(t.params[r] ?? "")}
@@ -3926,12 +3931,12 @@ var Rt = class extends j {
             ${e.name === e.id ? e.id : `${e.name} · ${e.id}`}
           </option>`)}
       </datalist>
-      <span class="hint">${a ?? N(e, "profiles.pick_or_type")}</span>
+      <span class="hint">${a ?? M(e, "profiles.pick_or_type")}</span>
     </label>`;
 	}
 	_text(e, t, n, r, i) {
 		return C`<label class="field">
-      <span class="lbl">${N(e, `field.${r}`)}</span>
+      <span class="lbl">${M(e, `field.${r}`)}</span>
       <input
         .value=${String(t.params[r] ?? "")}
         @input=${(e) => this._setParam(n, r, e.target.value)}
@@ -3941,11 +3946,11 @@ var Rt = class extends j {
 	}
 	_number(e, t, n, r, i) {
 		return C`<label class="field">
-      <span class="lbl">${N(e, `field.${r}`)}</span>
+      <span class="lbl">${M(e, `field.${r}`)}</span>
       <input
         type="number"
         .value=${t.params[r] == null ? "" : String(t.params[r])}
-        @input=${(e) => this._setParam(n, r, U(e.target.value))}
+        @input=${(e) => this._setParam(n, r, H(e.target.value))}
       />
       ${i ? C`<span class="hint">${i}</span>` : T}
     </label>`;
@@ -3957,7 +3962,7 @@ var Rt = class extends j {
 			name: e
 		});
 		if (!a) return C`<label class="field">
-        <span class="lbl">${N(e, `field.${r}`)}</span>
+        <span class="lbl">${M(e, `field.${r}`)}</span>
         <select
           @change=${(e) => this._setParam(n, r, e.target.value || null)}
         >
@@ -3971,12 +3976,12 @@ var Rt = class extends j {
 			return u.every((e) => t.includes(e));
 		});
 		return C`<fieldset class="entities wide">
-      <legend>${N(e, `field.${r}`)}</legend>
+      <legend>${M(e, `field.${r}`)}</legend>
       ${o.length > 8 ? C`<input
             class="filter"
             type="search"
             .value=${this._filters[l] ?? ""}
-            placeholder=${N(e, "profiles.filter")}
+            placeholder=${M(e, "profiles.filter")}
             @input=${(e) => {
 			this._filters = {
 				...this._filters,
@@ -3994,41 +3999,41 @@ var Rt = class extends j {
 			i ? a.add(t.id) : a.delete(t.id), this._setParam(n, r, [...a]);
 		}}
             />
-            <span>${N(e, "zones.entity", {
+            <span>${M(e, "zones.entity", {
 			name: t.name,
 			entity: t.id
 		})}</span>
           </label>`)}
-        ${d.length ? T : C`<p class="hint">${N(e, "profiles.no_match")}</p>`}
+        ${d.length ? T : C`<p class="hint">${M(e, "profiles.no_match")}</p>`}
       </div>
     </fieldset>`;
 	}
 	_renderParams(e, t, n) {
-		let r = this.ctx?.meta?.action_domains[t.kind] ?? [], i = N(e, "profiles.message_hint", { variables: (this.ctx?.meta?.template_variables ?? []).map((e) => `{{ ${e} }}`).join(" ") }), a = [];
-		switch (Nt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_ids", r, !0)), Pt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_id", r, !1)), t.kind) {
+		let r = this.ctx?.meta?.action_domains[t.kind] ?? [], i = M(e, "profiles.message_hint", { variables: (this.ctx?.meta?.template_variables ?? []).map((e) => `{{ ${e} }}`).join(" ") }), a = [];
+		switch (jt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_ids", r, !0)), Mt.includes(t.kind) && a.push(this._picker(e, t, n, "entity_id", r, !1)), t.kind) {
 			case "notify":
-				a.push(this._renderContacts(e, t, n)), Lt(t).length || a.push(this._suggested(e, t, n, "service", q(this.ctx.hass), N(e, "profiles.notify_hint"))), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i)), a.push(this._renderImages(e, t, n)), (jt(t) === "zone" || jt(t) === "fixed" && t.params.camera_entity_id) && (a.push(this._select(e, t, n, "attachment", Ot, (t) => N(e, `attachment.${t}`))), a.push(C`<span class="hint"
-              >${N(e, t.params.attachment === "telegram" ? "profiles.attach_hint_telegram" : "profiles.attach_hint")}</span
+				a.push(this._renderContacts(e, t, n)), Ft(t).length || a.push(this._suggested(e, t, n, "service", q(this.ctx.hass), M(e, "profiles.notify_hint"))), a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i)), a.push(this._renderImages(e, t, n)), (kt(t) === "zone" || kt(t) === "fixed" && t.params.camera_entity_id) && (a.push(this._select(e, t, n, "attachment", Et, (t) => M(e, `attachment.${t}`))), a.push(C`<span class="hint"
+              >${M(e, t.params.attachment === "telegram" ? "profiles.attach_hint_telegram" : "profiles.attach_hint")}</span
             >`));
 				break;
 			case "persistent_notification":
 				a.push(this._text(e, t, n, "title")), a.push(this._text(e, t, n, "message", i));
 				break;
 			case "siren":
-				a.push(this._number(e, t, n, "duration", N(e, "profiles.siren_duration_hint"))), a.push(this._renderTone(e, t, n));
+				a.push(this._number(e, t, n, "duration", M(e, "profiles.siren_duration_hint"))), a.push(this._renderTone(e, t, n));
 				break;
 			case "light":
 				a.push(this._number(e, t, n, "brightness")), a.push(this._select(e, t, n, "flash", [
 					"",
 					"short",
 					"long"
-				], (t) => N(e, `profiles.flash_${t || "none"}`)));
+				], (t) => M(e, `profiles.flash_${t || "none"}`)));
 				break;
 			case "camera":
-				a.push(this._select(e, t, n, "mode", ["snapshot", "record"], (t) => N(e, `camera_mode.${t}`))), a.push(this._number(e, t, n, "duration", N(e, "profiles.camera_hint")));
+				a.push(this._select(e, t, n, "mode", ["snapshot", "record"], (t) => M(e, `camera_mode.${t}`))), a.push(this._number(e, t, n, "duration", M(e, "profiles.camera_hint")));
 				break;
 			case "switch":
-				a.push(this._select(e, t, n, "state", ["on", "off"], (t) => N(e, `on_off.${t}`))), a.push(this._number(e, t, n, "revert_after", N(e, "profiles.revert_hint")));
+				a.push(this._select(e, t, n, "state", ["on", "off"], (t) => M(e, `on_off.${t}`))), a.push(this._number(e, t, n, "revert_after", M(e, "profiles.revert_hint")));
 				break;
 			case "tts":
 				a.push(this._picker(e, t, n, "media_player_entity_ids", ["media_player"], !0)), a.push(this._text(e, t, n, "message", i));
@@ -4044,7 +4049,7 @@ var Rt = class extends j {
 				})))), a.push(this._json(e, t, n));
 				break;
 			}
-			case "delay": a.push(this._number(e, t, n, "seconds", N(e, "profiles.delay_hint")));
+			case "delay": a.push(this._number(e, t, n, "seconds", M(e, "profiles.delay_hint")));
 		}
 		return C`<div class="grid-form">${a}</div>`;
 	}
@@ -4054,16 +4059,16 @@ var Rt = class extends j {
 			let t = this.ctx.hass.states[e]?.attributes?.available_tones;
 			Array.isArray(t) ? t.forEach((e) => a.add(String(e))) : t && typeof t == "object" && Object.keys(t).forEach((e) => a.add(e));
 		}
-		return a.size ? this._select(e, t, n, "tone", ["", ...[...a].sort()], (t) => t || N(e, "profiles.default_tone")) : i.length ? C`<label class="field">
-            <span class="lbl">${N(e, "field.tone")}</span>
-            <input disabled placeholder=${N(e, "profiles.no_tones")} />
-            <span class="hint">${N(e, "profiles.no_tones")}</span>
+		return a.size ? this._select(e, t, n, "tone", ["", ...[...a].sort()], (t) => t || M(e, "profiles.default_tone")) : i.length ? C`<label class="field">
+            <span class="lbl">${M(e, "field.tone")}</span>
+            <input disabled placeholder=${M(e, "profiles.no_tones")} />
+            <span class="hint">${M(e, "profiles.no_tones")}</span>
           </label>` : T;
 	}
 	_renderImages(e, t, n) {
-		let r = jt(t), i = t.moments.filter((e) => !At.includes(e));
+		let r = kt(t), i = t.moments.filter((e) => !Ot.includes(e));
 		return C`<label class="field">
-        <span class="lbl">${N(e, "field.images")}</span>
+        <span class="lbl">${M(e, "field.images")}</span>
         <select
           @change=${(e) => {
 			let r = e.target.value, i = {
@@ -4073,21 +4078,21 @@ var Rt = class extends j {
 			r !== "fixed" && delete i.camera_entity_id, this._setAction(n, { params: i });
 		}}
         >
-          ${kt.map((t) => C`<option .value=${t} .selected=${W(t === r)}>
-                ${N(e, `images.${t}`)}
+          ${Dt.map((t) => C`<option .value=${t} .selected=${W(t === r)}>
+                ${M(e, `images.${t}`)}
               </option>`)}
         </select>
-        <span class="hint">${N(e, `images.${r}_hint`)}</span>
+        <span class="hint">${M(e, `images.${r}_hint`)}</span>
       </label>
       ${r === "fixed" ? this._picker(e, t, n, "camera_entity_id", ["camera"], !1) : T}
       ${r === "zone" && i.length ? C`<span class="hint wide"
-            >${N(e, "profiles.images_text_alone", { moments: i.map((t) => N(e, `moment.${t}`)).join(", ") })}</span
+            >${M(e, "profiles.images_text_alone", { moments: i.map((t) => M(e, `moment.${t}`)).join(", ") })}</span
           >` : T}
-      ${r === "zone" && Lt(t).length ? C`<span class="hint wide">${N(e, "profiles.images_channels")}</span>` : T}`;
+      ${r === "zone" && Ft(t).length ? C`<span class="hint wide">${M(e, "profiles.images_channels")}</span>` : T}`;
 	}
 	_select(e, t, n, r, i, a) {
 		return C`<label class="field">
-      <span class="lbl">${N(e, `field.${r}`)}</span>
+      <span class="lbl">${M(e, `field.${r}`)}</span>
       <select
         @change=${(e) => this._setParam(n, r, e.target.value || null)}
       >
@@ -4099,7 +4104,7 @@ var Rt = class extends j {
 	}
 	_json(e, t, n) {
 		return C`<label class="field wide">
-      <span class="lbl">${N(e, "field.data")}</span>
+      <span class="lbl">${M(e, "field.data")}</span>
       <textarea
         rows="4"
         .value=${JSON.stringify(t.params.data ?? {}, null, 2)}
@@ -4118,15 +4123,15 @@ var Rt = class extends j {
 			}
 		}}
       ></textarea>
-      ${this._jsonErrors[n] ? C`<span class="hint bad" role="alert">${N(e, "profiles.json_invalid")}</span>` : T}
-      <span class="hint">${N(e, "profiles.call_service_hint")}</span>
+      ${this._jsonErrors[n] ? C`<span class="hint bad" role="alert">${M(e, "profiles.json_invalid")}</span>` : T}
+      <span class="hint">${M(e, "profiles.call_service_hint")}</span>
     </label>`;
 	}
 	_renderMoments(e, t, n) {
 		let r = new Set(this.ctx?.meta?.future_moments ?? []), i = new Set(this.ctx?.meta?.moments ?? []);
 		return C`<div class="moments-grid">
-      ${Object.entries(Dt).map(([a, o]) => C`<fieldset>
-            <legend>${N(e, `moment_group.${a}`)}</legend>
+      ${Object.entries(Tt).map(([a, o]) => C`<fieldset>
+            <legend>${M(e, `moment_group.${a}`)}</legend>
             ${o.filter((e) => i.has(e)).map((i) => C`<label class="check">
                     <input
                       type="checkbox"
@@ -4137,8 +4142,8 @@ var Rt = class extends j {
 		}}
                     />
                     <span>
-                      ${N(e, `moment.${i}`)}
-                      ${r.has(i) ? C`<span class="later">${N(e, "profiles.future_moment")}</span>` : T}
+                      ${M(e, `moment.${i}`)}
+                      ${r.has(i) ? C`<span class="later">${M(e, "profiles.future_moment")}</span>` : T}
                     </span>
                   </label>`)}
           </fieldset>`)}
@@ -4148,17 +4153,17 @@ var Rt = class extends j {
 		if (!t.moments.includes("duress")) return T;
 		let n = this.ctx?.config?.settings, r = this._draft, i = !!r?.id && n?.default_profile_id === r?.id, a = (n?.silent_suppresses ?? []).includes(t.kind), o = (e) => C`<span class="hint bad wide" role="alert">${e}</span>`;
 		return C`<div class="duress">
-      <span class="hint wide">${N(e, "profiles.duress_hint")}</span>
-      ${i ? T : o(N(e, "profiles.duress_not_default"))}
-      ${t.kind === "persistent_notification" ? o(N(e, "profiles.duress_persistent")) : T}
-      ${a ? o(N(e, "profiles.duress_silent", { kind: N(e, `action_kind.${t.kind}`) })) : T}
+      <span class="hint wide">${M(e, "profiles.duress_hint")}</span>
+      ${i ? T : o(M(e, "profiles.duress_not_default"))}
+      ${t.kind === "persistent_notification" ? o(M(e, "profiles.duress_persistent")) : T}
+      ${a ? o(M(e, "profiles.duress_silent", { kind: M(e, `action_kind.${t.kind}`) })) : T}
     </div>`;
 	}
 	_renderConditions(e, t, n) {
 		let r = this.ctx?.meta?.max_conditions ?? 2, i = (e) => this._setAction(n, { conditions: e });
 		return C`<fieldset class="conditions">
-      <legend>${N(e, "field.conditions")}</legend>
-      ${t.conditions.length ? t.conditions.map((r, i) => this._renderCondition(e, t, n, r, i)) : C`<p class="hint">${N(e, "condition.none")}</p>`}
+      <legend>${M(e, "field.conditions")}</legend>
+      ${t.conditions.length ? t.conditions.map((r, i) => this._renderCondition(e, t, n, r, i)) : C`<p class="hint">${M(e, "condition.none")}</p>`}
       ${t.conditions.length < r ? C`<div class="actions">
               <button
                 class="btn sm"
@@ -4168,7 +4173,7 @@ var Rt = class extends j {
 			before: "07:00"
 		}])}
               >
-                ${N(e, "condition.time")}
+                ${M(e, "condition.time")}
               </button>
               <button
                 class="btn sm"
@@ -4179,20 +4184,20 @@ var Rt = class extends j {
 			state: "on"
 		}])}
               >
-                ${N(e, "condition.state")}
+                ${M(e, "condition.state")}
               </button>
             </div>` : T}
       ${t.conditions.length === 2 ? C`<label class="field">
-              <span class="lbl">${N(e, "field.condition_mode")}</span>
+              <span class="lbl">${M(e, "field.condition_mode")}</span>
               <select
                 @change=${(e) => this._setAction(n, { condition_mode: e.target.value })}
               >
                 ${["all", "any"].map((n) => C`<option .value=${n} .selected=${W(t.condition_mode === n)}>
-                      ${N(e, `condition.${n}`)}
+                      ${M(e, `condition.${n}`)}
                     </option>`)}
               </select>
             </label>` : T}
-      <p class="hint">${N(e, "condition.max")}</p>
+      <p class="hint">${M(e, "condition.max")}</p>
     </fieldset>`;
 	}
 	_renderCondition(e, t, n, r, i) {
@@ -4202,7 +4207,7 @@ var Rt = class extends j {
 		} : t) });
 		return C`<div class="condition">
       ${r.kind === "time" ? C`<label class="field">
-                <span class="lbl">${N(e, "condition.after")}</span>
+                <span class="lbl">${M(e, "condition.after")}</span>
                 <input
                   type="time"
                   .value=${r.after}
@@ -4210,44 +4215,44 @@ var Rt = class extends j {
                 />
               </label>
               <label class="field">
-                <span class="lbl">${N(e, "condition.before")}</span>
+                <span class="lbl">${M(e, "condition.before")}</span>
                 <input
                   type="time"
                   .value=${r.before}
                   @input=${(e) => a({ before: e.target.value })}
                 />
-                <span class="hint">${N(e, "condition.midnight_hint")}</span>
+                <span class="hint">${M(e, "condition.midnight_hint")}</span>
               </label>` : C`<label class="field">
-                <span class="lbl">${N(e, "field.entity_id")}</span>
+                <span class="lbl">${M(e, "field.entity_id")}</span>
                 <input
                   .value=${r.entity_id}
                   @input=${(e) => a({ entity_id: e.target.value })}
                 />
               </label>
               <label class="field">
-                <span class="lbl">${N(e, "field.state")}</span>
+                <span class="lbl">${M(e, "field.state")}</span>
                 <select
                   @change=${(e) => a({ operator: e.target.value })}
                 >
                   ${["is", "is_not"].map((t) => C`<option .value=${t} .selected=${W(r.operator === t)}>
-                        ${N(e, `condition.${t}`)}
+                        ${M(e, `condition.${t}`)}
                       </option>`)}
                 </select>
               </label>
               <label class="field">
-                <span class="lbl">${N(e, "condition.state")}</span>
+                <span class="lbl">${M(e, "condition.state")}</span>
                 <input
                   .value=${r.state}
                   @input=${(e) => a({ state: e.target.value })}
                 />
               </label>`}
-      <button class="btn sm danger" @click=${() => this._setAction(n, { conditions: t.conditions.filter((e, t) => t !== i) })}>${N(e, "common.delete")}</button>
+      <button class="btn sm danger" @click=${() => this._setAction(n, { conditions: t.conditions.filter((e, t) => t !== i) })}>${M(e, "common.delete")}</button>
     </div>`;
 	}
 	static {
 		this.styles = [
-			F,
 			P,
+			N,
 			o`
       .hd-buttons {
         display: flex;
@@ -4377,11 +4382,7 @@ var Rt = class extends j {
     `
 		];
 	}
-};
-customElements.get("foyer-page-profiles") || customElements.define("foyer-page-profiles", Rt);
-//#endregion
-//#region src/panel/pages/groups.ts
-var zt = class extends j {
+}), U("foyer-page-groups", class extends A {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1;
 	}
@@ -4404,7 +4405,7 @@ var zt = class extends j {
 			window_seconds: 60,
 			suppress_members: !1,
 			response_profile_id: null
-		}, this._problems = [], R(this);
+		}, this._problems = [], L(this);
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -4417,7 +4418,7 @@ var zt = class extends j {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("group", this._draft);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -4465,51 +4466,51 @@ var zt = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "groups.title")}</h2>
-          <button class="btn primary" @click=${() => this._edit()}>${N(t, "groups.add")}</button>
+          <h2>${M(t, "groups.title")}</h2>
+          <button class="btn primary" @click=${() => this._edit()}>${M(t, "groups.add")}</button>
         </div>
         ${i.length ? C`<div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>${N(t, "field.name")}</th>
-                    <th>${N(t, "field.area_id")}</th>
-                    <th>${N(t, "field.members")}</th>
-                    <th>${N(t, "field.n")}</th>
-                    <th>${N(t, "field.window_seconds")}</th>
-                    <th>${N(t, "groups.members_below")}</th>
+                    <th>${M(t, "field.name")}</th>
+                    <th>${M(t, "field.area_id")}</th>
+                    <th>${M(t, "field.members")}</th>
+                    <th>${M(t, "field.n")}</th>
+                    <th>${M(t, "field.window_seconds")}</th>
+                    <th>${M(t, "groups.members_below")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${i.map(({ group: e, derived: i }) => C`<tr
                       class=${i ? "" : "clickable"}
  tabindex=${i ? "-1" : "0"}
- @keydown=${V}
+ @keydown=${B}
                       aria-selected=${this._draft?.id === e.id ? "true" : "false"}
                       @click=${() => i ? void 0 : this._edit(e)}
                     >
                       <td>
                         <strong>${e.name}</strong>
-                        ${i ? C`<span class="tag">${N(t, "groups.from_zone")}</span>` : T}
+                        ${i ? C`<span class="tag">${M(t, "groups.from_zone")}</span>` : T}
                       </td>
                       <td>${n.get(e.area_id) ?? ""}</td>
                       <td>
                         ${e.members.map((e) => C`<span class="tag">${r.get(e) ?? e}</span>`)}
                       </td>
-                      <td>${N(t, "groups.threshold", {
+                      <td>${M(t, "groups.threshold", {
 			n: e.n,
 			m: e.members.length
 		})}</td>
-                      <td>${N(t, "common.seconds", { n: e.window_seconds })}</td>
+                      <td>${M(t, "common.seconds", { n: e.window_seconds })}</td>
                       <td>
-                        ${N(t, e.suppress_members ? "groups.suppressed" : "groups.not_suppressed")}
+                        ${M(t, e.suppress_members ? "groups.suppressed" : "groups.not_suppressed")}
                       </td>
                     </tr>`)}
                 </tbody>
               </table>
-            </div>` : C`<div class="empty">${N(t, "groups.none")}</div>`}
+            </div>` : C`<div class="empty">${M(t, "groups.none")}</div>`}
         <div class="card-bd">
-          <p class="hint">${N(t, "groups.from_zone_hint")}</p>
+          <p class="hint">${M(t, "groups.from_zone_hint")}</p>
         </div>
       </div>
       ${this._draft ? this._renderEditor(t, this._draft) : T}
@@ -4523,19 +4524,19 @@ var zt = class extends j {
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "groups.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "groups.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.area_id")}</span>
+              <span class="lbl">${M(e, "field.area_id")}</span>
               <select
                 @change=${(e) => this._set("area_id", e.target.value)}
               >
@@ -4543,39 +4544,39 @@ var zt = class extends j {
                       ${e.name}
                     </option>`)}
               </select>
-              <span class="hint">${N(e, "groups.area_hint")}</span>
+              <span class="hint">${M(e, "groups.area_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.n")}</span>
+              <span class="lbl">${M(e, "field.n")}</span>
               <input
                 type="number"
                 min="2"
                 max=${Math.max(2, t.members.length)}
                 .value=${String(t.n)}
-                @input=${(e) => H(e, (e) => this._set("n", e))}
+                @input=${(e) => V(e, (e) => this._set("n", e))}
               />
               <span class="hint">
-                ${N(e, "groups.threshold", {
+                ${M(e, "groups.threshold", {
 			n: t.n,
 			m: t.members.length
 		})}
               </span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.window_seconds")}</span>
+              <span class="lbl">${M(e, "field.window_seconds")}</span>
               <input
                 type="number"
                 min=${r}
                 max=${i}
                 .value=${String(t.window_seconds)}
-                @input=${(e) => H(e, (e) => this._set("window_seconds", e))}
+                @input=${(e) => V(e, (e) => this._set("window_seconds", e))}
               />
-              <span class="hint">${N(e, "groups.window_hint")}</span>
+              <span class="hint">${M(e, "groups.window_hint")}</span>
             </label>
-            ${G(this.ctx, t.response_profile_id, (e) => this._set("response_profile_id", e), N(e, "profiles.group_hint"))}
+            ${G(this.ctx, t.response_profile_id, (e) => this._set("response_profile_id", e), M(e, "profiles.group_hint"))}
           </div>
           <fieldset>
-            <legend>${N(e, "field.members")}</legend>
+            <legend>${M(e, "field.members")}</legend>
             ${s.length ? s.map((n) => C`<label class="check">
                     <input
                       type="checkbox"
@@ -4583,13 +4584,13 @@ var zt = class extends j {
                       @change=${(e) => c(n.id ?? "", e.target.checked)}
                     />
                     <span>
-                      ${N(e, "zones.entity", {
+                      ${M(e, "zones.entity", {
 			name: n.name,
 			entity: a.get(n.area_id) ?? n.area_id
 		})}
                     </span>
-                  </label>`) : C`<p class="hint">${N(e, "groups.no_zones")}</p>`}
-            <p class="hint">${N(e, "groups.members_hint")}</p>
+                  </label>`) : C`<p class="hint">${M(e, "groups.no_zones")}</p>`}
+            <p class="hint">${M(e, "groups.members_hint")}</p>
           </fieldset>
           <label class="check suppress">
             <input
@@ -4598,21 +4599,21 @@ var zt = class extends j {
               @change=${(e) => this._set("suppress_members", e.target.checked)}
             />
             <span>
-              ${N(e, "field.suppress_members")}
-              <span class="hint">${N(e, "groups.suppress_hint")}</span>
+              ${M(e, "field.suppress_members")}
+              <span class="hint">${M(e, "groups.suppress_hint")}</span>
             </span>
           </label>
           ${this._problems.length ? C`<div class="problems" role="alert">
                 <ul>
-                  ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                  ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
                 </ul>
               </div>` : T}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-              ${N(e, "common.save")}
+              ${M(e, "common.save")}
             </button>
             <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
-              ${N(e, "common.cancel")}
+              ${M(e, "common.cancel")}
             </button>
             ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -4627,8 +4628,8 @@ var zt = class extends j {
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
 			o`
       .suppress {
         margin-top: 12px;
@@ -4639,11 +4640,10 @@ var zt = class extends j {
     `
 		];
 	}
-};
-customElements.get("foyer-page-groups") || customElements.define("foyer-page-groups", zt);
+});
 //#endregion
 //#region src/panel/pages/users.ts
-var Bt = {
+var It = {
 	name: "",
 	has_code: !1,
 	has_duress_code: !1,
@@ -4662,17 +4662,17 @@ var Bt = {
 	code_exempt_when_identified: !1,
 	enabled: !0
 };
-function Vt(e) {
+function Lt(e) {
 	if (!e) return "";
 	let t = new Date(e), n = (e) => String(e).padStart(2, "0");
 	return `${t.getFullYear()}-${n(t.getMonth() + 1)}-${n(t.getDate())}T${n(t.getHours())}:${n(t.getMinutes())}`;
 }
-function Ht(e) {
+function Rt(e) {
 	if (!e) return null;
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
-var Ut = class extends j {
+U("foyer-page-users", class extends A {
 	constructor(...e) {
 		super(...e), this._problems = [], this._policyProblems = [], this._busy = !1;
 	}
@@ -4687,7 +4687,7 @@ var Ut = class extends j {
 		};
 	}
 	_edit(e) {
-		this._busy || (this._draft = e ? { ...structuredClone(e) } : structuredClone(Bt), this._problems = [], R(this));
+		this._busy || (this._draft = e ? { ...structuredClone(e) } : structuredClone(It), this._problems = [], L(this));
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -4710,14 +4710,14 @@ var Ut = class extends j {
 						kind: "user",
 						ref: null,
 						field: null
-					}], z(this);
+					}], R(this);
 					return;
 				}
 				let i = await this.ctx.saveUser(r, {
 					...e === void 0 ? {} : { new_code: e },
 					...t === void 0 ? {} : { new_duress_code: t }
 				});
-				this._problems = i.problems, i.success || z(this), i.success && (this._draft = void 0);
+				this._problems = i.problems, i.success || R(this), i.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -4758,60 +4758,60 @@ var Ut = class extends j {
 		let t = e.strings, n = e.config.users ?? [];
 		return C`
       ${e.status.security.enforced ? T : C`<div class="banner warn">
-            <strong>${N(t, "users.not_enforced")}</strong>
-            <span>${N(t, "users.not_enforced_hint")}</span>
+            <strong>${M(t, "users.not_enforced")}</strong>
+            <span>${M(t, "users.not_enforced_hint")}</span>
           </div>`}
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "users.title")}</h2>
+          <h2>${M(t, "users.title")}</h2>
           <button class="btn primary" @click=${() => this._edit()}>
-            ${N(t, "users.add")}
+            ${M(t, "users.add")}
           </button>
         </div>
         ${n.length ? C`<div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>${N(t, "field.name")}</th>
-                    <th>${N(t, "users.code")}</th>
-                    <th>${N(t, "field.permissions")}</th>
-                    <th>${N(t, "users.scope")}</th>
-                    <th>${N(t, "field.valid_until")}</th>
-                    <th>${N(t, "users.duress")}</th>
-                    <th>${N(t, "field.ha_user_id")}</th>
+                    <th>${M(t, "field.name")}</th>
+                    <th>${M(t, "users.code")}</th>
+                    <th>${M(t, "field.permissions")}</th>
+                    <th>${M(t, "users.scope")}</th>
+                    <th>${M(t, "field.valid_until")}</th>
+                    <th>${M(t, "users.duress")}</th>
+                    <th>${M(t, "field.ha_user_id")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${n.map((e) => this._row(t, e))}
                 </tbody>
               </table>
-            </div>` : C`<div class="empty">${N(t, "users.none")}</div>`}
+            </div>` : C`<div class="empty">${M(t, "users.none")}</div>`}
       </div>
       ${this._draft ? this._renderEditor(t, this._draft) : T}
       ${this._renderPolicy(t)}
     `;
 	}
 	_row(e, t) {
-		let n = this.ctx, r = new Map((n.config?.areas ?? []).map((e) => [e.id, e.name])), i = t.allowed_area_ids === null ? N(e, "users.every_area") : t.allowed_area_ids.map((e) => r.get(e) ?? e).join(", ");
+		let n = this.ctx, r = new Map((n.config?.areas ?? []).map((e) => [e.id, e.name])), i = t.allowed_area_ids === null ? M(e, "users.every_area") : t.allowed_area_ids.map((e) => r.get(e) ?? e).join(", ");
 		return C`<tr
       class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
       aria-selected=${this._draft?.id === t.id ? "true" : "false"}
       @click=${() => this._edit(t)}
     >
       <td>
         <strong>${t.name}</strong>
-        ${t.enabled ? T : C`<span class="tag">${N(e, "users.disabled")}</span>`}
+        ${t.enabled ? T : C`<span class="tag">${M(e, "users.disabled")}</span>`}
       </td>
       <td>
-        ${t.has_code ? C`<span class="pill ok">${N(e, "users.code_set")}</span>` : C`<span class="pill warn">${N(e, "users.code_missing")}</span>`}
+        ${t.has_code ? C`<span class="pill ok">${M(e, "users.code_set")}</span>` : C`<span class="pill warn">${M(e, "users.code_missing")}</span>`}
       </td>
-      <td>${t.permissions.map((t) => C`<span class="tag">${N(e, `permission.${t}`)}</span>`)}</td>
+      <td>${t.permissions.map((t) => C`<span class="tag">${M(e, `permission.${t}`)}</span>`)}</td>
       <td>${i}</td>
       <td>${t.valid_until ? new Date(t.valid_until).toLocaleString(n.hass.language) : "—"}</td>
-      <td>${N(e, t.has_duress_code ? "common.yes" : "common.no")}</td>
-      <td>${t.ha_user_id ? N(e, "users.linked") : "—"}</td>
+      <td>${M(e, t.has_duress_code ? "common.yes" : "common.no")}</td>
+      <td>${t.ha_user_id ? M(e, "users.linked") : "—"}</td>
     </tr>`;
 	}
 	_renderEditor(e, t) {
@@ -4819,34 +4819,34 @@ var Ut = class extends j {
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "users.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "users.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "users.code")}</span>
+              <span class="lbl">${M(e, "users.code")}</span>
               <input
                 type="password"
                 inputmode="numeric"
                 autocomplete="off"
                 maxlength=${r}
-                placeholder=${t.has_code ? N(e, "users.code_unchanged") : N(e, "users.code_digits", { n: r })}
+                placeholder=${t.has_code ? M(e, "users.code_unchanged") : M(e, "users.code_digits", { n: r })}
                 .value=${W(t.new_code ?? "")}
                 @input=${(e) => this._set("new_code", e.target.value)}
               />
               <span class="hint">
-                ${N(e, t.id ? "users.code_hint" : "users.code_hint_new", { n: r })}
+                ${M(e, t.id ? "users.code_hint" : "users.code_hint_new", { n: r })}
               </span>
             </label>
             ${t.new_code ? C`<label class="field">
-                  <span class="lbl">${N(e, "users.code_repeat")}</span>
+                  <span class="lbl">${M(e, "users.code_repeat")}</span>
                   <input
                     type="password"
                     inputmode="numeric"
@@ -4857,51 +4857,51 @@ var Ut = class extends j {
                   />
                 </label>` : T}
             <label class="field">
-              <span class="lbl">${N(e, "users.duress")}</span>
+              <span class="lbl">${M(e, "users.duress")}</span>
               <input
                 type="password"
                 inputmode="numeric"
                 autocomplete="off"
                 maxlength=${r}
-                placeholder=${t.has_duress_code ? N(e, "users.code_unchanged") : N(e, "users.code_optional")}
+                placeholder=${t.has_duress_code ? M(e, "users.code_unchanged") : M(e, "users.code_optional")}
                 .value=${W(t.new_duress_code ?? "")}
                 @input=${(e) => this._set("new_duress_code", e.target.value)}
               />
-              <span class="hint">${N(e, "users.duress_hint")}</span>
+              <span class="hint">${M(e, "users.duress_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.ha_user_id")}</span>
+              <span class="lbl">${M(e, "field.ha_user_id")}</span>
               <select
                 @change=${(e) => this._set("ha_user_id", e.target.value || null)}
               >
-                <option value="" .selected=${W(!t.ha_user_id)}>${N(e, "users.not_linked")}</option>
+                <option value="" .selected=${W(!t.ha_user_id)}>${M(e, "users.not_linked")}</option>
                 ${a.map((e) => C`<option .value=${e.id} .selected=${W(e.id === t.ha_user_id)}>
                     ${e.name}
                   </option>`)}
               </select>
-              <span class="hint">${N(e, "users.linked_hint")}</span>
+              <span class="hint">${M(e, "users.linked_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.valid_from")}</span>
+              <span class="lbl">${M(e, "field.valid_from")}</span>
               <input
                 type="datetime-local"
-                .value=${Vt(t.valid_from)}
-                @input=${(e) => this._set("valid_from", Ht(e.target.value))}
+                .value=${Lt(t.valid_from)}
+                @input=${(e) => this._set("valid_from", Rt(e.target.value))}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.valid_until")}</span>
+              <span class="lbl">${M(e, "field.valid_until")}</span>
               <input
                 type="datetime-local"
-                .value=${Vt(t.valid_until)}
-                @input=${(e) => this._set("valid_until", Ht(e.target.value))}
+                .value=${Lt(t.valid_until)}
+                @input=${(e) => this._set("valid_until", Rt(e.target.value))}
               />
-              <span class="hint">${N(e, "users.validity_hint")}</span>
+              <span class="hint">${M(e, "users.validity_hint")}</span>
             </label>
           </div>
 
           <div class="hr"></div>
-          <div class="lbl">${N(e, "field.permissions")}</div>
+          <div class="lbl">${M(e, "field.permissions")}</div>
           <div class="chips">
             ${i.map((n) => C`<label class="chip">
                 <input
@@ -4909,10 +4909,10 @@ var Ut = class extends j {
                   .checked=${W(t.permissions.includes(n))}
                   @change=${(e) => this._togglePermission(n, e.target.checked)}
                 />
-                <span>${N(e, `permission.${n}`)}</span>
+                <span>${M(e, `permission.${n}`)}</span>
               </label>`)}
           </div>
-          ${t.permissions.includes("walk_test") ? C`<div class="notice" role="alert">${N(e, "users.walk_test_note")}</div>` : T}
+          ${t.permissions.includes("walk_test") ? C`<div class="notice" role="alert">${M(e, "users.walk_test_note")}</div>` : T}
 
           <div class="hr"></div>
           <div class="scopes">
@@ -4934,11 +4934,11 @@ var Ut = class extends j {
               @change=${(e) => this._set("code_exempt_when_identified", e.target.checked)}
             />
             <span>
-              ${N(e, "users.exempt")}
-              <span class="hint">${N(e, "users.exempt_hint")}</span>
+              ${M(e, "users.exempt")}
+              <span class="hint">${M(e, "users.exempt_hint")}</span>
             </span>
           </label>
-          <p class="note">${N(e, "users.exempt_note")}</p>
+          <p class="note">${M(e, "users.exempt_note")}</p>
           <label class="check">
             <input
               type="checkbox"
@@ -4946,18 +4946,18 @@ var Ut = class extends j {
               @change=${(e) => this._set("enabled", e.target.checked)}
             />
             <span>
-              ${N(e, "users.enabled")}
-              <span class="hint">${N(e, "users.enabled_hint")}</span>
+              ${M(e, "users.enabled")}
+              <span class="hint">${M(e, "users.enabled_hint")}</span>
             </span>
           </label>
 
           ${this._problems.length ? C`<ul class="problems">
-                ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
               </ul>` : T}
         </div>
         <div class="card-ft">
           <button class="btn" @click=${() => this._draft = void 0}>
-            ${N(e, "common.cancel")}
+            ${M(e, "common.cancel")}
           </button>
           ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -4967,7 +4967,7 @@ var Ut = class extends j {
                 @confirm=${this._delete}
               ></foyer-delete-button>` : T}
           <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-            ${N(e, "common.save")}
+            ${M(e, "common.save")}
           </button>
         </div>
       </div>
@@ -4979,14 +4979,14 @@ var Ut = class extends j {
 			r ? a.add(e) : a.delete(e), this._set(t, [...a]);
 		};
 		return C`<div class="scope">
-      <span class="lbl">${N(e, `field.${t}`)}</span>
+      <span class="lbl">${M(e, `field.${t}`)}</span>
       <label class="chip">
         <input
           type="checkbox"
           .checked=${W(i === null)}
           @change=${(e) => this._set(t, e.target.checked ? null : [])}
         />
-        <span>${N(e, "users.everything")}</span>
+        <span>${M(e, "users.everything")}</span>
       </label>
       ${i === null ? T : C`<div class="chips">
             ${n.map((e) => C`<label class="chip">
@@ -5017,29 +5017,29 @@ var Ut = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "users.policy")}</h2>
+          <h2>${M(e, "users.policy")}</h2>
         </div>
         <div class="card-bd">
-          <p class="hint">${N(e, "users.policy_hint")}</p>
-          ${L(t) ? C`<div class="notice" role="note">${N(e, "users.policy_armed")}</div>` : T}
+          <p class="hint">${M(e, "users.policy_hint")}</p>
+          ${I(t) ? C`<div class="notice" role="note">${M(e, "users.policy_armed")}</div>` : T}
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>${N(e, "users.operation")}</th>
-                  <th>${N(e, "users.needs_code")}</th>
+                  <th>${M(e, "users.operation")}</th>
+                  <th>${M(e, "users.needs_code")}</th>
                 </tr>
               </thead>
               <tbody>
                 ${r.map((t) => C`<tr>
                     <td>
-                      ${N(e, `operation.${t}`)}
-                      ${i.has(t) ? C`<span class="tag">${N(e, "users.later_phase")}</span>` : T}
+                      ${M(e, `operation.${t}`)}
+                      ${i.has(t) ? C`<span class="tag">${M(e, "users.later_phase")}</span>` : T}
                     </td>
                     <td>
                       <input
                         type="checkbox"
-                        aria-label=${N(e, `operation.${t}`)}
+                        aria-label=${M(e, `operation.${t}`)}
                         .checked=${W(!!n.code_policy[t])}
                         @change=${(e) => d(t, e.target.checked)}
                       />
@@ -5052,50 +5052,50 @@ var Ut = class extends j {
           <div class="hr"></div>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "users.code_length")}</span>
+              <span class="lbl">${M(e, "users.code_length")}</span>
               <input
                 type="number"
                 min=${l}
                 max=${u}
                 .value=${String(n.security.code_length)}
-                @input=${(e) => H(e, (e) => f("code_length", e))}
+                @input=${(e) => V(e, (e) => f("code_length", e))}
               />
-              <span class="hint">${N(e, "users.code_length_hint")}</span>
+              <span class="hint">${M(e, "users.code_length_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "users.lockout_failures")}</span>
+              <span class="lbl">${M(e, "users.lockout_failures")}</span>
               <input
                 type="number"
                 min=${a}
                 max=${o}
                 .value=${String(n.security.lockout_failures)}
-                @input=${(e) => H(e, (e) => f("lockout_failures", e))}
+                @input=${(e) => V(e, (e) => f("lockout_failures", e))}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "users.lockout_window")}</span>
+              <span class="lbl">${M(e, "users.lockout_window")}</span>
               <input
                 type="number"
                 min=${s}
                 max=${c}
                 .value=${String(n.security.lockout_window)}
-                @input=${(e) => H(e, (e) => f("lockout_window", e))}
+                @input=${(e) => V(e, (e) => f("lockout_window", e))}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "users.lockout_duration")}</span>
+              <span class="lbl">${M(e, "users.lockout_duration")}</span>
               <input
                 type="number"
                 min=${s}
                 max=${c}
                 .value=${String(n.security.lockout_duration)}
-                @input=${(e) => H(e, (e) => f("lockout_duration", e))}
+                @input=${(e) => V(e, (e) => f("lockout_duration", e))}
               />
-              <span class="hint">${N(e, "users.lockout_hint")}</span>
+              <span class="hint">${M(e, "users.lockout_hint")}</span>
             </label>
           </div>
           ${this._policyProblems.length ? C`<ul class="problems">
-                ${this._policyProblems.map((t) => C`<li>${B(e, t)}</li>`)}
+                ${this._policyProblems.map((t) => C`<li>${z(e, t)}</li>`)}
               </ul>` : T}
         </div>
         <div class="card-ft">
@@ -5104,7 +5104,7 @@ var Ut = class extends j {
             ?disabled=${this._busy || !this._policy}
             @click=${this._savePolicy}
           >
-            ${N(e, "common.save")}
+            ${M(e, "common.save")}
           </button>
         </div>
       </div>
@@ -5112,8 +5112,8 @@ var Ut = class extends j {
 	}
 	static {
 		this.styles = [
-			F,
 			P,
+			N,
 			o`
       .scopes {
         display: grid;
@@ -5159,11 +5159,10 @@ var Ut = class extends j {
     `
 		];
 	}
-};
-customElements.define("foyer-page-users", Ut);
+});
 //#endregion
 //#region src/panel/pages/devices.ts
-function Wt() {
+function zt() {
 	return {
 		scopes: [],
 		free_scopes: ["status"],
@@ -5174,18 +5173,18 @@ function Wt() {
 		clear_text_confirmed: !1
 	};
 }
-var Gt = [
+var Bt = [
 	"status",
 	"zones",
 	"batteries",
 	"health",
 	"log"
-], Kt = [
+], Vt = [
 	"arm",
 	"disarm",
 	"exclude",
 	"acknowledge"
-], qt = 30, Jt = 600, Yt = {
+], Ht = 30, Ut = 600, Wt = {
 	name: "",
 	kind: "keypad",
 	ref: "",
@@ -5196,8 +5195,8 @@ var Gt = [
 	scenario_id: null,
 	enabled: !0,
 	transport: "mqtt",
-	...Wt()
-}, Xt = ["tag.", "event."], Zt = class extends j {
+	...zt()
+}, Gt = ["tag.", "event."], Kt = class extends A {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._mqttProblems = [], this._tokenProblems = [];
 	}
@@ -5216,9 +5215,9 @@ var Gt = [
 	}
 	_edit(e) {
 		this._busy || (this._draft = e ? {
-			...Wt(),
+			...zt(),
 			...structuredClone(e)
-		} : structuredClone(Yt), this._problems = [], this._token = void 0, this._tokenProblems = [], this._confirmToken = void 0, R(this));
+		} : structuredClone(Wt), this._problems = [], this._token = void 0, this._tokenProblems = [], this._confirmToken = void 0, L(this));
 	}
 	async _tokenAction(e) {
 		let t = this._draft?.id;
@@ -5285,7 +5284,7 @@ var Gt = [
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("device", this._draft);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0, this._token = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0, this._token = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -5323,29 +5322,29 @@ var Gt = [
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "devices.title")}</h2>
+          <h2>${M(t, "devices.title")}</h2>
           <button class="btn primary" @click=${() => this._edit()}>
-            ${N(t, "devices.add")}
+            ${M(t, "devices.add")}
           </button>
         </div>
         ${n.length ? C`<div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>${N(t, "field.name")}</th>
-                    <th>${N(t, "field.kind")}</th>
-                    <th>${N(t, "devices.reaches")}</th>
-                    <th>${N(t, "devices.identifies")}</th>
-                    <th>${N(t, "field.enabled")}</th>
+                    <th>${M(t, "field.name")}</th>
+                    <th>${M(t, "field.kind")}</th>
+                    <th>${M(t, "devices.reaches")}</th>
+                    <th>${M(t, "devices.identifies")}</th>
+                    <th>${M(t, "field.enabled")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${n.map((e) => this._row(t, e))}
                 </tbody>
               </table>
-            </div>` : C`<div class="empty">${N(t, "devices.none")}</div>`}
+            </div>` : C`<div class="empty">${M(t, "devices.none")}</div>`}
         <div class="card-bd">
-          <p class="note">${N(t, "devices.white_list")}</p>
+          <p class="note">${M(t, "devices.white_list")}</p>
         </div>
       </div>
       ${this._draft ? this._renderEditor(t, this._draft) : T}
@@ -5357,21 +5356,21 @@ var Gt = [
 		return C`<tr
       class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
       aria-selected=${this._draft?.id === t.id ? "true" : "false"}
       @click=${() => this._edit(t)}
     >
       <td><strong>${t.name}</strong></td>
-      <td>${N(e, `device_kind.${t.kind}`)}</td>
+      <td>${M(e, `device_kind.${t.kind}`)}</td>
       <td class="mono">
         ${t.kind === "keypad" ? t.ref : t.entity_id}
-        ${t.kind === "keypad" ? C`<span class="pill idle">${N(e, `transport.${t.transport}`)}</span>` : T}
-        ${this._inClear(t) ? C`<span class="pill warn">${N(e, "devices.in_clear_pill")}</span>` : T}
+        ${t.kind === "keypad" ? C`<span class="pill idle">${M(e, `transport.${t.transport}`)}</span>` : T}
+        ${this._inClear(t) ? C`<span class="pill warn">${M(e, "devices.in_clear_pill")}</span>` : T}
       </td>
       <td>
-        ${t.kind === "tag" ? C`<span class="pill ok">${n?.name ?? "—"}</span>` : C`<span class="pill idle">${N(e, "devices.code_is_identity")}</span>`}
+        ${t.kind === "tag" ? C`<span class="pill ok">${n?.name ?? "—"}</span>` : C`<span class="pill idle">${M(e, "devices.code_is_identity")}</span>`}
       </td>
-      <td>${N(e, t.enabled ? "common.yes" : "common.no")}</td>
+      <td>${M(e, t.enabled ? "common.yes" : "common.no")}</td>
     </tr>`;
 	}
 	_renderEditor(e, t) {
@@ -5379,44 +5378,44 @@ var Gt = [
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "devices.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "devices.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.kind")}</span>
+              <span class="lbl">${M(e, "field.kind")}</span>
               <select
                 @change=${(e) => this._setKind(e.target.value)}
               >
                 ${["keypad", "tag"].map((n) => C`<option .value=${n} .selected=${W(n === t.kind)}>
-                    ${N(e, `device_kind.${n}`)}
+                    ${M(e, `device_kind.${n}`)}
                   </option>`)}
               </select>
-              <span class="hint">${N(e, `devices.kind_hint_${t.kind}`)}</span>
+              <span class="hint">${M(e, `devices.kind_hint_${t.kind}`)}</span>
             </label>
           </div>
 
           ${t.kind === "keypad" ? C`<div class="grid-form">
                   <label class="field">
-                    <span class="lbl">${N(e, "field.ref")}</span>
+                    <span class="lbl">${M(e, "field.ref")}</span>
                     <input
                       .value=${t.ref ?? ""}
                       placeholder="keypad_hall"
                       @input=${(e) => this._set("ref", e.target.value)}
                     />
                     <span class="hint"
-                      >${N(e, t.transport === "http" ? "devices.ref_hint_http" : "devices.ref_hint")}</span
+                      >${M(e, t.transport === "http" ? "devices.ref_hint_http" : "devices.ref_hint")}</span
                     >
                   </label>
                   <label class="field">
-                    <span class="lbl">${N(e, "field.transport")}</span>
+                    <span class="lbl">${M(e, "field.transport")}</span>
                     <select
                       @change=${(e) => this._setTransport(e.target.value)}
                     >
@@ -5424,22 +5423,22 @@ var Gt = [
                           .value=${n}
                           .selected=${W(n === t.transport)}
                         >
-                          ${N(e, `transport.${n}`)}
+                          ${M(e, `transport.${n}`)}
                         </option>`)}
                     </select>
-                    <span class="hint">${N(e, `devices.transport_hint_${t.transport}`)}</span>
-                    ${t.transport === "mqtt" && this.ctx?.config?.devices.find((e) => e.id === t.id)?.has_token ? C`<span class="hint warn-text">${N(e, "devices.token_dropped")}</span>` : T}
+                    <span class="hint">${M(e, `devices.transport_hint_${t.transport}`)}</span>
+                    ${t.transport === "mqtt" && this.ctx?.config?.devices.find((e) => e.id === t.id)?.has_token ? C`<span class="hint warn-text">${M(e, "devices.token_dropped")}</span>` : T}
                   </label>
                 </div>
                 ${t.transport === "http" ? C`${this._renderToken(e, t)} ${this._renderScopes(e, t)}` : T}` : C`
-                ${this.ctx?.config?.devices.find((e) => e.id === t.id)?.has_token ? C`<p class="hint warn-text">${N(e, "devices.token_dropped")}</p>` : T}
+                ${this.ctx?.config?.devices.find((e) => e.id === t.id)?.has_token ? C`<p class="hint warn-text">${M(e, "devices.token_dropped")}</p>` : T}
                 <div class="banner warn">
-                  <strong>${N(e, "devices.stolen_tag")}</strong>
-                  <span>${N(e, "devices.stolen_tag_hint")}</span>
+                  <strong>${M(e, "devices.stolen_tag")}</strong>
+                  <span>${M(e, "devices.stolen_tag_hint")}</span>
                 </div>
                 <div class="grid-form">
                   <label class="field">
-                    <span class="lbl">${N(e, "field.entity_id")}</span>
+                    <span class="lbl">${M(e, "field.entity_id")}</span>
                     <select
                       @change=${(e) => this._set("entity_id", e.target.value || null)}
                     >
@@ -5448,18 +5447,18 @@ var Gt = [
                           ${e}
                         </option>`)}
                     </select>
-                    <span class="hint">${N(e, "devices.entity_hint")}</span>
+                    <span class="hint">${M(e, "devices.entity_hint")}</span>
                   </label>
                   <label class="field">
-                    <span class="lbl">${N(e, "field.event_type")}</span>
+                    <span class="lbl">${M(e, "field.event_type")}</span>
                     <input
                       .value=${t.event_type ?? ""}
                       @input=${(e) => this._set("event_type", e.target.value || null)}
                     />
-                    <span class="hint">${N(e, "devices.event_type_hint")}</span>
+                    <span class="hint">${M(e, "devices.event_type_hint")}</span>
                   </label>
                   <label class="field">
-                    <span class="lbl">${N(e, "field.user_id")}</span>
+                    <span class="lbl">${M(e, "field.user_id")}</span>
                     <select
                       @change=${(e) => this._set("user_id", e.target.value || null)}
                     >
@@ -5468,10 +5467,10 @@ var Gt = [
                           ${e.name}
                         </option>`)}
                     </select>
-                    <span class="hint">${N(e, "devices.owner_hint")}</span>
+                    <span class="hint">${M(e, "devices.owner_hint")}</span>
                   </label>
                   <label class="field">
-                    <span class="lbl">${N(e, "field.command")}</span>
+                    <span class="lbl">${M(e, "field.command")}</span>
                     <select
                       @change=${(e) => this._set("command", e.target.value)}
                     >
@@ -5483,12 +5482,12 @@ var Gt = [
                           .value=${n}
                           .selected=${W(n === t.command)}
                         >
-                          ${N(e, `key_command.${n}`)}
+                          ${M(e, `key_command.${n}`)}
                         </option>`)}
                     </select>
                   </label>
                   ${t.command === "disarm" ? T : C`<label class="field">
-                        <span class="lbl">${N(e, "field.scenario_id")}</span>
+                        <span class="lbl">${M(e, "field.scenario_id")}</span>
                         <select
                           @change=${(e) => this._set("scenario_id", e.target.value || null)}
                         >
@@ -5512,13 +5511,13 @@ var Gt = [
               @change=${(e) => this._set("enabled", e.target.checked)}
             />
             <span>
-              ${N(e, "field.enabled")}
-              <span class="hint">${N(e, "devices.enabled_hint")}</span>
+              ${M(e, "field.enabled")}
+              <span class="hint">${M(e, "devices.enabled_hint")}</span>
             </span>
           </label>
 
           ${this._problems.length ? C`<ul class="problems">
-                ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
               </ul>` : T}
         </div>
         <div class="card-ft">
@@ -5528,7 +5527,7 @@ var Gt = [
 			this._draft = void 0, this._token = void 0;
 		}}
           >
-            ${N(e, "common.cancel")}
+            ${M(e, "common.cancel")}
           </button>
           ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -5537,7 +5536,7 @@ var Gt = [
                 @confirm=${this._delete}
               ></foyer-delete-button>` : T}
           <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-            ${N(e, "common.save")}
+            ${M(e, "common.save")}
           </button>
         </div>
       </div>
@@ -5546,7 +5545,7 @@ var Gt = [
 	_tagEntities(e) {
 		return this._tagCache?.states !== e && (this._tagCache = {
 			states: e,
-			ids: Object.keys(e).filter((e) => Xt.some((t) => e.startsWith(t))).sort()
+			ids: Object.keys(e).filter((e) => Gt.some((t) => e.startsWith(t))).sort()
 		}), this._tagCache.ids;
 	}
 	_inClear(e) {
@@ -5556,61 +5555,61 @@ var Gt = [
 		let n = this.ctx?.config?.devices.find((e) => e.id === t.id), r = !!n && n.transport === "http", i = this._token && this._token.deviceId === t.id ? this._token : void 0;
 		return C`<div class="token">
       ${this._inClear(t) ? C`<div class="banner warn" role="alert">
-            <strong>${N(e, "devices.in_clear")}</strong>
-            <span>${N(e, "devices.in_clear_hint")}</span>
+            <strong>${M(e, "devices.in_clear")}</strong>
+            <span>${M(e, "devices.in_clear_hint")}</span>
           </div>` : T}
-      <p class="note">${N(e, "devices.token_note")}</p>
+      <p class="note">${M(e, "devices.token_note")}</p>
       ${i ? C`<div class="once" role="status">
-            <span class="lbl">${N(e, "devices.token_once")}</span>
+            <span class="lbl">${M(e, "devices.token_once")}</span>
             <code class="mono secret">${i.value}</code>
-            <span class="hint">${N(e, "devices.token_once_hint")}</span>
+            <span class="hint">${M(e, "devices.token_once_hint")}</span>
           </div>` : C`<p class="hint">
-            ${r ? t.has_token ? N(e, "devices.token_exists") : N(e, "devices.token_none") : N(e, "devices.token_save_first")}
+            ${r ? t.has_token ? M(e, "devices.token_exists") : M(e, "devices.token_none") : M(e, "devices.token_save_first")}
           </p>`}
       ${r ? C`<div class="actions">
-            ${this._confirmToken ? C`<span class="hint">${N(e, "devices.token_confirm")}</span>
+            ${this._confirmToken ? C`<span class="hint">${M(e, "devices.token_confirm")}</span>
                   <button
                     class="btn danger"
                     ?disabled=${this._busy}
                     @click=${() => this._tokenAction(this._confirmToken === "revoke")}
                   >
-                    ${N(e, this._confirmToken === "revoke" ? "devices.token_revoke" : "devices.token_replace")}
+                    ${M(e, this._confirmToken === "revoke" ? "devices.token_revoke" : "devices.token_replace")}
                   </button>
                   <button class="btn" @click=${() => this._confirmToken = void 0}>
-                    ${N(e, "common.cancel")}
+                    ${M(e, "common.cancel")}
                   </button>` : C`<button
                     class="btn"
                     ?disabled=${this._busy}
                     @click=${() => t.has_token ? this._confirmToken = "replace" : this._tokenAction(!1)}
                   >
-                    ${N(e, t.has_token ? "devices.token_replace" : "devices.token_generate")}
+                    ${M(e, t.has_token ? "devices.token_replace" : "devices.token_generate")}
                   </button>
                   ${t.has_token ? C`<button
                         class="btn danger"
                         ?disabled=${this._busy}
                         @click=${() => this._confirmToken = "revoke"}
                       >
-                        ${N(e, "devices.token_revoke")}
+                        ${M(e, "devices.token_revoke")}
                       </button>` : T}`}
           </div>` : T}
       ${this._tokenProblems.length ? C`<ul class="problems">
-            ${this._tokenProblems.map((t) => C`<li>${B(e, t)}</li>`)}
+            ${this._tokenProblems.map((t) => C`<li>${z(e, t)}</li>`)}
           </ul>` : T}
       <div class="endpoint-samples">
         <div class="field">
-          <span class="lbl">${N(e, "devices.endpoint_request")}</span>
-          <pre class="sample">${$t}</pre>
+          <span class="lbl">${M(e, "devices.endpoint_request")}</span>
+          <pre class="sample">${Jt}</pre>
         </div>
         <div class="field">
-          <span class="lbl">${N(e, "devices.endpoint_stream")}</span>
-          <pre class="sample">${en}</pre>
-          <span class="hint">${N(e, "devices.endpoint_stream_hint")}</span>
+          <span class="lbl">${M(e, "devices.endpoint_stream")}</span>
+          <pre class="sample">${Yt}</pre>
+          <span class="hint">${M(e, "devices.endpoint_stream_hint")}</span>
         </div>
       </div>
     </div>`;
 	}
 	_renderScopes(e, t) {
-		let n = this.ctx?.config, r = (e) => t.scopes.includes(e), i = t.scopes.some((e) => e !== "status"), a = Gt.some((e) => r(e) && !t.free_scopes.includes(e)), o = (n?.areas ?? []).map((e) => ({
+		let n = this.ctx?.config, r = (e) => t.scopes.includes(e), i = t.scopes.some((e) => e !== "status"), a = Bt.some((e) => r(e) && !t.free_scopes.includes(e)), o = (n?.areas ?? []).map((e) => ({
 			id: e.id ?? "",
 			name: e.name
 		})), s = (n?.scenarios ?? []).map((e) => ({
@@ -5618,13 +5617,13 @@ var Gt = [
 			name: e.name
 		}));
 		return C`<fieldset class="scopes">
-      <legend>${N(e, "field.scopes")}</legend>
-      <p class="note">${N(e, "devices.scopes_note")}</p>
-      ${t.scopes.length ? T : C`<p class="hint warn-text">${N(e, "devices.scopes_none")}</p>`}
+      <legend>${M(e, "field.scopes")}</legend>
+      <p class="note">${M(e, "devices.scopes_note")}</p>
+      ${t.scopes.length ? T : C`<p class="hint warn-text">${M(e, "devices.scopes_none")}</p>`}
 
-      <h3>${N(e, "devices.scopes_read")}</h3>
-      <p class="hint">${N(e, "devices.scopes_read_hint")}</p>
-      ${Gt.map((n) => C`<div class="scope-row">
+      <h3>${M(e, "devices.scopes_read")}</h3>
+      <p class="hint">${M(e, "devices.scopes_read_hint")}</p>
+      ${Bt.map((n) => C`<div class="scope-row">
           <label class="check">
             <input
               type="checkbox"
@@ -5632,8 +5631,8 @@ var Gt = [
               @change=${(e) => this._toggle("scopes", n, e.target.checked)}
             />
             <span>
-              ${N(e, `devices.scope.${n}`)}
-              <span class="hint">${N(e, `devices.scope_hint.${n}`)}</span>
+              ${M(e, `devices.scope.${n}`)}
+              <span class="hint">${M(e, `devices.scope_hint.${n}`)}</span>
             </span>
           </label>
           <label class="check free">
@@ -5643,34 +5642,34 @@ var Gt = [
               .checked=${W(t.free_scopes.includes(n))}
               @change=${(e) => this._toggle("free_scopes", n, e.target.checked)}
             />
-            <span>${N(e, "field.free_scopes")}</span>
+            <span>${M(e, "field.free_scopes")}</span>
           </label>
         </div>`)}
-      ${r("log") && t.free_scopes.includes("log") ? C`<p class="hint">${N(e, "devices.free_log_hint")}</p>` : T}
+      ${r("log") && t.free_scopes.includes("log") ? C`<p class="hint">${M(e, "devices.free_log_hint")}</p>` : T}
       ${a ? C`<label class="field unlock">
-            <span class="lbl">${N(e, "field.unlock_seconds")}</span>
+            <span class="lbl">${M(e, "field.unlock_seconds")}</span>
             <input
               type="number"
-              min=${qt}
-              max=${Jt}
+              min=${Ht}
+              max=${Ut}
               step="1"
               .value=${String(t.unlock_seconds)}
-              @change=${(e) => H(e, (e) => this._set("unlock_seconds", e))}
+              @change=${(e) => V(e, (e) => this._set("unlock_seconds", e))}
             />
-            <span class="hint">${N(e, "devices.unlock_hint")}</span>
+            <span class="hint">${M(e, "devices.unlock_hint")}</span>
           </label>` : T}
 
-      <h3>${N(e, "devices.scopes_act")}</h3>
-      <p class="hint">${N(e, "devices.scopes_act_hint")}</p>
-      ${Kt.map((n) => C`<label class="check">
+      <h3>${M(e, "devices.scopes_act")}</h3>
+      <p class="hint">${M(e, "devices.scopes_act_hint")}</p>
+      ${Vt.map((n) => C`<label class="check">
             <input
               type="checkbox"
               .checked=${W(r(n))}
               @change=${(e) => this._toggle("scopes", n, e.target.checked)}
             />
             <span>
-              ${N(e, `devices.scope.${n}`)}
-              <span class="hint">${N(e, `devices.scope_hint.${n}`)}</span>
+              ${M(e, `devices.scope.${n}`)}
+              <span class="hint">${M(e, `devices.scope_hint.${n}`)}</span>
             </span>
           </label>
           ${n === "arm" && r("arm") ? C`<div class="reach">
@@ -5689,10 +5688,10 @@ var Gt = [
                 @change=${(e) => this._set("clear_text_confirmed", e.target.checked)}
               />
               <span>
-                ${N(e, "field.clear_text_confirmed")}
-                ${this._inClear(t) ? C`<span class="pill warn">${N(e, "devices.in_clear_pill")}</span>` : T}
-                <span class="hint">${N(e, "devices.clear_text_hint")}</span>
-                ${this._inClear(t) ? C`<span class="hint warn-text">${N(e, "devices.clear_text_now")}</span>` : T}
+                ${M(e, "field.clear_text_confirmed")}
+                ${this._inClear(t) ? C`<span class="pill warn">${M(e, "devices.in_clear_pill")}</span>` : T}
+                <span class="hint">${M(e, "devices.clear_text_hint")}</span>
+                ${this._inClear(t) ? C`<span class="hint warn-text">${M(e, "devices.clear_text_now")}</span>` : T}
               </span>
             </label>
           </div>` : T}
@@ -5704,7 +5703,7 @@ var Gt = [
 			name: e
 		}))];
 		return C`<div class="field">
-      <span class="lbl">${N(e, `field.${t}`)}</span>
+      <span class="lbl">${M(e, `field.${t}`)}</span>
       <label class="check">
         <input
           type="radio"
@@ -5712,7 +5711,7 @@ var Gt = [
           .checked=${W(a === null)}
           @change=${() => this._set(t, null)}
         />
-        <span>${N(e, n)}</span>
+        <span>${M(e, n)}</span>
       </label>
       <label class="check">
         <input
@@ -5721,7 +5720,7 @@ var Gt = [
           .checked=${W(a !== null)}
           @change=${() => this._set(t, a ?? [])}
         />
-        <span>${N(e, "devices.reach_only")}</span>
+        <span>${M(e, "devices.reach_only")}</span>
       </label>
       ${a === null ? T : C`<div class="choices">
               ${o.map((e) => C`<label class="check">
@@ -5733,7 +5732,7 @@ var Gt = [
                   <span>${e.name}</span>
                 </label>`)}
             </div>
-            ${a.length ? T : C`<span class="hint warn-text">${N(e, "devices.reach_none")}</span>`}`}
+            ${a.length ? T : C`<span class="hint warn-text">${M(e, "devices.reach_none")}</span>`}`}
     </div>`;
 	}
 	_renderMqtt(e) {
@@ -5746,10 +5745,10 @@ var Gt = [
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "devices.mqtt")}</h2>
+          <h2>${M(e, "devices.mqtt")}</h2>
         </div>
         <div class="card-bd">
-          <p class="note">${N(e, "devices.mqtt_note")}</p>
+          <p class="note">${M(e, "devices.mqtt_note")}</p>
           <label class="check">
             <input
               type="checkbox"
@@ -5757,30 +5756,30 @@ var Gt = [
               @change=${(e) => n("enabled", e.target.checked)}
             />
             <span>
-              ${N(e, "devices.mqtt_enabled")}
-              <span class="hint">${N(e, "devices.mqtt_enabled_hint")}</span>
+              ${M(e, "devices.mqtt_enabled")}
+              <span class="hint">${M(e, "devices.mqtt_enabled_hint")}</span>
             </span>
           </label>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.command_topic")}</span>
+              <span class="lbl">${M(e, "field.command_topic")}</span>
               <input
                 .value=${t.command_topic}
-                placeholder=${N(e, "devices.topic_command_example")}
+                placeholder=${M(e, "devices.topic_command_example")}
                 @input=${(e) => n("command_topic", e.target.value)}
               />
-              <span class="hint">${N(e, "devices.topic_hint")}</span>
+              <span class="hint">${M(e, "devices.topic_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.state_topic")}</span>
+              <span class="lbl">${M(e, "field.state_topic")}</span>
               <input
                 .value=${t.state_topic}
-                placeholder=${N(e, "devices.topic_state_example")}
+                placeholder=${M(e, "devices.topic_state_example")}
                 @input=${(e) => n("state_topic", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.detail")}</span>
+              <span class="lbl">${M(e, "field.detail")}</span>
               <select
                 @change=${(e) => n("detail", e.target.value)}
               >
@@ -5789,14 +5788,14 @@ var Gt = [
 			"standard",
 			"full"
 		].map((n) => C`<option .value=${n} .selected=${W(n === t.detail)}>
-                    ${N(e, `mqtt_detail.${n}`)}
+                    ${M(e, `mqtt_detail.${n}`)}
                   </option>`)}
               </select>
-              <span class="hint">${N(e, `devices.detail_hint_${t.detail}`)}</span>
-              <span class="hint">${N(e, "devices.detail_shared_hint")}</span>
+              <span class="hint">${M(e, `devices.detail_hint_${t.detail}`)}</span>
+              <span class="hint">${M(e, "devices.detail_shared_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.qos")}</span>
+              <span class="lbl">${M(e, "field.qos")}</span>
               <select
                 @change=${(e) => n("qos", Number(e.target.value))}
               >
@@ -5817,24 +5816,24 @@ var Gt = [
               @change=${(e) => n("retain", e.target.checked)}
             />
             <span>
-              ${N(e, "field.retain")}
-              <span class="hint">${N(e, "devices.retain_hint")}</span>
+              ${M(e, "field.retain")}
+              <span class="hint">${M(e, "devices.retain_hint")}</span>
             </span>
           </label>
           <div class="hr"></div>
           <div class="grid-form">
             <div class="field">
-              <span class="lbl">${N(e, "devices.inbound")}</span>
-              <pre class="sample">${Qt}</pre>
+              <span class="lbl">${M(e, "devices.inbound")}</span>
+              <pre class="sample">${qt}</pre>
             </div>
             <div class="field">
-              <span class="lbl">${N(e, "devices.outbound")}</span>
-              <pre class="sample">${tn[t.detail]}</pre>
-              <span class="hint">${N(e, "devices.last_result_hint")}</span>
+              <span class="lbl">${M(e, "devices.outbound")}</span>
+              <pre class="sample">${Xt[t.detail]}</pre>
+              <span class="hint">${M(e, "devices.last_result_hint")}</span>
             </div>
           </div>
           ${this._mqttProblems.length ? C`<ul class="problems">
-                ${this._mqttProblems.map((t) => C`<li>${B(e, t)}</li>`)}
+                ${this._mqttProblems.map((t) => C`<li>${z(e, t)}</li>`)}
               </ul>` : T}
         </div>
         <div class="card-ft">
@@ -5843,7 +5842,7 @@ var Gt = [
             ?disabled=${this._busy || !this._mqtt}
             @click=${this._saveMqtt}
           >
-            ${N(e, "common.save")}
+            ${M(e, "common.save")}
           </button>
         </div>
       </div>
@@ -5851,8 +5850,8 @@ var Gt = [
 	}
 	static {
 		this.styles = [
-			F,
 			P,
+			N,
 			o`
       .sample {
         margin: 0;
@@ -5986,43 +5985,43 @@ var Gt = [
     `
 		];
 	}
-}, Qt = "{\n  \"action\": \"arm\",\n  \"scenario\": \"Night\",\n  \"code\": \"123456\",\n  \"device_id\": \"keypad_hall\"\n}", $t = "POST /api/foyer/device\nAuthorization: Bearer <token>\n\n{ \"action\": \"arm\", \"scenario\": \"Night\", \"code\": \"123456\" }", en = "GET /api/foyer/device/state\nAuthorization: Bearer <token>\n\ndata: {\"master\": \"arming\", \"countdown\": {\"kind\": \"exit\", \"remaining\": 30}, …}\n\n: keepalive", tn = {
+}, qt = "{\n  \"action\": \"arm\",\n  \"scenario\": \"Night\",\n  \"code\": \"123456\",\n  \"device_id\": \"keypad_hall\"\n}", Jt = "POST /api/foyer/device\nAuthorization: Bearer <token>\n\n{ \"action\": \"arm\", \"scenario\": \"Night\", \"code\": \"123456\" }", Yt = "GET /api/foyer/device/state\nAuthorization: Bearer <token>\n\ndata: {\"master\": \"arming\", \"countdown\": {\"kind\": \"exit\", \"remaining\": 30}, …}\n\n: keepalive", Xt = {
 	minimal: "{\n  \"master\": \"armed_night\",\n  \"countdown\": { \"kind\": \"exit\", \"remaining\": 22 },\n  \"ready_to_arm\": false,\n  \"blocking_zones\": 1,\n  \"fault\": false,\n  \"last_result\": \"ok\"\n}",
 	standard: "{\n  \"master\": \"armed_night\",\n  \"countdown\": null,\n  \"ready_to_arm\": true,\n  \"blocking_zones\": 0,\n  \"fault\": false,\n  \"last_result\": \"ok\",\n  \"scenario\": \"Night\",\n  \"areas\": { \"Ground floor\": \"armed\" }\n}",
 	full: "{\n  \"master\": \"armed_night\",\n  \"countdown\": null,\n  \"ready_to_arm\": false,\n  \"blocking_zones\": 1,\n  \"fault\": false,\n  \"last_result\": \"blocked\",\n  \"scenario\": \"Night\",\n  \"areas\": { \"Ground floor\": \"armed\" },\n  \"open_zones\": [\"Bathroom window\"]\n}"
 };
-customElements.define("foyer-page-devices", Zt);
+U("foyer-page-devices", Kt);
 //#endregion
 //#region src/panel/pages/test.ts
-var nn = [
+var Zt = [
 	"diagnostics",
 	"simulator",
 	"walktest",
 	"actiontest"
-], rn = /* @__PURE__ */ new Set([
+], Qt = /* @__PURE__ */ new Set([
 	"triggered",
 	"entry_started",
 	"verification_satisfied",
 	"technical_raised"
 ]);
-function an(e, t) {
+function $t(e, t) {
 	let n = e.config?.zones.find((e) => e.id === t);
 	return n && n.trigger.kind === "state" ? n.trigger.states : [];
 }
-function on(e) {
+function en(e) {
 	let t = /* @__PURE__ */ new Set();
 	for (let n of e.config?.profiles ?? []) for (let e of n.actions) for (let n of e.conditions) n.kind === "state" && t.add(n.entity_id);
 	for (let n of e.config?.rules ?? []) if (n.enabled) for (let e of n.trigger.entity_ids) t.add(e);
 	return [...t].sort();
 }
 function Y(e, t, n) {
-	return new Date(e).toLocaleTimeString(t, I(n, {
+	return new Date(e).toLocaleTimeString(t, F(n, {
 		hour: "2-digit",
 		minute: "2-digit",
 		second: "2-digit"
 	}));
 }
-var sn = class extends j {
+var tn = class extends A {
 	constructor(...e) {
 		super(...e), this._tab = "diagnostics", this._busy = !1, this._walkWasOn = !1, this._scenario = "", this._start = "", this._overrides = [], this._entities = {}, this._code = "", this._codeWanted = !1, this._loaded = !1, this._mentioned = /* @__PURE__ */ new Set(), this._walkDuration = "", this._tested = {};
 	}
@@ -6090,7 +6089,7 @@ var sn = class extends j {
 		let t = e.strings;
 		return C`
       <nav class="subtabs" role="tablist">
-        ${nn.map((e) => C`
+        ${Zt.map((e) => C`
             <button
               role="tab"
               aria-selected=${e === this._tab ? "true" : "false"}
@@ -6098,7 +6097,7 @@ var sn = class extends j {
 			this._tab = e, this._error = void 0, this._notice = void 0;
 		}}
             >
-              ${N(t, `test.tab.${e}`)}
+              ${M(t, `test.tab.${e}`)}
             </button>
           `)}
       </nav>
@@ -6112,40 +6111,40 @@ var sn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "test.diagnostics.title")}</h2>
-          <span class="hint">${N(e, "test.diagnostics.subtitle")}</span>
+          <h2>${M(e, "test.diagnostics.title")}</h2>
+          <span class="hint">${M(e, "test.diagnostics.subtitle")}</span>
           <button class="btn" ?disabled=${this._busy} @click=${() => void this._refresh()}>
-            ${N(e, "test.refresh")}
+            ${M(e, "test.refresh")}
           </button>
         </div>
         <div class="card-bd">
           ${t?.missing_entities.length ? C`<div class="problems" role="alert">
-                <p>${N(e, "test.diagnostics.missing")}</p>
+                <p>${M(e, "test.diagnostics.missing")}</p>
                 <ul>
                   ${t.missing_entities.map((e) => C`<li class="mono">${e}</li>`)}
                 </ul>
               </div>` : T}
-          ${t ? t.zones.length === 0 ? C`<p class="empty">${N(e, "test.diagnostics.empty")}</p>` : C`<div class="table-wrap">
+          ${t ? t.zones.length === 0 ? C`<p class="empty">${M(e, "test.diagnostics.empty")}</p>` : C`<div class="table-wrap">
                   <table>
                     <thead>
                       <tr>
-                        <th>${N(e, "test.col.zone")}</th>
-                        <th>${N(e, "test.col.entity")}</th>
-                        <th>${N(e, "test.col.state")}</th>
-                        <th>${N(e, "test.col.evaluation")}</th>
-                        <th>${N(e, "test.col.last_change")}</th>
-                        <th>${N(e, "test.col.health")}</th>
-                        <th>${N(e, "test.col.battery")}</th>
-                        <th>${N(e, "test.col.signal")}</th>
-                        <th>${N(e, "test.col.supervision")}</th>
-                        <th>${N(e, "test.col.arming")}</th>
+                        <th>${M(e, "test.col.zone")}</th>
+                        <th>${M(e, "test.col.entity")}</th>
+                        <th>${M(e, "test.col.state")}</th>
+                        <th>${M(e, "test.col.evaluation")}</th>
+                        <th>${M(e, "test.col.last_change")}</th>
+                        <th>${M(e, "test.col.health")}</th>
+                        <th>${M(e, "test.col.battery")}</th>
+                        <th>${M(e, "test.col.signal")}</th>
+                        <th>${M(e, "test.col.supervision")}</th>
+                        <th>${M(e, "test.col.arming")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       ${t.zones.map((t) => this._renderZoneRow(e, t))}
                     </tbody>
                   </table>
-                </div>` : C`<p class="hint">${N(e, "common.loading")}</p>`}
+                </div>` : C`<p class="hint">${M(e, "common.loading")}</p>`}
         </div>
       </div>
       ${t && t.devices.length ? this._renderDevices(e, t.devices) : T}
@@ -6161,29 +6160,29 @@ var sn = class extends j {
         </td>
         <td class="mono">${t.entity_id}</td>
         <td>
-          ${t.state === null ? C`<span class="state fault">${N(e, "test.no_entity")}</span>` : C`<span class="mono">${t.state}</span>`}
+          ${t.state === null ? C`<span class="state fault">${M(e, "test.no_entity")}</span>` : C`<span class="mono">${t.state}</span>`}
         </td>
         <td>
-          ${t.momentary ? C`<span class="muted">${N(e, "test.momentary")}</span>` : C`<span class="state ${t.triggered ? "open" : "closed"}">
-                ${N(e, t.triggered ? "test.would_trigger" : "test.would_not")}
+          ${t.momentary ? C`<span class="muted">${M(e, "test.momentary")}</span>` : C`<span class="state ${t.triggered ? "open" : "closed"}">
+                ${M(e, t.triggered ? "test.would_trigger" : "test.would_not")}
               </span>`}
         </td>
         <td class="mono">
           ${t.last_changed ? Y(t.last_changed, this.ctx?.hass.language, this.ctx?.hass) : "—"}
         </td>
         <td>
-          ${t.enabled ? t.fault ? C`<span class="state fault">${N(e, `fault.${t.fault}`)}</span>` : C`<span class="state closed">${N(e, "test.ok")}</span>` : C`<span class="state disabled">${N(e, "test.disabled")}</span>`}
+          ${t.enabled ? t.fault ? C`<span class="state fault">${M(e, `fault.${t.fault}`)}</span>` : C`<span class="state closed">${M(e, "test.ok")}</span>` : C`<span class="state disabled">${M(e, "test.disabled")}</span>`}
         </td>
         <td>${this._renderBattery(e, t)}</td>
         <td class="mono">
-          ${t.signal ? `${t.signal.value} ${N(e, `test.unit.${t.signal.unit}`)}` : "—"}
+          ${t.signal ? `${t.signal.value} ${M(e, `test.unit.${t.signal.unit}`)}` : "—"}
         </td>
         <td class="hint">
-          ${t.supervision_timeout === null ? N(e, "test.supervision_off") : N(e, "test.supervision_on", { n: t.supervision_timeout })}
+          ${t.supervision_timeout === null ? M(e, "test.supervision_off") : M(e, "test.supervision_on", { n: t.supervision_timeout })}
         </td>
         <td>
-          ${t.bypassed ? C`<span class="state bypassed">${N(e, `bypass.${t.bypassed}`)}</span>` : t.blocks_arming ? C`<span class="state fault"
-                  >${N(e, `test.blocks.${t.blocks_because}`)}</span
+          ${t.bypassed ? C`<span class="state bypassed">${M(e, `bypass.${t.bypassed}`)}</span>` : t.blocks_arming ? C`<span class="state fault"
+                  >${M(e, `test.blocks.${t.blocks_because}`)}</span
                 >` : C`<span class="muted">—</span>`}
         </td>
       </tr>
@@ -6194,7 +6193,7 @@ var sn = class extends j {
 		let n = t.battery_level === null ? "" : `${Math.round(t.battery_level)} %`;
 		return C`
       <span class="state ${t.battery_low ? "open" : "closed"}">
-        ${n || N(e, t.battery_low ? "test.battery_low" : "test.battery_ok")}
+        ${n || M(e, t.battery_low ? "test.battery_low" : "test.battery_ok")}
       </span>
     `;
 	}
@@ -6202,37 +6201,37 @@ var sn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "test.devices.title")}</h2>
-          <span class="hint">${N(e, "test.devices.subtitle")}</span>
+          <h2>${M(e, "test.devices.title")}</h2>
+          <span class="hint">${M(e, "test.devices.subtitle")}</span>
         </div>
         <div class="card-bd">
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>${N(e, "test.col.device")}</th>
-                  <th>${N(e, "test.col.kind")}</th>
-                  <th>${N(e, "test.col.entity")}</th>
-                  <th>${N(e, "test.col.state")}</th>
-                  <th>${N(e, "test.col.last_change")}</th>
-                  <th>${N(e, "test.col.health")}</th>
+                  <th>${M(e, "test.col.device")}</th>
+                  <th>${M(e, "test.col.kind")}</th>
+                  <th>${M(e, "test.col.entity")}</th>
+                  <th>${M(e, "test.col.state")}</th>
+                  <th>${M(e, "test.col.last_change")}</th>
+                  <th>${M(e, "test.col.health")}</th>
                 </tr>
               </thead>
               <tbody>
                 ${t.map((t) => C`
                     <tr>
                       <td><strong>${t.name}</strong></td>
-                      <td>${N(e, `device_kind.${t.kind}`)}</td>
+                      <td>${M(e, `device_kind.${t.kind}`)}</td>
                       <td class="mono">${t.entity_id ?? "—"}</td>
                       <td class="mono">${t.state ?? "—"}</td>
                       <td class="mono">
                         ${t.last_changed ? Y(t.last_changed, this.ctx?.hass.language, this.ctx?.hass) : "—"}
                       </td>
                       <td>
-                        ${t.enabled ? t.watchable ? t.available ? C`<span class="state closed">${N(e, "test.ok")}</span>` : C`<span class="state fault"
-                                  >${N(e, "fault.unavailable")}</span
-                                >` : C`<span class="muted">${N(e, "test.no_entity_kind")}</span>` : C`<span class="state disabled"
-                              >${N(e, "test.disabled")}</span
+                        ${t.enabled ? t.watchable ? t.available ? C`<span class="state closed">${M(e, "test.ok")}</span>` : C`<span class="state fault"
+                                  >${M(e, "fault.unavailable")}</span
+                                >` : C`<span class="muted">${M(e, "test.no_entity_kind")}</span>` : C`<span class="state disabled"
+                              >${M(e, "test.disabled")}</span
                             >`}
                       </td>
                     </tr>
@@ -6248,23 +6247,23 @@ var sn = class extends j {
 		let t = this.ctx;
 		return C`
       <div class="notice info">
-        <strong>${N(e, "test.simulator.safe_title")}</strong>
-        ${N(e, "test.simulator.safe")}
+        <strong>${M(e, "test.simulator.safe_title")}</strong>
+        ${M(e, "test.simulator.safe")}
       </div>
       <div class="split">
         <div class="card">
           <div class="card-hd">
-            <h2>${N(e, "test.simulator.conditions")}</h2>
+            <h2>${M(e, "test.simulator.conditions")}</h2>
           </div>
           <div class="card-bd">
             <div class="grid-form">
               <label class="field">
-                <span class="lbl">${N(e, "test.simulator.scenario")}</span>
+                <span class="lbl">${M(e, "test.simulator.scenario")}</span>
                 <select
                   .value=${this._scenario}
                   @change=${(e) => this._scenario = e.target.value}
                 >
-                  <option value="">${N(e, "test.simulator.disarmed")}</option>
+                  <option value="">${M(e, "test.simulator.disarmed")}</option>
                   ${t.status.scenarios.map((e) => C`<option
                       .value=${e.id}
                       .selected=${W(e.id === this._scenario)}
@@ -6272,16 +6271,16 @@ var sn = class extends j {
                       ${e.name}
                     </option>`)}
                 </select>
-                <span class="hint">${N(e, "test.simulator.scenario_hint")}</span>
+                <span class="hint">${M(e, "test.simulator.scenario_hint")}</span>
               </label>
               <label class="field">
-                <span class="lbl">${N(e, "test.simulator.clock")}</span>
+                <span class="lbl">${M(e, "test.simulator.clock")}</span>
                 <input
                   type="datetime-local"
                   .value=${this._start}
                   @change=${(e) => this._start = e.target.value}
                 />
-                <span class="hint">${N(e, "test.simulator.clock_hint")}</span>
+                <span class="hint">${M(e, "test.simulator.clock_hint")}</span>
               </label>
             </div>
             ${this._renderOverrides(e)} ${this._renderEntityOverrides(e)}
@@ -6291,7 +6290,7 @@ var sn = class extends j {
                 ?disabled=${this._busy}
                 @click=${() => void this._run()}
               >
-                ${N(e, "test.simulator.run")}
+                ${M(e, "test.simulator.run")}
               </button>
               <button
                 class="btn"
@@ -6299,7 +6298,7 @@ var sn = class extends j {
 			this._overrides = [], this._entities = {}, this._simulation = void 0, this._start = "", this._code = "", this._codeWanted = !1;
 		}}
               >
-                ${N(e, "test.simulator.reset")}
+                ${M(e, "test.simulator.reset")}
               </button>
             </div>
           </div>
@@ -6312,18 +6311,18 @@ var sn = class extends j {
 		let t = this.ctx;
 		return C`
       <fieldset>
-        <legend>${N(e, "test.simulator.zones")}</legend>
-        <p class="hint">${N(e, "test.simulator.zones_hint")}</p>
+        <legend>${M(e, "test.simulator.zones")}</legend>
+        <p class="hint">${M(e, "test.simulator.zones_hint")}</p>
         ${this._overrides.map((n, r) => C`
             <div class="override">
               <select
-                aria-label=${N(e, "test.simulator.pick_zone")}
+                aria-label=${M(e, "test.simulator.pick_zone")}
                 @change=${(e) => this._setOverride(r, {
 			zone_id: e.target.value,
-			state: an(t, e.target.value)[0] ?? n.state
+			state: $t(t, e.target.value)[0] ?? n.state
 		})}
               >
-                <option value="">${N(e, "test.simulator.pick_zone")}</option>
+                <option value="">${M(e, "test.simulator.pick_zone")}</option>
                 ${t.status.zones.map((e) => C`<option
                     .value=${e.id}
                     .selected=${W(e.id === n.zone_id)}
@@ -6333,30 +6332,30 @@ var sn = class extends j {
               </select>
               <input
                 class="state-input"
-                aria-label=${N(e, "test.simulator.state")}
+                aria-label=${M(e, "test.simulator.state")}
                 .value=${n.state}
                 list="foyer-sim-states-${r}"
-                placeholder=${N(e, "test.simulator.state")}
+                placeholder=${M(e, "test.simulator.state")}
                 @change=${(e) => this._setOverride(r, { state: e.target.value })}
               />
               <datalist id="foyer-sim-states-${r}">
-                ${an(t, n.zone_id).map((e) => C`<option .value=${e}></option>`)}
+                ${$t(t, n.zone_id).map((e) => C`<option .value=${e}></option>`)}
               </datalist>
               <input
                 class="at-input"
                 type="number"
                 min="0"
                 .value=${String(n.at)}
-                title=${N(e, "test.simulator.at")}
-                aria-label=${N(e, "test.simulator.at")}
+                title=${M(e, "test.simulator.at")}
+                aria-label=${M(e, "test.simulator.at")}
                 @change=${(e) => this._setOverride(r, { at: Number(e.target.value) || 0 })}
               />
-              <span class="hint">${N(e, "test.simulator.seconds")}</span>
+              <span class="hint">${M(e, "test.simulator.seconds")}</span>
               <button
                 class="btn small"
                 @click=${() => this._overrides = this._overrides.filter((e, t) => t !== r)}
               >
-                ${N(e, "common.delete")}
+                ${M(e, "common.delete")}
               </button>
             </div>
           `)}
@@ -6368,24 +6367,24 @@ var sn = class extends j {
 			at: 0
 		}]}
         >
-          ${N(e, "test.simulator.add_zone")}
+          ${M(e, "test.simulator.add_zone")}
         </button>
       </fieldset>
     `;
 	}
 	_renderEntityOverrides(e) {
-		let t = on(this.ctx);
+		let t = en(this.ctx);
 		return t.length ? C`
       <fieldset>
-        <legend>${N(e, "test.simulator.entities")}</legend>
-        <p class="hint">${N(e, "test.simulator.entities_hint")}</p>
+        <legend>${M(e, "test.simulator.entities")}</legend>
+        <p class="hint">${M(e, "test.simulator.entities_hint")}</p>
         <div class="grid-form">
           ${t.map((t) => C`
               <label class="field">
                 <span class="lbl mono">${t}</span>
                 <input
                   .value=${this._entities[t] ?? ""}
-                  placeholder=${N(e, "test.simulator.as_now")}
+                  placeholder=${M(e, "test.simulator.as_now")}
                   @change=${(e) => {
 			let n = e.target.value, r = { ...this._entities };
 			n ? r[t] = n : delete r[t], this._entities = r;
@@ -6408,8 +6407,8 @@ var sn = class extends j {
 		return this._mentioned = /* @__PURE__ */ new Set(), C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "test.trace.title")}</h2>
-          <span class="hint">${N(e, "test.trace.subtitle")}</span>
+          <h2>${M(e, "test.trace.title")}</h2>
+          <span class="hint">${M(e, "test.trace.subtitle")}</span>
         </div>
         <div class="card-bd">
           ${this._premiseNeedsCode(t) ? this._renderCodePrompt(e) : T}
@@ -6417,9 +6416,9 @@ var sn = class extends j {
                 <ol class="trace">
                   ${t.steps.filter((e) => this._worthShowing(e)).map((t) => this._renderStep(e, t))}
                 </ol>
-                ${t.truncated ? C`<p class="notice">${N(e, "test.trace.truncated")}</p>` : T}
+                ${t.truncated ? C`<p class="notice">${M(e, "test.trace.truncated")}</p>` : T}
               ` : C`<p class="empty">
-                ${N(e, this._busy ? "common.loading" : "test.trace.empty")}
+                ${M(e, this._busy ? "common.loading" : "test.trace.empty")}
               </p>`}
         </div>
       </div>
@@ -6436,12 +6435,12 @@ var sn = class extends j {
 	_renderCodePrompt(e) {
 		return C`
       <div class="notice">
-        <p>${N(e, "test.simulator.premise_code")}</p>
+        <p>${M(e, "test.simulator.premise_code")}</p>
         <input
           type="password"
           inputmode="numeric"
           autocomplete="off"
-          aria-label=${N(e, "test.simulator.premise_code")}
+          aria-label=${M(e, "test.simulator.premise_code")}
           .value=${this._code}
           @change=${(e) => this._code = e.target.value}
         />
@@ -6451,7 +6450,7 @@ var sn = class extends j {
             ?disabled=${this._busy}
             @click=${() => void this._run()}
           >
-            ${N(e, "test.simulator.run")}
+            ${M(e, "test.simulator.run")}
           </button>
         </div>
       </div>
@@ -6464,25 +6463,25 @@ var sn = class extends j {
         <div class="when mono">${Y(t.at, this.ctx?.hass.language, this.ctx?.hass)}</div>
         <div class="what">
           ${t.kind === "zone" ? C`<div>
-                ${N(e, "test.trace.zone", { zone: r })}
+                ${M(e, "test.trace.zone", { zone: r })}
                 <span class="mono">${t.zone_state}</span>
               </div>` : T}
           ${t.accepted ? T : C`<div class="no">
-                ${N(e, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? e).join(", ") })}
+                ${M(e, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? e).join(", ") })}
               </div>`}
           ${t.low_battery_zones.length ? C`<div class="warn">
-                ${N(e, "test.trace.low_battery", { zones: t.low_battery_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? e).join(", ") })}
+                ${M(e, "test.trace.low_battery", { zones: t.low_battery_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? e).join(", ") })}
               </div>` : T}
           ${t.areas.map((t) => C`
               <div class="key">
-                ${N(e, "test.trace.area", {
+                ${M(e, "test.trace.area", {
 			area: n.status.areas.find((e) => e.id === t.area_id)?.name ?? t.area_id,
-			was: N(e, `state.${t.was}`),
-			now: N(e, `state.${t.now}`)
+			was: M(e, `state.${t.was}`),
+			now: M(e, `state.${t.now}`)
 		})}
                 ${t.timer_due ? C`<span class="muted">
-                      ${N(e, "test.trace.timer", {
-			kind: N(e, `test.timer.${t.timer_kind}`),
+                      ${M(e, "test.trace.timer", {
+			kind: M(e, `test.timer.${t.timer_kind}`),
 			at: Y(t.timer_due, this.ctx?.hass.language, this.ctx?.hass)
 		})}
                     </span>` : T}
@@ -6491,19 +6490,19 @@ var sn = class extends j {
           ${t.occurrences.map((t) => this._renderOccurrence(e, t))}
           ${this._renderBatches(e, t)}
           ${t.loose_actions.map((t) => t.escalation ? C`<div class="yes">
-                  ${N(e, "test.trace.escalation_sent", {
+                  ${M(e, "test.trace.escalation_sent", {
 			step: String(t.escalation_step ?? 0),
 			who: this._whoFor(t.recipients)
 		})}
                   ${this._renderCameras(e, t)}
                 </div>` : C`<div class="yes">
-                  ${N(e, "test.trace.ran", { action: N(e, `action_kind.${t.kind}`) })}
+                  ${M(e, "test.trace.ran", { action: M(e, `action_kind.${t.kind}`) })}
                 </div>`)}
           ${t.scheduled.filter((e) => e.kind === "delay" || e.kind === "siren").filter((e) => this._firstMention(e)).map((t) => C`<div class="wait">
-                ${N(e, `test.trace.later.${t.kind}`, { at: Y(t.at, this.ctx?.hass.language, this.ctx?.hass) })}
+                ${M(e, `test.trace.later.${t.kind}`, { at: Y(t.at, this.ctx?.hass.language, this.ctx?.hass) })}
               </div>`)}
           ${t.scheduled.filter((e) => e.kind === "escalation_step").map((t) => C`<div class="wait">
-                ${N(e, "test.trace.later.escalation_step", {
+                ${M(e, "test.trace.later.escalation_step", {
 			step: String(t.step ?? 0),
 			offset: String(t.offset ?? 0),
 			who: this._whoAhead(t.contact_ids, t.channel_ids)
@@ -6516,14 +6515,14 @@ var sn = class extends j {
 	_whoFor(e) {
 		let t = this.ctx?.config?.contacts ?? [];
 		return e.map((e) => {
-			let n = t.find((t) => t.id === e.contact_id), r = N(this.ctx.strings, `channel_kind.${e.kind}`);
+			let n = t.find((t) => t.id === e.contact_id), r = M(this.ctx.strings, `channel_kind.${e.kind}`);
 			return `${n?.name ?? e.contact_id} (${r})`;
 		}).join(", ");
 	}
 	_whoAhead(e, t) {
 		let n = this.ctx?.config?.contacts ?? [];
 		return e.map((e, r) => {
-			let i = n.find((t) => t.id === e), a = i?.channels.find((e) => e.id === t[r]), o = a ? ` (${N(this.ctx.strings, `channel_kind.${a.kind}`)})` : "";
+			let i = n.find((t) => t.id === e), a = i?.channels.find((e) => e.id === t[r]), o = a ? ` (${M(this.ctx.strings, `channel_kind.${a.kind}`)})` : "";
 			return `${i?.name ?? e}${o}`;
 		}).join(", ");
 	}
@@ -6536,8 +6535,8 @@ var sn = class extends j {
 		if (t.detail.verification) {
 			let r = t.group_id?.startsWith("cross:") ?? !0, i = n.config?.groups.find((e) => e.id === t.group_id);
 			return C`<div class="key">
-        ${N(e, t.moment === "verification_satisfied" ? "test.trace.group_satisfied" : "test.trace.group", {
-				group: i?.name ?? (r ? N(e, "test.trace.cross_zone") : N(e, "test.trace.a_group")),
+        ${M(e, t.moment === "verification_satisfied" ? "test.trace.group_satisfied" : "test.trace.group", {
+				group: i?.name ?? (r ? M(e, "test.trace.cross_zone") : M(e, "test.trace.a_group")),
 				count: t.detail.count,
 				n: t.detail.n,
 				window: t.detail.window
@@ -6545,52 +6544,52 @@ var sn = class extends j {
       </div>`;
 		}
 		return t.moment.startsWith("incident_") ? C`<div class="key">
-        ${N(e, `moment.${t.moment}`)}
+        ${M(e, `moment.${t.moment}`)}
         <span class="mono">${t.incident_id ?? ""}</span>
-      </div>` : C`<div class="key">${N(e, `moment.${t.moment}`)}</div>`;
+      </div>` : C`<div class="key">${M(e, `moment.${t.moment}`)}</div>`;
 	}
 	_renderBatches(e, t) {
-		return C`${t.batches.filter((e) => e.actions.length > 0 || rn.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
+		return C`${t.batches.filter((e) => e.actions.length > 0 || Qt.has(e.moment)).map((t) => this._renderBatch(e, t))}`;
 	}
 	_renderBatch(e, t) {
 		return t.profile_id ? C`
       <div class="batch">
         <div class="key">
-          ${N(e, "test.trace.profile", {
+          ${M(e, "test.trace.profile", {
 			profile: t.profile_name,
-			source: N(e, `test.source.${t.source}`)
+			source: M(e, `test.source.${t.source}`)
 		})}
         </div>
-        ${t.actions.length ? t.actions.map((t) => this._renderAction(e, t)) : C`<div class="no">${N(e, "test.trace.nothing_configured")}</div>`}
+        ${t.actions.length ? t.actions.map((t) => this._renderAction(e, t)) : C`<div class="no">${M(e, "test.trace.nothing_configured")}</div>`}
       </div>
-    ` : C`<div class="no">${N(e, "test.trace.no_profile")}</div>`;
+    ` : C`<div class="no">${M(e, "test.trace.no_profile")}</div>`;
 	}
 	_renderCameras(e, t) {
 		let n = t.cameras ?? [];
 		return n.length ? C`<span class="muted">
-      ${N(e, "test.trace.cameras", { cameras: n.map((e) => this.ctx?.hass.states[e]?.attributes?.friendly_name ?? e).join(", ") })}
-      ${t.cameras_omitted ? N(e, "test.trace.cameras_omitted", { count: String(t.cameras_omitted) }) : T}
+      ${M(e, "test.trace.cameras", { cameras: n.map((e) => this.ctx?.hass.states[e]?.attributes?.friendly_name ?? e).join(", ") })}
+      ${t.cameras_omitted ? M(e, "test.trace.cameras_omitted", { count: String(t.cameras_omitted) }) : T}
     </span>` : T;
 	}
 	_renderAction(e, t) {
-		let n = t.name || N(e, `action_kind.${t.kind}`);
+		let n = t.name || M(e, `action_kind.${t.kind}`);
 		if (t.ran) return C`<div class="yes">
-        ${N(e, "test.trace.ran", { action: n })}
+        ${M(e, "test.trace.ran", { action: n })}
         ${this._renderCameras(e, t)}
         ${t.recipients.length ? C`<span class="muted">
-              ${N(e, "test.trace.reached", { who: this._whoFor(t.recipients) })}
+              ${M(e, "test.trace.reached", { who: this._whoFor(t.recipients) })}
             </span>` : T}
         ${t.quiet.length ? C`<span class="muted">
-              ${N(e, "test.trace.quiet", { who: t.quiet.map((e) => (this.ctx?.config?.contacts ?? []).find((t) => t.id === e)?.name ?? e).join(", ") })}
+              ${M(e, "test.trace.quiet", { who: t.quiet.map((e) => (this.ctx?.config?.contacts ?? []).find((t) => t.id === e)?.name ?? e).join(", ") })}
             </span>` : T}
       </div>`;
-		let r = t.skipped === "condition" ? N(e, "test.skip.condition", { conditions: t.conditions.map((t) => t.kind === "time" ? N(e, "test.condition.time", t) : N(e, "test.condition.state", {
+		let r = t.skipped === "condition" ? M(e, "test.skip.condition", { conditions: t.conditions.map((t) => t.kind === "time" ? M(e, "test.condition.time", t) : M(e, "test.condition.state", {
 			entity_id: t.entity_id,
-			operator: N(e, `condition.${t.operator}`),
+			operator: M(e, `condition.${t.operator}`),
 			state: t.state
-		})).join(", ") }) : N(e, `test.skip.${t.skipped}`);
+		})).join(", ") }) : M(e, `test.skip.${t.skipped}`);
 		return C`<div class=${t.skipped === "held_by_delay" ? "wait" : "no"}>
-      ${N(e, "test.trace.skipped", {
+      ${M(e, "test.trace.skipped", {
 			action: n,
 			why: r
 		})}
@@ -6600,9 +6599,9 @@ var sn = class extends j {
 		let t = this.ctx.status.walk_test;
 		return C`
       <div class="notice ${t ? "danger" : "warn"}">
-        ${t ? N(e, "walk.active") : C`<strong>${N(e, "walk.idle_title")}</strong>
-              ${N(e, "walk.idle")}
-              <div class="hint">${N(e, "walk.always_on_live")}</div>`}
+        ${t ? M(e, "walk.active") : C`<strong>${M(e, "walk.idle_title")}</strong>
+              ${M(e, "walk.idle")}
+              <div class="hint">${M(e, "walk.always_on_live")}</div>`}
       </div>
       ${t ? this._renderWalkRunning(e, t) : this._renderWalkStart(e)}
     `;
@@ -6611,22 +6610,22 @@ var sn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "walk.start_title")}</h2>
-          <span class="hint">${N(e, "walk.start_sub")}</span>
+          <h2>${M(e, "walk.start_title")}</h2>
+          <span class="hint">${M(e, "walk.start_sub")}</span>
         </div>
         <div class="card-bd">
-          <p>${N(e, "walk.explainer")}</p>
+          <p>${M(e, "walk.explainer")}</p>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "walk.duration")}</span>
+              <span class="lbl">${M(e, "walk.duration")}</span>
               <input
                 type="number"
                 min="1"
                 .value=${this._walkDuration}
-                placeholder=${N(e, "walk.duration_default")}
+                placeholder=${M(e, "walk.duration_default")}
                 @change=${(e) => this._walkDuration = e.target.value}
               />
-              <span class="hint">${N(e, "walk.duration_hint")}</span>
+              <span class="hint">${M(e, "walk.duration_hint")}</span>
             </label>
           </div>
           <div class="actions">
@@ -6635,7 +6634,7 @@ var sn = class extends j {
               ?disabled=${this._busy}
               @click=${() => void this._startWalkTest()}
             >
-              ${N(e, "walk.start")}
+              ${M(e, "walk.start")}
             </button>
           </div>
         </div>
@@ -6651,13 +6650,13 @@ var sn = class extends j {
           <td>${i.get(a?.area_id ?? "") ?? ""}</td>
           <td>
             <span class="state ${o ? "closed" : "fault"}">
-              ${N(e, o ? "walk.detected" : "walk.never")}
+              ${M(e, o ? "walk.detected" : "walk.never")}
             </span>
           </td>
           <td class="mono">${o ? Y(o.first, this.ctx?.hass.language, this.ctx?.hass) : "—"}</td>
           <td class="mono">${o ? o.count : 0}</td>
           <td>
-            ${a?.fault ? C`<span class="state fault">${N(e, `fault.${a.fault}`)}</span>` : T}
+            ${a?.fault ? C`<span class="state fault">${M(e, `fault.${a.fault}`)}</span>` : T}
           </td>
         </tr>
       `;
@@ -6665,28 +6664,28 @@ var sn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "walk.table_title")}</h2>
+          <h2>${M(e, "walk.table_title")}</h2>
           <span class="hint">
-            ${N(e, "walk.started_by", {
-			who: t.user_name ?? N(e, "walk.somebody"),
+            ${M(e, "walk.started_by", {
+			who: t.user_name ?? M(e, "walk.somebody"),
 			at: Y(t.started_at, this.ctx?.hass.language, this.ctx?.hass)
 		})}
           </span>
         </div>
         <div class="card-bd">
           ${a.length ? C`<div class="problems" role="alert">
-                ${N(e, a.length === 1 ? "walk.never_reacted_one" : "walk.never_reacted", { n: a.length })}
-              </div>` : C`<div class="notice">${N(e, "walk.all_reacted")}</div>`}
+                ${M(e, a.length === 1 ? "walk.never_reacted_one" : "walk.never_reacted", { n: a.length })}
+              </div>` : C`<div class="notice">${M(e, "walk.all_reacted")}</div>`}
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>${N(e, "test.col.zone")}</th>
-                  <th>${N(e, "walk.col.area")}</th>
-                  <th>${N(e, "walk.col.result")}</th>
-                  <th>${N(e, "walk.col.first")}</th>
-                  <th>${N(e, "walk.col.count")}</th>
-                  <th>${N(e, "test.col.health")}</th>
+                  <th>${M(e, "test.col.zone")}</th>
+                  <th>${M(e, "walk.col.area")}</th>
+                  <th>${M(e, "walk.col.result")}</th>
+                  <th>${M(e, "walk.col.first")}</th>
+                  <th>${M(e, "walk.col.count")}</th>
+                  <th>${M(e, "test.col.health")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -6704,7 +6703,7 @@ var sn = class extends j {
 			this._busy = !0, this._error = void 0, this._notice = void 0;
 			try {
 				let t = Number(this._walkDuration) || 0, n = await e.walkTest(!0, { duration: t > 0 ? t * 60 : void 0 });
-				n.success ? n.blocking_zones.length && (this._notice = N(e.strings, "walk.partly_armed", { zones: n.blocking_zones.map((e) => e.name).join(", ") })) : this._error = Ye(e.strings, n, e.hass.language);
+				n.success ? n.blocking_zones.length && (this._notice = M(e.strings, "walk.partly_armed", { zones: n.blocking_zones.map((e) => e.name).join(", ") })) : this._error = Xe(e.strings, n, e.hass.language);
 			} catch (e) {
 				this._error = String(e?.message ?? e);
 			} finally {
@@ -6716,11 +6715,11 @@ var sn = class extends j {
 		let t = this.ctx.config?.profiles ?? [];
 		return C`
       <div class="notice danger">
-        <strong>${N(e, "action_test.warn_title")}</strong>
-        ${N(e, "action_test.warn")}
+        <strong>${M(e, "action_test.warn_title")}</strong>
+        ${M(e, "action_test.warn")}
       </div>
       ${this._confirming ? this._renderConfirm(e) : T}
-      ${t.length === 0 ? C`<p class="empty">${N(e, "action_test.no_profiles")}</p>` : t.map((t) => this._renderProfileTests(e, t))}
+      ${t.length === 0 ? C`<p class="empty">${M(e, "action_test.no_profiles")}</p>` : t.map((t) => this._renderProfileTests(e, t))}
     `;
 	}
 	_renderProfileTests(e, t) {
@@ -6729,16 +6728,16 @@ var sn = class extends j {
       <div class="card">
         <div class="card-hd">
           <h2>${t.name}</h2>
-          <span class="hint">${N(e, "action_test.subtitle")}</span>
+          <span class="hint">${M(e, "action_test.subtitle")}</span>
         </div>
         <div class="card-bd">
-          ${n.length === 0 ? C`<p class="empty">${N(e, "action_test.no_actions")}</p>` : C`<div class="table-wrap">
+          ${n.length === 0 ? C`<p class="empty">${M(e, "action_test.no_actions")}</p>` : C`<div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>${N(e, "action_test.col.action")}</th>
-                      <th>${N(e, "action_test.col.what")}</th>
-                      <th>${N(e, "action_test.col.last")}</th>
+                      <th>${M(e, "action_test.col.action")}</th>
+                      <th>${M(e, "action_test.col.what")}</th>
+                      <th>${M(e, "action_test.col.last")}</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -6752,15 +6751,15 @@ var sn = class extends j {
     `;
 	}
 	_renderActionRow(e, t, n) {
-		let r = `${t.id}:${n.id}`, i = this._tested[r], a = n.name || N(e, `action_kind.${n.kind}`);
+		let r = `${t.id}:${n.id}`, i = this._tested[r], a = n.name || M(e, `action_kind.${n.kind}`);
 		return C`
       <tr>
         <td><strong>${a}</strong></td>
-        <td class="hint">${N(e, `action_test.what.${n.kind}`)}</td>
+        <td class="hint">${M(e, `action_test.what.${n.kind}`)}</td>
         <td>
-          ${i ? i.ok ? C`<span class="state closed">${N(e, "action_test.ok")}</span>` : C`<span class="state fault" title=${i.error ?? ""}
-                  >${N(e, "action_test.failed")}</span
-                >` : C`<span class="muted">${N(e, "action_test.never")}</span>`}
+          ${i ? i.ok ? C`<span class="state closed">${M(e, "action_test.ok")}</span>` : C`<span class="state fault" title=${i.error ?? ""}
+                  >${M(e, "action_test.failed")}</span
+                >` : C`<span class="muted">${M(e, "action_test.never")}</span>`}
         </td>
         <td>
           <button
@@ -6772,7 +6771,7 @@ var sn = class extends j {
 			name: a
 		}}
           >
-            ${N(e, "action_test.test")}
+            ${M(e, "action_test.test")}
           </button>
         </td>
       </tr>
@@ -6782,17 +6781,17 @@ var sn = class extends j {
 		let t = this._confirming;
 		return C`
       <div class="problems" role="alertdialog">
-        <p>${N(e, "action_test.confirm", { action: t.name })}</p>
+        <p>${M(e, "action_test.confirm", { action: t.name })}</p>
         <div class="actions">
           <button
             class="btn primary"
             ?disabled=${this._busy}
             @click=${() => void this._runTest(t)}
           >
-            ${N(e, "action_test.confirm_yes")}
+            ${M(e, "action_test.confirm_yes")}
           </button>
           <button class="btn" @click=${() => this._confirming = void 0}>
-            ${N(e, "common.cancel")}
+            ${M(e, "common.cancel")}
           </button>
         </div>
       </div>
@@ -6806,7 +6805,7 @@ var sn = class extends j {
 				let n = await t.testAction({
 					profile_id: e.profile_id,
 					action_id: e.action_id
-				}), r = n.error ?? cn(t.strings, n.reason);
+				}), r = n.error ?? nn(t.strings, n.reason);
 				this._tested = {
 					...this._tested,
 					[`${e.profile_id}:${e.action_id}`]: {
@@ -6814,7 +6813,7 @@ var sn = class extends j {
 						at: Date.now(),
 						error: r || void 0
 					}
-				}, n.success || (this._error = N(t.strings, "action_test.failed_detail", {
+				}, n.success || (this._error = M(t.strings, "action_test.failed_detail", {
 					action: e.name,
 					detail: r
 				}));
@@ -6827,8 +6826,8 @@ var sn = class extends j {
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
 			o`
       :host {
         display: block;
@@ -6947,15 +6946,15 @@ var sn = class extends j {
 		];
 	}
 };
-function cn(e, t) {
+function nn(e, t) {
 	if (!t) return "";
-	let n = N(e, `action_test.reason.${t}`);
+	let n = M(e, `action_test.reason.${t}`);
 	return n.startsWith("action_test.reason.") ? t : n;
 }
-customElements.get("foyer-page-test") || customElements.define("foyer-page-test", sn);
+U("foyer-page-test", tn);
 //#endregion
 //#region src/panel/pages/contacts.ts
-async function ln(e, t) {
+async function rn(e, t) {
 	try {
 		if (window.isSecureContext && navigator.clipboard) return await navigator.clipboard.writeText(t), !0;
 	} catch {}
@@ -6969,7 +6968,7 @@ async function ln(e, t) {
 		n.remove();
 	}
 }
-var un = {
+var an = {
 	name: "",
 	channels: [],
 	quiet_start: null,
@@ -6977,20 +6976,20 @@ var un = {
 	quiet_min_severity: "alarm",
 	linked_user_id: null,
 	enabled: !0
-}, dn = {
+}, on = {
 	kind: "push",
 	service: "",
 	target: "",
 	data: {},
 	actionable: !1,
 	enabled: !0
-}, fn = [
+}, sn = [
 	"push",
 	"disarm",
 	"dtmf",
 	"service"
 ];
-function pn(e) {
+function cn(e) {
 	let t = /* @__PURE__ */ new Map();
 	for (let n of e) {
 		let e = n.actions.filter((e) => e.enabled && e.escalation_offset !== null).sort((e, t) => (e.escalation_offset ?? 0) - (t.escalation_offset ?? 0)).map((e, t) => ({
@@ -7002,14 +7001,14 @@ function pn(e) {
 	}
 	return t;
 }
-function mn(e) {
+function ln(e) {
 	let t = e.params.contacts;
 	return Array.isArray(t) ? t.map((e) => typeof e == "string" ? {
 		contact_id: e,
 		channel_id: null
 	} : e).filter((e) => e && e.contact_id) : [];
 }
-var hn = class extends j {
+U("foyer-page-contacts", class extends A {
 	constructor(...e) {
 		super(...e), this._problems = [], this._busy = !1, this._tested = {}, this._webhookProblems = [], this._confirmWebhook = !1, this._health = {};
 	}
@@ -7046,9 +7045,9 @@ var hn = class extends j {
 	}
 	_edit(e) {
 		this._busy || (this._draft = e ? structuredClone(e) : {
-			...structuredClone(un),
-			channels: [structuredClone(dn)]
-		}, this._problems = [], R(this));
+			...structuredClone(an),
+			channels: [structuredClone(on)]
+		}, this._problems = [], L(this));
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -7087,7 +7086,7 @@ var hn = class extends j {
 	_addChannel() {
 		this._draft &&= {
 			...this._draft,
-			channels: [...this._draft.channels, structuredClone(dn)]
+			channels: [...this._draft.channels, structuredClone(on)]
 		};
 	}
 	_removeChannel(e) {
@@ -7101,7 +7100,7 @@ var hn = class extends j {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("contact", this._draft);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -7112,7 +7111,7 @@ var hn = class extends j {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.remove("contact", this._draft.id);
-				this._problems = Ze(this.ctx.strings, this.ctx.config, e.problems), e.success && (this._draft = void 0);
+				this._problems = Qe(this.ctx.strings, this.ctx.config, e.problems), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -7130,7 +7129,7 @@ var hn = class extends j {
 					...this._tested,
 					[t.id]: {
 						ok: n.success,
-						error: n.error ?? cn(this.ctx.strings, n.reason ?? null)
+						error: n.error ?? nn(this.ctx.strings, n.reason ?? null)
 					}
 				};
 			} catch (e) {
@@ -7168,7 +7167,7 @@ var hn = class extends j {
 	}
 	async _copyWebhook() {
 		let e = this._webhookShown?.address;
-		e && (this._copied = await ln(this.renderRoot, e));
+		e && (this._copied = await rn(this.renderRoot, e));
 	}
 	render() {
 		let e = this.ctx;
@@ -7177,28 +7176,28 @@ var hn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "contacts.title")}</h2>
+          <h2>${M(t, "contacts.title")}</h2>
           <button class="btn primary" @click=${() => this._edit()}>
-            ${N(t, "contacts.add")}
+            ${M(t, "contacts.add")}
           </button>
         </div>
         ${n.length ? C`<div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>${N(t, "field.name")}</th>
-                    <th>${N(t, "contacts.channels_order")}</th>
-                    <th>${N(t, "contacts.quiet_hours")}</th>
-                    <th>${N(t, "field.linked_user_id")}</th>
+                    <th>${M(t, "field.name")}</th>
+                    <th>${M(t, "contacts.channels_order")}</th>
+                    <th>${M(t, "contacts.quiet_hours")}</th>
+                    <th>${M(t, "field.linked_user_id")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${n.map((e) => this._row(t, e))}
                 </tbody>
               </table>
-            </div>` : C`<div class="empty">${N(t, "contacts.none")}</div>`}
+            </div>` : C`<div class="empty">${M(t, "contacts.none")}</div>`}
         <div class="card-bd">
-          <p class="note">${N(t, "contacts.orchestration")}</p>
+          <p class="note">${M(t, "contacts.orchestration")}</p>
         </div>
       </div>
       ${this._draft ? this._renderEditor(t, this._draft) : T}
@@ -7210,7 +7209,7 @@ var hn = class extends j {
 		return C`<tr
       class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
       aria-selected=${this._draft?.id === t.id ? "true" : "false"}
       @click=${() => this._edit(t)}
     >
@@ -7220,14 +7219,14 @@ var hn = class extends j {
           ${t.channels.map((n, r) => {
 			let i = this._health[`${t.id}:${n.id}`];
 			return C`<span class="tag ${i ? "broken" : ""}"
-              >${r + 1}. ${N(e, `channel_kind.${n.kind}`)} ·
-              ${n.service}${i ? C` · <strong>${N(e, `health.fault_${i}`)}</strong>` : T}</span
+              >${r + 1}. ${M(e, `channel_kind.${n.kind}`)} ·
+              ${n.service}${i ? C` · <strong>${M(e, `health.fault_${i}`)}</strong>` : T}</span
             >`;
 		})}
         </div>
       </td>
       <td class="mono">
-        ${t.quiet_start ? `${t.quiet_start}–${t.quiet_end}` : N(e, "contacts.no_quiet_hours")}
+        ${t.quiet_start ? `${t.quiet_start}–${t.quiet_end}` : M(e, "contacts.no_quiet_hours")}
       </td>
       <td>${n?.name ?? "—"}</td>
     </tr>`;
@@ -7243,19 +7242,19 @@ var hn = class extends j {
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "contacts.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "contacts.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.linked_user_id")}</span>
+              <span class="lbl">${M(e, "field.linked_user_id")}</span>
               <select
                 @change=${(e) => this._set("linked_user_id", e.target.value || null)}
               >
@@ -7267,22 +7266,22 @@ var hn = class extends j {
                     ${e.name}
                   </option>`)}
               </select>
-              <span class="hint">${N(e, "contacts.linked_hint")}</span>
+              <span class="hint">${M(e, "contacts.linked_hint")}</span>
             </label>
           </div>
 
-          <h3>${N(e, "contacts.channels")}</h3>
-          <p class="note">${N(e, "contacts.channels_hint")}</p>
+          <h3>${M(e, "contacts.channels")}</h3>
+          <p class="note">${M(e, "contacts.channels_hint")}</p>
           ${t.channels.map((n, r) => this._renderChannel(e, t, n, r, i, a))}
           <button class="btn" @click=${() => this._addChannel()}>
-            ${N(e, "contacts.add_channel")}
+            ${M(e, "contacts.add_channel")}
           </button>
 
-          <h3>${N(e, "contacts.quiet_hours")}</h3>
-          <p class="note">${N(e, "contacts.quiet_hint")}</p>
+          <h3>${M(e, "contacts.quiet_hours")}</h3>
+          <p class="note">${M(e, "contacts.quiet_hint")}</p>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.quiet_start")}</span>
+              <span class="lbl">${M(e, "field.quiet_start")}</span>
               <input
                 type="time"
                 .value=${t.quiet_start ?? ""}
@@ -7290,7 +7289,7 @@ var hn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.quiet_end")}</span>
+              <span class="lbl">${M(e, "field.quiet_end")}</span>
               <input
                 type="time"
                 .value=${t.quiet_end ?? ""}
@@ -7298,7 +7297,7 @@ var hn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "contacts.quiet_min_severity")}</span>
+              <span class="lbl">${M(e, "contacts.quiet_min_severity")}</span>
               <select
                 @change=${(e) => this._set("quiet_min_severity", e.target.value)}
               >
@@ -7310,14 +7309,14 @@ var hn = class extends j {
                     .value=${n}
                     .selected=${W(n === t.quiet_min_severity)}
                   >
-                    ${N(e, `severity.${n}`)}
+                    ${M(e, `severity.${n}`)}
                   </option>`)}
               </select>
-              <span class="hint">${N(e, "contacts.quiet_severity_hint")}</span>
+              <span class="hint">${M(e, "contacts.quiet_severity_hint")}</span>
             </label>
           </div>
 
-          ${this._problems.map((t) => C`<p class="problem">${B(e, t)}</p>`)}
+          ${this._problems.map((t) => C`<p class="problem">${z(e, t)}</p>`)}
         </div>
         <div class="card-ft">
           ${t.id ? C`<foyer-delete-button
@@ -7327,10 +7326,10 @@ var hn = class extends j {
                 @confirm=${this._delete}
               ></foyer-delete-button>` : T}
           <button class="btn" @click=${() => this._draft = void 0}>
-            ${N(e, "common.cancel")}
+            ${M(e, "common.cancel")}
           </button>
           <button class="btn primary" ?disabled=${this._busy} @click=${() => this._save()}>
-            ${N(e, "common.save")}
+            ${M(e, "common.save")}
           </button>
         </div>
       </div>
@@ -7348,38 +7347,38 @@ var hn = class extends j {
           <div class="channel-tools">
             <button
               class="btn sm"
-              aria-label=${N(e, "common.move_up")}
-              title=${N(e, "common.move_up")}
+              aria-label=${M(e, "common.move_up")}
+              title=${M(e, "common.move_up")}
               @click=${() => this._move(r, -1)}
             >
               ↑
             </button>
             <button
               class="btn sm"
-              aria-label=${N(e, "common.move_down")}
-              title=${N(e, "common.move_down")}
+              aria-label=${M(e, "common.move_down")}
+              title=${M(e, "common.move_down")}
               @click=${() => this._move(r, 1)}
             >
               ↓
             </button>
             <button class="btn sm danger" @click=${() => this._removeChannel(r)}>
-              ${N(e, "common.delete")}
+              ${M(e, "common.delete")}
             </button>
           </div>
         </div>
         <div class="grid-form">
           <label class="field">
-            <span class="lbl">${N(e, "field.kind")}</span>
+            <span class="lbl">${M(e, "field.kind")}</span>
             <select
               @change=${(e) => this._setChannel(r, { kind: e.target.value })}
             >
               ${a.map((t) => C`<option .value=${t} .selected=${W(t === n.kind)}>
-                  ${N(e, `channel_kind.${t}`)}
+                  ${M(e, `channel_kind.${t}`)}
                 </option>`)}
             </select>
           </label>
           <label class="field">
-            <span class="lbl">${N(e, "contacts.service")}</span>
+            <span class="lbl">${M(e, "contacts.service")}</span>
             <select
               @change=${(e) => this._setChannel(r, { service: e.target.value })}
             >
@@ -7391,15 +7390,15 @@ var hn = class extends j {
                   ${e.name}
                 </option>`)}
             </select>
-            <span class="hint">${N(e, "contacts.service_hint")}</span>
+            <span class="hint">${M(e, "contacts.service_hint")}</span>
           </label>
           <label class="field">
-            <span class="lbl">${N(e, "contacts.target")}</span>
+            <span class="lbl">${M(e, "contacts.target")}</span>
             <input
               .value=${n.target}
               @input=${(e) => this._setChannel(r, { target: e.target.value })}
             />
-            <span class="hint">${N(e, "contacts.target_hint")}</span>
+            <span class="hint">${M(e, "contacts.target_hint")}</span>
           </label>
           <label class="check">
             <input
@@ -7407,9 +7406,9 @@ var hn = class extends j {
               .checked=${W(n.actionable)}
               @change=${(e) => this._setChannel(r, { actionable: e.target.checked })}
             />
-            <span class="lbl">${N(e, "contacts.actionable")}</span>
+            <span class="lbl">${M(e, "contacts.actionable")}</span>
             <span class="hint">
-              ${N(e, this._isEntity(n.service) ? "contacts.actionable_entity" : "contacts.actionable_hint")}
+              ${M(e, this._isEntity(n.service) ? "contacts.actionable_entity" : "contacts.actionable_hint")}
             </span>
           </label>
         </div>
@@ -7419,24 +7418,24 @@ var hn = class extends j {
             ?disabled=${this._busy || !t.id || !n.id || this._unsaved(t, n)}
             @click=${() => this._test(t, n)}
           >
-            ${N(e, "contacts.test")}
+            ${M(e, "contacts.test")}
           </button>
-          ${t.id && n.id && !this._unsaved(t, n) ? T : C`<span class="hint">${N(e, "contacts.test_after_save")}</span>`}
+          ${t.id && n.id && !this._unsaved(t, n) ? T : C`<span class="hint">${M(e, "contacts.test_after_save")}</span>`}
           ${o ? C`<span class=${o.ok ? "tag ok" : "tag bad"}>
-                ${o.ok ? N(e, "contacts.test_sent") : o.error}
+                ${o.ok ? M(e, "contacts.test_sent") : o.error}
               </span>` : T}
         </div>
       </div>
     `;
 	}
 	_renderPolicies(e) {
-		let t = this.ctx, n = t.config?.contacts ?? [], r = pn(t.config?.profiles ?? []);
+		let t = this.ctx, n = t.config?.contacts ?? [], r = cn(t.config?.profiles ?? []);
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "contacts.policies")}</h2>
+          <h2>${M(e, "contacts.policies")}</h2>
           <button class="btn" @click=${() => t.navigate("profiles")}>
-            ${N(e, "contacts.edit_on_profiles")}
+            ${M(e, "contacts.edit_on_profiles")}
           </button>
         </div>
         ${r.size ? C`<div class="card-bd">
@@ -7445,25 +7444,25 @@ var hn = class extends j {
                   ${t.map(({ action: t, index: r }) => C`
                       <div class="step">
                         <span class="mono at"
-                          >${N(e, "contacts.step_offset", { n: String(t.escalation_offset) })}</span
+                          >${M(e, "contacts.step_offset", { n: String(t.escalation_offset) })}</span
                         >
                         <div>
                           <div class="who">
-                            ${mn(t).map((t) => {
+                            ${ln(t).map((t) => {
 			let r = n.find((e) => e.id === t.contact_id), i = r?.channels.find((e) => e.id === t.channel_id);
-			return i ? `${r?.name} · ${N(e, `channel_kind.${i.kind}`)}` : r?.name ?? N(e, "problem.unknown_contact");
+			return i ? `${r?.name} · ${M(e, `channel_kind.${i.kind}`)}` : r?.name ?? M(e, "problem.unknown_contact");
 		}).join(" · ") || String(t.params.service ?? "")}
                           </div>
                           <div class="mono">
-                            ${N(e, "contacts.step_number")} ${r + 1} ·
-                            ${N(e, `moment.${t.moments[0]}`)}
+                            ${M(e, "contacts.step_number")} ${r + 1} ·
+                            ${M(e, `moment.${t.moments[0]}`)}
                           </div>
                         </div>
                       </div>
                     `)}
                 `)}
-              <p class="note">${N(e, "contacts.exhausted")}</p>
-            </div>` : C`<div class="empty">${N(e, "contacts.no_policies")}</div>`}
+              <p class="note">${M(e, "contacts.exhausted")}</p>
+            </div>` : C`<div class="empty">${M(e, "contacts.no_policies")}</div>`}
       </div>
     `;
 	}
@@ -7472,18 +7471,18 @@ var hn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "contacts.acknowledgement")}</h2>
+          <h2>${M(e, "contacts.acknowledgement")}</h2>
         </div>
         <div class="card-bd">
-          <p class="note">${N(e, "contacts.ack_stops")}</p>
-          ${fn.map((t) => C`<div class="path">
-              <div class="who">${N(e, `contacts.ack_${t}`)}</div>
-              <div class="mono">${N(e, `contacts.ack_${t}_how`)}</div>
+          <p class="note">${M(e, "contacts.ack_stops")}</p>
+          ${sn.map((t) => C`<div class="path">
+              <div class="who">${M(e, `contacts.ack_${t}`)}</div>
+              <div class="mono">${M(e, `contacts.ack_${t}_how`)}</div>
             </div>`)}
-          <h3>${N(e, "contacts.webhook")}</h3>
+          <h3>${M(e, "contacts.webhook")}</h3>
           <div class="banner warn">
-            <strong>${N(e, "contacts.webhook_warning")}</strong>
-            <span>${N(e, "contacts.webhook_warning_hint")}</span>
+            <strong>${M(e, "contacts.webhook_warning")}</strong>
+            <span>${M(e, "contacts.webhook_warning_hint")}</span>
           </div>
           <label class="check">
             <input
@@ -7492,43 +7491,43 @@ var hn = class extends j {
               ?disabled=${this._busy}
               @change=${(e) => this._toggleWebhook(e.target.checked)}
             />
-            <span class="lbl">${N(e, "contacts.webhook_enable")}</span>
+            <span class="lbl">${M(e, "contacts.webhook_enable")}</span>
           </label>
           ${this._webhookProblems.length ? C`<ul class="problems">
-                ${this._webhookProblems.map((t) => C`<li>${B(e, t)}</li>`)}
+                ${this._webhookProblems.map((t) => C`<li>${z(e, t)}</li>`)}
               </ul>` : T}
           ${n ? C`<div class="once" role="status">
-                <span class="lbl">${N(e, "contacts.webhook_once")}</span>
+                <span class="lbl">${M(e, "contacts.webhook_once")}</span>
                 <code class="secret">${n.address}</code>
                 <div class="copy">
                   <button class="btn" @click=${() => this._copyWebhook()}>
-                    ${N(e, "contacts.webhook_copy")}
+                    ${M(e, "contacts.webhook_copy")}
                   </button>
                   ${this._copied === void 0 ? T : C`<span class="hint">
-                        ${N(e, this._copied ? "contacts.webhook_copied" : "contacts.webhook_copy_failed")}
+                        ${M(e, this._copied ? "contacts.webhook_copied" : "contacts.webhook_copy_failed")}
                       </span>`}
                 </div>
-                ${n.path ? C`<span class="hint">${N(e, "contacts.webhook_path_hint")}</span>` : T}
-                <span class="hint">${N(e, "contacts.webhook_once_hint")}</span>
-              </div>` : t ? C`<p class="hint">${N(e, "contacts.webhook_exists")}</p>` : T}
-          ${t ? C`<p class="note">${N(e, "contacts.webhook_hint")}</p>
+                ${n.path ? C`<span class="hint">${M(e, "contacts.webhook_path_hint")}</span>` : T}
+                <span class="hint">${M(e, "contacts.webhook_once_hint")}</span>
+              </div>` : t ? C`<p class="hint">${M(e, "contacts.webhook_exists")}</p>` : T}
+          ${t ? C`<p class="note">${M(e, "contacts.webhook_hint")}</p>
                 <div class="actions">
-                  ${this._confirmWebhook ? C`<span class="hint">${N(e, "contacts.webhook_confirm")}</span>
+                  ${this._confirmWebhook ? C`<span class="hint">${M(e, "contacts.webhook_confirm")}</span>
                         <button
                           class="btn danger"
                           ?disabled=${this._busy}
                           @click=${() => this._toggleWebhook(!0)}
                         >
-                          ${N(e, "contacts.webhook_regenerate")}
+                          ${M(e, "contacts.webhook_regenerate")}
                         </button>
                         <button class="btn" @click=${() => this._confirmWebhook = !1}>
-                          ${N(e, "common.cancel")}
+                          ${M(e, "common.cancel")}
                         </button>` : C`<button
                         class="btn"
                         ?disabled=${this._busy}
                         @click=${() => this._confirmWebhook = !0}
                       >
-                        ${N(e, "contacts.webhook_regenerate")}
+                        ${M(e, "contacts.webhook_regenerate")}
                       </button>`}
                 </div>` : T}
         </div>
@@ -7537,8 +7536,8 @@ var hn = class extends j {
 	}
 	static {
 		this.styles = [
-			F,
 			P,
+			N,
 			o`
       /* A channel Foyer cannot reach (§12.2). Red here as well as on page
          14, because this is the page somebody is on when they decide who
@@ -7651,17 +7650,16 @@ var hn = class extends j {
     `
 		];
 	}
-};
-customElements.define("foyer-page-contacts", hn);
+});
 //#endregion
 //#region src/panel/entity-list.ts
-function gn(e) {
+function un(e) {
 	return Object.values(e.states).map((e) => ({
 		id: e.entity_id,
 		name: String(e.attributes.friendly_name ?? e.entity_id)
 	})).sort((e, t) => e.name.localeCompare(t.name));
 }
-function _n(e) {
+function dn(e) {
 	let { hass: t, s: n, chosen: r, candidates: i, listId: a, onChange: o } = e, s = new Map(i.map((e) => [e.id, e.name])), c = (t) => {
 		if (!t) return;
 		let n = t.value.trim(), a = n.toLowerCase(), c = i.filter((e) => e.name.toLowerCase() === a), l = s.has(n) ? n : c.length === 1 ? c[0].id : void 0;
@@ -7677,10 +7675,10 @@ function _n(e) {
                 <span class="muted">${e}</span>
               </span>
               <span class=${i ? "now" : "now missing"}>
-                ${i ? J(t, e, i.state) : N(n, "entity_list.missing")}
+                ${i ? J(t, e, i.state) : M(n, "entity_list.missing")}
               </span>
               <button class="btn sm" @click=${() => o(r.filter((t) => t !== e))}>
-                ${N(n, "common.remove")}
+                ${M(n, "common.remove")}
               </button>
             </li>`;
 	})}
@@ -7688,8 +7686,8 @@ function _n(e) {
     <div class="add-row">
       <input
         list=${a}
-        placeholder=${N(n, "entity_list.placeholder")}
-        aria-label=${N(n, "entity_list.placeholder")}
+        placeholder=${M(n, "entity_list.placeholder")}
+        aria-label=${M(n, "entity_list.placeholder")}
         @change=${(e) => {
 		let t = e.target;
 		s.has(t.value.trim()) && c(t);
@@ -7702,7 +7700,7 @@ function _n(e) {
         class="btn"
         @click=${(e) => c(e.target.previousElementSibling)}
       >
-        ${N(n, e.single && r.length ? "entity_list.replace" : "common.add")}
+        ${M(n, e.single && r.length ? "entity_list.replace" : "common.add")}
       </button>
     </div>
     <datalist id=${a}>
@@ -7710,7 +7708,7 @@ function _n(e) {
     </datalist>
   </div>`;
 }
-var vn = o`
+var fn = o`
   .entity-list ul {
     list-style: none;
     margin: 4px 0 8px;
@@ -7746,7 +7744,7 @@ var vn = o`
     flex: 1;
     min-width: 0;
   }
-`, yn = [
+`, pn = [
 	0,
 	1,
 	2,
@@ -7755,13 +7753,13 @@ var vn = o`
 	5,
 	6
 ];
-function bn(e, t) {
+function mn(e, t) {
 	return e ? new Date(e).toLocaleString(t, {
 		dateStyle: "short",
 		timeStyle: "short"
 	}) : "";
 }
-function xn() {
+function hn() {
 	return {
 		name: "",
 		trigger: {
@@ -7791,7 +7789,7 @@ function xn() {
 		exclude_open_zones: !1
 	};
 }
-var Sn = class extends j {
+U("foyer-page-rules", class extends A {
 	constructor(...e) {
 		super(...e), this._visitor = {
 			name: "",
@@ -7814,7 +7812,7 @@ var Sn = class extends j {
 		return this.ctx?.status?.auto;
 	}
 	_edit(e) {
-		this._busy || (this._draft = e ? structuredClone(e) : xn(), this._problems = [], R(this));
+		this._busy || (this._draft = e ? structuredClone(e) : hn(), this._problems = [], L(this));
 	}
 	_set(e, t) {
 		this._draft &&= {
@@ -7857,7 +7855,7 @@ var Sn = class extends j {
 			this._busy = !0;
 			try {
 				let e = await this.ctx.save("rule", this._draft);
-				this._problems = e.problems, e.success || z(this), e.success && (this._draft = void 0);
+				this._problems = e.problems, e.success || R(this), e.success && (this._draft = void 0);
 			} finally {
 				this._busy = !1;
 			}
@@ -7878,9 +7876,9 @@ var Sn = class extends j {
 		this._busy = !0, this._error = void 0;
 		try {
 			let t = await e();
-			t.success || (this._error = N(this.ctx.strings, `reason.${t.reason ?? "unknown"}`));
+			t.success || (this._error = M(this.ctx.strings, `reason.${t.reason ?? "unknown"}`));
 		} catch (e) {
-			this._error = N(this.ctx.strings, "problem.request_failed", { detail: String(e?.message ?? e) });
+			this._error = M(this.ctx.strings, "problem.request_failed", { detail: String(e?.message ?? e) });
 		} finally {
 			this._busy = !1;
 		}
@@ -7917,12 +7915,12 @@ var Sn = class extends j {
 		let t = this.ctx, n = this._auto, r = n?.next, i = n?.pending ?? [];
 		return n?.enabled ? i.length ? C`${i.map((n) => C`<div class="banner crit">
           <div>
-            ${N(e, `rules.counting_${n.action}`, {
+            ${M(e, `rules.counting_${n.action}`, {
 			rule: n.rule_name,
 			scenario: this._scenarioName(n.scenario_id),
 			seconds: Math.max(0, Math.round((Date.parse(n.due) - t.now()) / 1e3))
 		})}
-            ${n.suspension_name ? C`<em>${N(e, "rules.because", { name: n.suspension_name })}</em>` : T}
+            ${n.suspension_name ? C`<em>${M(e, "rules.because", { name: n.suspension_name })}</em>` : T}
           </div>
           <span class="spacer"></span>
           <button
@@ -7930,15 +7928,15 @@ var Sn = class extends j {
             ?disabled=${this._busy}
             @click=${() => this._run(() => t.cancelAuto(n.id))}
           >
-            ${N(e, "rules.cancel_now")}
+            ${M(e, "rules.cancel_now")}
           </button>
         </div>`)}` : C`<div class="banner info">
       <div>
-        ${r ? N(e, `rules.next_${r.action}`, {
+        ${r ? M(e, `rules.next_${r.action}`, {
 			rule: r.rule_name,
 			scenario: this._scenarioName(r.scenario_id),
-			when: bn(r.at, t.hass.language)
-		}) : N(e, "rules.next_none")}
+			when: mn(r.at, t.hass.language)
+		}) : M(e, "rules.next_none")}
       </div>
       <span class="spacer"></span>
       <button
@@ -7946,17 +7944,17 @@ var Sn = class extends j {
         ?disabled=${this._busy}
         @click=${() => this._run(() => t.setAutoArming(!1))}
       >
-        ${N(e, "rules.switch_off")}
+        ${M(e, "rules.switch_off")}
       </button>
     </div>` : C`<div class="banner warn">
-        <div>${N(e, "rules.switched_off")}</div>
+        <div>${M(e, "rules.switched_off")}</div>
         <span class="spacer"></span>
         <button
           class="btn sm"
           ?disabled=${this._busy}
           @click=${() => this._run(() => t.setAutoArming(!0))}
         >
-          ${N(e, "rules.switch_on")}
+          ${M(e, "rules.switch_on")}
         </button>
       </div>`;
 	}
@@ -7966,16 +7964,16 @@ var Sn = class extends j {
 	_triggerText(e, t) {
 		let n = t.trigger, r = n.entity_ids.length;
 		switch (n.kind) {
-			case "absence": return N(e, "rules.trigger_absence", {
+			case "absence": return M(e, "rules.trigger_absence", {
 				n: r,
 				minutes: n.minutes
 			});
-			case "presence": return N(e, "rules.trigger_presence", { n: r });
-			case "time": return N(e, "rules.trigger_time", {
+			case "presence": return M(e, "rules.trigger_presence", { n: r });
+			case "time": return M(e, "rules.trigger_time", {
 				at: n.at ?? "",
 				days: this._days(e, n.weekdays)
 			});
-			default: return N(e, "rules.trigger_entity", {
+			default: return M(e, "rules.trigger_entity", {
 				entity: n.entity_ids[0] ?? "",
 				state: n.state ?? "",
 				minutes: n.minutes
@@ -7983,48 +7981,48 @@ var Sn = class extends j {
 		}
 	}
 	_days(e, t) {
-		return t.length ? t.map((t) => N(e, `rules.weekday_${t}`)).join(", ") : N(e, "rules.every_day");
+		return t.length ? t.map((t) => M(e, `rules.weekday_${t}`)).join(", ") : M(e, "rules.every_day");
 	}
 	_actionText(e, t) {
 		if (t.action === "disarm") {
-			if (t.all_areas) return N(e, "rules.action_disarm_all");
+			if (t.all_areas) return M(e, "rules.action_disarm_all");
 			let n = this.ctx?.config?.areas ?? [];
-			return N(e, "rules.action_disarm", { areas: t.area_ids.map((e) => n.find((t) => t.id === e)).filter((e) => e !== void 0).map((e) => e.name).join(", ") });
+			return M(e, "rules.action_disarm", { areas: t.area_ids.map((e) => n.find((t) => t.id === e)).filter((e) => e !== void 0).map((e) => e.name).join(", ") });
 		}
-		return N(e, `rules.action_${t.action}`, { scenario: this._scenarioName(t.scenario_id) });
+		return M(e, `rules.action_${t.action}`, { scenario: this._scenarioName(t.scenario_id) });
 	}
 	_guardText(e, t) {
 		let n = [];
-		return t.guards.only_when_disarmed && n.push(N(e, "rules.guard_disarmed")), t.guards.only_when_ready && n.push(N(e, "rules.guard_ready")), t.guards.quiet_minutes !== null && n.push(N(e, "rules.guard_quiet", { minutes: t.guards.quiet_minutes })), n.length ? n.join(" · ") : N(e, "rules.guard_none");
+		return t.guards.only_when_disarmed && n.push(M(e, "rules.guard_disarmed")), t.guards.only_when_ready && n.push(M(e, "rules.guard_ready")), t.guards.quiet_minutes !== null && n.push(M(e, "rules.guard_quiet", { minutes: t.guards.quiet_minutes })), n.length ? n.join(" · ") : M(e, "rules.guard_none");
 	}
 	_renderRules(e) {
 		let t = this.ctx.config?.rules ?? [], n = this._auto?.blocked ?? {};
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "rules.title")}</h2>
+          <h2>${M(e, "rules.title")}</h2>
           <button class="btn primary" @click=${() => this._edit()}>
-            ${N(e, "rules.add")}
+            ${M(e, "rules.add")}
           </button>
         </div>
         ${t.length ? C`<div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>${N(e, "field.name")}</th>
-                    <th>${N(e, "field.trigger")}</th>
-                    <th>${N(e, "rules.action")}</th>
-                    <th>${N(e, "field.window")}</th>
-                    <th>${N(e, "field.guards")}</th>
-                    <th>${N(e, "field.grace_seconds")}</th>
-                    <th>${N(e, "rules.status")}</th>
+                    <th>${M(e, "field.name")}</th>
+                    <th>${M(e, "field.trigger")}</th>
+                    <th>${M(e, "rules.action")}</th>
+                    <th>${M(e, "field.window")}</th>
+                    <th>${M(e, "field.guards")}</th>
+                    <th>${M(e, "field.grace_seconds")}</th>
+                    <th>${M(e, "rules.status")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${t.map((t) => C`<tr
                       class="clickable"
  tabindex="0"
- @keydown=${V}
+ @keydown=${B}
                       aria-selected=${this._draft?.id === t.id ? "true" : "false"}
                       @click=${() => this._edit(t)}
                     >
@@ -8040,17 +8038,17 @@ var Sn = class extends j {
                       </td>
                       <td class="muted small">${this._guardText(e, t)}</td>
                       <td class="num">
-                        ${t.grace_seconds ? N(e, "common.seconds", { n: t.grace_seconds }) : N(e, "rules.at_once")}
+                        ${t.grace_seconds ? M(e, "common.seconds", { n: t.grace_seconds }) : M(e, "rules.at_once")}
                       </td>
                       <td>
                         ${t.enabled ? n[t.id ?? ""] ? C`<span class="pill warn"
-                                >${N(e, `rules.block_${n[t.id ?? ""]}`)}</span
-                              >` : C`<span class="pill ok">${N(e, "rules.active")}</span>` : C`<span class="pill idle">${N(e, "rules.disabled")}</span>`}
+                                >${M(e, `rules.block_${n[t.id ?? ""]}`)}</span
+                              >` : C`<span class="pill ok">${M(e, "rules.active")}</span>` : C`<span class="pill idle">${M(e, "rules.disabled")}</span>`}
                       </td>
                     </tr>`)}
                 </tbody>
               </table>
-            </div>` : C`<div class="empty">${N(e, "rules.none")}</div>`}
+            </div>` : C`<div class="empty">${M(e, "rules.none")}</div>`}
       </div>
     `;
 	}
@@ -8059,67 +8057,67 @@ var Sn = class extends j {
 		return C`
       <div class="card editor">
         <div class="card-hd">
-          <h2>${t.id ? t.name : N(e, "rules.new")}</h2>
+          <h2>${t.id ? t.name : M(e, "rules.new")}</h2>
         </div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.name")}</span>
+              <span class="lbl">${M(e, "field.name")}</span>
               <input
                 .value=${t.name}
                 @input=${(e) => this._set("name", e.target.value)}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.trigger")}</span>
+              <span class="lbl">${M(e, "field.trigger")}</span>
               <select
                 @change=${(e) => this._setTrigger("kind", e.target.value)}
               >
                 ${(n.meta?.rule_triggers ?? []).map((t) => C`<option .value=${t} .selected=${W(t === o.kind)}>
-                      ${N(e, `rules.trigger_kind_${t}`)}
+                      ${M(e, `rules.trigger_kind_${t}`)}
                     </option>`)}
               </select>
-              <span class="hint">${N(e, `rules.trigger_hint_${o.kind}`)}</span>
+              <span class="hint">${M(e, `rules.trigger_hint_${o.kind}`)}</span>
             </label>
             ${o.kind === "time" ? C`<label class="field">
-                  <span class="lbl">${N(e, "rules.at")}</span>
+                  <span class="lbl">${M(e, "rules.at")}</span>
                   <input
                     type="time"
                     .value=${o.at ?? ""}
                     @change=${(e) => this._setTrigger("at", e.target.value || null)}
                   />
                 </label>` : C`<label class="field">
-                  <span class="lbl">${N(e, "rules.for_minutes")}</span>
+                  <span class="lbl">${M(e, "rules.for_minutes")}</span>
                   <input
                     type="number"
                     min="0"
                     max=${a}
                     .value=${String(o.minutes)}
                     ?disabled=${o.kind === "presence"}
-                    @input=${(e) => H(e, (e) => this._setTrigger("minutes", e))}
+                    @input=${(e) => V(e, (e) => this._setTrigger("minutes", e))}
                   />
                 </label>`}
           </div>
 
           ${o.kind === "absence" || o.kind === "presence" ? C`<div class="block">
-                <div class="lbl strong">${N(e, "rules.people")}</div>
-                ${r.length ? _n({
+                <div class="lbl strong">${M(e, "rules.people")}</div>
+                ${r.length ? dn({
 			hass: n.hass,
 			s: e,
 			chosen: o.entity_ids,
 			candidates: r,
 			listId: "foyer-rule-people",
 			onChange: (e) => this._setTrigger("entity_ids", e)
-		}) : C`<span class="hint">${N(e, "rules.no_people")}</span>`}
-                <span class="hint">${N(e, "rules.people_hint")}</span>
+		}) : C`<span class="hint">${M(e, "rules.no_people")}</span>`}
+                <span class="hint">${M(e, "rules.people_hint")}</span>
               </div>` : T}
           ${o.kind === "entity" ? C`<div class="field">
-                  <span class="lbl">${N(e, "field.entity_id")}</span>
-                  ${_n({
+                  <span class="lbl">${M(e, "field.entity_id")}</span>
+                  ${dn({
 			hass: n.hass,
 			s: e,
 			chosen: o.entity_ids,
-			candidates: gn(n.hass),
+			candidates: un(n.hass),
 			listId: "foyer-rule-entity",
 			single: !0,
 			onChange: (e) => this._setTrigger("entity_ids", e)
@@ -8127,7 +8125,7 @@ var Sn = class extends j {
                 </div>
                 <div class="grid-form">
                 <label class="field">
-                  <span class="lbl">${N(e, "field.state")}</span>
+                  <span class="lbl">${M(e, "field.state")}</span>
                   <input
                     .value=${o.state ?? ""}
                     @change=${(e) => this._setTrigger("state", e.target.value || null)}
@@ -8139,22 +8137,22 @@ var Sn = class extends j {
           <div class="hr"></div>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "rules.action")}</span>
+              <span class="lbl">${M(e, "rules.action")}</span>
               <select
                 @change=${(e) => this._setAction(e.target.value)}
               >
                 ${(n.meta?.rule_actions ?? []).map((n) => C`<option .value=${n} .selected=${W(n === t.action)}>
-                      ${N(e, `rules.action_kind_${n}`)}
+                      ${M(e, `rules.action_kind_${n}`)}
                     </option>`)}
               </select>
             </label>
             ${t.action === "disarm" ? T : C`<label class="field">
-                  <span class="lbl">${N(e, "field.scenario_id")}</span>
+                  <span class="lbl">${M(e, "field.scenario_id")}</span>
                   <select
                     @change=${(e) => this._set("scenario_id", e.target.value || null)}
                   >
                     <option value="" .selected=${W(!t.scenario_id)}>
-                      ${N(e, "rules.choose_scenario")}
+                      ${M(e, "rules.choose_scenario")}
                     </option>
                     ${(n.config?.scenarios ?? []).map((e) => C`<option .value=${e.id ?? ""} .selected=${W(e.id === t.scenario_id)}>
                           ${e.name}
@@ -8165,10 +8163,10 @@ var Sn = class extends j {
           ${t.action === "disarm" ? this._renderDisarmAreas(e, t) : T}
 
           <div class="hr"></div>
-          <div class="lbl strong">${N(e, "field.window")}</div>
+          <div class="lbl strong">${M(e, "field.window")}</div>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.after")}</span>
+              <span class="lbl">${M(e, "field.after")}</span>
               <input
                 type="time"
                 .value=${t.window.after ?? ""}
@@ -8176,7 +8174,7 @@ var Sn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.before")}</span>
+              <span class="lbl">${M(e, "field.before")}</span>
               <input
                 type="time"
                 .value=${t.window.before ?? ""}
@@ -8185,17 +8183,17 @@ var Sn = class extends j {
             </label>
           </div>
           ${this._renderDays(e, t.window.weekdays, (e) => this._setWindow("weekdays", e))}
-          <span class="hint">${N(e, "rules.window_hint")}</span>
+          <span class="hint">${M(e, "rules.window_hint")}</span>
 
           <div class="hr"></div>
-          <div class="lbl strong">${N(e, "field.guards")}</div>
+          <div class="lbl strong">${M(e, "field.guards")}</div>
           <label class="check">
             <input
               type="checkbox"
               .checked=${W(t.guards.only_when_disarmed)}
               @change=${(e) => this._setGuard("only_when_disarmed", e.target.checked)}
             />
-            <span>${N(e, "rules.guard_disarmed")}</span>
+            <span>${M(e, "rules.guard_disarmed")}</span>
           </label>
           <label class="check">
             <input
@@ -8204,8 +8202,8 @@ var Sn = class extends j {
               @change=${(e) => this._setGuard("only_when_ready", e.target.checked)}
             />
             <span>
-              ${N(e, "rules.guard_ready")}
-              <span class="hint">${N(e, "rules.guard_ready_hint")}</span>
+              ${M(e, "rules.guard_ready")}
+              <span class="hint">${M(e, "rules.guard_ready_hint")}</span>
             </span>
           </label>
           ${t.action === "disarm" ? T : C`<label class="check">
@@ -8215,42 +8213,42 @@ var Sn = class extends j {
                     @change=${(e) => this._set("exclude_open_zones", e.target.checked)}
                   />
                   <span>
-                    ${N(e, "field.exclude_open_zones")}
-                    <span class="hint">${N(e, "rules.exclude_open_hint")}</span>
+                    ${M(e, "field.exclude_open_zones")}
+                    <span class="hint">${M(e, "rules.exclude_open_hint")}</span>
                   </span>
                 </label>
                 ${t.exclude_open_zones ? C`<div class="notice">
-                      ${N(e, t.guards.only_when_ready ? "rules.exclude_open_no_effect" : "rules.exclude_open_warning")}
+                      ${M(e, t.guards.only_when_ready ? "rules.exclude_open_no_effect" : "rules.exclude_open_warning")}
                     </div>` : T}`}
           <label class="field">
-            <span class="lbl">${N(e, "rules.guard_quiet_label")}</span>
+            <span class="lbl">${M(e, "rules.guard_quiet_label")}</span>
             <input
               type="number"
               min="1"
               max=${a}
               .value=${t.guards.quiet_minutes === null ? "" : String(t.guards.quiet_minutes)}
-              @input=${(e) => this._setGuard("quiet_minutes", U(e.target.value))}
+              @input=${(e) => this._setGuard("quiet_minutes", H(e.target.value))}
             />
-            <span class="hint">${N(e, "rules.guard_quiet_hint")}</span>
+            <span class="hint">${M(e, "rules.guard_quiet_hint")}</span>
           </label>
 
           <div class="hr"></div>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.grace_seconds")}</span>
+              <span class="lbl">${M(e, "field.grace_seconds")}</span>
               <input
                 type="number"
                 min="0"
                 max=${i}
                 .value=${String(t.grace_seconds)}
-                @input=${(e) => H(e, (e) => this._set("grace_seconds", e))}
+                @input=${(e) => V(e, (e) => this._set("grace_seconds", e))}
               />
-              <span class="hint">${N(e, "rules.grace_hint")}</span>
+              <span class="hint">${M(e, "rules.grace_hint")}</span>
             </label>
           </div>
           <div class="block">
-            <div class="lbl strong">${N(e, "field.notify_contact_ids")}</div>
-            <p class="hint">${N(e, "rules.notify_outcome_hint")}</p>
+            <div class="lbl strong">${M(e, "field.notify_contact_ids")}</div>
+            <p class="hint">${M(e, "rules.notify_outcome_hint")}</p>
             <div class="chips">
               ${(n.config?.contacts ?? []).map((e) => C`<label class="chip">
                   <input
@@ -8261,7 +8259,7 @@ var Sn = class extends j {
                   <span>${e.name}</span>
                 </label>`)}
             </div>
-            <span class="hint">${N(e, "rules.notify_hint")}</span>
+            <span class="hint">${M(e, "rules.notify_hint")}</span>
           </div>
           <label class="check">
             <input
@@ -8269,20 +8267,20 @@ var Sn = class extends j {
               .checked=${W(t.enabled)}
               @change=${(e) => this._set("enabled", e.target.checked)}
             />
-            <span>${N(e, "rules.enabled")}</span>
+            <span>${M(e, "rules.enabled")}</span>
           </label>
 
           ${this._problems.length ? C`<div class="problems" role="alert">
                 <ul>
-                  ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                  ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
                 </ul>
               </div>` : T}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-              ${N(e, "common.save")}
+              ${M(e, "common.save")}
             </button>
             <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
-              ${N(e, "common.cancel")}
+              ${M(e, "common.cancel")}
             </button>
             ${t.id ? C`<foyer-delete-button
                 .strings=${e}
@@ -8297,20 +8295,20 @@ var Sn = class extends j {
 	}
 	_renderDays(e, t, n) {
 		return C`<div class="chips days">
-      ${yn.map((r) => C`<label class="chip">
+      ${pn.map((r) => C`<label class="chip">
           <input
             type="checkbox"
             .checked=${W(t.includes(r))}
             @change=${(e) => n(e.target.checked ? [...t, r].sort((e, t) => e - t) : t.filter((e) => e !== r))}
           />
-          <span>${N(e, `rules.weekday_${r}`)}</span>
+          <span>${M(e, `rules.weekday_${r}`)}</span>
         </label>`)}
     </div>`;
 	}
 	_renderDisarmAreas(e, t) {
 		let n = this.ctx?.config?.areas ?? [], r = !!t.all_areas;
 		return C`<div class="block">
-      <div class="lbl strong">${N(e, "field.area_ids")}</div>
+      <div class="lbl strong">${M(e, "field.area_ids")}</div>
       <label class="check">
         <input
           type="checkbox"
@@ -8318,8 +8316,8 @@ var Sn = class extends j {
           @change=${(e) => this._set("all_areas", e.target.checked)}
         />
         <span>
-          ${N(e, "rules.all_areas")}
-          <span class="hint">${N(e, "rules.all_areas_hint")}</span>
+          ${M(e, "rules.all_areas")}
+          <span class="hint">${M(e, "rules.all_areas_hint")}</span>
         </span>
       </label>
       <div class="chips" ?hidden=${r}>
@@ -8334,7 +8332,7 @@ var Sn = class extends j {
             />
             <span>
               ${n.name}
-              ${n.is_perimeter ? C`<em>&nbsp;· ${N(e, "rules.never_disarmed")}</em>` : T}
+              ${n.is_perimeter ? C`<em>&nbsp;· ${M(e, "rules.never_disarmed")}</em>` : T}
             </span>
           </label>`;
 		})}
@@ -8346,20 +8344,20 @@ var Sn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "rules.suspensions")}</h2>
+          <h2>${M(e, "rules.suspensions")}</h2>
         </div>
         <div class="card-bd">
-          <p class="hint">${N(e, "rules.visitor_intro")}</p>
+          <p class="hint">${M(e, "rules.visitor_intro")}</p>
           ${t.length ? C`<div class="stack">
                 ${t.map((t) => C`<div class="suspension">
                     <div>
                       <div class="lbl strong">
-                        ${t.name ?? N(e, `rules.suspension_${t.kind}`)}
+                        ${t.name ?? M(e, `rules.suspension_${t.kind}`)}
                       </div>
                       <div class="hint mono">
-                        ${t.kind === "next" ? N(e, "rules.suspension_next_hint") : `${bn(t.start, n.hass.language)} – ${bn(t.until, n.hass.language)}`}
-                        ${t.rule_ids.length ? ` · ${t.rule_ids.map((e) => r.find((t) => t.id === e)?.name ?? e).join(", ")}` : ` · ${N(e, "rules.every_rule")}`}
-                        ${t.reduced_scenario_id ? ` · ${N(e, "rules.instead", { scenario: this._scenarioName(t.reduced_scenario_id) })}` : ""}
+                        ${t.kind === "next" ? M(e, "rules.suspension_next_hint") : `${mn(t.start, n.hass.language)} – ${mn(t.until, n.hass.language)}`}
+                        ${t.rule_ids.length ? ` · ${t.rule_ids.map((e) => r.find((t) => t.id === e)?.name ?? e).join(", ")}` : ` · ${M(e, "rules.every_rule")}`}
+                        ${t.reduced_scenario_id ? ` · ${M(e, "rules.instead", { scenario: this._scenarioName(t.reduced_scenario_id) })}` : ""}
                       </div>
                     </div>
                     <span class="spacer"></span>
@@ -8368,19 +8366,19 @@ var Sn = class extends j {
                       ?disabled=${this._busy}
                       @click=${() => this._run(() => n.liftSuspension(t.id))}
                     >
-                      ${N(e, "rules.lift")}
+                      ${M(e, "rules.lift")}
                     </button>
                   </div>`)}
-              </div>` : C`<div class="empty">${N(e, "rules.no_suspensions")}</div>`}
+              </div>` : C`<div class="empty">${M(e, "rules.no_suspensions")}</div>`}
 
           <div class="hr"></div>
-          <div class="lbl strong">${N(e, "rules.visitor")}</div>
+          <div class="lbl strong">${M(e, "rules.visitor")}</div>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "rules.reason")}</span>
+              <span class="lbl">${M(e, "rules.reason")}</span>
               <input
                 .value=${i.name}
-                placeholder=${N(e, "rules.reason_placeholder")}
+                placeholder=${M(e, "rules.reason_placeholder")}
                 @input=${(e) => this._visitor = {
 			...i,
 			name: e.target.value
@@ -8388,7 +8386,7 @@ var Sn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.after")}</span>
+              <span class="lbl">${M(e, "field.after")}</span>
               <input
                 type="datetime-local"
                 .value=${i.start}
@@ -8399,7 +8397,7 @@ var Sn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.before")}</span>
+              <span class="lbl">${M(e, "field.before")}</span>
               <input
                 type="datetime-local"
                 .value=${i.until}
@@ -8410,7 +8408,7 @@ var Sn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "rules.instead_label")}</span>
+              <span class="lbl">${M(e, "rules.instead_label")}</span>
               <select
                 @change=${(e) => this._visitor = {
 			...i,
@@ -8418,7 +8416,7 @@ var Sn = class extends j {
 		}}
               >
                 <option value="" .selected=${W(!i.reduced_scenario_id)}>
-                  ${N(e, "rules.instead_nothing")}
+                  ${M(e, "rules.instead_nothing")}
                 </option>
                 ${(n.config?.scenarios ?? []).map((e) => C`<option
                       .value=${e.id ?? ""}
@@ -8427,7 +8425,7 @@ var Sn = class extends j {
                       ${e.name}
                     </option>`)}
               </select>
-              <span class="hint">${N(e, "rules.instead_hint")}</span>
+              <span class="hint">${M(e, "rules.instead_hint")}</span>
             </label>
           </div>
           <div class="actions">
@@ -8436,7 +8434,7 @@ var Sn = class extends j {
               ?disabled=${this._busy || !i.name.trim() || !i.until}
               @click=${this._addVisitor}
             >
-              ${N(e, "rules.add_visitor")}
+              ${M(e, "rules.add_visitor")}
             </button>
             ${(n.config?.rules ?? []).length ? C`<button
                   class="btn"
@@ -8446,7 +8444,7 @@ var Sn = class extends j {
 			rule_ids: []
 		}))}
                 >
-                  ${N(e, "rules.skip_next")}
+                  ${M(e, "rules.skip_next")}
                 </button>` : T}
           </div>
         </div>
@@ -8458,11 +8456,11 @@ var Sn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "rules.disarming")}</h2>
+          <h2>${M(e, "rules.disarming")}</h2>
         </div>
         <div class="card-bd">
-          <div class="notice">${N(e, "rules.disarming_warning")}</div>
-          ${L(t) ? C`<div class="notice" role="note">${N(e, "rules.allow_disarm_armed")}</div>` : T}
+          <div class="notice">${M(e, "rules.disarming_warning")}</div>
+          ${I(t) ? C`<div class="notice" role="note">${M(e, "rules.allow_disarm_armed")}</div>` : T}
           <label class="check">
             <input
               type="checkbox"
@@ -8473,34 +8471,34 @@ var Sn = class extends j {
 			this._busy = !0, this._error = void 0;
 			try {
 				let n = await t.saveSettings({ allow_auto_disarm: r });
-				n.success || (this._error = n.problems.map((t) => B(e, t)).join(" ") || N(e, "reason.code_required"));
+				n.success || (this._error = n.problems.map((t) => z(e, t)).join(" ") || M(e, "reason.code_required"));
 			} finally {
 				this._busy = !1, this.requestUpdate();
 			}
 		}}
             />
             <span>
-              ${N(e, "rules.allow_disarm")}
-              <span class="hint">${N(e, "rules.allow_disarm_hint")}</span>
+              ${M(e, "rules.allow_disarm")}
+              <span class="hint">${M(e, "rules.allow_disarm_hint")}</span>
             </span>
           </label>
           <div class="hr"></div>
-          <div class="lbl strong">${N(e, "rules.areas_a_rule_may_disarm")}</div>
+          <div class="lbl strong">${M(e, "rules.areas_a_rule_may_disarm")}</div>
           <div class="chips">
             ${r.map((t) => C`<span class=${t.is_perimeter ? "pill bad" : "pill ok"}>
-                  ${t.name}${t.is_perimeter ? ` · ${N(e, "rules.never_disarmed")}` : ""}
+                  ${t.name}${t.is_perimeter ? ` · ${M(e, "rules.never_disarmed")}` : ""}
                 </span>`)}
           </div>
-          <p class="hint">${N(e, "rules.perimeter_note")}</p>
+          <p class="hint">${M(e, "rules.perimeter_note")}</p>
         </div>
       </div>
     `;
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
-			vn,
+			fn,
 			o`
       /* A disarm naming many areas wraps inside its own column instead of
          pushing every other column off the screen. */
@@ -8589,11 +8587,10 @@ var Sn = class extends j {
     `
 		];
 	}
-};
-customElements.get("foyer-page-rules") || customElements.define("foyer-page-rules", Sn);
+});
 //#endregion
 //#region src/panel/pages/log.ts
-var X = 50, Cn = class extends j {
+var X = 50, gn = class extends A {
 	constructor(...e) {
 		super(...e), this._rows = [], this._total = 0, this._offset = 0, this._filters = {}, this._busy = !1, this._confirmClear = !1, this._loaded = !1, this._person = "", this._keepPseudonym = !1, this._confirmErase = !1;
 	}
@@ -8646,7 +8643,7 @@ var X = 50, Cn = class extends j {
 			this._busy = !0;
 			try {
 				let t = await this.ctx.exportLog(this._filters, e);
-				qe(t.filename, t.content, e === "csv" ? "text/csv" : "application/json"), t.truncated && (this._error = N(this.ctx.strings, "log.truncated", {
+				Je(t.filename, t.content, e === "csv" ? "text/csv" : "application/json"), t.truncated && (this._error = M(this.ctx.strings, "log.truncated", {
 					rows: t.rows,
 					total: t.total
 				}));
@@ -8663,7 +8660,7 @@ var X = 50, Cn = class extends j {
 			try {
 				let e = await this.ctx.clearLog();
 				if (!e.success) {
-					this._error = N(this.ctx.strings, `reason.${e.reason ?? "unknown"}`);
+					this._error = M(this.ctx.strings, `reason.${e.reason ?? "unknown"}`);
 					return;
 				}
 				this._offset = 0, await this._load();
@@ -8687,7 +8684,7 @@ var X = 50, Cn = class extends j {
 			this._busy = !0, this._error = void 0;
 			try {
 				let t = await this.ctx.exportPerson(this._person, e);
-				qe(t.filename, t.content, e === "csv" ? "text/csv" : "application/json"), t.truncated && (this._error = N(this.ctx.strings, "log.truncated", {
+				Je(t.filename, t.content, e === "csv" ? "text/csv" : "application/json"), t.truncated && (this._error = M(this.ctx.strings, "log.truncated", {
 					rows: t.rows,
 					total: t.total
 				}));
@@ -8703,7 +8700,7 @@ var X = 50, Cn = class extends j {
 			this._confirmErase = !1, this._busy = !0, this._error = void 0;
 			try {
 				let e = await this.ctx.erasePerson(this._person, this._keepPseudonym);
-				e.success ? (this._erased = e.removed ?? 0, this._counts = await this.ctx.previewPerson(this._person), await this._load()) : e.reason && (this._error = N(this.ctx.strings, `reason.${e.reason}`));
+				e.success ? (this._erased = e.removed ?? 0, this._counts = await this.ctx.previewPerson(this._person), await this._load()) : e.reason && (this._error = M(this.ctx.strings, `reason.${e.reason}`));
 			} catch (e) {
 				this._error = String(e?.message ?? e);
 			} finally {
@@ -8717,17 +8714,17 @@ var X = 50, Cn = class extends j {
 		let n = this._counts;
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "log.person_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "log.person_title")}</h2></div>
         <div class="card-bd">
-          <p class="hint">${N(e, "log.person_intro")}</p>
+          <p class="hint">${M(e, "log.person_intro")}</p>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "log.person")}</span>
+              <span class="lbl">${M(e, "log.person")}</span>
               <select
                 .value=${this._person}
                 @change=${(e) => void this._pick(e.target.value)}
               >
-                <option value="">${N(e, "log.person_none")}</option>
+                <option value="">${M(e, "log.person_none")}</option>
                 ${t.map((e) => C`<option .value=${e.id} .selected=${W(e.id === this._person)}>
                       ${e.name}
                     </option>`)}
@@ -8736,35 +8733,35 @@ var X = 50, Cn = class extends j {
           </div>
           ${n ? C`
                 <p class="hint">
-                  ${N(e, "log.person_found", {
+                  ${M(e, "log.person_found", {
 			total: n.total,
 			by_id: n.by_id,
 			by_name: n.by_name,
 			about: n.about
 		})}
                 </p>
-                <p class="hint">${N(e, "log.person_export_rows", { rows: n.wide })}</p>
+                <p class="hint">${M(e, "log.person_export_rows", { rows: n.wide })}</p>
                 <div class="actions">
                   <button
                     class="btn"
                     ?disabled=${this._busy}
                     @click=${() => void this._exportPerson("csv")}
                   >
-                    ${N(e, "log.person_export_csv")}
+                    ${M(e, "log.person_export_csv")}
                   </button>
                   <button
                     class="btn"
                     ?disabled=${this._busy}
                     @click=${() => void this._exportPerson("json")}
                   >
-                    ${N(e, "log.person_export_json")}
+                    ${M(e, "log.person_export_json")}
                   </button>
                   <button
                     class="btn danger"
                     ?disabled=${this._busy || n.total === 0}
                     @click=${() => this._confirmErase = !0}
                   >
-                    ${N(e, "log.person_erase")}
+                    ${M(e, "log.person_erase")}
                   </button>
                 </div>
                 <label class="check">
@@ -8773,21 +8770,21 @@ var X = 50, Cn = class extends j {
                     .checked=${W(this._keepPseudonym)}
                     @change=${(e) => this._keepPseudonym = e.target.checked}
                   />
-                  <span>${N(e, "log.person_keep_pseudonym")}</span>
+                  <span>${M(e, "log.person_keep_pseudonym")}</span>
                 </label>
-                <p class="hint">${N(e, "log.person_keep_pseudonym_hint")}</p>
+                <p class="hint">${M(e, "log.person_keep_pseudonym_hint")}</p>
               ` : T}
-          ${this._erased === void 0 ? T : C`<p class="hint">${N(e, "log.person_erased", { rows: this._erased })}</p>`}
+          ${this._erased === void 0 ? T : C`<p class="hint">${M(e, "log.person_erased", { rows: this._erased })}</p>`}
           ${this._confirmErase ? C`<div class="problems" role="alert">
                 <p>
-                  ${N(e, this._keepPseudonym ? "log.person_erase_confirm_pseudonym" : "log.person_erase_confirm", { rows: n?.total ?? 0 })}
+                  ${M(e, this._keepPseudonym ? "log.person_erase_confirm_pseudonym" : "log.person_erase_confirm", { rows: n?.total ?? 0 })}
                 </p>
                 <div class="actions">
                   <button class="btn danger" @click=${() => void this._erasePerson()}>
-                    ${N(e, "log.person_erase_yes")}
+                    ${M(e, "log.person_erase_yes")}
                   </button>
                   <button class="btn" @click=${() => this._confirmErase = !1}>
-                    ${N(e, "common.cancel")}
+                    ${M(e, "common.cancel")}
                   </button>
                 </div>
               </div>` : T}
@@ -8810,11 +8807,11 @@ var X = 50, Cn = class extends j {
 		let t = this.ctx, n = this._vocabulary(e, "category", t.meta?.log_categories), r = this._vocabulary(e, "severity", t.meta?.log_severities), i = this._vocabulary(e, "outcome", t.meta?.outcomes), a = this._filters.categories ?? [];
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "log.filters")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "log.filters")}</h2></div>
         <div class="card-bd">
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "log.from")}</span>
+              <span class="lbl">${M(e, "log.from")}</span>
               <input
                 type="datetime-local"
                 .value=${this._filters.start ?? ""}
@@ -8822,7 +8819,7 @@ var X = 50, Cn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "log.to")}</span>
+              <span class="lbl">${M(e, "log.to")}</span>
               <input
                 type="datetime-local"
                 .value=${this._filters.end ?? ""}
@@ -8830,52 +8827,52 @@ var X = 50, Cn = class extends j {
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "log.area")}</span>
+              <span class="lbl">${M(e, "log.area")}</span>
               <select
                 @change=${(e) => this._filter({ area_id: e.target.value || null })}
               >
-                <option value="">${N(e, "log.all")}</option>
+                <option value="">${M(e, "log.all")}</option>
                 ${t.status.areas.map((e) => C`<option .value=${e.id} .selected=${W(e.id === this._filters.area_id)}>
                       ${e.name}
                     </option>`)}
               </select>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "log.zone")}</span>
+              <span class="lbl">${M(e, "log.zone")}</span>
               <select
                 @change=${(e) => this._filter({ zone_id: e.target.value || null })}
               >
-                <option value="">${N(e, "log.all")}</option>
+                <option value="">${M(e, "log.all")}</option>
                 ${t.status.zones.map((e) => C`<option .value=${e.id} .selected=${W(e.id === this._filters.zone_id)}>
                       ${e.name}
                     </option>`)}
               </select>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "log.severity")}</span>
+              <span class="lbl">${M(e, "log.severity")}</span>
               <select
                 @change=${(e) => this._filter({ severity: e.target.value || null })}
               >
-                <option value="">${N(e, "log.all")}</option>
+                <option value="">${M(e, "log.all")}</option>
                 ${r.map((t) => C`<option .value=${t} .selected=${W(t === this._filters.severity)}>
-                      ${N(e, `severity.${t}`)}
+                      ${M(e, `severity.${t}`)}
                     </option>`)}
               </select>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "log.outcome")}</span>
+              <span class="lbl">${M(e, "log.outcome")}</span>
               <select
                 @change=${(e) => this._filter({ outcome: e.target.value || null })}
               >
-                <option value="">${N(e, "log.all")}</option>
+                <option value="">${M(e, "log.all")}</option>
                 ${i.map((t) => C`<option .value=${t} .selected=${W(t === this._filters.outcome)}>
-                      ${N(e, `outcome.${t}`)}
+                      ${M(e, `outcome.${t}`)}
                     </option>`)}
               </select>
             </label>
           </div>
           <fieldset>
-            <legend>${N(e, "log.categories")}</legend>
+            <legend>${M(e, "log.categories")}</legend>
             <div class="chips">
               ${n.map((t) => C`
                   <button
@@ -8883,16 +8880,16 @@ var X = 50, Cn = class extends j {
                     aria-pressed=${a.includes(t) ? "true" : "false"}
                     @click=${() => this._filter({ categories: a.includes(t) ? a.filter((e) => e !== t) : [...a, t] })}
                   >
-                    ${N(e, `category.${t}`)}
+                    ${M(e, `category.${t}`)}
                   </button>
                 `)}
             </div>
-            <p class="hint">${N(e, "log.categories_hint")}</p>
+            <p class="hint">${M(e, "log.categories_hint")}</p>
           </fieldset>
           ${this._filters.incident_id ? C`<p class="hint">
-                ${N(e, "log.incident_filter", { id: this._filters.incident_id })}
+                ${M(e, "log.incident_filter", { id: this._filters.incident_id })}
                 <button class="btn small" @click=${() => this._filter({ incident_id: null })}>
-                  ${N(e, "log.clear_filter")}
+                  ${M(e, "log.clear_filter")}
                 </button>
               </p>` : T}
         </div>
@@ -8904,49 +8901,49 @@ var X = 50, Cn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(e, "log.events")}</h2>
+          <h2>${M(e, "log.events")}</h2>
           <span class="hint"
-            >${N(e, "log.count", {
+            >${M(e, "log.count", {
 			shown: n ? `${this._offset + 1}–${this._offset + n}` : "0",
 			total: this._total
 		})}</span
           >
           <button class="btn" ?disabled=${this._busy} @click=${() => void this._load()}>
-            ${N(e, "log.refresh")}
+            ${M(e, "log.refresh")}
           </button>
           <button class="btn" ?disabled=${this._busy} @click=${() => this._export("csv")}>
-            ${N(e, "log.export_csv")}
+            ${M(e, "log.export_csv")}
           </button>
           <button class="btn" ?disabled=${this._busy} @click=${() => this._export("json")}>
-            ${N(e, "log.export_json")}
+            ${M(e, "log.export_json")}
           </button>
           ${t.isAdmin ? C`<button class="btn danger" ?disabled=${this._busy} @click=${() => this._confirmClear = !0}>
-                ${N(e, "log.clear")}
+                ${M(e, "log.clear")}
               </button>` : T}
         </div>
         <div class="card-bd">
           ${this._error ? C`<div class="problems" role="alert">${this._error}</div>` : T}
           ${this._confirmClear ? C`<div class="problems" role="alert">
-                <p>${N(e, "log.clear_confirm")}</p>
+                <p>${M(e, "log.clear_confirm")}</p>
                 <div class="actions">
                   <button class="btn danger" @click=${this._clear}>
-                    ${N(e, "log.clear_yes")}
+                    ${M(e, "log.clear_yes")}
                   </button>
                   <button class="btn" @click=${() => this._confirmClear = !1}>
-                    ${N(e, "common.cancel")}
+                    ${M(e, "common.cancel")}
                   </button>
                 </div>
               </div>` : T}
-          ${n === 0 ? C`<p class="hint">${N(e, this._busy ? "common.loading" : "log.empty")}</p>` : C`<div class="table-wrap">
+          ${n === 0 ? C`<p class="hint">${M(e, this._busy ? "common.loading" : "log.empty")}</p>` : C`<div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>${N(e, "log.time")}</th>
-                      <th>${N(e, "log.event")}</th>
-                      <th>${N(e, "log.category")}</th>
-                      <th>${N(e, "log.where")}</th>
-                      <th>${N(e, "log.who")}</th>
-                      <th>${N(e, "log.detail")}</th>
+                      <th>${M(e, "log.time")}</th>
+                      <th>${M(e, "log.event")}</th>
+                      <th>${M(e, "log.category")}</th>
+                      <th>${M(e, "log.where")}</th>
+                      <th>${M(e, "log.who")}</th>
+                      <th>${M(e, "log.detail")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -8962,7 +8959,7 @@ var X = 50, Cn = class extends j {
 			this._offset = Math.max(0, this._offset - X), this._load();
 		}}
                 >
-                  ${N(e, "log.newer")}
+                  ${M(e, "log.newer")}
                 </button>
                 <button
                   class="btn"
@@ -8971,7 +8968,7 @@ var X = 50, Cn = class extends j {
 			this._offset += X, this._load();
 		}}
                 >
-                  ${N(e, "log.older")}
+                  ${M(e, "log.older")}
                 </button>
               </div>` : T}
         </div>
@@ -8983,25 +8980,25 @@ var X = 50, Cn = class extends j {
 		return C`
       <tr class="clickable"
  tabindex="0"
- @keydown=${V} aria-selected=${a ? "true" : "false"} @click=${() => this._open = a ? void 0 : t.id}>
-        <td class="mono">${new Date(t.ts).toLocaleString(n.hass.language, I(n.hass))}</td>
+ @keydown=${B} aria-selected=${a ? "true" : "false"} @click=${() => this._open = a ? void 0 : t.id}>
+        <td class="mono">${new Date(t.ts).toLocaleString(n.hass.language, F(n.hass))}</td>
         <td>
-          <span class="state ${En(t.severity)}">
-            ${wn(e, t.event_type)}
+          <span class="state ${yn(t.severity)}">
+            ${_n(e, t.event_type)}
           </span>
         </td>
-        <td><span class="tag">${N(e, `category.${t.category}`)}</span></td>
+        <td><span class="tag">${M(e, `category.${t.category}`)}</span></td>
         <td>${o}</td>
         <td>
-          ${t.user_name ?? (t.channel ? Tn(e, t.channel) : "")}
-          ${t.detail?.attributed === "claimed" ? C`<span class="claimed">${N(e, "log.claimed")}</span>` : T}
+          ${t.user_name ?? (t.channel ? vn(e, t.channel) : "")}
+          ${t.detail?.attributed === "claimed" ? C`<span class="claimed">${M(e, "log.claimed")}</span>` : T}
         </td>
         <td class="detail">${this._summary(e, t)}</td>
       </tr>
       ${a ? C`<tr class="expanded">
             <td colspan="6">
               <dl class="kv">
-                ${t.incident_id ? C`<dt>${N(e, "log.incident")}</dt>
+                ${t.incident_id ? C`<dt>${M(e, "log.incident")}</dt>
                       <dd>
                         <button
                           class="btn small"
@@ -9009,14 +9006,14 @@ var X = 50, Cn = class extends j {
 			e.stopPropagation(), this._filter({ incident_id: t.incident_id });
 		}}
                         >
-                          ${N(e, "log.show_incident")}
+                          ${M(e, "log.show_incident")}
                         </button>
                       </dd>` : T}
-                ${t.outcome ? C`<dt>${N(e, "log.outcome")}</dt>
-                      <dd>${N(e, `outcome.${t.outcome}`)}</dd>` : T}
-                ${t.channel ? C`<dt>${N(e, "log.channel")}</dt>
-                      <dd>${Tn(e, t.channel)}</dd>` : T}
-                ${this._changeLines(e, t).map((t, n) => C`<dt>${n ? "" : N(e, "log.changes")}</dt>
+                ${t.outcome ? C`<dt>${M(e, "log.outcome")}</dt>
+                      <dd>${M(e, `outcome.${t.outcome}`)}</dd>` : T}
+                ${t.channel ? C`<dt>${M(e, "log.channel")}</dt>
+                      <dd>${vn(e, t.channel)}</dd>` : T}
+                ${this._changeLines(e, t).map((t, n) => C`<dt>${n ? "" : M(e, "log.changes")}</dt>
                     <dd>${t}</dd>`)}
                 ${this._plainDetail(e, t).map(([t, n]) => C`<dt>${this._detailLabel(e, t)}</dt>
                     <dd class="mono">${n}</dd>`)}
@@ -9029,29 +9026,29 @@ var X = 50, Cn = class extends j {
 		let n = this.ctx, r = t.detail ?? {};
 		if (t.event_type === "duress") return this._duressSummary(e, t);
 		if (typeof r.reason == "string" && r.reason) {
-			let t = Array.isArray(r.blocking_zones) ? r.blocking_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? String(e)).join(", ") : "", i = `reason.${r.reason}`, a = N(e, i, { zones: t });
-			return a === i ? N(e, `rules.block_${r.reason}`) : a;
+			let t = Array.isArray(r.blocking_zones) ? r.blocking_zones.map((e) => n.status.zones.find((t) => t.id === e)?.name ?? String(e)).join(", ") : "", i = `reason.${r.reason}`, a = M(e, i, { zones: t });
+			return a === i ? M(e, `rules.block_${r.reason}`) : a;
 		}
 		if (typeof r.error == "string") return r.error;
 		if (t.event_type === "zone_state") return `${r.from ?? "?"} → ${r.to ?? "?"}`;
-		if (t.event_type === "tokens_rejected") return N(e, "log.tokens_rejected", {
+		if (t.event_type === "tokens_rejected") return M(e, "log.tokens_rejected", {
 			count: String(r.count ?? "?"),
 			addresses: String(r.addresses ?? "?")
 		});
-		if (t.event_type === "reloaded") return N(e, "log.gap_short", { seconds: String(r.gap_seconds ?? "") });
-		if (t.event_type === "system_unavailable" && typeof r.down_since == "string" && r.down_since !== "") return N(e, "log.gap", {
-			from: new Date(r.down_since).toLocaleString(n.hass.language, I(n.hass)),
-			to: new Date(String(r.up_at)).toLocaleString(n.hass.language, I(n.hass))
+		if (t.event_type === "reloaded") return M(e, "log.gap_short", { seconds: String(r.gap_seconds ?? "") });
+		if (t.event_type === "system_unavailable" && typeof r.down_since == "string" && r.down_since !== "") return M(e, "log.gap", {
+			from: new Date(r.down_since).toLocaleString(n.hass.language, F(n.hass)),
+			to: new Date(String(r.up_at)).toLocaleString(n.hass.language, F(n.hass))
 		});
-		if (typeof r.kind == "string" && t.category === "action") return N(e, `action_kind.${r.kind}`);
+		if (typeof r.kind == "string" && t.category === "action") return M(e, `action_kind.${r.kind}`);
 		let i = this._changeLines(e, t);
-		return i.length ? i.length > 2 ? `${i.slice(0, 2).join(" · ")} ${N(e, "log.and_more", { count: i.length - 2 })}` : i.join(" · ") : "";
+		return i.length ? i.length > 2 ? `${i.slice(0, 2).join(" · ")} ${M(e, "log.and_more", { count: i.length - 2 })}` : i.join(" · ") : "";
 	}
 	_duressSummary(e, t) {
 		let n = this.ctx.status, r = t.detail ?? {}, i = (e) => {
 			let t = r[e];
 			return typeof t == "string" ? t : "";
-		}, a = i("operation"), o = `operation.${a}`, s = a ? N(e, o) : "", c = [
+		}, a = i("operation"), o = `operation.${a}`, s = a ? M(e, o) : "", c = [
 			...[...i("areas").split(","), i("area")].filter(Boolean).map((e) => n.areas.find((t) => t.id === e)?.name ?? e),
 			...[i("scenario")].filter(Boolean).map((e) => n.scenarios.find((t) => t.id === e)?.name ?? e),
 			...[i("zone")].filter(Boolean).map((e) => n.zones.find((t) => t.id === e)?.name ?? e)
@@ -9063,9 +9060,9 @@ var X = 50, Cn = class extends j {
 		if (!n || typeof n != "object" || Array.isArray(n)) return [];
 		let r = [];
 		for (let [t, i] of Object.entries(n)) {
-			let n = N(e, `config_kind.${t}`);
+			let n = M(e, `config_kind.${t}`);
 			if (t === "reason" && typeof i == "string") {
-				r.push(`${n}: ${N(e, `reason.${i}`)}`);
+				r.push(`${n}: ${M(e, `reason.${i}`)}`);
 				continue;
 			}
 			if (typeof i != "object" || !i) {
@@ -9077,8 +9074,8 @@ var X = 50, Cn = class extends j {
 				r.push(...this._fieldLines(e, n, a));
 				continue;
 			}
-			for (let t of a.added ?? []) r.push(`${n} · ${N(e, "log.added")}: ${t}`);
-			for (let t of a.removed ?? []) r.push(`${n} · ${N(e, "log.removed")}: ${t}`);
+			for (let t of a.added ?? []) r.push(`${n} · ${M(e, "log.added")}: ${t}`);
+			for (let t of a.removed ?? []) r.push(`${n} · ${M(e, "log.removed")}: ${t}`);
 			let o = a.changed ?? {};
 			for (let [t, i] of Object.entries(o)) r.push(...this._fieldLines(e, `${n} «${t}»`, i));
 		}
@@ -9087,18 +9084,18 @@ var X = 50, Cn = class extends j {
 	_fieldLines(e, t, n) {
 		return Array.isArray(n) ? n.map((n) => `${t} · ${this._fieldLabel(e, n)}`) : Object.entries(n).map(([n, r]) => {
 			let i = this._fieldLabel(e, n);
-			return Array.isArray(r) && r.length === 2 ? `${t} · ${i}: ${this._value(e, r[0])} → ${this._value(e, r[1])}` : `${t} · ${i}: ${N(e, "log.changed")}`;
+			return Array.isArray(r) && r.length === 2 ? `${t} · ${i}: ${this._value(e, r[0])} → ${this._value(e, r[1])}` : `${t} · ${i}: ${M(e, "log.changed")}`;
 		});
 	}
 	_fieldLabel(e, t) {
-		let n = N(e, `field.${t.replace(/\./g, "_")}`);
+		let n = M(e, `field.${t.replace(/\./g, "_")}`);
 		return n.startsWith("field.") ? t : n;
 	}
 	_value(e, t) {
-		return t == null || t === "" ? "—" : typeof t == "boolean" ? N(e, t ? "common.yes" : "common.no") : Array.isArray(t) ? t.length ? t.map((t) => this._value(e, t)).join(", ") : "—" : String(t);
+		return t == null || t === "" ? "—" : typeof t == "boolean" ? M(e, t ? "common.yes" : "common.no") : Array.isArray(t) ? t.length ? t.map((t) => this._value(e, t)).join(", ") : "—" : String(t);
 	}
 	_detailLabel(e, t) {
-		let n = N(e, `detail.${t}`);
+		let n = M(e, `detail.${t}`);
 		return n === `detail.${t}` ? t : n;
 	}
 	_plainDetail(e, t) {
@@ -9110,15 +9107,15 @@ var X = 50, Cn = class extends j {
 			if (t.event_type !== "duress" || typeof r != "string") return null;
 			let i = n === "operation" ? `operation.${r}` : n === "target" ? `log.duress_target.${r}` : "";
 			if (!i) return null;
-			let a = N(e, i);
+			let a = M(e, i);
 			return a === i ? null : a;
 		};
 		return Object.entries(t.detail ?? {}).filter(([e, t]) => !n.has(e) && t !== null && t !== "").map(([t, n]) => [t, r(t, n) ?? (n === "true" || n === "false" ? this._value(e, n === "true") : typeof n == "object" ? JSON.stringify(n) : this._value(e, n))]);
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
 			o`
       .claimed {
         margin-left: 6px;
@@ -9178,23 +9175,23 @@ var X = 50, Cn = class extends j {
 		];
 	}
 };
-function wn(e, t) {
-	let n = N(e, `event_type.${t}`);
+function _n(e, t) {
+	let n = M(e, `event_type.${t}`);
 	if (!n.startsWith("event_type.")) return n;
-	let r = N(e, `moment.${t}`);
+	let r = M(e, `moment.${t}`);
 	return r.startsWith("moment.") ? t : r;
 }
-function Tn(e, t) {
-	let n = N(e, `log_channel.${t}`);
+function vn(e, t) {
+	let n = M(e, `log_channel.${t}`);
 	return n.startsWith("log_channel.") ? t : n;
 }
-function En(e) {
+function yn(e) {
 	return e === "alarm" ? "triggered" : e === "warning" ? "arming" : "disarmed";
 }
-customElements.get("foyer-page-log") || customElements.define("foyer-page-log", Cn);
+U("foyer-page-log", gn);
 //#endregion
 //#region src/panel/pages/settings.ts
-var Dn = 30, On = {
+var bn = 30, xn = {
 	targets: [],
 	mode: "sound",
 	sound: null,
@@ -9203,7 +9200,8 @@ var Dn = 30, On = {
 	quiet_start: null,
 	quiet_end: null,
 	during_exit: !1
-}, kn = class extends j {
+};
+U("foyer-page-settings", class extends A {
 	constructor(...e) {
 		super(...e), this._problems = [], this._backupProblems = [], this._busy = !1, this._saved = !1, this._restored = !1, this._confirmPseudonymise = !1, this._languages = [], this._alarmoDone = !1;
 	}
@@ -9227,7 +9225,7 @@ var Dn = 30, On = {
 		super.connectedCallback(), this.ctx?.hass.callWS({ type: "foyer/languages" }).then((e) => this._languages = e.languages ?? []).catch(() => this._languages = []);
 	}
 	get _chime() {
-		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? On);
+		return this._draft ?? structuredClone(this.ctx?.config?.chime ?? xn);
 	}
 	_set(e, t) {
 		this._draft = {
@@ -9280,7 +9278,7 @@ var Dn = 30, On = {
 	_renderProblems(e, t) {
 		return this._problemsIn !== t || !this._problems.length ? T : C`<div class="problems" role="alert">
       <ul>
-        ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+        ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
       </ul>
     </div>`;
 	}
@@ -9296,29 +9294,29 @@ var Dn = 30, On = {
 	}
 	_renderDefaults(e) {
 		let t = this.ctx, n = this._settings ?? t.config.settings, r = t.meta?.bounds ?? {}, i = (t, r, i) => C`<label class="field">
-      <span class="lbl">${N(e, `field.${t}`)}</span>
+      <span class="lbl">${M(e, `field.${t}`)}</span>
       <input
         type="number"
         min=${r ? r[0] : 0}
         max=${r ? r[1] : 3600}
         .value=${String(n[t])}
-        @change=${(e) => H(e, (e) => void this._saveSettings({ [t]: e }, "defaults"))}
+        @change=${(e) => V(e, (e) => void this._saveSettings({ [t]: e }, "defaults"))}
       />
-      <span class="hint">${i ?? N(e, "common.seconds_unit")}</span>
+      <span class="hint">${i ?? M(e, "common.seconds_unit")}</span>
     </label>`;
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "settings.defaults_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "settings.defaults_title")}</h2></div>
         <div class="card-bd">
-          <p class="intro">${N(e, "settings.defaults_intro")}</p>
-          ${L(t) ? C`<div class="notice" role="note">${N(e, "settings.defaults_armed")}</div>` : T}
+          <p class="intro">${M(e, "settings.defaults_intro")}</p>
+          ${I(t) ? C`<div class="notice" role="note">${M(e, "settings.defaults_armed")}</div>` : T}
           <div class="grid-form">
-            ${i("siren_duration", r.siren_duration, N(e, "settings.siren_duration_hint"))}
-            ${i("arm_hold_timeout", r.arm_hold_timeout, N(e, "settings.arm_hold_hint"))}
-            ${i("default_entry_delay", r.entry_delay, N(e, "settings.area_defaults_hint"))}
-            ${i("default_exit_delay", r.exit_delay, N(e, "settings.area_defaults_hint"))}
-            ${i("low_battery_threshold", r.low_battery_threshold, N(e, "settings.low_battery_hint"))}
-            ${i("walk_test_timeout", r.walk_test_timeout, N(e, "settings.walk_test_hint"))}
+            ${i("siren_duration", r.siren_duration, M(e, "settings.siren_duration_hint"))}
+            ${i("arm_hold_timeout", r.arm_hold_timeout, M(e, "settings.arm_hold_hint"))}
+            ${i("default_entry_delay", r.entry_delay, M(e, "settings.area_defaults_hint"))}
+            ${i("default_exit_delay", r.exit_delay, M(e, "settings.area_defaults_hint"))}
+            ${i("low_battery_threshold", r.low_battery_threshold, M(e, "settings.low_battery_hint"))}
+            ${i("walk_test_timeout", r.walk_test_timeout, M(e, "settings.walk_test_hint"))}
           </div>
           ${this._renderProblems(e, "defaults")}
         </div>
@@ -9343,9 +9341,9 @@ var Dn = 30, On = {
 		};
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "settings.log_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "settings.log_title")}</h2></div>
         <div class="card-bd">
-          <p class="intro">${N(e, "settings.log_intro")}</p>
+          <p class="intro">${M(e, "settings.log_intro")}</p>
           <div class="rows">
             ${r.map((t) => {
 			let r = n.enabled[t] !== !1;
@@ -9356,7 +9354,7 @@ var Dn = 30, On = {
                     .checked=${W(r)}
                     @change=${(e) => o({ enabled: { [t]: e.target.checked } })}
                   />
-                  <span>${N(e, `category.${t}`)}</span>
+                  <span>${M(e, `category.${t}`)}</span>
                 </label>
                 <span class="spacer"></span>
                 ${r ? C`<label class="field inline">
@@ -9365,28 +9363,28 @@ var Dn = 30, On = {
                         min=${i}
                         max=${a}
                         .value=${String(n.retention_days[t] ?? 30)}
-                        @change=${(e) => H(e, (e) => o({ retention_days: { [t]: e } }))}
+                        @change=${(e) => V(e, (e) => o({ retention_days: { [t]: e } }))}
                       />
-                      <span class="hint">${N(e, "settings.log_days")}</span>
-                    </label>` : C`<span class="hint">${N(e, "settings.log_off")}</span>`}
+                      <span class="hint">${M(e, "settings.log_days")}</span>
+                    </label>` : C`<span class="hint">${M(e, "settings.log_off")}</span>`}
               </div>
-              ${!r && t === "security" ? C`<p class="hint">${N(e, "settings.log_security_off")}</p>` : T}`;
+              ${!r && t === "security" ? C`<p class="hint">${M(e, "settings.log_security_off")}</p>` : T}`;
 		})}
           </div>
-          <p class="hint">${N(e, "settings.log_rows_hint")}</p>
+          <p class="hint">${M(e, "settings.log_rows_hint")}</p>
           <div class="actions">
             <button
               class="btn"
               ?disabled=${this._busy}
               @click=${() => o({ retention_days: Object.fromEntries((t.meta?.named_categories ?? []).map((e) => [e, t.meta?.short_retention ?? 7])) })}
             >
-              ${N(e, "settings.short_preset", { days: t.meta?.short_retention ?? 7 })}
+              ${M(e, "settings.short_preset", { days: t.meta?.short_retention ?? 7 })}
             </button>
           </div>
           <p class="hint">
-            ${N(e, "settings.short_preset_hint", {
+            ${M(e, "settings.short_preset_hint", {
 			days: t.meta?.short_retention ?? 7,
-			categories: (t.meta?.named_categories ?? []).map((t) => N(e, `category.${t}`)).join(", ")
+			categories: (t.meta?.named_categories ?? []).map((t) => M(e, `category.${t}`)).join(", ")
 		})}
           </p>
           ${this._renderProblems(e, "log")}
@@ -9401,9 +9399,9 @@ var Dn = 30, On = {
 		} }, "privacy");
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "settings.privacy_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "settings.privacy_title")}</h2></div>
         <div class="card-bd">
-          <p class="intro">${N(e, "settings.privacy_intro")}</p>
+          <p class="intro">${M(e, "settings.privacy_intro")}</p>
           <div class="row">
             <label class="check">
               <input
@@ -9413,7 +9411,7 @@ var Dn = 30, On = {
 			e.target.checked ? this._confirmPseudonymise = !0 : (this._confirmPseudonymise = !1, o({ pseudonymise_after: null }));
 		}}
               />
-              <span>${N(e, "settings.pseudonymise")}</span>
+              <span>${M(e, "settings.pseudonymise")}</span>
             </label>
             <span class="spacer"></span>
             ${a ? C`<label class="field inline">
@@ -9422,42 +9420,42 @@ var Dn = 30, On = {
                     min=${r}
                     max=${i}
                     .value=${String(n.pseudonymise_after ?? 30)}
-                    @change=${(e) => H(e, (e) => o({ pseudonymise_after: e }))}
+                    @change=${(e) => V(e, (e) => o({ pseudonymise_after: e }))}
                   />
-                  <span class="hint">${N(e, "settings.log_days")}</span>
+                  <span class="hint">${M(e, "settings.log_days")}</span>
                 </label>` : T}
           </div>
-          <div class="notice">${N(e, "settings.pseudonymise_warning")}</div>
+          <div class="notice">${M(e, "settings.pseudonymise_warning")}</div>
           ${this._confirmPseudonymise ? C`<div class="problems" role="alert">
-                <p>${N(e, "settings.pseudonymise_confirm", { days: 30 })}</p>
+                <p>${M(e, "settings.pseudonymise_confirm", { days: 30 })}</p>
                 <div class="actions">
                   <button
                     class="btn danger"
                     @click=${() => {
-			this._confirmPseudonymise = !1, o({ pseudonymise_after: Dn });
+			this._confirmPseudonymise = !1, o({ pseudonymise_after: bn });
 		}}
                   >
-                    ${N(e, "settings.pseudonymise_yes")}
+                    ${M(e, "settings.pseudonymise_yes")}
                   </button>
                   <button
                     class="btn"
                     @click=${() => this._confirmPseudonymise = !1}
                   >
-                    ${N(e, "common.cancel")}
+                    ${M(e, "common.cancel")}
                   </button>
                 </div>
               </div>` : T}
-          <p class="hint">${N(e, "settings.pseudonymise_hint")}</p>
+          <p class="hint">${M(e, "settings.pseudonymise_hint")}</p>
           <label class="check">
             <input
               type="checkbox"
               .checked=${W(n.delete_on_uninstall)}
               @change=${(e) => o({ delete_on_uninstall: e.target.checked })}
             />
-            <span>${N(e, "settings.delete_on_uninstall")}</span>
+            <span>${M(e, "settings.delete_on_uninstall")}</span>
           </label>
-          <p class="hint">${N(e, "settings.delete_on_uninstall_hint")}</p>
-          <p class="hint">${N(e, "settings.uninstall_snapshots_hint")}</p>
+          <p class="hint">${M(e, "settings.delete_on_uninstall_hint")}</p>
+          <p class="hint">${M(e, "settings.uninstall_snapshots_hint")}</p>
           ${this._renderProblems(e, "privacy")}
         </div>
       </div>
@@ -9467,26 +9465,26 @@ var Dn = 30, On = {
 		let t = (this.ctx.meta?.schema_version ?? []).join(".");
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "settings.backup_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "settings.backup_title")}</h2></div>
         <div class="card-bd">
-          <p class="intro">${N(e, "settings.backup_intro")}</p>
+          <p class="intro">${M(e, "settings.backup_intro")}</p>
           <div class="actions">
             <button class="btn" ?disabled=${this._busy} @click=${this._exportConfig}>
-              ${N(e, "settings.backup_export")}
+              ${M(e, "settings.backup_export")}
             </button>
             <label class="btn file">
-              ${N(e, "settings.backup_import")}
+              ${M(e, "settings.backup_import")}
               <input type="file" accept="application/json,.json" @change=${this._importConfig} />
             </label>
           </div>
-          <p class="hint">${N(e, "settings.backup_hint")}</p>
-          <p class="hint">${N(e, "settings.backup_version", { version: t })}</p>
+          <p class="hint">${M(e, "settings.backup_hint")}</p>
+          <p class="hint">${M(e, "settings.backup_version", { version: t })}</p>
           ${this._backupProblems.length ? C`<div class="problems" role="alert">
                 <ul>
-                  ${this._backupProblems.map((t) => C`<li>${B(e, t)}</li>`)}
+                  ${this._backupProblems.map((t) => C`<li>${z(e, t)}</li>`)}
                 </ul>
               </div>` : T}
-          ${this._restored ? C`<div class="notice">${N(e, "settings.backup_restored")}</div>` : T}
+          ${this._restored ? C`<div class="notice">${M(e, "settings.backup_restored")}</div>` : T}
         </div>
       </div>
     `;
@@ -9505,7 +9503,7 @@ var Dn = 30, On = {
 					}];
 					return;
 				}
-				qe(e.filename, JSON.stringify(e.document, null, 2), "application/json");
+				Je(e.filename, JSON.stringify(e.document, null, 2), "application/json");
 			} catch (e) {
 				this._backupProblems = [{
 					code: "request_failed",
@@ -9546,9 +9544,9 @@ var Dn = 30, On = {
 				"armed_night",
 				"armed_vacation",
 				"armed_custom_bypass"
-			].map((t) => [t, N(e, `alarmo.mode.${t}`)])),
-			split: N(e, "alarmo.split_name"),
-			profile: N(e, "alarmo.profile_name")
+			].map((t) => [t, M(e, `alarmo.mode.${t}`)])),
+			split: M(e, "alarmo.split_name"),
+			profile: M(e, "alarmo.profile_name")
 		};
 	}
 	_alarmoText(e, t, n) {
@@ -9557,8 +9555,8 @@ var Dn = 30, On = {
 			setting: "alarmo.setting",
 			kind: "alarmo.kind",
 			type: "alarmo.sensor_type"
-		}, i = Object.fromEntries(Object.entries(n.params).map(([t, n]) => [t, t in r ? N(e, `${r[t]}.${n}`) : n]));
-		return N(e, `alarmo.${t}.${n.code}`, i);
+		}, i = Object.fromEntries(Object.entries(n.params).map(([t, n]) => [t, t in r ? M(e, `${r[t]}.${n}`) : n]));
+		return M(e, `alarmo.${t}.${n.code}`, i);
 	}
 	async _alarmoRead() {
 		if (this.ctx) {
@@ -9600,47 +9598,47 @@ var Dn = 30, On = {
 		}
 	}
 	_renderAlarmo(e) {
-		let t = this._alarmo, n = t?.created, r = (t) => n && n[t].length ? C`<li>${N(e, `alarmo.created.${t}`, { names: n[t].join(", ") })}</li>` : T;
+		let t = this._alarmo, n = t?.created, r = (t) => n && n[t].length ? C`<li>${M(e, `alarmo.created.${t}`, { names: n[t].join(", ") })}</li>` : T;
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "alarmo.title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "alarmo.title")}</h2></div>
         <div class="card-bd">
-          <p class="intro">${N(e, "alarmo.intro")}</p>
+          <p class="intro">${M(e, "alarmo.intro")}</p>
           <div class="actions">
             <button class="btn" ?disabled=${this._busy} @click=${this._alarmoRead}>
-              ${N(e, "alarmo.read")}
+              ${M(e, "alarmo.read")}
             </button>
             ${t?.fingerprint ? C`<button
                   class="btn primary"
                   ?disabled=${this._busy || !t.success}
                   @click=${this._alarmoApply}
                 >
-                  ${N(e, "alarmo.apply")}
+                  ${M(e, "alarmo.apply")}
                 </button>` : T}
           </div>
-          ${this._alarmoDone ? C`<div class="notice" role="status">${N(e, "alarmo.applied")}</div>` : T}
+          ${this._alarmoDone ? C`<div class="notice" role="status">${M(e, "alarmo.applied")}</div>` : T}
           ${t?.refused ? C`<div class="problems" role="alert">
                 ${this._alarmoText(e, "refused", t.refused)}
               </div>` : T}
           ${t?.problems?.length ? C`<div class="problems" role="alert">
                 <ul>
-                  ${t.problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                  ${t.problems.map((t) => C`<li>${z(e, t)}</li>`)}
                 </ul>
               </div>` : T}
-          ${n ? C`<h3>${N(e, "alarmo.summary_title")}</h3>
+          ${n ? C`<h3>${M(e, "alarmo.summary_title")}</h3>
                 <ul class="alarmo-list">
                   ${r("areas")}
                   <li>
-                    ${N(e, "alarmo.created.zones", { count: t?.counts?.zones ?? 0 })}
+                    ${M(e, "alarmo.created.zones", { count: t?.counts?.zones ?? 0 })}
                   </li>
                   ${r("scenarios")} ${r("extended")} ${r("people")}
                   ${r("profiles")}
                 </ul>` : T}
-          ${t?.lines?.length ? C`<h3>${N(e, "alarmo.report_title")}</h3>
+          ${t?.lines?.length ? C`<h3>${M(e, "alarmo.report_title")}</h3>
                 <ul class="alarmo-list">
                   ${t.lines.map((t) => C`<li>${this._alarmoText(e, "line", t)}</li>`)}
                 </ul>` : T}
-          <p class="hint">${N(e, "alarmo.hint")}</p>
+          <p class="hint">${M(e, "alarmo.hint")}</p>
         </div>
       </div>
     `;
@@ -9649,15 +9647,15 @@ var Dn = 30, On = {
 		let t = this.ctx, n = this._settings ?? t.config.settings;
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "settings.language_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "settings.language_title")}</h2></div>
         <div class="card-bd">
           <label class="field">
-            <span class="lbl">${N(e, "field.language")}</span>
+            <span class="lbl">${M(e, "field.language")}</span>
             <select
               @change=${(e) => this._saveSettings({ language: e.target.value || null }, "language")}
             >
               <option value="" .selected=${W(!n.language)}>
-                ${N(e, "settings.language_system")}
+                ${M(e, "settings.language_system")}
               </option>
               ${n.language && !this._languages.some((e) => e.code === n.language) ? C`<option .value=${n.language} selected>
                     ${n.language}
@@ -9669,7 +9667,7 @@ var Dn = 30, On = {
                     ${e.name}
                   </option>`)}
             </select>
-            <span class="hint">${N(e, "settings.language_hint")}</span>
+            <span class="hint">${M(e, "settings.language_hint")}</span>
           </label>
           ${this._renderProblems(e, "language")}
         </div>
@@ -9678,11 +9676,11 @@ var Dn = 30, On = {
 	}
 	_renderResponse(e) {
 		let t = this.ctx, n = this._settings ?? t.config.settings, r = t.config.profiles ?? [], i = t.meta?.silenceable ?? [], a = (t, i) => C`<label class="field">
-        <span class="lbl">${N(e, `field.${t}`)}</span>
+        <span class="lbl">${M(e, `field.${t}`)}</span>
         <select
           @change=${(e) => this._saveSettings({ [t]: e.target.value || null }, "response")}
         >
-          <option value="" .selected=${W(!n[t])}>${N(e, "settings.none")}</option>
+          <option value="" .selected=${W(!n[t])}>${M(e, "settings.none")}</option>
           ${r.map((e) => C`<option .value=${e.id ?? ""} .selected=${W(e.id === n[t])}>
                 ${e.name}
               </option>`)}
@@ -9691,24 +9689,24 @@ var Dn = 30, On = {
       </label>`;
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "settings.response_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "settings.response_title")}</h2></div>
         <div class="card-bd">
-          <p class="intro">${N(e, "settings.response_intro")}</p>
-          ${L(t) ? C`<div class="notice" role="note">${N(e, "settings.response_armed")}</div>` : T}
+          <p class="intro">${M(e, "settings.response_intro")}</p>
+          ${I(t) ? C`<div class="notice" role="note">${M(e, "settings.response_armed")}</div>` : T}
           <div class="grid-form">
-            ${a("default_profile_id", N(e, "settings.default_profile_hint"))}
-            ${a("technical_profile_id", N(e, "settings.technical_profile_hint"))}
+            ${a("default_profile_id", M(e, "settings.default_profile_hint"))}
+            ${a("technical_profile_id", M(e, "settings.technical_profile_hint"))}
             <label class="field">
-              <span class="lbl">${N(e, "field.camera_dir")}</span>
+              <span class="lbl">${M(e, "field.camera_dir")}</span>
               <input
                 .value=${n.camera_dir}
                 @change=${(e) => this._saveSettings({ camera_dir: e.target.value.trim() }, "response")}
               />
-              <span class="hint">${N(e, "settings.camera_dir_hint")}</span>
+              <span class="hint">${M(e, "settings.camera_dir_hint")}</span>
             </label>
           </div>
           <fieldset>
-            <legend>${N(e, "field.silent_suppresses")}</legend>
+            <legend>${M(e, "field.silent_suppresses")}</legend>
             ${i.map((t) => C`<label class="check">
                   <input
                     type="checkbox"
@@ -9719,10 +9717,10 @@ var Dn = 30, On = {
 		}}
                   />
                   <span
-                    >${t === "chime" ? N(e, "settings.chime_title") : N(e, `action_kind.${t}`)}</span
+                    >${t === "chime" ? M(e, "settings.chime_title") : M(e, `action_kind.${t}`)}</span
                   >
                 </label>`)}
-            <p class="hint">${N(e, "settings.silent_hint")}</p>
+            <p class="hint">${M(e, "settings.silent_hint")}</p>
           </fieldset>
           ${this._renderProblems(e, "response")}
         </div>
@@ -9742,65 +9740,65 @@ var Dn = 30, On = {
 		let i = this._entities(["tts"]), a = (e) => (t) => this._set(e, t.target.value || null);
 		return C`
       <div class="card">
-        <div class="card-hd"><h2>${N(e, "settings.chime_title")}</h2></div>
+        <div class="card-hd"><h2>${M(e, "settings.chime_title")}</h2></div>
         <div class="card-bd">
-          <p class="intro">${N(e, "settings.chime_intro")}</p>
+          <p class="intro">${M(e, "settings.chime_intro")}</p>
           <fieldset>
-            <legend>${N(e, "field.targets")}</legend>
-            ${r.length ? r.map((t) => this._renderTarget(e, t)) : C`<p class="hint">${N(e, "settings.no_targets")}</p>`}
-            <p class="hint">${N(e, "settings.targets_hint")}</p>
+            <legend>${M(e, "field.targets")}</legend>
+            ${r.length ? r.map((t) => this._renderTarget(e, t)) : C`<p class="hint">${M(e, "settings.no_targets")}</p>`}
+            <p class="hint">${M(e, "settings.targets_hint")}</p>
           </fieldset>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.mode")}</span>
+              <span class="lbl">${M(e, "field.mode")}</span>
               <select
                 @change=${(e) => this._set("mode", e.target.value)}
               >
                 ${["sound", "speech"].map((n) => C`<option .value=${n} .selected=${W(n === t.mode)}>
-                      ${N(e, `chime_mode.${n}`)}
+                      ${M(e, `chime_mode.${n}`)}
                     </option>`)}
               </select>
             </label>
             ${t.mode === "speech" ? C`<label class="field">
-                    <span class="lbl">${N(e, "field.tts_entity")}</span>
+                    <span class="lbl">${M(e, "field.tts_entity")}</span>
                     <select
                       @change=${(e) => this._set("tts_entity", e.target.value || null)}
                     >
                       <option value="" .selected=${W(!t.tts_entity)}>
-                        ${N(e, "settings.pick_tts")}
+                        ${M(e, "settings.pick_tts")}
                       </option>
                       ${i.map((e) => C`<option .value=${e.id} .selected=${W(e.id === t.tts_entity)}>
                             ${e.name}
                           </option>`)}
                     </select>
-                    <span class="hint">${N(e, "settings.tts_hint")}</span>
+                    <span class="hint">${M(e, "settings.tts_hint")}</span>
                   </label>` : C`<label class="field">
-                    <span class="lbl">${N(e, "field.sound")}</span>
+                    <span class="lbl">${M(e, "field.sound")}</span>
                     <input
                       .value=${t.sound ?? ""}
                       @input=${(e) => this._set("sound", e.target.value.trim() || null)}
                     />
-                    <span class="hint">${N(e, "settings.sound_hint")}</span>
+                    <span class="hint">${M(e, "settings.sound_hint")}</span>
                   </label>`}
             <label class="field">
-              <span class="lbl">${N(e, "field.volume")}</span>
+              <span class="lbl">${M(e, "field.volume")}</span>
               <input
                 type="number"
                 min="0"
                 max="100"
                 .value=${t.volume == null ? "" : String(t.volume)}
-                @input=${(e) => this._set("volume", U(e.target.value))}
+                @input=${(e) => this._set("volume", H(e.target.value))}
               />
-              <span class="hint">${N(e, "settings.volume_hint")}</span>
+              <span class="hint">${M(e, "settings.volume_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.quiet_start")}</span>
+              <span class="lbl">${M(e, "field.quiet_start")}</span>
               <input type="time" .value=${t.quiet_start ?? ""} @input=${a("quiet_start")} />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.quiet_end")}</span>
+              <span class="lbl">${M(e, "field.quiet_end")}</span>
               <input type="time" .value=${t.quiet_end ?? ""} @input=${a("quiet_end")} />
-              <span class="hint">${N(e, "settings.quiet_hint")}</span>
+              <span class="hint">${M(e, "settings.quiet_hint")}</span>
             </label>
           </div>
           <label class="check">
@@ -9810,16 +9808,16 @@ var Dn = 30, On = {
               @change=${(e) => this._set("during_exit", e.target.checked)}
             />
             <span>
-              ${N(e, "field.during_exit")}
-              <span class="hint">${N(e, "settings.during_exit_hint")}</span>
+              ${M(e, "field.during_exit")}
+              <span class="hint">${M(e, "settings.during_exit_hint")}</span>
             </span>
           </label>
-          <p class="hint">${N(e, "settings.switch_hint")}</p>
+          <p class="hint">${M(e, "settings.switch_hint")}</p>
           ${this._renderProblems(e, "chime")}
-          ${this._saved ? C`<div class="notice">${N(e, "settings.saved")}</div>` : T}
+          ${this._saved ? C`<div class="notice">${M(e, "settings.saved")}</div>` : T}
           <div class="actions">
             <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-              ${N(e, "common.save")}
+              ${M(e, "common.save")}
             </button>
             <button
               class="btn"
@@ -9828,7 +9826,7 @@ var Dn = 30, On = {
 			this._draft = void 0, this._problems = [];
 		}}
             >
-              ${N(e, "common.cancel")}
+              ${M(e, "common.cancel")}
             </button>
           </div>
         </div>
@@ -9845,14 +9843,14 @@ var Dn = 30, On = {
           @change=${(e) => this._toggleTarget(t.id, e.target.checked)}
         />
         <span>
-          ${t.name === t.id ? t.id : N(e, "zones.entity", {
+          ${t.name === t.id ? t.id : M(e, "zones.entity", {
 			name: t.name,
 			entity: t.id
 		})}
         </span>
       </label>
       ${n ? C`<label class="field inline">
-                <span class="lbl">${N(e, "field.quiet_start")}</span>
+                <span class="lbl">${M(e, "field.quiet_start")}</span>
                 <input
                   type="time"
                   .value=${n.quiet_start ?? ""}
@@ -9860,13 +9858,13 @@ var Dn = 30, On = {
                 />
               </label>
               <label class="field inline">
-                <span class="lbl">${N(e, "field.quiet_end")}</span>
+                <span class="lbl">${M(e, "field.quiet_end")}</span>
                 <input type="time" .value=${n.quiet_end ?? ""} @input=${r("quiet_end")} />
               </label>` : T}
     </div>`;
 	}
 	static {
-		this.styles = [F, o`
+		this.styles = [P, o`
       .alarmo-list {
         margin: 4px 0 12px;
         padding-left: 20px;
@@ -9931,14 +9929,13 @@ var Dn = 30, On = {
       }
     `];
 	}
-};
-customElements.get("foyer-page-settings") || customElements.define("foyer-page-settings", kn);
+});
 //#endregion
 //#region src/panel/pages/health.ts
-function An(e, t) {
+function Sn(e, t) {
 	return t ? new Date(t).toLocaleString(e.hass.language) : "—";
 }
-var jn = class extends j {
+U("foyer-page-health", class extends A {
 	constructor(...e) {
 		super(...e), this._candidates = [], this._problems = [], this._busy = !1, this._error = "";
 	}
@@ -10039,17 +10036,17 @@ var jn = class extends j {
       ${this._renderDiagnostics(t)}
       ${this._draft ? this._renderEditor(t, this._draft) : C`<div class="card">
             <div class="card-hd">
-              <h2>${N(t, "health.settings")}</h2>
+              <h2>${M(t, "health.settings")}</h2>
               <button class="btn" @click=${() => this._editConfig()}>
-                ${N(t, "common.edit")}
+                ${M(t, "common.edit")}
               </button>
             </div>
             <div class="card-bd">
-              <p class="hint">${N(t, "health.settings_hint")}</p>
+              <p class="hint">${M(t, "health.settings_hint")}</p>
             </div>
           </div>`}
     ` : C`<div class="card">
-        <div class="card-bd"><div class="empty">${N(t, "common.loading")}</div></div>
+        <div class="card-bd"><div class="empty">${M(t, "common.loading")}</div></div>
       </div>`;
 	}
 	_tile(e, t, n, r) {
@@ -10062,80 +10059,80 @@ var jn = class extends j {
 	_renderTiles(e, t) {
 		let n = t.mains, r = n.mode === "outside_ups", i = r ? n.outside.length > 0 : !!n.entity_id, a = i ? n.lost === !0 ? "crit" : n.lost === null ? "warn" : "ok" : "idle", o = t.watchdog, s = o.enabled ? o.down_since ? "crit" : "ok" : "idle", c = t.channels.filter((e) => e.fault).length, l = t.channels.filter((e) => !e.fault && !e.checked).length;
 		return C`<div class="tiles">
-      ${this._tile(N(e, "health.mains"), i ? n.lost === !0 ? N(e, "health.mains_lost") : n.lost === null ? N(e, "health.unreadable") : N(e, "health.mains_present") : N(e, "health.not_configured"), r && i ? N(e, "health.mains_outside_meta", {
+      ${this._tile(M(e, "health.mains"), i ? n.lost === !0 ? M(e, "health.mains_lost") : n.lost === null ? M(e, "health.unreadable") : M(e, "health.mains_present") : M(e, "health.not_configured"), r && i ? M(e, "health.mains_outside_meta", {
 			count: String(n.outside.length),
 			silent: String(n.outside.filter((e) => e.quiet_since).length)
-		}) : n.entity_id ?? N(e, "health.mains_pick"), a)}
-      ${this._tile(N(e, "health.watchdog"), o.enabled ? o.down_since ? N(e, "health.unreachable") : N(e, "health.reporting") : N(e, "health.off"), o.enabled ? N(e, "health.watchdog_meta", {
+		}) : n.entity_id ?? M(e, "health.mains_pick"), a)}
+      ${this._tile(M(e, "health.watchdog"), o.enabled ? o.down_since ? M(e, "health.unreachable") : M(e, "health.reporting") : M(e, "health.off"), o.enabled ? M(e, "health.watchdog_meta", {
 			every: String(Math.round(o.interval / 60)),
-			payload: N(e, o.payload ? "health.with_payload" : "health.no_payload")
-		}) : N(e, "health.watchdog_off_hint"), s)}
-      ${this._tile(N(e, "health.channels"), c ? N(e, "health.channels_broken", { n: String(c) }) : N(e, "health.channels_ok", { n: String(t.channels.length) }), N(e, "health.channels_meta", { n: String(l) }), c ? "crit" : t.channels.length ? "ok" : "idle")}
+			payload: M(e, o.payload ? "health.with_payload" : "health.no_payload")
+		}) : M(e, "health.watchdog_off_hint"), s)}
+      ${this._tile(M(e, "health.channels"), c ? M(e, "health.channels_broken", { n: String(c) }) : M(e, "health.channels_ok", { n: String(t.channels.length) }), M(e, "health.channels_meta", { n: String(l) }), c ? "crit" : t.channels.length ? "ok" : "idle")}
     </div>`;
 	}
 	_renderChannels(e, t) {
 		return C`<div class="card">
       <div class="card-hd">
-        <h2>${N(e, "health.channels")}</h2>
+        <h2>${M(e, "health.channels")}</h2>
         <span class="sub">
-          ${N(e, "health.sweep_every", { minutes: String(Math.round((this.ctx?.config?.health.channel_sweep ?? 900) / 60)) })}
+          ${M(e, "health.sweep_every", { minutes: String(Math.round((this.ctx?.config?.health.channel_sweep ?? 900) / 60)) })}
         </span>
       </div>
       ${t.channels.length ? C`<div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>${N(e, "contacts.title")}</th>
-                  <th>${N(e, "field.service")}</th>
-                  <th>${N(e, "field.state")}</th>
-                  <th>${N(e, "health.last_result")}</th>
+                  <th>${M(e, "contacts.title")}</th>
+                  <th>${M(e, "field.service")}</th>
+                  <th>${M(e, "field.state")}</th>
+                  <th>${M(e, "health.last_result")}</th>
                 </tr>
               </thead>
               <tbody>
                 ${t.channels.map((t) => C`<tr>
                     <td>
                       <strong>${t.contact_name}</strong>
-                      <span class="tag">${N(e, `channel_kind.${t.kind}`)}</span>
+                      <span class="tag">${M(e, `channel_kind.${t.kind}`)}</span>
                     </td>
                     <td class="mono">${t.service}</td>
                     <td>
                       <span class="pill ${t.fault ? "bad" : t.checked ? "ok" : "warn"}">
-                        ${t.fault ? N(e, `health.fault_${t.fault}`) : t.checked ? N(e, "health.healthy") : N(e, "health.untested")}
+                        ${t.fault ? M(e, `health.fault_${t.fault}`) : t.checked ? M(e, "health.healthy") : M(e, "health.untested")}
                       </span>
                     </td>
-                    <td>${An(this.ctx, t.since ?? t.last_ok)}</td>
+                    <td>${Sn(this.ctx, t.since ?? t.last_ok)}</td>
                   </tr>`)}
               </tbody>
             </table>
-          </div>` : C`<div class="empty">${N(e, "health.no_channels")}</div>`}
+          </div>` : C`<div class="empty">${M(e, "health.no_channels")}</div>`}
       <div class="card-bd">
-        <p class="hint">${N(e, "health.channels_note")}</p>
+        <p class="hint">${M(e, "health.channels_note")}</p>
       </div>
     </div>`;
 	}
 	_renderRadios(e, t) {
 		return C`<div class="card">
       <div class="card-hd">
-        <h2>${N(e, "health.radios")}</h2>
+        <h2>${M(e, "health.radios")}</h2>
       </div>
       ${t.radios.length ? C`<div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>${N(e, "field.name")}</th>
-                  <th>${N(e, "field.coordinator_entity_id")}</th>
-                  <th>${N(e, "health.quiet_zones")}</th>
-                  <th>${N(e, "field.state")}</th>
+                  <th>${M(e, "field.name")}</th>
+                  <th>${M(e, "field.coordinator_entity_id")}</th>
+                  <th>${M(e, "health.quiet_zones")}</th>
+                  <th>${M(e, "field.state")}</th>
                 </tr>
               </thead>
               <tbody>
                 ${t.radios.map((t) => C`<tr>
                     <td><strong>${t.name}</strong></td>
                     <td class="mono">
-                      ${t.coordinator_entity_id ?? N(e, "health.no_coordinator")}
+                      ${t.coordinator_entity_id ?? M(e, "health.no_coordinator")}
                     </td>
                     <td class="mono">
-                      ${N(e, "health.quiet_of", {
+                      ${M(e, "health.quiet_of", {
 			quiet: String(t.quiet),
 			zones: String(t.zones),
 			threshold: String(t.threshold)
@@ -10145,15 +10142,15 @@ var jn = class extends j {
                       <span
                         class="pill ${t.confirmed || t.coordinator_down_since ? "bad" : t.suspected_since || !t.coordinator_entity_id || !t.zones ? "warn" : "ok"}"
                       >
-                        ${t.confirmed ? N(e, "health.interference") : t.coordinator_down_since ? N(e, "health.coordinator_down") : t.suspected_since ? N(e, "health.confirming") : t.coordinator_entity_id ? t.zones ? N(e, "health.watching") : N(e, "health.no_zones") : N(e, "health.not_gated")}
+                        ${t.confirmed ? M(e, "health.interference") : t.coordinator_down_since ? M(e, "health.coordinator_down") : t.suspected_since ? M(e, "health.confirming") : t.coordinator_entity_id ? t.zones ? M(e, "health.watching") : M(e, "health.no_zones") : M(e, "health.not_gated")}
                       </span>
                     </td>
                   </tr>`)}
               </tbody>
             </table>
-          </div>` : C`<div class="empty">${N(e, "health.no_radios")}</div>`}
+          </div>` : C`<div class="empty">${M(e, "health.no_radios")}</div>`}
       <div class="card-bd">
-        <p class="hint">${N(e, "health.radios_note")}</p>
+        <p class="hint">${M(e, "health.radios_note")}</p>
       </div>
     </div>`;
 	}
@@ -10161,16 +10158,16 @@ var jn = class extends j {
 		let n = new Map((this.ctx?.config?.zones ?? []).map((e) => [e.id ?? "", e])), r = new Map(t.unreachable_zones.map((e) => [e.id, e]));
 		return C`<div class="card">
       <div class="card-hd">
-        <h2>${N(e, "health.faults")}</h2>
-        <span class="sub">${N(e, "health.faults_sub")}</span>
+        <h2>${M(e, "health.faults")}</h2>
+        <span class="sub">${M(e, "health.faults_sub")}</span>
       </div>
       ${t.faults.length ? C`<div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>${N(e, "field.name")}</th>
-                  <th>${N(e, "field.entity_id")}</th>
-                  <th>${N(e, "health.since")}</th>
+                  <th>${M(e, "field.name")}</th>
+                  <th>${M(e, "field.entity_id")}</th>
+                  <th>${M(e, "health.since")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -10180,26 +10177,26 @@ var jn = class extends j {
                     <td><strong>${i?.name ?? t}</strong></td>
                     <td class="mono">${i?.entity_id ?? ""}</td>
                     <td>
-                      ${a ? N(e, "health.days", { n: String(a.days) }) : N(e, "health.recent")}
+                      ${a ? M(e, "health.days", { n: String(a.days) }) : M(e, "health.recent")}
                     </td>
                   </tr>`;
 		})}
               </tbody>
             </table>
-          </div>` : C`<div class="empty">${N(e, "health.no_faults")}</div>`}
+          </div>` : C`<div class="empty">${M(e, "health.no_faults")}</div>`}
     </div>`;
 	}
 	_renderDiagnostics(e) {
 		return C`<div class="card">
       <div class="card-hd">
-        <h2>${N(e, "health.diagnostics")}</h2>
+        <h2>${M(e, "health.diagnostics")}</h2>
       </div>
       <div class="card-bd">
-        <p class="hint">${N(e, "health.diagnostics_hint")}</p>
+        <p class="hint">${M(e, "health.diagnostics_hint")}</p>
         <a class="btn" href="/config/integrations/integration/foyer">
-          ${N(e, "health.diagnostics_open")}
+          ${M(e, "health.diagnostics_open")}
         </a>
-        <p class="hint">${N(e, "health.diagnostics_where")}</p>
+        <p class="hint">${M(e, "health.diagnostics_where")}</p>
       </div>
     </div>`;
 	}
@@ -10216,50 +10213,50 @@ var jn = class extends j {
 	_renderSensor(e, t) {
 		return C`<div class="grid-form">
       <label class="field">
-        <span class="lbl">${N(e, "field.mains_entity_id")}</span>
+        <span class="lbl">${M(e, "field.mains_entity_id")}</span>
         <input
           list="foyer-entities"
           .value=${t.mains_entity_id ?? ""}
-          placeholder=${N(e, "health.mains_placeholder")}
+          placeholder=${M(e, "health.mains_placeholder")}
           @input=${(e) => this._set("mains_entity_id", e.target.value.trim() || null)}
         />
-        <span class="hint">${N(e, "health.mains_hint")}</span>
+        <span class="hint">${M(e, "health.mains_hint")}</span>
       </label>
       <label class="field">
-        <span class="lbl">${N(e, "field.mains_lost_states")}</span>
+        <span class="lbl">${M(e, "field.mains_lost_states")}</span>
         <input
           .value=${t.mains_lost_states.join(", ")}
           @input=${(e) => this._set("mains_lost_states", e.target.value.split(",").map((e) => e.trim()).filter(Boolean))}
         />
-        <span class="hint">${N(e, "health.mains_states_hint")}</span>
+        <span class="hint">${M(e, "health.mains_states_hint")}</span>
       </label>
     </div>`;
 	}
 	_renderOutside(e, t) {
 		let [n, r] = this._bounds("mains_outside_delay", [30, 3600]);
 		return C`<div class="field">
-        <span class="lbl">${N(e, "field.mains_outside_entity_ids")}</span>
-        ${_n({
+        <span class="lbl">${M(e, "field.mains_outside_entity_ids")}</span>
+        ${dn({
 			hass: this.ctx.hass,
 			s: e,
 			chosen: t.mains_outside_entity_ids,
-			candidates: gn(this.ctx.hass),
+			candidates: un(this.ctx.hass),
 			listId: "foyer-outside-ups",
 			onChange: (e) => this._set("mains_outside_entity_ids", e)
 		})}
-        <span class="hint">${N(e, "health.mains_outside_hint")}</span>
+        <span class="hint">${M(e, "health.mains_outside_hint")}</span>
       </div>
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "field.mains_outside_delay")}</span>
+          <span class="lbl">${M(e, "field.mains_outside_delay")}</span>
           <input
             type="number"
             min=${n}
             max=${r}
             .value=${String(t.mains_outside_delay)}
-            @input=${(e) => H(e, (e) => this._set("mains_outside_delay", e))}
+            @input=${(e) => V(e, (e) => this._set("mains_outside_delay", e))}
           />
-          <span class="hint">${N(e, "health.mains_outside_delay_hint")}</span>
+          <span class="hint">${M(e, "health.mains_outside_delay_hint")}</span>
         </label>
       </div>`;
 	}
@@ -10267,15 +10264,15 @@ var jn = class extends j {
 		let [n, r] = this._bounds("startup_grace", [0, 900]);
 		return C`<div class="grid-form">
       <label class="field">
-        <span class="lbl">${N(e, "field.startup_grace")}</span>
+        <span class="lbl">${M(e, "field.startup_grace")}</span>
         <input
           type="number"
           min=${n}
           max=${r}
           .value=${String(t.startup_grace ?? 120)}
-          @input=${(e) => H(e, (e) => this._set("startup_grace", e))}
+          @input=${(e) => V(e, (e) => this._set("startup_grace", e))}
         />
-        <span class="hint">${N(e, "health.startup_grace_hint")}</span>
+        <span class="hint">${M(e, "health.startup_grace_hint")}</span>
       </label>
     </div>`;
 	}
@@ -10283,79 +10280,79 @@ var jn = class extends j {
 		let [n, r] = this._bounds("watchdog_interval", [60, 86400]), [i, a] = this._bounds("watchdog_timeout", [5, 120]), [o, s] = this._bounds("watchdog_failures", [1, 20]), [c, l] = this._bounds("rf_zones", [2, 50]), [u, d] = this._bounds("rf_window", [5, 3600]), [f, ee] = this._bounds("rf_confirm", [0, 3600]);
 		return C`<div class="card">
       <div class="card-hd">
-        <h2>${N(e, "health.settings")}</h2>
+        <h2>${M(e, "health.settings")}</h2>
       </div>
       <div class="card-bd">
         ${this._renderEntityList()}
         <div class="grid-form">
           <label class="field">
-            <span class="lbl">${N(e, "field.mains_mode")}</span>
+            <span class="lbl">${M(e, "field.mains_mode")}</span>
             <select
               @change=${(e) => this._set("mains_mode", e.target.value)}
             >
               ${["sensor", "outside_ups"].map((n) => C`<option .value=${n} .selected=${W(t.mains_mode === n)}>
-                    ${N(e, `health.mains_mode.${n}`)}
+                    ${M(e, `health.mains_mode.${n}`)}
                   </option>`)}
             </select>
-            <span class="hint">${N(e, `health.mains_mode_hint.${t.mains_mode}`)}</span>
+            <span class="hint">${M(e, `health.mains_mode_hint.${t.mains_mode}`)}</span>
           </label>
         </div>
         ${t.mains_mode === "outside_ups" ? this._renderOutside(e, t) : this._renderSensor(e, t)}
         ${this._renderStartupGrace(e, t)}
 
         <fieldset>
-          <legend>${N(e, "health.watchdog")}</legend>
+          <legend>${M(e, "health.watchdog")}</legend>
           <label class="check">
             <input
               type="checkbox"
               .checked=${W(t.watchdog.enabled)}
               @change=${(e) => this._setWatchdog("enabled", e.target.checked)}
             />
-            <span>${N(e, "health.watchdog_enable")}</span>
+            <span>${M(e, "health.watchdog_enable")}</span>
           </label>
           <div class="grid-form">
             <label class="field wide">
-              <span class="lbl">${N(e, "field.url")}</span>
+              <span class="lbl">${M(e, "field.url")}</span>
               <input
                 autocomplete="off"
                 .value=${W(t.watchdog.url ?? "")}
-                placeholder=${N(e, t.watchdog.url_set ? "health.url_set_placeholder" : "health.url_placeholder")}
+                placeholder=${M(e, t.watchdog.url_set ? "health.url_set_placeholder" : "health.url_placeholder")}
                 @input=${(e) => this._setWatchdog("url", e.target.value)}
               />
-              ${t.watchdog.url_set ? C`<span class="hint">${N(e, "health.url_set_hint")}</span>` : T}
-              <span class="hint">${N(e, "health.url_hint")}</span>
+              ${t.watchdog.url_set ? C`<span class="hint">${M(e, "health.url_set_hint")}</span>` : T}
+              <span class="hint">${M(e, "health.url_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.interval")}</span>
+              <span class="lbl">${M(e, "field.interval")}</span>
               <input
                 type="number"
                 min=${n}
                 max=${r}
                 .value=${String(t.watchdog.interval)}
-                @input=${(e) => H(e, (e) => this._setWatchdog("interval", e))}
+                @input=${(e) => V(e, (e) => this._setWatchdog("interval", e))}
               />
-              <span class="hint">${N(e, "health.interval_hint")}</span>
+              <span class="hint">${M(e, "health.interval_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.timeout")}</span>
+              <span class="lbl">${M(e, "field.timeout")}</span>
               <input
                 type="number"
                 min=${i}
                 max=${a}
                 .value=${String(t.watchdog.timeout)}
-                @input=${(e) => H(e, (e) => this._setWatchdog("timeout", e))}
+                @input=${(e) => V(e, (e) => this._setWatchdog("timeout", e))}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.failures")}</span>
+              <span class="lbl">${M(e, "field.failures")}</span>
               <input
                 type="number"
                 min=${o}
                 max=${s}
                 .value=${String(t.watchdog.failures)}
-                @input=${(e) => H(e, (e) => this._setWatchdog("failures", e))}
+                @input=${(e) => V(e, (e) => this._setWatchdog("failures", e))}
               />
-              <span class="hint">${N(e, "health.failures_hint")}</span>
+              <span class="hint">${M(e, "health.failures_hint")}</span>
             </label>
           </div>
           <label class="check">
@@ -10365,67 +10362,67 @@ var jn = class extends j {
               @change=${(e) => this._setWatchdog("payload", e.target.checked)}
             />
             <span>
-              ${N(e, "health.payload")}
-              <span class="hint">${N(e, "health.payload_hint")}</span>
+              ${M(e, "health.payload")}
+              <span class="hint">${M(e, "health.payload_hint")}</span>
             </span>
           </label>
-          ${t.watchdog.payload ? C`<div class="warning" role="alert">${N(e, "health.payload_warning")}</div>` : T}
-          <p class="hint">${N(e, "health.watchdog_note")}</p>
+          ${t.watchdog.payload ? C`<div class="warning" role="alert">${M(e, "health.payload_warning")}</div>` : T}
+          <p class="hint">${M(e, "health.watchdog_note")}</p>
         </fieldset>
 
         <fieldset>
-          <legend>${N(e, "health.radios")}</legend>
-          <p class="hint">${N(e, "health.radios_hint")}</p>
-          ${L(this.ctx) ? C`<div class="notice" role="note">${N(e, "health.radios_armed")}</div>` : T}
+          <legend>${M(e, "health.radios")}</legend>
+          <p class="hint">${M(e, "health.radios_hint")}</p>
+          ${I(this.ctx) ? C`<div class="notice" role="note">${M(e, "health.radios_armed")}</div>` : T}
           ${t.radios.map((t, n) => this._renderRadioEditor(e, t, n))}
-          <button class="btn" @click=${() => this._addRadio()}>${N(e, "health.add_radio")}</button>
+          <button class="btn" @click=${() => this._addRadio()}>${M(e, "health.add_radio")}</button>
           <div class="grid-form">
             <label class="field">
-              <span class="lbl">${N(e, "field.rf_zones")}</span>
+              <span class="lbl">${M(e, "field.rf_zones")}</span>
               <input
                 type="number"
                 min=${c}
                 max=${l}
                 .value=${String(t.rf_zones)}
-                @input=${(e) => H(e, (e) => this._set("rf_zones", e))}
+                @input=${(e) => V(e, (e) => this._set("rf_zones", e))}
               />
-              <span class="hint">${N(e, "health.rf_zones_hint")}</span>
+              <span class="hint">${M(e, "health.rf_zones_hint")}</span>
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.rf_window")}</span>
+              <span class="lbl">${M(e, "field.rf_window")}</span>
               <input
                 type="number"
                 min=${u}
                 max=${d}
                 .value=${String(t.rf_window)}
-                @input=${(e) => H(e, (e) => this._set("rf_window", e))}
+                @input=${(e) => V(e, (e) => this._set("rf_window", e))}
               />
             </label>
             <label class="field">
-              <span class="lbl">${N(e, "field.rf_confirm")}</span>
+              <span class="lbl">${M(e, "field.rf_confirm")}</span>
               <input
                 type="number"
                 min=${f}
                 max=${ee}
                 .value=${String(t.rf_confirm)}
-                @input=${(e) => H(e, (e) => this._set("rf_confirm", e))}
+                @input=${(e) => V(e, (e) => this._set("rf_confirm", e))}
               />
-              <span class="hint">${N(e, "health.rf_confirm_hint")}</span>
+              <span class="hint">${M(e, "health.rf_confirm_hint")}</span>
             </label>
           </div>
         </fieldset>
 
         ${this._problems.length ? C`<div class="problems" role="alert">
               <ul>
-                ${this._problems.map((t) => C`<li>${B(e, t)}</li>`)}
+                ${this._problems.map((t) => C`<li>${z(e, t)}</li>`)}
               </ul>
             </div>` : T}
         <div class="actions">
           <button class="btn primary" ?disabled=${this._busy} @click=${this._save}>
-            ${N(e, "common.save")}
+            ${M(e, "common.save")}
           </button>
           <button class="btn" ?disabled=${this._busy} @click=${() => this._draft = void 0}>
-            ${N(e, "common.cancel")}
+            ${M(e, "common.cancel")}
           </button>
         </div>
       </div>
@@ -10435,14 +10432,14 @@ var jn = class extends j {
 		return C`<div class="radio-row">
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "field.name")}</span>
+          <span class="lbl">${M(e, "field.name")}</span>
           <input
             .value=${t.name}
             @input=${(e) => this._setRadio(n, { name: e.target.value })}
           />
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "field.entry_id")}</span>
+          <span class="lbl">${M(e, "field.entry_id")}</span>
           <select
             @change=${(e) => {
 			let r = e.target.value, i = this._candidates.find((e) => e.entry_id === r);
@@ -10457,22 +10454,22 @@ var jn = class extends j {
                 .value=${n.entry_id}
                 .selected=${W(n.entry_id === t.entry_id)}
               >
-                ${N(e, "health.candidate", {
+                ${M(e, "health.candidate", {
 			title: n.title,
 			zones: String(n.zones)
 		})}
               </option>`)}
           </select>
-          <span class="hint">${N(e, "health.entry_hint")}</span>
+          <span class="hint">${M(e, "health.entry_hint")}</span>
         </label>
         <label class="field wide">
-          <span class="lbl">${N(e, "field.coordinator_entity_id")}</span>
+          <span class="lbl">${M(e, "field.coordinator_entity_id")}</span>
           <input
             .value=${t.coordinator_entity_id ?? ""}
-            placeholder=${N(e, "health.coordinator_placeholder")}
+            placeholder=${M(e, "health.coordinator_placeholder")}
             @input=${(e) => this._setRadio(n, { coordinator_entity_id: e.target.value || null })}
           />
-          <span class="hint">${N(e, "health.coordinator_hint")}</span>
+          <span class="hint">${M(e, "health.coordinator_hint")}</span>
         </label>
       </div>
       <div class="actions">
@@ -10482,19 +10479,19 @@ var jn = class extends j {
             .checked=${W(t.enabled)}
             @change=${(e) => this._setRadio(n, { enabled: e.target.checked })}
           />
-          <span>${N(e, "field.enabled")}</span>
+          <span>${M(e, "field.enabled")}</span>
         </label>
         <button class="btn danger" @click=${() => this._removeRadio(n)}>
-          ${N(e, "common.delete")}
+          ${M(e, "common.delete")}
         </button>
       </div>
     </div>`;
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
-			vn,
+			fn,
 			o`
       .tiles {
         display: grid;
@@ -10553,11 +10550,7 @@ var jn = class extends j {
     `
 		];
 	}
-};
-customElements.get("foyer-page-health") || customElements.define("foyer-page-health", jn);
-//#endregion
-//#region src/panel/pages/api.ts
-var Mn = class extends j {
+}), U("foyer-page-api", class extends A {
 	constructor(...e) {
 		super(...e), this._state = "loading", this._attempt = 0;
 	}
@@ -10597,19 +10590,19 @@ var Mn = class extends j {
 		return C`
       <div class="card">
         <div class="card-hd">
-          <h2>${N(t, "api.title")}</h2>
-          <span class="pill idle">${N(t, "api.contract", { version: "v1" })}</span>
+          <h2>${M(t, "api.title")}</h2>
+          <span class="pill idle">${M(t, "api.contract", { version: "v1" })}</span>
         </div>
         <div class="card-bd">
-          <p class="note">${N(t, "api.intro")}</p>
-          <p class="note">${N(t, "api.try_it")}</p>
-          <p class="notice">${N(t, "api.real_requests")}</p>
-          ${this._state === "loading" ? C`<p class="muted">${N(t, "api.loading")}</p>` : T}
+          <p class="note">${M(t, "api.intro")}</p>
+          <p class="note">${M(t, "api.try_it")}</p>
+          <p class="notice">${M(t, "api.real_requests")}</p>
+          ${this._state === "loading" ? C`<p class="muted">${M(t, "api.loading")}</p>` : T}
           ${this._state === "failed" ? C`<div class="problems" role="alert">
-                ${N(t, "api.failed")}
+                ${M(t, "api.failed")}
                 <div class="actions">
                   <button class="btn" @click=${() => void this._load()}>
-                    ${N(t, "api.retry")}
+                    ${M(t, "api.retry")}
                   </button>
                 </div>
               </div>` : T}
@@ -10619,7 +10612,7 @@ var Mn = class extends j {
     `;
 	}
 	static {
-		this.styles = [F, o`
+		this.styles = [P, o`
       /* Swagger UI draws for a light page and has no dark theme: it keeps
          its own light background rather than half-inheriting a dark one,
          which leaves grey text on grey. */
@@ -10635,8 +10628,7 @@ var Mn = class extends j {
       }
     `];
 	}
-};
-customElements.define("foyer-page-api", Mn);
+});
 //#endregion
 //#region src/panel/wizard.ts
 var Z = [
@@ -10645,7 +10637,8 @@ var Z = [
 	"scenario",
 	"user",
 	"test"
-], Nn = 3, Pn = class extends j {
+], Cn = 3;
+U("foyer-wizard", class extends A {
 	constructor(...e) {
 		super(...e), this._step = "area", this._userName = "", this._userCode = "", this._userRepeat = "", this._zoneType = "", this._busy = !1, this._problems = [], this._confirmed = !1, this._pickedEntity = "", this._notifyTarget = "", this._sent = !1;
 	}
@@ -10702,24 +10695,24 @@ var Z = [
 		return C`
       <section class="wizard">
         <header>
-          <h2>${N(t, "wizard.title")}</h2>
+          <h2>${M(t, "wizard.title")}</h2>
           <button class="btn" ?disabled=${this._busy} @click=${this._finish}>
-            ${N(t, "wizard.dismiss")}
+            ${M(t, "wizard.dismiss")}
           </button>
         </header>
-        <p class="intro">${N(t, "wizard.intro")}</p>
+        <p class="intro">${M(t, "wizard.intro")}</p>
         <ol class="steps">
           ${Z.map((e, n) => {
 			let r = Z.indexOf(this._step);
 			return C`<li class=${n < r ? "done" : n === r ? "active" : ""}>
-              <span class="n">${n + 1}</span>${N(t, `wizard.step.${e}`)}
+              <span class="n">${n + 1}</span>${M(t, `wizard.step.${e}`)}
             </li>`;
 		})}
         </ol>
         <div class="body">${this._renderStep(t)}</div>
         ${this._problems.length ? C`<div class="problems" role="alert">
               <ul>
-                ${this._problems.map((e) => C`<li>${B(t, e)}</li>`)}
+                ${this._problems.map((e) => C`<li>${z(t, e)}</li>`)}
               </ul>
             </div>` : T}
         <div class="actions">
@@ -10728,13 +10721,13 @@ var Z = [
             ?disabled=${this._busy || this._step === Z[0]}
             @click=${this._back}
           >
-            ${N(t, "wizard.back")}
+            ${M(t, "wizard.back")}
           </button>
           <span class="spacer"></span>
           ${this._step === "test" ? C`<button class="btn primary" ?disabled=${this._busy} @click=${this._finish}>
-                ${N(t, "wizard.done")}
+                ${M(t, "wizard.done")}
               </button>` : this._step === "user" && !this.ctx?.config?.users.some((e) => e.enabled && e.has_code) ? this._renderUserAction(t) : C`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
-                  ${N(t, "wizard.next")}
+                  ${M(t, "wizard.next")}
                 </button>`}
         </div>
       </section>
@@ -10751,42 +10744,42 @@ var Z = [
 	}
 	_renderArea(e) {
 		let t = this._area;
-		if (!t) return C`<p class="hint">${N(e, "wizard.no_area")}</p>`;
+		if (!t) return C`<p class="hint">${M(e, "wizard.no_area")}</p>`;
 		let n = (e) => this._saveArea({
 			...t,
 			...e
 		});
 		return C`
-      <p>${N(e, "wizard.area_text")}</p>
+      <p>${M(e, "wizard.area_text")}</p>
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "field.name")}</span>
+          <span class="lbl">${M(e, "field.name")}</span>
           <input
             .value=${t.name}
             @change=${(e) => n({ name: e.target.value.trim() })}
           />
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "field.default_exit_delay")}</span>
+          <span class="lbl">${M(e, "field.default_exit_delay")}</span>
           <input
             type="number"
             min="0"
             max="300"
             .value=${String(t.default_exit_delay)}
-            @change=${(e) => H(e, (e) => n({ default_exit_delay: e }))}
+            @change=${(e) => V(e, (e) => n({ default_exit_delay: e }))}
           />
-          <span class="hint">${N(e, "wizard.exit_hint")}</span>
+          <span class="hint">${M(e, "wizard.exit_hint")}</span>
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "field.default_entry_delay")}</span>
+          <span class="lbl">${M(e, "field.default_entry_delay")}</span>
           <input
             type="number"
             min="0"
             max="300"
             .value=${String(t.default_entry_delay)}
-            @change=${(e) => H(e, (e) => n({ default_entry_delay: e }))}
+            @change=${(e) => V(e, (e) => n({ default_entry_delay: e }))}
           />
-          <span class="hint">${N(e, "wizard.entry_hint")}</span>
+          <span class="hint">${M(e, "wizard.entry_hint")}</span>
         </label>
       </div>
     `;
@@ -10808,24 +10801,24 @@ var Z = [
 			name: String(e.attributes.friendly_name ?? e.entity_id)
 		})).sort((e, t) => e.name.localeCompare(t.name));
 		return C`
-      <p>${N(e, "wizard.zones_text", {
+      <p>${M(e, "wizard.zones_text", {
 			have: n.length,
-			want: Nn
+			want: Cn
 		})}</p>
       <ul class="zones">
         ${n.map((t) => C`<li>
             <strong>${t.name}</strong>
             <span class="mono">${t.entity_id}</span>
-            <span class="tag">${N(e, `zone_type.${t.type}`)}</span>
+            <span class="tag">${M(e, `zone_type.${t.type}`)}</span>
           </li>`)}
       </ul>
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "wizard.add_zone")}</span>
+          <span class="lbl">${M(e, "wizard.add_zone")}</span>
           <select
             @change=${(e) => this._pick(e.target.value)}
           >
-            <option value="" .selected=${W(!this._pickedEntity)}>${N(e, "wizard.pick_entity")}</option>
+            <option value="" .selected=${W(!this._pickedEntity)}>${M(e, "wizard.pick_entity")}</option>
             ${a.map((e) => C`<option .value=${e.id} .selected=${W(e.id === this._pickedEntity)}>
                   ${e.name}
                 </option>`)}
@@ -10838,16 +10831,16 @@ var Z = [
 	_renderProposal(e, t) {
 		let n = this.ctx, r = n.hass.states[t.entity_id], i = String(r?.attributes.friendly_name ?? t.name);
 		if (t.trigger_kind === "numeric" || !t.proposed.length) return C`<div class="proposal">
-        <p>${N(e, `wizard.${t.trigger_kind === "numeric" ? "numeric_elsewhere" : "no_proposal_elsewhere"}`)}</p>
+        <p>${M(e, `wizard.${t.trigger_kind === "numeric" ? "numeric_elsewhere" : "no_proposal_elsewhere"}`)}</p>
         <button class="btn" @click=${() => n.navigate("zones")}>
-          ${N(e, "wizard.go_zones")}
+          ${M(e, "wizard.go_zones")}
         </button>
       </div>`;
 		let a = r?.state ?? t.state ?? "unavailable", o = (e) => J(n.hass, t.entity_id, e), s = !t.zone_type || ["instant", "delayed"].includes(t.zone_type), c = this._zoneType || t.zone_type || "instant";
 		return C`
             <div class="proposal">
               <p>
-                ${N(e, "wizard.proposed", {
+                ${M(e, "wizard.proposed", {
 			name: i,
 			state: o(a),
 			states: t.proposed.map(o).join(", ")
@@ -10855,7 +10848,7 @@ var Z = [
               </p>
               ${s ? C`<div class="grid-form">
                     <label class="field">
-                      <span class="lbl">${N(e, "field.type")}</span>
+                      <span class="lbl">${M(e, "field.type")}</span>
                       <select
                         @change=${(e) => this._zoneType = e.target.value}
                       >
@@ -10863,13 +10856,13 @@ var Z = [
                             .value=${t}
                             .selected=${W(t === c)}
                           >
-                            ${N(e, `zone_type.${t}`)}
+                            ${M(e, `zone_type.${t}`)}
                           </option>`)}
                       </select>
-                      <span class="hint">${N(e, "wizard.type_hint")}</span>
+                      <span class="hint">${M(e, "wizard.type_hint")}</span>
                     </label>
                   </div>` : C`<p class="hint">
-                    ${N(e, "wizard.type_fixed", { type: N(e, `zone_type.${c}`) })}
+                    ${M(e, "wizard.type_fixed", { type: M(e, `zone_type.${c}`) })}
                   </p>`}
               <label class="check">
                 <input
@@ -10877,15 +10870,15 @@ var Z = [
                   .checked=${W(this._confirmed)}
                   @change=${(e) => this._confirmed = e.target.checked}
                 />
-                <span>${N(e, "wizard.confirm_trigger")}</span>
+                <span>${M(e, "wizard.confirm_trigger")}</span>
               </label>
-              <p class="hint">${N(e, "wizard.confirm_hint")}</p>
+              <p class="hint">${M(e, "wizard.confirm_hint")}</p>
               <button
                 class="btn"
                 ?disabled=${this._busy || !this._confirmed}
                 @click=${this._addZone}
               >
-                ${N(e, "wizard.add")}
+                ${M(e, "wizard.add")}
               </button>
             </div>
     `;
@@ -10932,13 +10925,13 @@ var Z = [
 	}
 	_renderScenario(e) {
 		let t = this.ctx, n = t.config.scenarios[0];
-		if (!n) return C`<p class="hint">${N(e, "wizard.no_scenario")}</p>`;
+		if (!n) return C`<p class="hint">${M(e, "wizard.no_scenario")}</p>`;
 		let r = t.config.areas;
 		return C`
-      <p>${N(e, "wizard.scenario_text")}</p>
+      <p>${M(e, "wizard.scenario_text")}</p>
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "field.name")}</span>
+          <span class="lbl">${M(e, "field.name")}</span>
           <input
             .value=${n.name}
             @change=${async (e) => {
@@ -10958,15 +10951,15 @@ var Z = [
         </label>
       </div>
       <p class="hint">
-        ${N(e, "wizard.scenario_areas", { areas: r.filter((e) => n.areas.includes(e.id)).map((e) => e.name).join(", ") })}
+        ${M(e, "wizard.scenario_areas", { areas: r.filter((e) => n.areas.includes(e.id)).map((e) => e.name).join(", ") })}
       </p>
     `;
 	}
 	_renderUserAction(e) {
 		return this._userName.trim() !== "" || this._userCode !== "" ? C`<button class="btn primary" ?disabled=${this._busy} @click=${this._createUser}>
-          ${N(e, "wizard.user_create_next")}
+          ${M(e, "wizard.user_create_next")}
         </button>` : C`<button class="btn primary" ?disabled=${this._busy} @click=${this._next}>
-          ${N(e, "wizard.skip")}
+          ${M(e, "wizard.skip")}
         </button>`;
 	}
 	async _createUser() {
@@ -11014,23 +11007,23 @@ var Z = [
 	_renderUser(e) {
 		let t = this.ctx?.config?.users ?? [], n = this.ctx?.status.security.code_length ?? 6, r = t.find((e) => e.enabled && e.has_code);
 		return r ? C`
-        <p>${N(e, "wizard.user_text")}</p>
-        <div class="notice">${N(e, "wizard.user_done", { name: r.name })}</div>
+        <p>${M(e, "wizard.user_text")}</p>
+        <div class="notice">${M(e, "wizard.user_done", { name: r.name })}</div>
       ` : C`
-      <p>${N(e, "wizard.user_text")}</p>
+      <p>${M(e, "wizard.user_text")}</p>
       ${t.length ? C`<div class="notice">
-            ${N(e, "wizard.user_no_code", { name: t[0].name })}
+            ${M(e, "wizard.user_no_code", { name: t[0].name })}
           </div>` : T}
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "field.name")}</span>
+          <span class="lbl">${M(e, "field.name")}</span>
           <input
             .value=${this._userName}
             @input=${(e) => this._userName = e.target.value}
           />
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "users.code")}</span>
+          <span class="lbl">${M(e, "users.code")}</span>
           <input
             type="password"
             inputmode="numeric"
@@ -11039,10 +11032,10 @@ var Z = [
             .value=${this._userCode}
             @input=${(e) => this._userCode = e.target.value}
           />
-          <span class="hint">${N(e, "users.code_hint_new", { n })}</span>
+          <span class="hint">${M(e, "users.code_hint_new", { n })}</span>
         </label>
         <label class="field">
-          <span class="lbl">${N(e, "users.code_repeat")}</span>
+          <span class="lbl">${M(e, "users.code_repeat")}</span>
           <input
             type="password"
             inputmode="numeric"
@@ -11053,22 +11046,22 @@ var Z = [
           />
         </label>
       </div>
-      <p class="hint">${N(e, "wizard.user_hint")}</p>
+      <p class="hint">${M(e, "wizard.user_hint")}</p>
     `;
 	}
 	_renderTest(e) {
 		let t = this.ctx, n = q(t.hass);
 		return C`
-      <p>${N(e, "wizard.test_text")}</p>
+      <p>${M(e, "wizard.test_text")}</p>
       <div class="grid-form">
         <label class="field">
-          <span class="lbl">${N(e, "wizard.test_target")}</span>
+          <span class="lbl">${M(e, "wizard.test_target")}</span>
           <select
             @change=${(e) => {
 			this._notifyTarget = e.target.value, this._sent = !1;
 		}}
           >
-            <option value="" .selected=${W(!this._notifyTarget)}>${N(e, "wizard.pick_target")}</option>
+            <option value="" .selected=${W(!this._notifyTarget)}>${M(e, "wizard.pick_target")}</option>
             ${n.map((e) => C`<option .value=${e.id} .selected=${W(e.id === this._notifyTarget)}>
                   ${e.name}
                 </option>`)}
@@ -11080,13 +11073,13 @@ var Z = [
         ?disabled=${this._busy || !this._notifyTarget}
         @click=${this._sendTest}
       >
-        ${N(e, "wizard.send_test")}
+        ${M(e, "wizard.send_test")}
       </button>
-      ${this._sent ? C`<div class="notice">${N(e, "wizard.test_sent")}</div>` : T}
-      <p class="hint">${N(e, "wizard.test_hint")}</p>
+      ${this._sent ? C`<div class="notice">${M(e, "wizard.test_sent")}</div>` : T}
+      <p class="hint">${M(e, "wizard.test_hint")}</p>
       <div class="actions">
         <button class="btn" @click=${() => t.navigate("contacts")}>
-          ${N(e, "wizard.go_contacts")}
+          ${M(e, "wizard.go_contacts")}
         </button>
       </div>
       ${this._renderLeft(e)}
@@ -11094,12 +11087,12 @@ var Z = [
 	}
 	_renderLeft(e) {
 		let t = this.ctx, n = t.config, r = [];
-		return n.zones.length < Nn && r.push({
+		return n.zones.length < Cn && r.push({
 			key: "wizard.left.zones",
 			page: "zones",
 			params: {
 				have: n.zones.length,
-				want: Nn
+				want: Cn
 			}
 		}), n.users.some((e) => e.has_code) || r.push({
 			key: "wizard.left.users",
@@ -11108,15 +11101,15 @@ var Z = [
 			key: "wizard.left.contacts",
 			page: "contacts"
 		}), C`<div class="left">
-      <h3>${N(e, "wizard.left.title")}</h3>
+      <h3>${M(e, "wizard.left.title")}</h3>
       ${r.length ? C`<ul>
             ${r.map((n) => C`<li>
-                <span>${N(e, n.key, n.params)}</span>
+                <span>${M(e, n.key, n.params)}</span>
                 <button class="btn sm" @click=${() => t.navigate(n.page)}>
-                  ${N(e, `nav.${n.page}`)}
+                  ${M(e, `nav.${n.page}`)}
                 </button>
               </li>`)}
-          </ul>` : C`<p class="hint">${N(e, "wizard.left.none")}</p>`}
+          </ul>` : C`<p class="hint">${M(e, "wizard.left.none")}</p>`}
     </div>`;
 	}
 	async _sendTest() {
@@ -11126,7 +11119,7 @@ var Z = [
 			try {
 				let t = await e.testAction({
 					service: this._notifyTarget,
-					message: N(e.strings, "wizard.test_message")
+					message: M(e.strings, "wizard.test_message")
 				});
 				this._sent = t.success, t.success || (this._problems = [{
 					code: "request_failed",
@@ -11149,7 +11142,7 @@ var Z = [
 		}
 	}
 	static {
-		this.styles = [F, o`
+		this.styles = [P, o`
       .wizard {
         background: var(--card-background-color);
         border: 1px solid var(--primary-color);
@@ -11265,16 +11258,15 @@ var Z = [
       }
     `];
 	}
-};
-customElements.get("foyer-wizard") || customElements.define("foyer-wizard", Pn);
+});
 //#endregion
 //#region src/panel/foyer-panel.ts
-var Fn = [
+var wn = [
 	"overview",
 	"log",
 	"test",
 	"health"
-], In = [
+], Tn = [
 	"areas",
 	"zones",
 	"scenarios",
@@ -11285,7 +11277,7 @@ var Fn = [
 	"devices",
 	"rules",
 	"settings"
-], Ln = {
+], En = {
 	overview: [
 		"area",
 		"master",
@@ -11417,7 +11409,7 @@ var Fn = [
 		"try",
 		"internal"
 	]
-}, Rn = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", zn = {
+}, Dn = "https://github.com/foyer-labs/Foyer-Home-Defender/blob/master/docs", On = {
 	overview: "getting-started.md#the-overview",
 	areas: "zones.md#areas",
 	zones: "zones.md#zones",
@@ -11433,7 +11425,7 @@ var Fn = [
 	settings: "settings.md",
 	health: "system-health.md",
 	api: "keypads.md#api-devices-displays-relays-and-modules-of-your-own"
-}, Bn = { it: /* @__PURE__ */ new Set([
+}, kn = { it: /* @__PURE__ */ new Set([
 	"getting-started.md",
 	"zones.md",
 	"response-profiles.md",
@@ -11446,14 +11438,14 @@ var Fn = [
 	"privacy.md",
 	"system-health.md"
 ]) };
-function Vn(e, t) {
-	let n = zn[e];
+function An(e, t) {
+	let n = On[e];
 	if (!n) return;
 	let [r, i] = n.split("#"), a = (t ?? "en").split("-")[0];
-	return `${Rn}/${Bn[a]?.has(r) ? r.replace(/\.md$/, `.${a}.md`) : r}${i ? `#${i}` : ""}`;
+	return `${Dn}/${kn[a]?.has(r) ? r.replace(/\.md$/, `.${a}.md`) : r}${i ? `#${i}` : ""}`;
 }
-var Hn = 12e4;
-function Un(e) {
+var jn = 12e4;
+function Mn(e) {
 	let t = {
 		...e,
 		reason: "cancelled"
@@ -11471,7 +11463,7 @@ function Q(e) {
 function $(e) {
 	return Object.fromEntries(Object.entries(e).filter(([, e]) => e != null && e !== "" && !(Array.isArray(e) && e.length === 0)));
 }
-var Wn = class extends j {
+U("foyer-panel", class extends A {
 	constructor(...e) {
 		super(...e), this.narrow = !1, this._page = "overview", this._prefs = {}, this._tick = 0, this._focusCode = !1, this._offset = 0, this._retryAt = 0;
 	}
@@ -11499,7 +11491,7 @@ var Wn = class extends j {
 		super.disconnectedCallback(), this._forgetCode(), this._asking?.resolve(void 0), this._asking = void 0, this._unsubscribe?.then((e) => e()).catch(() => void 0), this._unsubscribe = void 0, window.clearInterval(this._timer), window.clearTimeout(this._retryTimer);
 	}
 	willUpdate(e) {
-		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, We(this.hass).then((e) => this._strings = e).catch((e) => this._error = String(e?.message ?? e))), !this._unsubscribe && this.isConnected && Date.now() >= this._retryAt && this._start());
+		e.has("hass") && this.hass && (this.hass.language !== this._language && (this._language = this.hass.language, Ge(this.hass).then((e) => this._strings = e).catch((e) => this._error = String(e?.message ?? e))), !this._unsubscribe && this.isConnected && Date.now() >= this._retryAt && this._start());
 	}
 	get _isAdmin() {
 		return !!this.hass?.user?.is_admin;
@@ -11523,7 +11515,7 @@ var Wn = class extends j {
 		this._asking = void 0, this.requestUpdate(), t?.resolve(e);
 	}
 	_rememberCode(e) {
-		this._code = e, window.clearTimeout(this._codeTimer), this._codeTimer = window.setTimeout(() => this._forgetCode(), Hn);
+		this._code = e, window.clearTimeout(this._codeTimer), this._codeTimer = window.setTimeout(() => this._forgetCode(), jn);
 	}
 	_forgetCode() {
 		this._code = void 0, window.clearTimeout(this._codeTimer), this._codeTimer = void 0;
@@ -11533,7 +11525,7 @@ var Wn = class extends j {
 		for (let o = 0; o < 3 && !(a.success || a.reason !== "code_required" && a.reason !== "bad_code"); o++) {
 			a.reason === "bad_code" && this._forgetCode(), i = a.code_required_by ?? i;
 			let o = await this._askForCode(r && a.reason === "bad_code", t, i);
-			if (o === void 0) return Un(a);
+			if (o === void 0) return Mn(a);
 			n = o, r = !0, a = await e(n);
 		}
 		return a.success && n && this.isConnected && this._rememberCode(n), (a.reason === "bad_code" || a.reason === "locked_out") && this._forgetCode(), a;
@@ -11560,7 +11552,7 @@ var Wn = class extends j {
 		}, { type: "foyer/subscribe" }), this._unsubscribe.catch((e) => {
 			this._unsubscribe = void 0, this._retryAt = Date.now() + 5e3, window.clearTimeout(this._retryTimer), this._retryTimer = window.setTimeout(() => {
 				this.isConnected && !this._unsubscribe && this._start();
-			}, 5e3), this._error = e?.code === "not_loaded" ? N(this._strings, "common.not_loaded") : N(this._strings, "common.connection_error", { error: String(e?.message ?? e) });
+			}, 5e3), this._error = e?.code === "not_loaded" ? M(this._strings, "common.not_loaded") : M(this._strings, "common.connection_error", { error: String(e?.message ?? e) });
 		}), this.hass.callWS({ type: "foyer/prefs" }).then((e) => this._prefs = e).catch(() => void 0), this._isAdmin && this.hass.callWS({ type: "config/auth/list" }).then((e) => this._haUsers = e.filter((e) => !e.system_generated)).catch(() => void 0));
 	}
 	async _loadConfig() {
@@ -11805,15 +11797,15 @@ var Wn = class extends j {
       <div class="toolbar">
         <ha-menu-button .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
         <span class="symbol" aria-hidden="true"
-          >${ze(He(!!this.hass?.themes?.darkMode))}</span
+          >${Be(Ue(!!this.hass?.themes?.darkMode))}</span
         >
-        <div class="title">${N(e, "common.brand")}</div>
-        ${this._status ? C`<span class="live">${N(e, "common.live")}</span>` : T}
+        <div class="title">${M(e, "common.brand")}</div>
+        ${this._status ? C`<span class="live">${M(e, "common.live")}</span>` : T}
         <button
           class="help-toggle"
           aria-pressed=${t ? "false" : "true"}
-          title=${N(e, "help.global_toggle")}
-          aria-label=${N(e, "help.global_toggle")}
+          title=${M(e, "help.global_toggle")}
+          aria-label=${M(e, "help.global_toggle")}
           @click=${() => this._savePrefs({ help_hidden: !t })}
         >
           <ha-icon icon="mdi:help-circle-outline"></ha-icon>
@@ -11830,20 +11822,20 @@ var Wn = class extends j {
 		let t = this._status?.walk_test;
 		if (!t) return T;
 		this._tick;
-		let n = Ke(t.deadline, this._offset);
+		let n = qe(t.deadline, this._offset);
 		return C`
       <div class="walk-banner" role="alert">
         <ha-icon icon="mdi:shield-off-outline"></ha-icon>
         <div>
-          <strong>${N(e, "walk.banner_title")}</strong>
-          ${N(e, "walk.banner", {
-			time: Ge(n),
-			who: t.user_name ?? N(e, "walk.somebody")
+          <strong>${M(e, "walk.banner_title")}</strong>
+          ${M(e, "walk.banner", {
+			time: Ke(n),
+			who: t.user_name ?? M(e, "walk.somebody")
 		})}
-          <div class="live-note">${N(e, "walk.always_on_live")}</div>
+          <div class="live-note">${M(e, "walk.always_on_live")}</div>
         </div>
         <button class="btn danger" @click=${() => void this._endWalkTest()}>
-          ${N(e, "walk.end")}
+          ${M(e, "walk.end")}
         </button>
       </div>
     `;
@@ -11871,11 +11863,11 @@ var Wn = class extends j {
 		}}
       >
         <h2 id="code-title">
-          ${t.purpose ? N(e, t.purpose.key, t.purpose.params) : N(e, "code.title")}
+          ${t.purpose ? M(e, t.purpose.key, t.purpose.params) : M(e, "code.title")}
         </h2>
-        ${i?.name ? C`<p class="by">${N(e, "code.required_by", { name: i.name })}</p>` : T}
+        ${i?.name ? C`<p class="by">${M(e, "code.required_by", { name: i.name })}</p>` : T}
         <p id="code-prompt" class=${t.retry ? "wrong" : ""}>
-          ${t.retry ? N(e, "code.wrong", { n }) : N(e, "code.prompt", { n })}
+          ${t.retry ? M(e, "code.wrong", { n }) : M(e, "code.prompt", { n })}
         </p>
         ${a ? C`<p class="wrong">${a}</p>` : T}
         <input
@@ -11888,9 +11880,9 @@ var Wn = class extends j {
         />
         <div class="row">
           <button type="button" class="btn" @click=${() => this._answerCode(void 0)}>
-            ${N(e, "common.cancel")}
+            ${M(e, "common.cancel")}
           </button>
-          <button type="submit" class="btn primary">${N(e, "common.ok")}</button>
+          <button type="submit" class="btn primary">${M(e, "common.ok")}</button>
         </div>
       </form>
     `;
@@ -11900,7 +11892,7 @@ var Wn = class extends j {
 	}
 	_lockoutText(e) {
 		let t = this._status?.security.locked_until;
-		return !t || Date.parse(t) <= Date.now() + this._offset ? null : Xe(e, this.hass?.language, t);
+		return !t || Date.parse(t) <= Date.now() + this._offset ? null : Ze(e, this.hass?.language, t);
 	}
 	_renderTabs(e) {
 		let t = (t) => C`
@@ -11909,21 +11901,21 @@ var Wn = class extends j {
         aria-selected=${t === this._page ? "true" : "false"}
         @click=${() => this._page = t}
       >
-        ${N(e, `nav.${t}`)}
+        ${M(e, `nav.${t}`)}
       </button>
     `;
 		return this._canConfigure ? C`
       <nav class="tabs" role="tablist">
-        ${Fn.map(t)}
-        <span class="tab-group" role="presentation">${N(e, "nav.group_setup")}</span>
-        ${In.map(t)} ${this._isAdmin ? t("api") : T}
+        ${wn.map(t)}
+        <span class="tab-group" role="presentation">${M(e, "nav.group_setup")}</span>
+        ${Tn.map(t)} ${this._isAdmin ? t("api") : T}
       </nav>
-    ` : C`<nav class="tabs" role="tablist">${Fn.map(t)}</nav>`;
+    ` : C`<nav class="tabs" role="tablist">${wn.map(t)}</nav>`;
 	}
 	_renderBody(e) {
 		if (this._error) return C`<p class="error">${this._error}</p>`;
 		let t = this._context();
-		if (!t) return C`<p class="muted">${N(e, "common.loading")}</p>`;
+		if (!t) return C`<p class="muted">${M(e, "common.loading")}</p>`;
 		let n = this._page, r = this._canConfigure && this._config && !this._config.settings.wizard_done ? C`<foyer-wizard
             .ctx=${t}
             @wizard-done=${() => void this._loadConfig()}
@@ -11963,24 +11955,24 @@ var Wn = class extends j {
           @click=${() => this._savePrefs({ help: { [t]: !r } })}
         >
           <ha-icon icon="mdi:help-circle-outline"></ha-icon>
-          <span>${N(e, `${n}.title`)}</span>
-          <span class="sr-only">${N(e, "help.toggle")}</span>
+          <span>${M(e, `${n}.title`)}</span>
+          <span class="sr-only">${M(e, "help.toggle")}</span>
           <ha-icon class="chev" icon="mdi:chevron-down"></ha-icon>
         </button>
         ${r ? C`<div class="help-body">
-              <p>${N(e, `${n}.intro`)}</p>
+              <p>${M(e, `${n}.intro`)}</p>
               <dl>
-                ${Ln[t].map((t) => C`
-                    <dt>${N(e, `${n}.items.${t}.term`)}</dt>
-                    <dd>${N(e, `${n}.items.${t}.text`)}</dd>
+                ${En[t].map((t) => C`
+                    <dt>${M(e, `${n}.items.${t}.term`)}</dt>
+                    <dd>${M(e, `${n}.items.${t}.text`)}</dd>
                   `)}
               </dl>
-              ${zn[t] ? C`<a
+              ${On[t] ? C`<a
                     class="learn-more"
-                    href=${Vn(t, this.hass?.language)}
+                    href=${An(t, this.hass?.language)}
                     target="_blank"
                     rel="noreferrer noopener"
-                    >${N(e, "help.learn_more")}</a
+                    >${M(e, "help.learn_more")}</a
                   >` : T}
             </div>` : T}
       </section>
@@ -11988,8 +11980,8 @@ var Wn = class extends j {
 	}
 	static {
 		this.styles = [
+			N,
 			P,
-			F,
 			o`
       :host {
         display: block;
@@ -12259,6 +12251,5 @@ var Wn = class extends j {
     `
 		];
 	}
-};
-customElements.get("foyer-panel") || customElements.define("foyer-panel", Wn);
+});
 //#endregion

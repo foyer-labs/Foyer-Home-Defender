@@ -897,21 +897,30 @@ function Q(e, t = 0) {
 	return Math.max(0, Math.round((Date.parse(e) - (Date.now() + t)) / 1e3));
 }
 //#endregion
-//#region src/card/foyer-card.ts
-var ke = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master";
-function Ae(e) {
-	let t = e.entities;
-	return Object.keys(e.states).filter((e) => e.startsWith("alarm_control_panel.")).filter((e) => t?.[e] ? t[e].platform === "foyer" : e.startsWith(ke)).sort();
+//#region src/shared/define.ts
+var ke = document.querySelector("home-assistant") && !customElements.get("home-assistant") ? customElements.whenDefined("home-assistant") : Promise.resolve(), Ae = (e) => void ke.then(e);
+function je(e, t) {
+	Ae(() => {
+		customElements.get(e) || customElements.define(e, t);
+	});
 }
-function je(e) {
+//#endregion
+//#region src/card/foyer-card.ts
+var Me = "alarm_control_panel.foyer_", $ = "alarm_control_panel.foyer_master";
+function Ne(e) {
+	let t = e.entities;
+	return Object.keys(e.states).filter((e) => e.startsWith("alarm_control_panel.")).filter((e) => t?.[e] ? t[e].platform === "foyer" : e.startsWith(Me)).sort();
+}
+function Pe(e) {
 	let t = e.entities;
 	return t ? Object.values(t).find((e) => e.platform === "foyer" && e.translation_key === "master")?.entity_id ?? (e.states[$] ? $ : void 0) : e.states[$] ? $ : void 0;
 }
-var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__ */ new Set(["code_required", "bad_code"]), Pe = 3e4, Fe = /* @__PURE__ */ new Set([
+var Fe = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ie = /* @__PURE__ */ new Set(["code_required", "bad_code"]), Le = 3e4, Re = /* @__PURE__ */ new Set([
 	"foyer/auto/cancel",
 	"foyer/acknowledge",
 	"foyer/walk_test"
-]), Ie = class extends q {
+]);
+je("foyer-card", class extends q {
 	constructor(...e) {
 		super(...e), this._busy = !1, this._code = "", this._padOpen = !1, this._retype = !1, this._tick = 0, this._offset = 0;
 	}
@@ -931,7 +940,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 		};
 	}
 	static getStubConfig(e) {
-		let t = Ae(e), n = je(e);
+		let t = Ne(e), n = Pe(e);
 		return {
 			type: "custom:foyer-card",
 			entity: n && t.includes(n) ? n : t[0],
@@ -961,7 +970,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 		this._code.length >= this._codeLength || (this._code += e, this._feedback = void 0, this._retype = !1, this._touch());
 	}
 	_touch() {
-		window.clearTimeout(this._idle), this._idle = window.setTimeout(() => this._expire(), Pe);
+		window.clearTimeout(this._idle), this._idle = window.setTimeout(() => this._expire(), Le);
 	}
 	_forget() {
 		window.clearTimeout(this._idle), this._idle = void 0, this._code = "", this._pending = void 0, this._retype = !1;
@@ -1031,7 +1040,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 	async _run(e) {
 		if (!this.hass) return;
 		this._busy = !0, this._feedback = void 0;
-		let t = this._pending, n = t !== void 0 && JSON.stringify(t) === JSON.stringify(e), r = t ? !n : Fe.has(String(e.type)), i = r ? "" : this._code;
+		let t = this._pending, n = t !== void 0 && JSON.stringify(t) === JSON.stringify(e), r = t ? !n : Re.has(String(e.type)), i = r ? "" : this._code;
 		r || this._forget();
 		try {
 			let t = await this.hass.callWS({
@@ -1043,7 +1052,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 				warning: !0
 			}), !t.success && t.reason === "nothing_to_cancel" && e.type === "foyer/auto/cancel")) return;
 			if (!t.success) {
-				if (Ne.has(t.reason ?? "")) {
+				if (Ie.has(t.reason ?? "")) {
 					if (r && (this._retype = !!this._code, this._code = ""), this._padOpen = !0, this._pending = e, this._touch(), t.reason === "code_required") return;
 					this._feedback = {
 						text: Z(this._strings, `reason.${t.reason}`),
@@ -1062,7 +1071,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
 				}
 				this._feedback = {
 					text: Z(this._strings, `reason.${t.reason ?? "unknown"}`, { zones: t.blocking_zones.map((e) => e.name).join(", ") }),
-					retry: e.type === "foyer/arm" && !e.force && Me.has(t.reason ?? "") ? {
+					retry: e.type === "foyer/arm" && !e.force && Fe.has(t.reason ?? "") ? {
 						...e,
 						force: !0
 					} : void 0
@@ -1909,9 +1918,7 @@ var Me = /* @__PURE__ */ new Set(["zone_open", "zone_fault"]), Ne = /* @__PURE__
       }
     `];
 	}
-};
-customElements.get("foyer-card") || customElements.define("foyer-card", Ie);
-var Le = class extends q {
+}), je("foyer-card-editor", class extends q {
 	constructor(...e) {
 		super(...e), this._config = { type: "custom:foyer-card" };
 	}
@@ -1941,7 +1948,7 @@ var Le = class extends q {
 	render() {
 		let e = this._strings;
 		if (!e || !this.hass) return L;
-		let t = je(this.hass), n = Ae(this.hass).sort((e, n) => Number(n === t || n === $) - Number(e === t || e === $)), r = this._config.layout ?? "full";
+		let t = Pe(this.hass), n = Ne(this.hass).sort((e, n) => Number(n === t || n === $) - Number(e === t || e === $)), r = this._config.layout ?? "full";
 		return !this._config.entity && n.length && queueMicrotask(() => this._emit({ entity: n[0] })), F`
       <div class="editor">
         <label>
@@ -2006,10 +2013,11 @@ var Le = class extends q {
     }
   `;
 	}
-};
-customElements.get("foyer-card-editor") || customElements.define("foyer-card-editor", Le), window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
-	type: "foyer-card",
-	name: "Foyer Home Defender",
-	preview: !0
+}), Ae(() => {
+	window.customCards = window.customCards ?? [], window.customCards.some((e) => e.type === "foyer-card") || window.customCards.push({
+		type: "foyer-card",
+		name: "Foyer Home Defender",
+		preview: !0
+	});
 });
 //#endregion

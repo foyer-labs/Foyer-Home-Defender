@@ -12,6 +12,7 @@ import { LitElement, css, html, nothing } from "lit";
 import { t } from "../../shared/i18n";
 import { formStyles } from "../../shared/styles";
 import type { PanelContext } from "../context";
+import { define } from "../../shared/define";
 
 class FoyerPageApi extends LitElement {
   static override properties = {
@@ -110,4 +111,4 @@ class FoyerPageApi extends LitElement {
   ];
 }
 
-customElements.define("foyer-page-api", FoyerPageApi);
+define("foyer-page-api", FoyerPageApi);

@@ -41,6 +41,7 @@ import {
   whenNumber,
 } from "../context";
 import "../delete-button";
+import { define } from "../../shared/define";
 
 // What a new device, or one read from a backend older than scopes, starts
 // with (decision 115): nothing at all, and `status` free should it be ticked.
@@ -1146,4 +1147,4 @@ const OUTBOUND: Record<MqttConfig["detail"], string> = {
 }`,
 };
 
-customElements.define("foyer-page-devices", FoyerPageDevices);
+define("foyer-page-devices", FoyerPageDevices);

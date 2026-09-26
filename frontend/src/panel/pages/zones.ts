@@ -27,6 +27,7 @@ import {
 import "../delete-button";
 import { batteryTargets, entityTargets, stateLabel } from "../ha-targets";
 import { profileField } from "../profile-picker";
+import { define } from "../../shared/define";
 
 const EVENT_DOMAINS = new Set(["event", "tag"]);
 const FAULT_STATES = new Set(["unavailable", "unknown"]);
@@ -1231,6 +1232,4 @@ class FoyerPageZones extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-zones")) {
-  customElements.define("foyer-page-zones", FoyerPageZones);
-}
+define("foyer-page-zones", FoyerPageZones);

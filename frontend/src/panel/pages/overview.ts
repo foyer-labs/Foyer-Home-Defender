@@ -13,6 +13,7 @@ import type {
   StatusZone,
 } from "../../shared/types";
 import { reasonText, remaining, type PanelContext } from "../context";
+import { define } from "../../shared/define";
 
 /** The name of an event, the same way the log page finds it: the log's own
  * word for it, else the moment's. */
@@ -897,6 +898,4 @@ class FoyerPageOverview extends LitElement {
   ];
 }
 
-if (!customElements.get("foyer-page-overview")) {
-  customElements.define("foyer-page-overview", FoyerPageOverview);
-}
+define("foyer-page-overview", FoyerPageOverview);
