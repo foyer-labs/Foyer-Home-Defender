@@ -8,6 +8,15 @@ you decide whether to take an update, so entries say what changed in
 behaviour, not just "fixes", and whatever needs something from you comes
 first, under *Changed — read these before you update*.
 
+## [1.0.12] — the card in the picker
+
+### Fixed
+- **The card can be added from the dashboard editor again.** In *Edit dashboard →
+  Add card*, *Foyer Home Defender* could be listed and still not be added, or be
+  missing: its code could load before Home Assistant had set up its registry of
+  custom elements, where it stayed invisible. It now waits for Home Assistant to
+  be ready. After updating, reload the browser page (or close and reopen the app).
+
 ## [1.0.11] — away is anywhere but home
 
 ### Fixed
